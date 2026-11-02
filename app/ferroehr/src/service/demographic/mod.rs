@@ -60,6 +60,7 @@
 //!   (`PARTY_REF.Type_validity`) + `…object_ref.adoc` (`OBJECT_REF.namespace`).
 
 pub mod identifier;
+pub mod reverse;
 pub mod types;
 
 mod api;

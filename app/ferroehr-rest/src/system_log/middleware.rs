@@ -39,8 +39,6 @@
               with no RM type (typed-FHIR evaluation tracked separately)"
 )]
 
-use std::collections::BTreeMap;
-
 use axum::extract::{FromRequestParts, RawPathParams, Request, State};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
@@ -49,7 +47,7 @@ use http::{HeaderValue, StatusCode, header};
 use openehr_its::rest::runtime::ApiError;
 
 use ferroehr::system_log::access_context;
-use ferroehr::system_log::categories::{AccessedContent, ContentIds, ResourceKind};
+use ferroehr::system_log::categories::{AccessedContent, ResourceKind};
 use ferroehr::system_log::event::{
     AccessDomain, ActorAuthentication, AuditEvent, EmitOutcome, EventActionCode, EventOutcome,
     EventType, ObjectClass,
@@ -105,27 +103,11 @@ pub struct AuditObject {
     pub content: Option<AccessedContent>,
 }
 
-/// The EHRs a query served, each with its served-row count and the
-/// identifiers of the versions it served from that EHR.
-///
-/// A response extension the query dispatch sets and the audit middleware
-/// reads: an AQL statement is one operation but potentially many accesses, and
-/// NEN 7513 and EHDS Art. 9 both ask which records were accessed. Carrying it
-/// here rather than emitting from the service keeps the caller identity in the
-/// one place that has it.
-#[derive(Debug, Clone)]
-pub struct AuditServedEhrs {
-    /// The served EHRs with their served-row counts, in first-served order.
-    pub served: Vec<(String, u64)>,
-    /// The identifiers of the versions served from each EHR, keyed by EHR id.
-    pub content: BTreeMap<String, Vec<ContentIds>>,
-}
-
 /// The access-logging facts every record of one request shares: the request
 /// correlation id, the declared purpose of use, and the organisation the
 /// caller acted for.
 #[derive(Debug, Clone, Default)]
-struct AccessContext {
+pub(super) struct AccessContext {
     request_id: Option<String>,
     purpose: Option<String>,
     permit: Option<String>,
@@ -135,7 +117,7 @@ struct AccessContext {
 /// The caller as the authentication layer published it on the response: the
 /// principal, and how it authenticated.
 #[derive(Debug, Clone, Copy)]
-struct Caller<'a> {
+pub(super) struct Caller<'a> {
     principal: Option<&'a Principal>,
     actor: Option<&'a ActorAuthentication>,
 }
@@ -154,54 +136,12 @@ impl<'a> Caller<'a> {
 ///
 /// The legal basis is a deployment fact rather than a request one, so it is
 /// read from configuration here rather than carried per request.
-fn fill_access(event: &mut AuditEvent, access: &AccessContext, state: &AppState) {
+pub(super) fn fill_access(event: &mut AuditEvent, access: &AccessContext, state: &AppState) {
     event.request_id.clone_from(&access.request_id);
     event.purpose.clone_from(&access.purpose);
     event.permit.clone_from(&access.permit);
     event.organisation.clone_from(&access.organisation);
     event.legal_basis = state.backend().audit_legal_basis().map(str::to_owned);
-}
-
-/// Emit one access record per EHR a query served, beside the statement's own
-/// operation record.
-///
-/// The statement record answers "who ran what"; these answer "whose record was
-/// disclosed", which is the question NEN 7513 and EHDS Art. 9 put per record.
-/// Returns whether any record was refused under `fail_mode = closed`.
-fn emit_served_ehr_records(
-    state: &AppState,
-    resp: &Response,
-    op: &'static str,
-    caller: Caller<'_>,
-    client_ip: Option<&str>,
-    timestamp: jiff::Timestamp,
-    access: &AccessContext,
-) -> bool {
-    let Some(AuditServedEhrs { served, content }) = resp.extensions().get::<AuditServedEhrs>()
-    else {
-        return false;
-    };
-    let mut rejected = false;
-    for (ehr_id, rows) in served {
-        let mut event = AuditEvent::new(
-            EventActionCode::Read,
-            ObjectClass::Ehr,
-            EventOutcome::Success,
-        );
-        event.event_type = Some(EventType::rest(op));
-        fill_common(&mut event, caller, client_ip.map(str::to_owned), timestamp);
-        event.ehr_id = Some(ehr_id.clone());
-        event.object_id = Some(ehr_id.clone());
-        event.result_count = Some(*rows);
-        event.category = content.get(ehr_id).and_then(|objects| {
-            state
-                .backend()
-                .audit_classify(&AccessedContent::Objects(objects.clone()), event.action)
-        });
-        fill_access(&mut event, access, state);
-        rejected |= state.backend().emit(event) == EmitOutcome::Rejected;
-    }
-    rejected
 }
 
 /// The purpose of use the caller declared, when the deployment records it.
@@ -334,7 +274,7 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
         }
         fill_access(&mut event, &access, &state);
         op_rejected = state.backend().emit(event) == EmitOutcome::Rejected;
-        op_rejected |= emit_served_ehr_records(
+        op_rejected |= crate::system_log::served::emit(
             &state,
             &resp,
             op,
@@ -443,7 +383,7 @@ fn outcome_from_status(status: StatusCode) -> EventOutcome {
 ///
 /// An absent principal leaves `user_id` empty, which the emitter renders as the
 /// configured value-if-missing.
-fn fill_common(
+pub(super) fn fill_common(
     event: &mut AuditEvent,
     caller: Caller<'_>,
     client_ip: Option<String>,

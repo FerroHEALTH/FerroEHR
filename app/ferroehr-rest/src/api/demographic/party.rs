@@ -157,18 +157,29 @@ async fn run_get(
     if resp.is_empty() {
         return Ok(negotiate::empty(StatusCode::NO_CONTENT));
     }
+    let mut served_sources = Vec::new();
     if serves_reverse_relationships(state.config().spec_profile, h) {
-        let refs = state.backend().party_reverse_relationships(&uid).await?;
-        if !refs.is_empty()
+        let reverse = state.backend().party_reverse_relationships(&uid).await?;
+        if !reverse.references.is_empty()
             && let serde_json::Value::Object(map) = &mut resp.body
         {
             map.insert(
                 "reverse_relationships".to_owned(),
-                serde_json::Value::Array(refs),
+                serde_json::Value::Array(reverse.references),
             );
+            served_sources = reverse.sources;
         }
     }
-    Ok(read_party(kind, h, &resp))
+    let mut out = read_party(kind, h, &resp);
+    // The references disclose each source party's container and relationship,
+    // so each source gets its own access record beside the target's.
+    if !served_sources.is_empty() {
+        out.extensions_mut()
+            .insert(crate::system_log::served::AuditServedParties {
+                parties: served_sources,
+            });
+    }
+    Ok(out)
 }
 
 /// Stores the `ITEM_TAG` lists the wrapper headers asked for on the just-written
