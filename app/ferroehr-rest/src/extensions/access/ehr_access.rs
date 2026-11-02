@@ -185,7 +185,8 @@ fn composition_target(parts: &RequestParts) -> Option<&str> {
 /// Parsed minimally: an `EHR_ACCESS` create/modify carries the full object, so a
 /// `versions[].data._type == "EHR_ACCESS"` is sufficient detection.
 fn contribution_targets_ehr_access(parts: &RequestParts) -> bool {
-    let Ok(value) = crate::overview::negotiate::json_value(&parts.headers, &parts.body) else {
+    let Ok(value) = crate::overview::negotiate::decode::json_value(&parts.headers, &parts.body)
+    else {
         // A malformed body: the dispatch will return the 400; nothing to gate.
         return false;
     };

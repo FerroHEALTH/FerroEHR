@@ -41,6 +41,7 @@ use openehr_rm::prelude::PartyRelationship;
 
 use crate::api::{RequestParts, guarded_dispatch};
 use crate::negotiate;
+use crate::negotiate::body::respond_rm;
 use crate::overview::error::RestError;
 use crate::state::AppState;
 use ferroehr::service::response::ServiceResponse;
@@ -1045,7 +1046,7 @@ pub(super) async fn run(
     match op {
         "party_relationship_create" => {
             let _p = parts.decode(AgentCreateParams::from_request, AgentCreateParams::PARAMS)?;
-            let body = negotiate::rm_value::<PartyRelationship>(h, &parts.body)?;
+            let body = negotiate::decode::rm_value::<PartyRelationship>(h, &parts.body)?;
             let resp = state
                 .backend()
                 .party_relationship_create(crate::overview::committal::write_request(
@@ -1071,21 +1072,21 @@ pub(super) async fn run(
                 .party_relationship_get(p.uid_based_id, p.version_at_time)
                 .await?;
             if resp.is_empty() {
-                return Ok(negotiate::empty(StatusCode::NO_CONTENT));
+                return Ok(negotiate::body::empty(StatusCode::NO_CONTENT));
             }
             Ok(read_relationship(h, &resp))
         }
         "party_relationship_update" => {
             let p = parts.decode(AgentUpdateParams::from_request, AgentUpdateParams::PARAMS)?;
             let uid = p.uid_based_id.clone();
-            let body = negotiate::rm_value::<PartyRelationship>(h, &parts.body)?;
+            let body = negotiate::decode::rm_value::<PartyRelationship>(h, &parts.body)?;
             match state
                 .backend()
                 .party_relationship_update(
                     p.uid_based_id,
                     // Decode the `W/"…"`/quoted ETag syntax at the adapter seam
                     // so the service compares a bare OBJECT_VERSION_ID.
-                    super::if_match_token(&p.if_match),
+                    crate::overview::version_id::strip_etag(&p.if_match).to_owned(),
                     crate::overview::committal::write_request(
                         h,
                         crate::api::ehr::committer_proxy(),
@@ -1128,7 +1129,7 @@ pub(super) async fn run(
                 .backend()
                 .party_relationship_delete(
                     p.uid_based_id,
-                    super::if_match_of(h),
+                    crate::overview::version_id::if_match(h),
                     crate::overview::committal::delete_request(
                         h,
                         crate::api::ehr::committer_proxy(),
@@ -1138,7 +1139,7 @@ pub(super) async fn run(
                 .await
             {
                 Ok(resp) => {
-                    let mut out = negotiate::empty(StatusCode::NO_CONTENT);
+                    let mut out = negotiate::body::empty(StatusCode::NO_CONTENT);
                     super::set_versioning_headers(&mut out, resp.meta.as_ref());
                     Ok(out)
                 }
@@ -1194,7 +1195,7 @@ pub(super) async fn run(
                 .backend()
                 .party_relationship_version_get_at_time(p.versioned_object_uid, p.version_at_time)
                 .await?;
-            let mut out = negotiate::respond(h, StatusCode::OK, &resp.body);
+            let mut out = negotiate::body::respond(h, StatusCode::OK, &resp.body);
             super::set_versioning_headers(&mut out, resp.meta.as_ref());
             Ok(out)
         }
@@ -1230,12 +1231,12 @@ fn write_relationship(
     // The full `Prefer` triad (overview §Prefer): representation → the RM
     // body; identifier → `{uid}` only, never `204`; minimal (default) → empty.
     // One seam for all three, and for the `Preference-Applied` declaration.
-    let mut out = negotiate::write_negotiated(
+    let mut out = negotiate::prefer::write_negotiated(
         h,
         minimal_status,
         repr_status,
         resp.meta.as_ref().map(|m| m.uid.as_str()),
-        |status| negotiate::respond_rm::<PartyRelationship>(h, status, &resp.body, LOCATABLE_ROOT),
+        |status| respond_rm::<PartyRelationship>(h, status, &resp.body, LOCATABLE_ROOT),
     );
     super::set_write_headers(&mut out, base, segment, resp.meta.as_ref());
     out
@@ -1246,8 +1247,7 @@ fn write_relationship(
 /// NOT be used to indicate an alternate representation of an existing resource
 /// (e.g. via `GET` method)".
 fn read_relationship(h: &http::HeaderMap, resp: &ServiceResponse) -> Response {
-    let mut out =
-        negotiate::respond_rm::<PartyRelationship>(h, StatusCode::OK, &resp.body, LOCATABLE_ROOT);
+    let mut out = respond_rm::<PartyRelationship>(h, StatusCode::OK, &resp.body, LOCATABLE_ROOT);
     super::set_versioning_headers(&mut out, resp.meta.as_ref());
     out
 }

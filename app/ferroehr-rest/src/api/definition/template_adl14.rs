@@ -31,7 +31,8 @@ use openehr_rm::prelude::Composition;
 
 use crate::api::RequestParts;
 use crate::negotiate;
-use crate::negotiate::{AppliedPreference, WireFormat};
+use crate::negotiate::WireFormat;
+use crate::negotiate::prefer::AppliedPreference;
 use crate::overview::error::RestError;
 use crate::state::AppState;
 
@@ -78,7 +79,7 @@ pub(super) async fn list(state: &AppState, parts: &RequestParts) -> Result<Respo
     )?;
     let (filter, page) =
         list_filter_and_page(p.template_id, p.concept, p.version, p.offset, p.fetch);
-    Ok(negotiate::respond(
+    Ok(negotiate::body::respond(
         h,
         StatusCode::OK,
         &state.backend().template_adl14_list(filter, page).await?,
@@ -97,18 +98,19 @@ pub(super) async fn upload(state: &AppState, parts: &RequestParts) -> Result<Res
     // type, so a payload declaring another media type is refused before parsing
     // (`overview/Resources.md` §XML Format, a `415` MUST). An absent
     // `Content-Type` declares nothing to refuse and reads as the XML body type.
-    negotiate::require_content_type(h, &[WireFormat::CanonicalXml], "application/xml")?;
+    negotiate::decode::require_content_type(h, &[WireFormat::CanonicalXml], "application/xml")?;
     // NOTE: `responses/201_Template_adl1_4_upload.yaml` declares the OPT XML and the Web Template,
     // and `Resources.md` §Simplified Formats answers an `Accept` the service cannot fulfil with 406.
-    let representation = if negotiate::prefers_representation(h) {
-        Some(
-            negotiate::resolve_accept(h, TEMPLATE_DEF_FORMATS, WireFormat::CanonicalXml)
-                .ok_or_else(|| RestError::from(ApiError::NotAcceptable(not_acceptable())))?,
-        )
-    } else {
-        None
-    };
-    let xml = negotiate::text_body(&parts.body)?;
+    let representation =
+        if negotiate::prefer::prefers(h, negotiate::prefer::Preference::Representation) {
+            Some(
+                negotiate::resolve_accept(h, TEMPLATE_DEF_FORMATS, WireFormat::CanonicalXml)
+                    .ok_or_else(|| RestError::from(ApiError::NotAcceptable(not_acceptable())))?,
+            )
+        } else {
+            None
+        };
+    let xml = negotiate::decode::text_body(&parts.body)?;
     let meta = state
         .backend()
         .template_adl14_upload(&xml)
@@ -128,7 +130,11 @@ pub(super) async fn upload(state: &AppState, parts: &RequestParts) -> Result<Res
     // happens: the upload declares no refusal after the store, and the stored
     // Web Template was built before it.
     let body = match representation {
-        Some(WireFormat::CanonicalXml) => Some(negotiate::xml_body(StatusCode::CREATED, xml)),
+        Some(WireFormat::CanonicalXml) => Some(negotiate::body::body(
+            StatusCode::CREATED,
+            negotiate::APPLICATION_XML,
+            xml,
+        )),
         Some(fmt) => {
             match web_template_response(state, &template_id, fmt, StatusCode::CREATED).await {
                 Ok(resp) => Some(resp),
@@ -194,7 +200,7 @@ pub(super) async fn get(state: &AppState, parts: &RequestParts) -> Result<Respon
     let xml = state.backend().template_adl14_get(&template_id).await?;
     match fmt {
         WireFormat::CanonicalXml => {
-            let mut resp = negotiate::xml_body(StatusCode::OK, xml);
+            let mut resp = negotiate::body::body(StatusCode::OK, negotiate::APPLICATION_XML, xml);
             set_template_etag(&mut resp, &template_id);
             Ok(resp)
         }
@@ -237,14 +243,9 @@ pub(super) async fn example_get(
                 .await
         }
         // `respond_rm` re-types the value, so the generated `ToXml` runs.
-        Some(WireFormat::CanonicalJson | WireFormat::CanonicalXml) => {
-            Ok(negotiate::respond_rm::<Composition>(
-                h,
-                StatusCode::OK,
-                &comp,
-                "composition",
-            ))
-        }
+        Some(WireFormat::CanonicalJson | WireFormat::CanonicalXml) => Ok(
+            negotiate::body::respond_rm::<Composition>(h, StatusCode::OK, &comp, "composition"),
+        ),
         _ => Err(RestError::from(ApiError::NotAcceptable(
             "the template example is available as application/json, application/xml, \
              application/openehr.wt.flat+json, or application/openehr.wt.structured+json"
@@ -257,11 +258,11 @@ pub(super) async fn example_get(
 /// (`headers/ETag_Template_adl1_4.yaml`: `W/"<id>"`). Keyed on the
 /// `template_id` string, matching the upload path so a client's `If-None-Match`
 /// round-trips. The weak-form construction goes through the shared
-/// [`negotiate::set_etag`] helper (overview §"Deprecated headers": a
+/// [`negotiate::resource::set_etag`] helper (overview §"Deprecated headers": a
 /// resource-identifier `ETag` MUST carry the `W/` weakness indicator), so the
 /// upload and this GET share one implementation of the `W/"…"` format.
 fn set_template_etag(resp: &mut Response, template_id: &str) {
-    negotiate::set_etag(resp, template_id);
+    negotiate::resource::set_etag(resp, template_id);
 }
 
 /// Render the `201_Template_adl1_4_upload` response per `Prefer`:
@@ -271,11 +272,11 @@ fn set_template_etag(resp: &mut Response, template_id: &str) {
 /// (`schemas/others/TemplateIdentifier.yaml`); missing / `return=minimal` → an
 /// empty body. `Location` + the weak `ETag` are set on every case, and the
 /// applied preference is declared through the shared
-/// [`negotiate::set_preference_applied`] seam.
+/// [`negotiate::prefer::set_preference_applied`] seam.
 ///
 /// A template is not `uid`-versioned, so the identifier body is the
 /// `template_id` object rather than the generic `{uid}` of
-/// [`negotiate::write_negotiated`]; the preference resolution and the
+/// [`negotiate::prefer::write_negotiated`]; the preference resolution and the
 /// never-`204` identifier status are the same rule (`Requests_and_responses.md`
 /// §"Prefer only identifier"), here trivially satisfied because every upload
 /// outcome is `201 Created`.
@@ -287,7 +288,7 @@ fn upload_response(
 ) -> Response {
     let (applied, mut resp) = match representation {
         Some(resp) => (AppliedPreference::Representation, resp),
-        None if negotiate::prefers_identifier(headers) => {
+        None if negotiate::prefer::prefers(headers, negotiate::prefer::Preference::Identifier) => {
             let body = serde_json::json!({ "template_id": template_id });
             (
                 AppliedPreference::Identifier(template_id),
@@ -303,7 +304,7 @@ fn upload_response(
         resp.headers_mut().insert(header::LOCATION, v);
     }
     set_template_etag(&mut resp, template_id);
-    negotiate::set_preference_applied(&mut resp, applied);
+    negotiate::prefer::set_preference_applied(&mut resp, applied);
     resp
 }
 
@@ -340,8 +341,10 @@ async fn web_template_response(
         ))
     })?;
     let mut resp = match fmt {
-        WireFormat::CanonicalJson => negotiate::json_body(status, json),
-        _ => negotiate::wt_json_body(status, json),
+        WireFormat::CanonicalJson => {
+            negotiate::body::body(status, negotiate::APPLICATION_JSON, json)
+        }
+        _ => negotiate::body::body(status, negotiate::APPLICATION_WT_JSON, json),
     };
     set_template_etag(&mut resp, template_id);
     Ok(resp)

@@ -67,7 +67,7 @@ pub(super) async fn run(
         }
         "ehr_create" => {
             let _p = parts.decode(EhrCreateParams::from_request, EhrCreateParams::PARAMS)?;
-            let status = negotiate::optional_rm_value::<EhrStatus>(h, &parts.body)?;
+            let status = negotiate::decode::optional_rm_value::<EhrStatus>(h, &parts.body)?;
             // The service returns the created EHR's own resource metadata
             // (ehr_id + creation instant) — the write path never rebuilds a
             // metadata-less envelope, so `Last-Modified` survives to the wire.
@@ -81,7 +81,7 @@ pub(super) async fn run(
                 EhrCreateWithIdParams::PARAMS,
             )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
-            let status = negotiate::optional_rm_value::<EhrStatus>(h, &parts.body)?;
+            let status = negotiate::decode::optional_rm_value::<EhrStatus>(h, &parts.body)?;
             let request = create_request(h, status)?;
             let meta = Box::pin(state.backend().create_ehr_with_id_meta(ehr_id, request)).await?;
             ehr_write_response(&state, h, &base, ehr_id, meta).await
@@ -104,7 +104,7 @@ pub(super) async fn run(
                     p.tag_target_path.as_deref(),
                 )
                 .await?;
-            Ok(negotiate::respond(
+            Ok(negotiate::body::respond(
                 h,
                 ok,
                 &openehr_its::json::to_canonical_value(&tags),
@@ -152,17 +152,17 @@ fn create_request(
 /// identifiers". The EHR's creating commit dates it until a folder hierarchy
 /// joins or leaves `EHR.folders`.
 fn ehr_read_response(h: &http::HeaderMap, status: StatusCode, read: &ServiceResponse) -> Response {
-    let mut out = negotiate::respond_rm::<Ehr>(h, status, &read.body, super::EHR_ROOT_TAG);
+    let mut out = negotiate::body::respond_rm::<Ehr>(h, status, &read.body, super::EHR_ROOT_TAG);
     if let Some(id) = read
         .body
         .get("ehr_id")
         .and_then(|i| i.get("value"))
         .and_then(Value::as_str)
     {
-        negotiate::set_etag(&mut out, id);
+        negotiate::resource::set_etag(&mut out, id);
     }
     if let Some(at) = read.meta.as_ref().and_then(|meta| meta.last_modified) {
-        negotiate::set_last_modified(&mut out, at);
+        negotiate::resource::set_last_modified(&mut out, at);
     }
     out
 }
@@ -182,7 +182,7 @@ async fn ehr_write_response(
     ehr_id: EhrId,
     meta: ResourceMeta,
 ) -> Result<Response, RestError> {
-    let body = if negotiate::prefers_representation(h) {
+    let body = if negotiate::prefer::prefers(h, negotiate::prefer::Preference::Representation) {
         // `ehr_created_object` serves the just-committed EHR body from the
         // create-time stash (built from the commit results), avoiding the
         // `ehr_summary` re-read; it falls back to a full read on a stash miss.
@@ -191,7 +191,7 @@ async fn ehr_write_response(
         Value::Null
     };
     let resp = ServiceResponse::new(body, meta);
-    Ok(negotiate::write_rm::<Ehr>(
+    Ok(negotiate::resource::write_rm::<Ehr>(
         h,
         base,
         StatusCode::CREATED,

@@ -66,7 +66,7 @@ async fn run(
             // Physical EHR delete → 204 No Content; unknown EHR → 404
             // (the service maps `ehr_id_does_not_exist` to NotFound).
             state.backend().admin_ehr_delete(p.ehr_id).await?;
-            Ok(negotiate::empty(StatusCode::NO_CONTENT))
+            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
         // NOTE: no openEHR spec governs the routes below — our own extensions;
         // both mirror `admin_ehr_delete` (204, 404, same admin gate).
@@ -75,14 +75,14 @@ async fn run(
             // A template still referenced by a committed version is a 409:
             // never orphan clinical data.
             state.backend().admin_template_delete(&template_id).await?;
-            Ok(negotiate::empty(StatusCode::NO_CONTENT))
+            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
         // The party with its relationships; a malformed id is 400, an unknown
         // one 404.
         "admin_party_delete" => {
             let party_id = path_segment(&parts, "party_id")?;
             state.backend().physical_party_delete(party_id).await?;
-            Ok(negotiate::empty(StatusCode::NO_CONTENT))
+            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
         "admin_query_delete" => {
             let qualified_name = path_segment(&parts, "qualified_query_name")?;
@@ -91,7 +91,7 @@ async fn run(
                 .backend()
                 .admin_query_delete(&qualified_name, &version)
                 .await?;
-            Ok(negotiate::empty(StatusCode::NO_CONTENT))
+            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
         "admin_config" => {
             // NOTE: no openEHR spec governs configuration — our own extension.
@@ -111,7 +111,7 @@ async fn run(
             state.backend().admin_ehr_delete_all(ids).await?;
             // The only declared success responses are a bodyless `204` (sync)
             // and `202` (async); this server is synchronous.
-            Ok(negotiate::empty(StatusCode::NO_CONTENT))
+            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
         other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted admin operation: {other}"

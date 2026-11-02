@@ -98,5 +98,5 @@ async fn run(state: &AppState, parts: &RequestParts) -> Result<Response, RestErr
         .get("versioned_object_uid")
         .map_or("", String::as_str);
     state.backend().release_person_access(ehr_id, vo_id).await?;
-    Ok(negotiate::empty(StatusCode::NO_CONTENT))
+    Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
 }

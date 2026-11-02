@@ -204,7 +204,11 @@ pub(crate) fn composition_flat_response_with(
         .map_err(|e| flat_output_err(&e))?;
     let json =
         serde_json::to_string(&flat).map_err(|e| internal(format!("FLAT serialization: {e}")))?;
-    Ok(negotiate::flat_json_body(status, json))
+    Ok(negotiate::body::body(
+        status,
+        negotiate::APPLICATION_WT_FLAT_JSON,
+        json,
+    ))
 }
 
 /// Render a canonical-JSON COMPOSITION as a STRUCTURED
@@ -233,7 +237,11 @@ pub(crate) fn composition_structured_response_with(
         .map_err(|e| flat_output_err(&e))?;
     let json = serde_json::to_string(&structured)
         .map_err(|e| internal(format!("STRUCTURED serialization: {e}")))?;
-    Ok(negotiate::structured_json_body(status, json))
+    Ok(negotiate::body::body(
+        status,
+        negotiate::APPLICATION_WT_STRUCTURED_JSON,
+        json,
+    ))
 }
 
 // ── CONTRIBUTION: envelope canonical, inner payload simplified ─────────────
@@ -353,8 +361,10 @@ pub(crate) async fn contribution_to_simplified(
     let json = serde_json::to_string(&envelope)
         .map_err(|e| internal(format!("CONTRIBUTION serialization: {e}")))?;
     Ok(match format {
-        WireFormat::Structured => negotiate::structured_json_body(status, json),
-        _ => negotiate::flat_json_body(status, json),
+        WireFormat::Structured => {
+            negotiate::body::body(status, negotiate::APPLICATION_WT_STRUCTURED_JSON, json)
+        }
+        _ => negotiate::body::body(status, negotiate::APPLICATION_WT_FLAT_JSON, json),
     })
 }
 

@@ -258,7 +258,7 @@ async fn run(
     match op {
         "terminology_ids" => {
             let ids = state.backend().get_terminology_ids()?;
-            Ok(negotiate::respond(
+            Ok(negotiate::body::respond(
                 h,
                 ok,
                 &json!({ "terminology_ids": ids }),
@@ -268,7 +268,7 @@ async fn run(
             let tid = path_get(&parts, "terminology_id")?;
             // An unknown terminology → NotFound (404).
             let desc = state.backend().get_terminology_description(&tid)?;
-            Ok(negotiate::respond(h, ok, &desc))
+            Ok(negotiate::body::respond(h, ok, &desc))
         }
         "terminology_get_term" => {
             let tid = path_get(&parts, "terminology_id")?;
@@ -277,7 +277,7 @@ async fn run(
             // NOTE: no specification governs this extension: our own design; no
             // attribute allow-list is surfaced on the wire.
             let extract = state.backend().get_term(&tid, &code, None, at_date).await?;
-            Ok(negotiate::respond(h, ok, &extract))
+            Ok(negotiate::body::respond(h, ok, &extract))
         }
         "terminology_subsumes" => {
             let tid = path_get(&parts, "terminology_id")?;
@@ -287,14 +287,18 @@ async fn run(
                 .backend()
                 .subsumes(&tid, &ref_code, &candidate)
                 .await?;
-            Ok(negotiate::respond(h, ok, &json!({ "subsumes": subsumes })))
+            Ok(negotiate::body::respond(
+                h,
+                ok,
+                &json!({ "subsumes": subsumes }),
+            ))
         }
         "terminology_value_set" => {
             let tid = path_get(&parts, "terminology_id")?;
             let value_set_id = path_get(&parts, "value_set_id")?;
             // An unknown value set → NotFound (404).
             let extract = state.backend().get_value_set(&tid, &value_set_id).await?;
-            Ok(negotiate::respond(h, ok, &extract))
+            Ok(negotiate::body::respond(h, ok, &extract))
         }
         "terminology_value_set_validate" => {
             let tid = path_get(&parts, "terminology_id")?;
@@ -305,7 +309,7 @@ async fn run(
                 .backend()
                 .value_set_validate(&tid, &value_set_id, &candidate_code, at_date)
                 .await?;
-            Ok(negotiate::respond(h, ok, &json!({ "valid": valid })))
+            Ok(negotiate::body::respond(h, ok, &json!({ "valid": valid })))
         }
         other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted terminology operation: {other}"

@@ -25,6 +25,7 @@
 use std::str::FromStr;
 
 use ferroehr::ids::EhrId;
+use http::{HeaderMap, header};
 use openehr_base::prelude::ObjectVersionId;
 use openehr_its::rest::runtime::ApiError;
 use uuid::Uuid;
@@ -122,6 +123,19 @@ pub(crate) fn strip_etag(raw: &str) -> &str {
         .or_else(|| trimmed.strip_prefix("w/"))
         .unwrap_or(trimmed);
     unweak.trim().trim_matches('"')
+}
+
+/// The `If-Match` request header reduced by [`strip_etag`] to the bare value it
+/// names, or `None` when the header is absent or not valid header text.
+///
+/// A present-but-empty header yields `Some("")`, which the service refuses as a
+/// malformed precondition: a received `If-Match` MUST be honoured (overview
+/// §"If-Match and accidental overwrites"), never read as no precondition.
+pub(crate) fn if_match(headers: &HeaderMap) -> Option<String> {
+    headers
+        .get(header::IF_MATCH)
+        .and_then(|v| v.to_str().ok())
+        .map(|raw| strip_etag(raw).to_owned())
 }
 
 #[cfg(test)]

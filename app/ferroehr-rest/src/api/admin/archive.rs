@@ -295,24 +295,24 @@ async fn run(
 
     match op {
         "admin_archive_ehrs" => {
-            let ids = id_list(&negotiate::json_value(h, &parts.body)?, "ehr_ids")?;
+            let ids = id_list(&negotiate::decode::json_value(h, &parts.body)?, "ehr_ids")?;
             state.backend().archive_ehrs(ids).await?;
-            Ok(negotiate::empty(StatusCode::NO_CONTENT))
+            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
         "admin_archive_parties" => {
-            let ids = id_list(&negotiate::json_value(h, &parts.body)?, "party_ids")?;
+            let ids = id_list(&negotiate::decode::json_value(h, &parts.body)?, "party_ids")?;
             state.backend().archive_parties(ids).await?;
-            Ok(negotiate::empty(StatusCode::NO_CONTENT))
+            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
         "admin_restore_archived_ehrs" => {
-            let ids = id_list(&negotiate::json_value(h, &parts.body)?, "ehr_ids")?;
+            let ids = id_list(&negotiate::decode::json_value(h, &parts.body)?, "ehr_ids")?;
             state.backend().restore_archived_ehrs(ids).await?;
-            Ok(negotiate::empty(StatusCode::NO_CONTENT))
+            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
         "admin_restore_archived_parties" => {
-            let ids = id_list(&negotiate::json_value(h, &parts.body)?, "party_ids")?;
+            let ids = id_list(&negotiate::decode::json_value(h, &parts.body)?, "party_ids")?;
             state.backend().restore_archived_parties(ids).await?;
-            Ok(negotiate::empty(StatusCode::NO_CONTENT))
+            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
         other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted admin archive operation: {other}"

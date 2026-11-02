@@ -204,30 +204,30 @@ async fn run(
     match op {
         "event_subscription_list" => {
             let items = state.backend().event_subscription_list().await?;
-            Ok(negotiate::respond(h, StatusCode::OK, &items))
+            Ok(negotiate::body::respond(h, StatusCode::OK, &items))
         }
         "event_subscription_create" => {
             let body: ferroehr::extensions::events::subscription::SubscriptionDefinition =
-                negotiate::typed_json(h, &parts.body)?;
+                negotiate::decode::typed_json(h, &parts.body)?;
             let created = state.backend().event_subscription_create(&body).await?;
-            Ok(negotiate::respond(h, StatusCode::CREATED, &created))
+            Ok(negotiate::body::respond(h, StatusCode::CREATED, &created))
         }
         "event_subscription_get" => {
             let id = subscription_id(&parts)?;
             let item = state.backend().event_subscription_get(id).await?;
-            Ok(negotiate::respond(h, StatusCode::OK, &item))
+            Ok(negotiate::body::respond(h, StatusCode::OK, &item))
         }
         "event_subscription_update" => {
             let id = subscription_id(&parts)?;
             let body: ferroehr::extensions::events::subscription::SubscriptionUpdate =
-                negotiate::typed_json(h, &parts.body)?;
+                negotiate::decode::typed_json(h, &parts.body)?;
             let updated = state.backend().event_subscription_update(id, &body).await?;
-            Ok(negotiate::respond(h, StatusCode::OK, &updated))
+            Ok(negotiate::body::respond(h, StatusCode::OK, &updated))
         }
         "event_subscription_delete" => {
             let id = subscription_id(&parts)?;
             state.backend().event_subscription_delete(id).await?;
-            Ok(negotiate::empty(StatusCode::NO_CONTENT))
+            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
         other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted event subscription operation: {other}"

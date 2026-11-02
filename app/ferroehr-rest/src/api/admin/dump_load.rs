@@ -222,14 +222,14 @@ async fn run(
         return Ok(refusal);
     }
     let h = &parts.headers;
-    let body = negotiate::json_value(h, &parts.body)?;
+    let body = negotiate::decode::json_value(h, &parts.body)?;
     let file_sys_loc = file_sys_loc(&body)?;
 
     match op {
         "admin_dump" => {
             let spec = export_spec(&body)?;
             let reports = state.backend().export_ehrs(file_sys_loc, spec).await?;
-            Ok(negotiate::respond(
+            Ok(negotiate::body::respond(
                 h,
                 StatusCode::OK,
                 &fail_reports(&reports),
@@ -237,7 +237,7 @@ async fn run(
         }
         "admin_load" => {
             let reports = state.backend().load_ehrs(file_sys_loc).await?;
-            Ok(negotiate::respond(
+            Ok(negotiate::body::respond(
                 h,
                 StatusCode::OK,
                 &fail_reports(&reports),

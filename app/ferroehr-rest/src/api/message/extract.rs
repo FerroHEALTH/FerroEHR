@@ -318,18 +318,18 @@ async fn run(
         "message_export_ehrs" => {
             let ehr_id = super::path_ehr_id(&parts)?;
             let extracts = state.backend().extract_ehrs(ehr_id).await?;
-            Ok(negotiate::respond(h, StatusCode::OK, &extracts))
+            Ok(negotiate::body::respond(h, StatusCode::OK, &extracts))
         }
         "message_export_ehr_extracts" => {
-            let spec = negotiate::rm_value::<ExtractSpec>(h, &parts.body)?;
+            let spec = negotiate::decode::rm_value::<ExtractSpec>(h, &parts.body)?;
             let extracts = state.backend().export_ehr_extracts(spec).await?;
-            Ok(negotiate::respond(h, StatusCode::OK, &extracts))
+            Ok(negotiate::body::respond(h, StatusCode::OK, &extracts))
         }
         "message_import_ehr" => {
             let requested = query_ehr_id(&parts)?;
             let extract = read_extract(&parts)?;
             let created = state.backend().import_ehr(requested, extract).await?;
-            Ok(negotiate::identifier_response(
+            Ok(negotiate::prefer::identifier_response(
                 h,
                 StatusCode::CREATED,
                 &created.to_string(),
@@ -339,7 +339,7 @@ async fn run(
             let ehr_id = super::path_ehr_id(&parts)?;
             let extract = read_extract(&parts)?;
             state.backend().import_ehr_extract(ehr_id, extract).await?;
-            Ok(negotiate::empty(StatusCode::NO_CONTENT))
+            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
         other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted message extract operation: {other}"
@@ -350,7 +350,10 @@ async fn run(
 /// Decode the request body as a canonical `EXTRACT` (JSON or XML, per the
 /// shared RM body negotiation).
 fn read_extract(parts: &RequestParts) -> Result<Extract, RestError> {
-    Ok(negotiate::rm_value::<Extract>(&parts.headers, &parts.body)?)
+    Ok(negotiate::decode::rm_value::<Extract>(
+        &parts.headers,
+        &parts.body,
+    )?)
 }
 
 /// The OPTIONAL `ehr_id` query parameter of `import_ehr`.

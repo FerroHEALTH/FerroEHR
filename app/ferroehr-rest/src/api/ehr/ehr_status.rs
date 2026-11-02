@@ -78,10 +78,8 @@ pub(super) async fn run(
             // three-part identity, case-insensitively (overview `Resources.md`
             // §Identifier types; BASE master05 §Composite Identifiers and Case).
             super::ensure_served_version(&p.version_uid, &resp.body)?;
-            Ok(negotiate::read_rm::<EhrStatus>(
+            Ok(negotiate::resource::read_rm::<EhrStatus>(
                 h,
-                &base,
-                Some("ehr_status"),
                 &resp,
                 openehr_its::xml::LOCATABLE_ROOT,
             ))
@@ -100,10 +98,8 @@ pub(super) async fn run(
                 .await?;
             let mut resp = resp;
             resp.body = super::expand_multimedia_if_requested(&state, q, resp.body).await?;
-            Ok(negotiate::read_rm::<EhrStatus>(
+            Ok(negotiate::resource::read_rm::<EhrStatus>(
                 h,
-                &base,
-                Some("ehr_status"),
                 &resp,
                 openehr_its::xml::LOCATABLE_ROOT,
             ))
@@ -114,7 +110,7 @@ pub(super) async fn run(
                 EhrStatusUpdateParams::PARAMS,
             )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
-            let body = negotiate::rm_value::<EhrStatus>(h, &parts.body)?;
+            let body = negotiate::decode::rm_value::<EhrStatus>(h, &parts.body)?;
             let uv = crate::overview::committal::write_request(
                 h,
                 super::committer_proxy(),
@@ -139,13 +135,16 @@ pub(super) async fn run(
                         pending_tags,
                     )
                     .await?;
-                    let repr = if negotiate::prefers_representation(h) {
+                    let repr = if negotiate::prefer::prefers(
+                        h,
+                        negotiate::prefer::Preference::Representation,
+                    ) {
                         state.backend().get_ehr_status(ehr_id).await?
                     } else {
                         Value::Null
                     };
                     let resp = ServiceResponse::new(repr, meta);
-                    let mut resp = negotiate::write_rm::<EhrStatus>(
+                    let mut resp = negotiate::resource::write_rm::<EhrStatus>(
                         h,
                         &base,
                         no_content,
@@ -164,10 +163,8 @@ pub(super) async fn run(
                         .await
                         .ok()
                         .flatten();
-                    Ok(negotiate::error_with_meta(
+                    Ok(negotiate::resource::error_with_meta(
                         crate::overview::service_error::api_error(e),
-                        &base,
-                        Some("ehr_status"),
                         meta.as_ref(),
                     ))
                 }
@@ -184,7 +181,7 @@ pub(super) async fn run(
                 .backend()
                 .target_tags_get(ehr_id, p.uid_based_id, "EHR_STATUS")
                 .await?;
-            Ok(negotiate::respond(
+            Ok(negotiate::body::respond(
                 h,
                 ok,
                 &openehr_its::json::to_canonical_value(&tags),
@@ -203,7 +200,7 @@ pub(super) async fn run(
                 .await?;
             // ehr_status_tags_update.yaml: 200 on `Prefer: return=representation`,
             // 204 when `Prefer` is missing or `return=minimal` (overview §Prefer).
-            Ok(negotiate::write_collection(
+            Ok(negotiate::prefer::write_collection(
                 h,
                 no_content,
                 ok,
@@ -220,7 +217,7 @@ pub(super) async fn run(
                 .backend()
                 .target_tag_delete(ehr_id, p.uid_based_id, "EHR_STATUS", p.key)
                 .await?;
-            Ok(negotiate::empty(no_content))
+            Ok(negotiate::body::empty(no_content))
         }
         other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted ehr operation: {other}"

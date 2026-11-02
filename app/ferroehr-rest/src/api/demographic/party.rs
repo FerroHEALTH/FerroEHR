@@ -94,7 +94,7 @@ pub(super) async fn run(
                     // The `W/"…"`/quoted ETag syntax is decoded here, at the
                     // adapter seam, so the service compares a bare
                     // OBJECT_VERSION_ID (overview §"`ETag` and Last-Modified").
-                    super::if_match_token(&p.if_match),
+                    crate::overview::version_id::strip_etag(&p.if_match).to_owned(),
                     crate::overview::committal::write_request(
                         h,
                         crate::api::ehr::committer_proxy(),
@@ -157,7 +157,7 @@ async fn run_get(
         .await?;
     // A deleted current version → Null body → 204 (like composition_get).
     if resp.is_empty() {
-        return Ok(negotiate::empty(StatusCode::NO_CONTENT));
+        return Ok(negotiate::body::empty(StatusCode::NO_CONTENT));
     }
     let mut served_sources = Vec::new();
     if serves_reverse_relationships(state.config().spec_profile, h) {
@@ -254,7 +254,7 @@ async fn run_delete(
         .party_delete(
             kind,
             preceding.clone(),
-            super::if_match_of(h),
+            crate::overview::version_id::if_match(h),
             crate::overview::committal::delete_request(
                 h,
                 crate::api::ehr::committer_proxy(),
@@ -264,7 +264,7 @@ async fn run_delete(
         .await
     {
         Ok(resp) => {
-            let mut out = negotiate::empty(StatusCode::NO_CONTENT);
+            let mut out = negotiate::body::empty(StatusCode::NO_CONTENT);
             super::set_versioning_headers(&mut out, resp.meta.as_ref());
             Ok(out)
         }
@@ -351,12 +351,12 @@ where
             Some(negotiate::WireFormat::CanonicalJson)
         );
     if !stable_json {
-        return negotiate::rm_value::<Current>(h, body);
+        return negotiate::decode::rm_value::<Current>(h, body);
     }
     let json = std::str::from_utf8(body)
         .map_err(|e| ApiError::BadRequest(format!("body is not UTF-8: {e}")))?;
     let released: Stable = openehr_its::json::from_canonical_json(json)
-        .map_err(|e| negotiate::canonical_json_refusal(json, &e))?;
+        .map_err(|e| negotiate::decode::canonical_json_refusal(json, &e))?;
     let mut value = openehr_its::json::to_canonical_value(&released);
     if let serde_json::Value::Object(map) = &mut value {
         map.remove("reverse_relationships");
@@ -395,19 +395,22 @@ fn respond_party(
 ) -> Response {
     match kind {
         PartyKind::Agent => {
-            negotiate::respond_rm::<Agent>(h, status, body, openehr_its::xml::LOCATABLE_ROOT)
+            negotiate::body::respond_rm::<Agent>(h, status, body, openehr_its::xml::LOCATABLE_ROOT)
         }
         PartyKind::Group => {
-            negotiate::respond_rm::<Group>(h, status, body, openehr_its::xml::LOCATABLE_ROOT)
+            negotiate::body::respond_rm::<Group>(h, status, body, openehr_its::xml::LOCATABLE_ROOT)
         }
-        PartyKind::Organisation => {
-            negotiate::respond_rm::<Organisation>(h, status, body, openehr_its::xml::LOCATABLE_ROOT)
-        }
+        PartyKind::Organisation => negotiate::body::respond_rm::<Organisation>(
+            h,
+            status,
+            body,
+            openehr_its::xml::LOCATABLE_ROOT,
+        ),
         PartyKind::Person => {
-            negotiate::respond_rm::<Person>(h, status, body, openehr_its::xml::LOCATABLE_ROOT)
+            negotiate::body::respond_rm::<Person>(h, status, body, openehr_its::xml::LOCATABLE_ROOT)
         }
         PartyKind::Role => {
-            negotiate::respond_rm::<Role>(h, status, body, openehr_its::xml::LOCATABLE_ROOT)
+            negotiate::body::respond_rm::<Role>(h, status, body, openehr_its::xml::LOCATABLE_ROOT)
         }
     }
 }
@@ -417,7 +420,7 @@ fn respond_party(
 /// version (overview §Location, §"Prefer minimal…").
 ///
 /// The body and `Preference-Applied` go through the shared
-/// [`negotiate::write_negotiated`] seam, so a demographic write honours the full
+/// [`negotiate::prefer::write_negotiated`] seam, so a demographic write honours the full
 /// `Prefer` triad and declares the preference it applied.
 fn write_party(
     kind: PartyKind,
@@ -427,7 +430,7 @@ fn write_party(
     repr_status: StatusCode,
     resp: &ServiceResponse,
 ) -> Response {
-    let mut out = negotiate::write_negotiated(
+    let mut out = negotiate::prefer::write_negotiated(
         h,
         minimal_status,
         repr_status,

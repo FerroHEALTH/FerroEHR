@@ -170,7 +170,7 @@ impl SystemManifest {
     /// Render the `OPTIONS /` response: a `200 OK` with the `Allow` header and
     /// the `Options` body, honouring `Accept`.
     ///
-    /// Content negotiation goes through `crate::overview::negotiate::respond`:
+    /// Content negotiation goes through `crate::overview::negotiate::body::respond`:
     /// JSON for `application/json`/`*/*`/absent `Accept` (the OAS constrains
     /// `Accept` to `application/json`, `system-codegen.openapi.yaml`
     /// `Accept_JSON` lines 71-78), and `406 Not Acceptable` for an
@@ -178,7 +178,7 @@ impl SystemManifest {
     /// object and has no canonical-XML shape, so XML is genuinely not offered.
     /// The `Allow` header is attached only to the successful (`200`) response.
     pub fn respond(&self, headers: &HeaderMap) -> Response {
-        let mut resp = negotiate::respond(headers, StatusCode::OK, &self.body());
+        let mut resp = negotiate::body::respond(headers, StatusCode::OK, &self.body());
         if resp.status() == StatusCode::OK {
             resp.headers_mut()
                 .insert(header::ALLOW, HeaderValue::from_static(ALLOW_METHODS));

@@ -38,7 +38,6 @@ pub(super) async fn run(
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
     let q = parts.query.as_deref();
-    let base = state.config().rest.base_path.clone();
 
     match op {
         "versioned_ehr_status_get" => {
@@ -51,10 +50,8 @@ pub(super) async fn run(
                 .backend()
                 .versioned_ehr_status_response(ehr_id)
                 .await?;
-            Ok(negotiate::read_rm::<VersionedEhrStatus>(
+            Ok(negotiate::resource::read_rm::<VersionedEhrStatus>(
                 h,
-                &base,
-                None,
                 &resp,
                 VERSIONED_EHR_STATUS_ROOT_TAG,
             ))
@@ -69,10 +66,8 @@ pub(super) async fn run(
                 .backend()
                 .ehr_status_revision_history_response(ehr_id)
                 .await?;
-            Ok(negotiate::read_rm::<RevisionHistory>(
+            Ok(negotiate::resource::read_rm::<RevisionHistory>(
                 h,
-                &base,
-                None,
                 &resp,
                 REVISION_HISTORY_ROOT_TAG,
             ))
@@ -91,10 +86,8 @@ pub(super) async fn run(
             // resource does, so it re-inlines on the same request.
             let body = super::expand_multimedia_if_requested(&state, q, body).await?;
             let resp = super::read_resp(&p.ehr_id, body);
-            Ok(negotiate::read_rm::<Version<EhrStatus>>(
+            Ok(negotiate::resource::read_rm::<Version<EhrStatus>>(
                 h,
-                &base,
-                None,
                 &resp,
                 VERSION_ROOT_TAG,
             ))
@@ -117,10 +110,8 @@ pub(super) async fn run(
             // resource does, so it re-inlines on the same request.
             let body = super::expand_multimedia_if_requested(&state, q, body).await?;
             let resp = super::read_resp(&p.ehr_id, body);
-            Ok(negotiate::read_rm::<Version<EhrStatus>>(
+            Ok(negotiate::resource::read_rm::<Version<EhrStatus>>(
                 h,
-                &base,
-                None,
                 &resp,
                 VERSION_ROOT_TAG,
             ))

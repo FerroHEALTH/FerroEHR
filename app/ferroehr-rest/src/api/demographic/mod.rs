@@ -81,32 +81,6 @@ fn is_precondition(e: &ServiceError) -> bool {
     matches!(e, ServiceError::VersionConflict(_))
 }
 
-/// Normalize an `If-Match` wire value to the bare `OBJECT_VERSION_ID` the
-/// service seam compares.
-///
-/// The overview §"`ETag` and Last-Modified" makes every resource-identifier
-/// `ETag` weak-type (`W/"…"`), and §"Deprecated headers" keeps the pre-1.1.0
-/// bare quoted form supported ("implementations MAY still support it") — so a
-/// client echoing either shape of the `ETag` this server emitted names the same
-/// version. [`crate::overview::version_id::strip_etag`] is the one place this
-/// server decodes that syntax; the demographic seam now goes through it instead
-/// of stripping quotes only (which turned the server's OWN weak `ETag` into a
-/// malformed precondition).
-fn if_match_token(raw: &str) -> String {
-    crate::overview::version_id::strip_etag(raw).to_owned()
-}
-
-/// The `If-Match` request header normalized by [`if_match_token`], or `None`
-/// when the header is absent (or not valid header text). A present-but-empty
-/// value yields `Some("")`, which the service rejects as a malformed
-/// precondition — never silently as "no precondition" (overview §"If-Match and
-/// accidental overwrites": a received `If-Match` MUST be honoured).
-fn if_match_of(h: &HeaderMap) -> Option<String> {
-    h.get("if-match")
-        .and_then(|v| v.to_str().ok())
-        .map(if_match_token)
-}
-
 /// Set the versioning response headers from a demographic [`ResourceMeta`]
 /// (whose `ehr_id` is empty — parties are not EHR-scoped): the weak `ETag`
 /// (`W/"{uid}"` — the ITS-REST overview §"`ETag` and Last-Modified" makes
@@ -125,11 +99,9 @@ fn set_versioning_headers(resp: &mut Response, meta: Option<&ResourceMeta>) {
     let Some(meta) = meta else { return };
     // The weak-form construction is shared with the EHR/definition surfaces so
     // there is one implementation of the `W/"…"` shape in the adapter.
-    crate::overview::negotiate::set_etag(resp, &meta.uid);
-    if let Some(at) = meta.last_modified
-        && let Ok(lm) = HeaderValue::from_str(&crate::overview::negotiate::http_date(at))
-    {
-        resp.headers_mut().insert(header::LAST_MODIFIED, lm);
+    crate::overview::negotiate::resource::set_etag(resp, &meta.uid);
+    if let Some(at) = meta.last_modified {
+        crate::overview::negotiate::resource::set_last_modified(resp, at);
     }
     resp.extensions_mut()
         .insert(crate::system_log::middleware::AuditObject {
@@ -233,7 +205,7 @@ fn commit_time(body: &serde_json::Value) -> Option<jiff::Timestamp> {
 /// Render a demographic read that the service returns without metadata, with
 /// the versioning headers derived from the served body ([`read_meta`]).
 fn read_versioned(h: &HeaderMap, versioned_object_uid: &str, body: &serde_json::Value) -> Response {
-    let mut out = crate::overview::negotiate::respond(h, http::StatusCode::OK, body);
+    let mut out = crate::overview::negotiate::body::respond(h, http::StatusCode::OK, body);
     set_versioning_headers(&mut out, Some(&read_meta(versioned_object_uid, body)));
     out
 }
@@ -314,7 +286,7 @@ mod tests {
     /// creation … or redirect responses".
     #[test]
     fn versioning_headers_carry_no_location() {
-        let mut resp = crate::overview::negotiate::empty(http::StatusCode::OK);
+        let mut resp = crate::overview::negotiate::body::empty(http::StatusCode::OK);
         set_versioning_headers(&mut resp, Some(&meta()));
         assert_eq!(etag(&resp), Some(format!("W/\"{UID}\"").as_str()));
         assert!(
@@ -329,11 +301,11 @@ mod tests {
     #[test]
     fn versioning_headers_emit_last_modified_when_known() {
         let at: jiff::Timestamp = "2009-07-22T19:15:56Z".parse().unwrap();
-        let mut resp = crate::overview::negotiate::empty(http::StatusCode::OK);
+        let mut resp = crate::overview::negotiate::body::empty(http::StatusCode::OK);
         set_versioning_headers(&mut resp, Some(&meta().with_last_modified(at)));
         assert_eq!(last_modified(&resp), Some("Wed, 22 Jul 2009 19:15:56 GMT"));
 
-        let mut bare = crate::overview::negotiate::empty(http::StatusCode::OK);
+        let mut bare = crate::overview::negotiate::body::empty(http::StatusCode::OK);
         set_versioning_headers(&mut bare, Some(&meta()));
         assert!(last_modified(&bare).is_none());
     }
@@ -343,7 +315,7 @@ mod tests {
     /// resource").
     #[test]
     fn write_headers_add_the_creation_location() {
-        let mut resp = crate::overview::negotiate::empty(http::StatusCode::CREATED);
+        let mut resp = crate::overview::negotiate::body::empty(http::StatusCode::CREATED);
         set_write_headers(&mut resp, BASE, "person", Some(&meta()));
         assert_eq!(etag(&resp), Some(format!("W/\"{UID}\"").as_str()));
         assert_eq!(
@@ -383,17 +355,20 @@ mod tests {
             format!("  W/\"{UID}\"  "),
         ] {
             assert_eq!(
-                if_match_of(&if_match_headers(&raw)).as_deref(),
+                crate::overview::version_id::if_match(&if_match_headers(&raw)).as_deref(),
                 Some(UID),
                 "If-Match {raw:?} must reduce to the bare OBJECT_VERSION_ID"
             );
         }
-        assert_eq!(if_match_of(&HeaderMap::new()), None);
+        assert_eq!(
+            crate::overview::version_id::if_match(&HeaderMap::new()),
+            None
+        );
         // A present-but-empty precondition is NOT "absent": it reaches the
         // service, which rejects it (overview §If-Match: a received header MUST
         // be honoured).
         assert_eq!(
-            if_match_of(&if_match_headers("\"\"")).as_deref(),
+            crate::overview::version_id::if_match(&if_match_headers("\"\"")).as_deref(),
             Some(""),
             "an empty If-Match must not read as an absent precondition"
         );
