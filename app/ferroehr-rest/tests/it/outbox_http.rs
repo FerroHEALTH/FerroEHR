@@ -53,11 +53,12 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
             .with_audit_store(AuditStore::new(pool.clone())),
     );
     let mut config = common::api_config(true);
-    let hash = common::hash_password("pw");
-    config.auth = common::basic_auth(&[
-        ("bridge", hash.as_str(), "__ferroehr.outbox"),
-        ("root", hash.as_str(), common::FULL_SCOPES),
-    ]);
+    common::with_basic_users(&mut config, &[("bridge", &[]), ("root", &[])]);
+    if let Some(basic) = config.auth.basic.as_mut() {
+        for user in basic.users.iter_mut().filter(|user| user.user == "bridge") {
+            user.scopes = vec!["__ferroehr.outbox".to_owned()];
+        }
+    }
     let app = ferroehr_rest::build_full(config, svc, None, Observability::default())
         .await
         .expect("build app");
