@@ -115,3 +115,16 @@ than its rate allows.
 
 The caller passed `[server.caller_rate]`. Retry after the `Retry-After`
 header's delay.
+
+## `archive-invalid`
+
+**Status:** `400 Bad Request`. **Title:** The archive cannot be loaded.
+
+The archive at `file_sys_loc` that `POST /admin/load` reads is malformed: the
+container (`archive.zip`, `archive.7z`), `manifest.json`, a segment or a blob
+entry is absent, truncated or does not parse as an export archive, or the
+manifest declares a logical format that names no export format. Export the
+archive again, or repair the entry; `detail` names it.
+
+With `Prefer: return=representation`: `archive`, `{"entry": …}` for the entry
+that cannot be read or `{"format": …}` for the declared format.

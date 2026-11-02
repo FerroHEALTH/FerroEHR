@@ -61,11 +61,13 @@ pub enum Kind {
     Unavailable,
     /// A caller past its request rate.
     RateLimited,
+    /// A dump/load archive the server cannot read as an export archive.
+    ArchiveInvalid,
 }
 
 impl Kind {
     /// Every kind, in the order the book lists them.
-    pub const ALL: [Self; 11] = [
+    pub const ALL: [Self; 12] = [
         Self::AqlInvalid,
         Self::QueryTimeout,
         Self::ValidationFailed,
@@ -77,6 +79,7 @@ impl Kind {
         Self::ProcessingRestricted,
         Self::Unavailable,
         Self::RateLimited,
+        Self::ArchiveInvalid,
     ];
 
     /// The slug the type URI ends in, the anchor on the book page.
@@ -94,6 +97,7 @@ impl Kind {
             Self::ProcessingRestricted => "processing-restricted",
             Self::Unavailable => "unavailable",
             Self::RateLimited => "rate-limited",
+            Self::ArchiveInvalid => "archive-invalid",
         }
     }
 
@@ -112,6 +116,7 @@ impl Kind {
             Self::ProcessingRestricted => "Processing of this record is restricted",
             Self::Unavailable => "The server is temporarily unavailable",
             Self::RateLimited => "The caller sent more requests than its rate allows",
+            Self::ArchiveInvalid => "The archive cannot be loaded",
         }
     }
 
@@ -119,7 +124,7 @@ impl Kind {
     #[must_use]
     pub const fn status(self) -> StatusCode {
         match self {
-            Self::AqlInvalid => StatusCode::BAD_REQUEST,
+            Self::AqlInvalid | Self::ArchiveInvalid => StatusCode::BAD_REQUEST,
             Self::QueryTimeout => StatusCode::REQUEST_TIMEOUT,
             Self::ValidationFailed | Self::ContentInvalid => StatusCode::UNPROCESSABLE_ENTITY,
             Self::Conflict => StatusCode::CONFLICT,
@@ -191,6 +196,22 @@ pub struct ProblemDocument {
     /// `version-conflict`, with `Prefer: return=representation`: the latest
     /// version of the resource.
     pub current_version: Option<String>,
+    /// `archive-invalid`, with `Prefer: return=representation`: the archive
+    /// entry or the declared format the load refused.
+    pub archive: Option<ArchiveFault>,
+}
+
+/// What an `archive-invalid` refusal names: the archive entry that cannot be
+/// read, or the logical format the manifest declares.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, utoipa::ToSchema)]
+pub struct ArchiveFault {
+    /// The entry inside the archive: `manifest.json`, a segment, a blob, or
+    /// the container file itself.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub entry: Option<String>,
+    /// The logical format the manifest declares, which names no export format.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub format: Option<String>,
 }
 
 /// The source byte range an AQL refusal points at.
@@ -220,6 +241,8 @@ pub enum Detail {
     Errors(Vec<Violation>),
     /// `current_version`: the latest version of the resource a `412` names.
     CurrentVersion(String),
+    /// `archive`: the entry or declared format an `archive-invalid` names.
+    Archive(ArchiveFault),
 }
 
 impl Detail {
@@ -230,6 +253,7 @@ impl Detail {
             Self::Position(_) => "position",
             Self::Errors(_) => "errors",
             Self::CurrentVersion(_) => "current_version",
+            Self::Archive(_) => "archive",
         }
     }
 
@@ -239,6 +263,7 @@ impl Detail {
             Self::Position(position) => problem.with_extension(self.name(), position),
             Self::Errors(errors) => problem.with_extension(self.name(), errors),
             Self::CurrentVersion(version) => problem.with_extension(self.name(), version),
+            Self::Archive(fault) => problem.with_extension(self.name(), fault),
         }
     }
 }

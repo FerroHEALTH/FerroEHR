@@ -10,9 +10,30 @@
 //! both types are foreign to this crate and the orphan rule forbids that impl.
 
 use ferroehr::service::error::ServiceError;
+use ferroehr::service::refusal::{ArchiveDefect, Malformed};
 use openehr_its::rest::runtime::{ApiError, ValidationError};
 
 use crate::overview::error::{internal_fault, internal_fault_caused};
+use crate::overview::problem::ArchiveFault;
+
+/// The problem type and `archive` member a malformed dump/load archive
+/// answers with, beside its `400` row in [`api_error`].
+pub(crate) fn archive_fault(e: &ServiceError) -> Option<ArchiveFault> {
+    let ServiceError::BadRequest(refusal) = e else {
+        return None;
+    };
+    match &refusal.kind {
+        Malformed::Archive(ArchiveDefect::Entry(entry)) => Some(ArchiveFault {
+            entry: Some(entry.clone()),
+            format: None,
+        }),
+        Malformed::Archive(ArchiveDefect::Format(declared)) => Some(ArchiveFault {
+            entry: None,
+            format: Some(declared.clone()),
+        }),
+        Malformed::Precondition => None,
+    }
+}
 
 /// The wire error a service failure answers.
 ///
@@ -79,7 +100,7 @@ pub(crate) fn api_error(e: ServiceError) -> ApiError {
 #[cfg(test)]
 mod tests {
     use ferroehr::service::error::{ServiceError, Violation};
-    use ferroehr::service::refusal::{Clash, Invalid, Malformed, Missing, Refusal};
+    use ferroehr::service::refusal::{ArchiveDefect, Clash, Invalid, Malformed, Missing, Refusal};
     use http::StatusCode as C;
     use openehr_base::validate::InvariantViolation;
     use openehr_its::rest::runtime::ApiError;
@@ -127,6 +148,17 @@ mod tests {
             ServiceError::BadRequest(refusal(Malformed::Precondition, with_cause)),
             C::BAD_REQUEST,
         )];
+        for defect in [
+            ArchiveDefect::Entry("manifest.json".to_owned()),
+            ArchiveDefect::Format("unknown".to_owned()),
+        ] {
+            let kind = Malformed::Archive(defect);
+            rows.push((
+                format!("{kind:?}"),
+                ServiceError::BadRequest(refusal(kind, with_cause)),
+                C::BAD_REQUEST,
+            ));
+        }
         for kind in MISSING {
             rows.push((
                 format!("{kind:?}"),
@@ -361,5 +393,36 @@ mod tests {
             api_error(ServiceError::content_invalid(carried)).to_string(),
             api_error(ServiceError::content_invalid(plain)).to_string()
         );
+    }
+
+    /// A malformed archive names its entry or declared format for the
+    /// `archive` member, and no other refusal does.
+    #[test]
+    fn only_an_archive_refusal_has_an_archive_fault() {
+        use crate::overview::problem::ArchiveFault;
+        let entry = ServiceError::BadRequest(Refusal::new(
+            Malformed::Archive(ArchiveDefect::Entry("segment-0001.json".to_owned())),
+            "m",
+        ));
+        assert_eq!(
+            super::archive_fault(&entry),
+            Some(ArchiveFault {
+                entry: Some("segment-0001.json".to_owned()),
+                format: None
+            })
+        );
+        let format = ServiceError::BadRequest(Refusal::new(
+            Malformed::Archive(ArchiveDefect::Format("x".to_owned())),
+            "m",
+        ));
+        assert_eq!(
+            super::archive_fault(&format),
+            Some(ArchiveFault {
+                entry: None,
+                format: Some("x".to_owned())
+            })
+        );
+        let precondition = ServiceError::precondition("m");
+        assert_eq!(super::archive_fault(&precondition), None);
     }
 }

@@ -659,8 +659,10 @@ async fn dump_refuses_every_unrepresentable_request_shape() {
     let _cleanup = std::fs::remove_dir_all(&dir);
 }
 
-/// A load whose location holds no readable archive is a `500` naming no
-/// server path, and a mangled manifest is a `500` naming that entry.
+/// A load whose location holds no archive is a `500` naming no server path,
+/// and a mangled manifest, the caller's own input, is an `archive-invalid`
+/// `400` naming that entry, in its `archive` member too when the caller
+/// prefers the representation.
 #[tokio::test]
 async fn load_refusals_name_no_server_path() {
     let (_pg, app) = common::app(common::api_config(true)).await;
@@ -689,10 +691,33 @@ async fn load_refusals_name_no_server_path() {
         post_json("/admin/load", &format!(r#"{{"file_sys_loc":{dir:?}}}"#)),
     )
     .await;
-    assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR, "{body}");
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    let problem: serde_json::Value = serde_json::from_str(&body).expect("a problem document");
+    assert_eq!(
+        problem["type"],
+        "https://ferroehr.eu/docs/latest/using-the-api/problems.html#archive-invalid",
+        "{body}"
+    );
     assert!(
         body.contains("manifest.json"),
         "the refusal names the entry: {body}"
+    );
+    assert!(!body.contains(&dir), "no server path in the body: {body}");
+
+    let (status, body) = send_body(
+        &app,
+        common::req("POST", common::full("/admin/load"))
+            .prefer_representation()
+            .json(format!(r#"{{"file_sys_loc":{dir:?}}}"#))
+            .build(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    let problem: serde_json::Value = serde_json::from_str(&body).expect("a problem document");
+    assert_eq!(
+        problem["archive"],
+        serde_json::json!({ "entry": "manifest.json" }),
+        "{body}"
     );
     assert!(!body.contains(&dir), "no server path in the body: {body}");
     let _cleanup = (

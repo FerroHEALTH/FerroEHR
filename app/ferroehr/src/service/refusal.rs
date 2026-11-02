@@ -120,10 +120,27 @@ pub enum Missing {
 }
 
 /// Which malformed request a `400` refuses.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Malformed {
     /// An argument-validity precondition failed.
     Precondition,
+    /// The caller's dump/load archive cannot be read as an export archive.
+    Archive(ArchiveDefect),
+}
+
+/// What a malformed dump/load archive names.
+///
+/// NOTE: no specification governs dump/load: our own design; the archive is the
+/// caller's input, so its defect is a `400` naming the entry, never a fault.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum ArchiveDefect {
+    /// The entry inside the archive (`manifest.json`, a segment, a blob, or
+    /// the container `archive.zip` / `archive.7z`) that is absent, truncated
+    /// or does not parse; never a server path.
+    Entry(String),
+    /// The logical format the manifest declares, which names no
+    /// `EXPORT_FORMAT` member.
+    Format(String),
 }
 
 /// Which state a `409` clashes with.
