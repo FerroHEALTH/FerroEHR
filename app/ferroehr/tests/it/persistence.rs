@@ -87,7 +87,7 @@ async fn migrations_apply_cleanly_and_idempotently() {
     // `_sqlx_migrations` reads as the set's table of contents.
     assert_eq!(applied("ext").await, 9);
     assert_eq!(applied("clinical").await, 29);
-    assert_eq!(applied("party").await, 20);
+    assert_eq!(applied("party").await, 21);
     assert_eq!(applied("audit").await, 21);
 
     let tables = |schema: &'static str| {
