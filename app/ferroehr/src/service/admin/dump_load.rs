@@ -42,7 +42,7 @@
 //! Creation governing creation rather than restore. The promoted `ehr` column
 //! projection is the one re-derived datum. A duplicate EHR id is reported in a
 //! `DUMP_LOAD_FAIL_REPORT` and skipped. The verbatim row insert is a storage
-//! seam ([`crate::storage::version_repo::import::insert_version_verbatim`]).
+//! seam ([`crate::storage::version_repo::import::insert_versions_verbatim`]).
 //!
 //! NOTE: `vo_attestation` rows carry their `at_committal` flag because an
 //! at-committal attestation is inside the version's signed canonical form (RM

@@ -381,9 +381,11 @@ async fn seed(svc: &Arc<FerroEhrService>, pool: &PgPool, class: BenchClass) -> C
         .expect("analyze the seeded database");
     // The partitioned parents' statistics, and `ehr`'s below the autoanalyze
     // threshold, as the server keeps them after a load (#4453).
-    ferroehr::db::parent_statistics::refresh_pool(pool)
-        .await
-        .expect("analyze the seeded partitioned parents");
+    ferroehr::db::parent_statistics::refresh_pools(
+        &ferroehr::db::domain::DomainPools::from_shared(pool),
+    )
+    .await
+    .expect("analyze the seeded partitioned parents");
     Corpus {
         entry_rm_type: entry_rm_type(&payload),
         at: jiff::Timestamp::now().to_string(),

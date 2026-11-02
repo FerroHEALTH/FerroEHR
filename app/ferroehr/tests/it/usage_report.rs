@@ -115,6 +115,13 @@ fn replica_pool(db: &testkit::TestDb) -> PgPool {
     DomainPools::from_shared(&db.pool()).clinical
 }
 
+/// The installation id the database holds, without creating one.
+async fn stored_instance(pool: &PgPool) -> Result<Option<uuid::Uuid>, sqlx::Error> {
+    sqlx::query_scalar("SELECT instance_id FROM usage_report_instance")
+        .fetch_optional(pool)
+        .await
+}
+
 /// One replica's reporter over the shared database, with its own window.
 async fn reporter(
     db: &testkit::TestDb,
@@ -676,7 +683,7 @@ async fn the_preview_writes_nothing() {
     .await
     .expect("preview");
     assert!(!preview.instance_stored);
-    let stored = ferroehr::usage_report::store::read_instance(&replica_pool(&db))
+    let stored = stored_instance(&replica_pool(&db))
         .await
         .expect("read the instance");
     assert_eq!(stored, None);
@@ -696,9 +703,7 @@ async fn nothing_is_sent_when_disabled() {
 
     let handle = start_report(&config, &pool, None).await;
     assert!(handle.is_none(), "a disabled report starts no task");
-    let stored = ferroehr::usage_report::store::read_instance(&pool)
-        .await
-        .expect("read the instance");
+    let stored = stored_instance(&pool).await.expect("read the instance");
     assert_eq!(stored, None, "a disabled report stores no instance id");
     assert_eq!(received(&server).await, Vec::<Value>::new());
 }
@@ -718,9 +723,7 @@ async fn nothing_is_sent_in_ci() {
 
     let handle = start_report(&config, &pool, ci).await;
     assert!(handle.is_none(), "a CI run starts no task");
-    let stored = ferroehr::usage_report::store::read_instance(&pool)
-        .await
-        .expect("read the instance");
+    let stored = stored_instance(&pool).await.expect("read the instance");
     assert_eq!(stored, None, "a CI run stores no instance id");
     assert_eq!(received(&server).await, Vec::<Value>::new());
 }

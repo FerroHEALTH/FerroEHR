@@ -109,7 +109,7 @@ impl Signer {
                     .ok_or(SigningError::MissingKeyPath)?;
                 // Passed as the wrapper, not as `&str`: the plaintext is
                 // produced only at the `pgp` call that needs it (see
-                // `PgpKey::from_armored`), so no un-zeroized copy exists here.
+                // `PgpKey::from_parts`), so no un-zeroized copy exists here.
                 SignerMode::Pgp(Box::new(PgpKey::load(
                     path,
                     config.key_passphrase.as_ref(),

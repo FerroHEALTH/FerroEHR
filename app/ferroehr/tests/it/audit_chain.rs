@@ -89,7 +89,10 @@ async fn a_modified_audit_record_is_detected_and_named() {
     seed(&store, 4).await;
 
     assert!(
-        store.verify_chain().await.expect("verify").is_empty(),
+        crate::fixtures::verify_chain(&pool)
+            .await
+            .expect("verify")
+            .is_empty(),
         "a freshly written trail must verify clean"
     );
 
@@ -106,7 +109,7 @@ async fn a_modified_audit_record_is_detected_and_named() {
     )
     .await;
 
-    let findings = store.verify_chain().await.expect("verify");
+    let findings = crate::fixtures::verify_chain(&pool).await.expect("verify");
     assert_eq!(
         findings.len(),
         1,
@@ -132,7 +135,7 @@ async fn a_deleted_audit_record_is_detected_in_the_middle_and_at_the_end() {
     seed(&store, 5).await;
 
     with_triggers_disabled(&pool, "DELETE FROM audit.audit_event WHERE chain_seq = 3").await;
-    let findings = store.verify_chain().await.expect("verify");
+    let findings = crate::fixtures::verify_chain(&pool).await.expect("verify");
     assert_eq!(findings.len(), 1, "one gap must be reported: {findings:?}");
     let finding = findings.first().expect("one finding");
     assert_eq!(
@@ -149,7 +152,7 @@ async fn a_deleted_audit_record_is_detected_in_the_middle_and_at_the_end() {
     // The newest record has no successor to notice its removal; the recorded
     // chain head does.
     with_triggers_disabled(&pool, "DELETE FROM audit.audit_event WHERE chain_seq = 5").await;
-    let findings = store.verify_chain().await.expect("verify");
+    let findings = crate::fixtures::verify_chain(&pool).await.expect("verify");
     assert!(
         findings
             .iter()
@@ -178,7 +181,10 @@ async fn retention_reaping_leaves_a_verifiable_trail() {
 
     assert_eq!(store.reap(30).await.expect("reap"), 2);
     assert!(
-        store.verify_chain().await.expect("verify").is_empty(),
+        crate::fixtures::verify_chain(&pool)
+            .await
+            .expect("verify")
+            .is_empty(),
         "a reaped trail must still verify: the removal is recorded"
     );
 
@@ -192,7 +198,10 @@ async fn retention_reaping_leaves_a_verifiable_trail() {
     // removal covers only what retention actually took.
     with_triggers_disabled(&pool, "DELETE FROM audit.audit_event WHERE chain_seq = 3").await;
     assert!(
-        !store.verify_chain().await.expect("verify").is_empty(),
+        !crate::fixtures::verify_chain(&pool)
+            .await
+            .expect("verify")
+            .is_empty(),
         "an unrecorded deletion after reaping must still be detected"
     );
 }
@@ -229,7 +238,10 @@ async fn the_audit_table_refuses_mutation_deletion_and_truncation() {
         .await
         .expect("stamping a record as forwarded is the one permitted change");
     assert!(
-        store.verify_chain().await.expect("verify").is_empty(),
+        crate::fixtures::verify_chain(&pool)
+            .await
+            .expect("verify")
+            .is_empty(),
         "a delivery stamp must not disturb the chain"
     );
 }
@@ -449,7 +461,7 @@ async fn the_batched_write_path_is_chained_too() {
             subject: None,
         });
     }
-    store.insert_batch(&batch).await.expect("batch insert");
+    store.insert_batch(&batch, &[]).await.expect("batch insert");
 
     let positions: Vec<i64> =
         sqlx::query("SELECT chain_seq FROM audit.audit_event ORDER BY chain_seq")
@@ -460,7 +472,12 @@ async fn the_batched_write_path_is_chained_too() {
             .map(|row| row.get::<i64, _>("chain_seq"))
             .collect();
     assert_eq!(positions, vec![1, 2, 3, 4, 5]);
-    assert!(store.verify_chain().await.expect("verify").is_empty());
+    assert!(
+        crate::fixtures::verify_chain(&pool)
+            .await
+            .expect("verify")
+            .is_empty()
+    );
 }
 
 /// The scheduled check reports a tampered record on the management health
@@ -667,7 +684,10 @@ async fn every_hashed_column_is_tamper_evident() {
     seed(&store, 3).await;
 
     assert!(
-        store.verify_chain().await.expect("verify").is_empty(),
+        crate::fixtures::verify_chain(&pool)
+            .await
+            .expect("verify")
+            .is_empty(),
         "a freshly written trail must verify clean"
     );
 
@@ -717,7 +737,12 @@ async fn a_changed_or_missing_render_policy_is_reported() {
     let pool = testdb.pool();
     let store = AuditStore::new(pool.clone());
     seed(&store, 2).await;
-    assert!(store.verify_chain().await.expect("verify").is_empty());
+    assert!(
+        crate::fixtures::verify_chain(&pool)
+            .await
+            .expect("verify")
+            .is_empty()
+    );
 
     let changed = policy_findings_after(
         &pool,
@@ -761,7 +786,12 @@ async fn a_changed_search_token_or_set_is_reported() {
     let pool = testdb.pool();
     let store = AuditStore::new(pool.clone());
     seed(&store, 2).await;
-    assert!(store.verify_chain().await.expect("verify").is_empty());
+    assert!(
+        crate::fixtures::verify_chain(&pool)
+            .await
+            .expect("verify")
+            .is_empty()
+    );
 
     let token = findings_after(
         &pool,
@@ -858,7 +888,10 @@ async fn an_incremental_run_verifies_from_the_checkpoint() {
         "the full pass finds it: {full:?}"
     );
     assert_eq!(
-        store.verify_chain().await.expect("verify").len(),
+        crate::fixtures::verify_chain(&pool)
+            .await
+            .expect("verify")
+            .len(),
         full.len()
     );
 
@@ -962,5 +995,10 @@ async fn an_incremental_run_verifies_across_a_reaped_checkpoint() {
         .expect("verify");
     assert!(after.is_empty(), "{after:?}");
     assert_eq!(checkpoint(&pool).await, Some(4));
-    assert!(store.verify_chain().await.expect("verify").is_empty());
+    assert!(
+        crate::fixtures::verify_chain(&pool)
+            .await
+            .expect("verify")
+            .is_empty()
+    );
 }

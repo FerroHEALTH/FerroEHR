@@ -23,12 +23,6 @@ pub const fn base_for(profile: crate::config::profile::SpecProfile) -> &'static 
     profile.base().spec_version()
 }
 
-/// Returns the openEHR LANG version the given profile serves.
-#[must_use]
-pub const fn lang_for(profile: crate::config::profile::SpecProfile) -> &'static str {
-    profile.lang().spec_version()
-}
-
 /// The version this server reports.
 ///
 /// `--version` and `server_version` on `GET /ferroehr/rest/status` carry it:

@@ -215,17 +215,3 @@ pub async fn count_contributions(
     .fetch_one(&mut *acquire(pool).await?)
     .await?)
 }
-
-/// The total number of an EHR's CONTRIBUTIONs (the
-/// EHR summary's `contribution_count`), unwindowed.
-///
-/// # Errors
-/// Returns [`StorageError::Database`] on a driver failure.
-pub async fn ehr_contribution_count(pool: &PgPool, ehr_id: EhrId) -> Result<i64, StorageError> {
-    Ok(
-        sqlx::query_scalar("SELECT count(*) FROM contribution WHERE ehr_id = $1")
-            .bind(ehr_id)
-            .fetch_one(&mut *acquire(pool).await?)
-            .await?,
-    )
-}

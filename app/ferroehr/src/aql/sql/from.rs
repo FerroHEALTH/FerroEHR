@@ -129,7 +129,8 @@ fn folder_items_exists(parent_node: &str, child_node: &str) -> Expr {
 }
 
 /// Bind the head row of the object `version_alias` belongs to into `q`, and
-/// return its alias.
+/// return its alias: a `JOIN` on the streaming shape, a FROM item with its
+/// predicates otherwise.
 ///
 /// One join serves two predicates that used to be two correlated `EXISTS`
 /// subqueries. The restriction gate: GDPR Art. 18(2) leaves storage as the
@@ -155,18 +156,25 @@ fn bind_head(
     version_alias: &str,
     latest: bool,
     gates: super::gates::Gates,
+    streaming: bool,
 ) -> String {
     let h = format!("{version_alias}_head");
-    q.from_as(VoHead::Table, Alias::new(h.as_str()));
-    q.and_where(col(&h, VoHead::VoId).eq(col(version_alias, VersionRow::VoId)));
-    q.and_where(col(&h, VoHead::RestrictedAt).is_null());
+    let mut cond = col(&h, VoHead::VoId)
+        .eq(col(version_alias, VersionRow::VoId))
+        .and(col(&h, VoHead::RestrictedAt).is_null());
     for predicate in gates.on_head(&h) {
-        q.and_where(predicate);
+        cond = cond.and(predicate);
     }
     if latest {
-        q.and_where(
+        cond = cond.and(
             col(version_alias, VersionRow::SysVersion).eq(col(&h, VoHead::TrunkHeadSysVersion)),
         );
+    }
+    if streaming {
+        q.join_as(JoinType::Join, VoHead::Table, Alias::new(h.as_str()), cond);
+    } else {
+        q.from_as(VoHead::Table, Alias::new(h.as_str()));
+        q.and_where(cond);
     }
     h
 }
@@ -1001,10 +1009,10 @@ impl Builder<'_> {
                         );
                         match scope {
                             VersionScope::Latest => {
-                                bind_head(sub, &voa, true, self.gates);
+                                bind_head(sub, &voa, true, self.gates, false);
                             }
                             VersionScope::All => {
-                                bind_head(sub, &voa, false, self.gates);
+                                bind_head(sub, &voa, false, self.gates, false);
                             }
                             VersionScope::Predicate(_) => {
                                 return Err(SqlError::Unsupported(
@@ -1031,10 +1039,10 @@ impl Builder<'_> {
                         );
                         match scope {
                             VersionScope::Latest => {
-                                bind_head(sub, &voa, true, self.gates);
+                                bind_head(sub, &voa, true, self.gates, false);
                             }
                             VersionScope::All => {
-                                bind_head(sub, &voa, false, self.gates);
+                                bind_head(sub, &voa, false, self.gates, false);
                             }
                             VersionScope::Predicate(_) => {
                                 return Err(SqlError::Unsupported(
@@ -1062,10 +1070,10 @@ impl Builder<'_> {
                 sub.and_where(col(&voa, VersionRow::EhrId).eq(col(e, Ehr::Id)));
                 match scope {
                     VersionScope::Latest => {
-                        bind_head(sub, &voa, true, self.gates);
+                        bind_head(sub, &voa, true, self.gates, false);
                     }
                     VersionScope::All => {
-                        bind_head(sub, &voa, false, self.gates);
+                        bind_head(sub, &voa, false, self.gates, false);
                     }
                     VersionScope::Predicate(_) => {
                         return Err(SqlError::Unsupported(
@@ -1336,7 +1344,7 @@ impl Builder<'_> {
         self.q
             .and_where(col(&vo, VersionRow::Kind).eq(Expr::val("EHR_STATUS")));
         // Current = latest trunk (master06 latest_trunk_version).
-        self.bind_head(&vo, true);
+        bind_head(&mut self.q, &vo, true, self.gates, self.streaming);
         self.q.and_where(col(&node, Node::Num).eq(Expr::val(0)));
         self.ehr_status_node.insert(ehr_sid, node.clone());
         self.ehr_status_vo.insert(ehr_sid, vo);
@@ -1369,44 +1377,19 @@ impl Builder<'_> {
         alias
     }
 
-    /// Bind the object's head row for the version spine `voa` (the restriction
-    /// gate, and `LATEST_VERSION` when `latest`): a `JOIN` on the streaming
-    /// shape, a FROM item with its predicates otherwise. See [`bind_head`].
-    fn bind_head(&mut self, voa: &str, latest: bool) -> String {
-        let h = format!("{voa}_head");
-        let mut cond = col(&h, VoHead::VoId)
-            .eq(col(voa, VersionRow::VoId))
-            .and(col(&h, VoHead::RestrictedAt).is_null());
-        for predicate in self.gates.on_head(&h) {
-            cond = cond.and(predicate);
-        }
-        if latest {
-            cond =
-                cond.and(col(voa, VersionRow::SysVersion).eq(col(&h, VoHead::TrunkHeadSysVersion)));
-        }
-        if self.streaming {
-            self.q
-                .join_as(JoinType::Join, VoHead::Table, Alias::new(h.as_str()), cond);
-        } else {
-            self.q.from_as(VoHead::Table, Alias::new(h.as_str()));
-            self.q.and_where(cond);
-        }
-        h
-    }
-
     pub(super) fn push_scope(&mut self, voa: &str, scope: &VersionScope) -> Result<(), AqlError> {
         match scope {
             VersionScope::Latest => {
                 // LATEST_VERSION = the latest TRUNK version (RM common master06
                 // latest_trunk_version; open branch tips coexist and are not
                 // "the latest version" of the container).
-                self.bind_head(voa, true);
+                bind_head(&mut self.q, voa, true, self.gates, self.streaming);
             }
             VersionScope::All => {
-                self.bind_head(voa, false);
+                bind_head(&mut self.q, voa, false, self.gates, self.streaming);
             }
             VersionScope::Predicate(p) if p.field == VersionField::TimeCommitted => {
-                self.bind_head(voa, false);
+                bind_head(&mut self.q, voa, false, self.gates, self.streaming);
                 // Version-at-time: the TRUNK version in force at the instant; a
                 // branch version live at that instant coexists by design and
                 // must not duplicate the row.
@@ -1417,7 +1400,7 @@ impl Builder<'_> {
                     .and_where(trunk_at_instant(voa, cast(Expr::val(value), "timestamptz")));
             }
             VersionScope::Predicate(p) => {
-                self.bind_head(voa, false);
+                bind_head(&mut self.q, voa, false, self.gates, self.streaming);
                 let rhs = cast(Expr::val(self.bind_value(&p.value)?), "text");
                 let lhs = version_field_expr(voa, || self.ensure_audit(voa), p.field);
                 self.q

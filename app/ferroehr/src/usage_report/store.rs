@@ -191,17 +191,6 @@ pub async fn ensure_instance_on(conn: &mut PgConnection) -> Result<Instance, Sto
     Ok(Instance { id, created: false })
 }
 
-/// Reads the installation id without creating one.
-///
-/// # Errors
-/// [`StoreError::Sqlx`] when the read fails.
-pub async fn read_instance(pool: &PgPool) -> Result<Option<Uuid>, StoreError> {
-    let id = sqlx::query_scalar("SELECT instance_id FROM usage_report_instance")
-        .fetch_optional(&mut *acquire(pool).await?)
-        .await?;
-    Ok(id)
-}
-
 /// Claims the start report: true when no start report was claimed in the last
 /// ten minutes, in which case the claim is now recorded.
 ///

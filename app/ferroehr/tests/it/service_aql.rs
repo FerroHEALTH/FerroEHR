@@ -947,7 +947,7 @@ async fn archetype_predicate_child_releases_follow_their_own_parent_release() {
 #[tokio::test]
 async fn all_versions_includes_a_branch_row() {
     use ferroehr::ids::{EhrId, VoId};
-    use ferroehr::storage::version_repo::import::{VerbatimVersionRow, insert_version_verbatim};
+    use ferroehr::storage::version_repo::import::{VerbatimVersionRow, insert_versions_verbatim};
 
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
@@ -972,9 +972,9 @@ async fn all_versions_includes_a_branch_row() {
     .await
     .expect("the trunk row's provenance");
     let mut conn = pool.acquire().await.expect("connection");
-    insert_version_verbatim(
+    insert_versions_verbatim(
         &mut conn,
-        &VerbatimVersionRow {
+        &[VerbatimVersionRow {
             vo_id: VoId(vo),
             kind: "COMPOSITION",
             ehr_id: Some(EhrId(ehr_uuid)),
@@ -994,7 +994,7 @@ async fn all_versions_includes_a_branch_row() {
             creating_system_id: &system,
             wrapped_original: None,
             body: None,
-        },
+        }],
     )
     .await
     .expect("a branch row off trunk 1");

@@ -9,8 +9,7 @@
 //! high-water mark in `event_outbox_reader`. The prune deletes a published row
 //! only once it is older than the retention window AND at or below every
 //! active reader's cursor, in one statement, so a slow or paused reader never
-//! loses rows. Which readers are active is reconciled from the configuration
-//! at boot, so a reader that was switched off cannot hold the outbox forever.
+//! loses rows.
 //!
 //! The instance is single-tenant, so a reader is exactly one row and one pass
 //! drains the whole store.
@@ -49,32 +48,6 @@ impl OutboxReader {
     pub const fn name(self) -> &'static str {
         self.0
     }
-}
-
-/// Record whether `reader` runs in this deployment, keeping its cursor.
-///
-/// Called at boot for every known reader. The row is created if missing, so a
-/// reader that never advanced still holds (or releases) the floor.
-///
-/// # Errors
-///
-/// [`OutboxError::Acquire`] when no connection can be obtained, and
-/// [`OutboxError::Database`] when the registry cannot be written.
-pub async fn reconcile(
-    pool: &PgPool,
-    reader: OutboxReader,
-    active: bool,
-) -> Result<(), OutboxError> {
-    sqlx::query(
-        "INSERT INTO event_outbox_reader (reader, active) VALUES ($1, $2) \
-         ON CONFLICT (reader) DO UPDATE \
-            SET active = EXCLUDED.active, updated_at = now()",
-    )
-    .bind(reader.name())
-    .bind(active)
-    .execute(&mut *acquire(pool).await?)
-    .await?;
-    Ok(())
 }
 
 /// The reader's cursor: the highest `seq` it has fully processed, `0` before

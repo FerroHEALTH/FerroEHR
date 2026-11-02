@@ -52,7 +52,7 @@ use crate::service::admin::integrity::{
 use crate::service::error::ServiceError;
 use crate::service::status::StatusError;
 use crate::storage::codec::decompose;
-use crate::storage::node_repo::{delete_version_nodes, read_version_canonical_tx, write_nodes};
+use crate::storage::node_repo::{delete_version_nodes, read_version_canonical, write_nodes};
 use crate::storage::version_repo::tier;
 
 /// How many rebuild records the returned report carries in full.
@@ -358,7 +358,7 @@ async fn rebuild_in_tx(
     // before they are committed. A rebuild that did not restore parity must
     // not report success, and the read is transaction-scoped precisely so it
     // sees this transaction's own uncommitted rows.
-    match read_version_canonical_tx(tx, vo_id, sys_version).await {
+    match read_version_canonical(tx, vo_id, sys_version).await {
         Ok(rebuilt) if rebuilt == body => Ok(NodeRebuildOutcome::Rebuilt { node_rows }),
         Ok(_) => Ok(NodeRebuildOutcome::Refused {
             reason: "the rows re-derived from the stored body do not reproduce it".to_owned(),

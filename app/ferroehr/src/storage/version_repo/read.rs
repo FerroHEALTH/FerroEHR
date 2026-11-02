@@ -149,10 +149,9 @@ pub struct StoredVersion {
 /// The version's `ATTESTATION`s (RM common master06 §Attestation) are folded in
 /// as aggregated jsonb columns via a `LEFT JOIN LATERAL`, so one statement
 /// carries the whole version read instead of a second round trip per versioned
-/// read (empty in the common case → `[]`). The aggregates'
-/// `ORDER BY time_committed, id` is the same commit order the per-object
-/// attestation read
-/// ([`crate::storage::version_repo::attestation::read_attestations_all`]) applies.
+/// read (empty in the common case → `[]`). The aggregates order by
+/// `time_committed, id`: attestations committed in one transaction share
+/// `now()`, so the `uuidv7()` `id` breaks ties in insertion order.
 ///
 /// They arrive split on `at_committal`, the two halves standing in different
 /// relations to `VERSION.signature`: an attestation present at the act of

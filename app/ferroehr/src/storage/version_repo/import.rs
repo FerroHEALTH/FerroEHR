@@ -192,11 +192,11 @@ pub struct VerbatimVersionRow<'a> {
     pub body: Option<&'a Value>,
 }
 
-/// Insert one `version` row verbatim from an archive record (explicit
-/// `committed_at` + preserved `template_id`) — the load side of the admin
-/// dump/load round-trip.
+/// Insert verbatim `version` rows from an archive record in ONE statement.
 ///
-/// The node rows are re-decomposed and written by the caller.
+/// The load side of the admin dump/load round-trip: explicit `committed_at`
+/// and preserved `template_id`, a whole record's versions with no round trip
+/// per version. The node rows are re-decomposed and written by the caller.
 ///
 /// This is the one version writer that does not derive the version tree position
 /// itself: the live write paths compute the next `VERSION_TREE_ID` from the
@@ -209,25 +209,7 @@ pub struct VerbatimVersionRow<'a> {
 /// system-local). The per-partition trunk-position unique index is the
 /// backstop; this check names the container, the position and the holder.
 ///
-/// # Errors
-/// Returns [`StorageError::TrunkPositionInUse`] when another creating system
-/// already holds this trunk position of the container, or
-/// [`StorageError::Database`] on a driver/insert failure.
-pub async fn insert_version_verbatim(
-    tx: &mut PgConnection,
-    row: &VerbatimVersionRow<'_>,
-) -> Result<(), StorageError> {
-    insert_versions_verbatim(tx, std::slice::from_ref(row)).await
-}
-
-/// Insert MANY verbatim `version` rows in ONE statement.
-///
-/// The archive-load batch (a whole record's versions, never a round trip per
-/// version), with the trunk-position invariant of
-/// [`insert_version_verbatim`] checked for the whole batch in one probe
-/// first.
-///
-/// The probe checks the batch against PRE-EXISTING rows; a corrupt record
+/// One probe checks the whole batch against PRE-EXISTING rows; a corrupt record
 /// that duplicates a trunk position within itself falls to the per-partition
 /// trunk-position unique-index backstop instead of the named error.
 ///

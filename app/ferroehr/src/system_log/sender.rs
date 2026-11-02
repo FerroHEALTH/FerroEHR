@@ -876,7 +876,7 @@ async fn store_whole_batch(
     store_healthy: &AtomicBool,
     feed_notify: Option<&Arc<Notify>>,
 ) {
-    let insert = || async { store.insert_batch_ending(records, ends).await };
+    let insert = || async { store.insert_batch(records, ends).await };
     #[expect(
         clippy::as_conversions,
         reason = "the batch record count widens exactly: usize is at most 64 bits on \

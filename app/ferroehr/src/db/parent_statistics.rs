@@ -115,16 +115,6 @@ pub async fn refresh_pools(pools: &DomainPools) -> Result<Refreshed, DbError> {
     Ok(refreshed)
 }
 
-/// [`refresh`] of each store through one pool that reaches both schemas.
-///
-/// # Errors
-/// [`DbError::Acquire`] when the pool yields no connection, or whatever
-/// [`refresh`] returns.
-pub async fn refresh_pool(pool: &PgPool) -> Result<Refreshed, DbError> {
-    let mut conn = acquire(pool).await?;
-    refresh(&mut conn, &STORES.map(Domain::as_str)).await
-}
-
 /// Log one refresh's outcome: what was analyzed at debug, a refused table or
 /// a failure as a warning.
 pub fn report(outcome: &Result<Refreshed, DbError>) {

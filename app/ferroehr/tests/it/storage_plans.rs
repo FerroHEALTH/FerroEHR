@@ -1513,9 +1513,11 @@ async fn a_projection_over_named_ehrs_holds_its_plan_whatever_the_archetype_stat
         ehrs.push(ehr);
     }
     analyze_as_autovacuum(&pool).await;
-    ferroehr::db::parent_statistics::refresh_pool(&pool)
-        .await
-        .expect("refresh the partitioned parents' statistics");
+    ferroehr::db::parent_statistics::refresh_pools(
+        &ferroehr::db::domain::DomainPools::from_shared(&pool),
+    )
+    .await
+    .expect("refresh the partitioned parents' statistics");
 
     let wide = format!(
         "SELECT c/uid/value, {} FROM EHR e CONTAINS COMPOSITION c \
@@ -2025,9 +2027,11 @@ async fn a_read_by_vo_id_probes_each_commit_audit_by_key() {
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
     let vo = seed_stale_parent_statistics(&svc, &pool).await;
-    ferroehr::db::parent_statistics::refresh_pool(&pool)
-        .await
-        .expect("refresh the partitioned parents' statistics");
+    ferroehr::db::parent_statistics::refresh_pools(
+        &ferroehr::db::domain::DomainPools::from_shared(&pool),
+    )
+    .await
+    .expect("refresh the partitioned parents' statistics");
 
     let walked = reads_walking_the_commit_audit(&pool, vo).await;
     assert!(
@@ -2114,9 +2118,11 @@ async fn a_population_contains_enters_through_the_archetype_index() {
             .expect("seed a composition");
     }
     analyze_as_autovacuum(&pool).await;
-    ferroehr::db::parent_statistics::refresh_pool(&pool)
-        .await
-        .expect("refresh the partitioned parents' statistics");
+    ferroehr::db::parent_statistics::refresh_pools(
+        &ferroehr::db::domain::DomainPools::from_shared(&pool),
+    )
+    .await
+    .expect("refresh the partitioned parents' statistics");
 
     let prepared = aql_sql(
         "SELECT count(c) FROM EHR e CONTAINS COMPOSITION c \

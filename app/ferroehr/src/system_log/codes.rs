@@ -111,42 +111,16 @@ pub const OBJECT_ROLE_PATIENT: &str = "1";
 pub const OBJECT_ROLE_QUERY: &str = "24";
 
 // ── ATNA rendering of the event enums ────────────────────────────────────────
-// The event model (`super::event::{EventActionCode, EventOutcome, ObjectClass}`)
-// is a pure, transport-agnostic model with no methods; the DICOM / RFC-3881
-// renderings live here, in the ATNA layer, as three focused extension traits —
-// one per enum, so every method stays meaningful for its receiver instead of
-// needing empty/`unreachable!` stubs under one umbrella trait.
+// The DICOM / RFC-3881 renderings of the event model live here, in the ATNA
+// layer, one inherent impl per enum.
 
 use super::event::{EventActionCode, EventOutcome, EventType, ObjectClass};
 
-/// ATNA (DICOM PS3.15 §A.5.1) rendering of an [`EventActionCode`].
-pub(crate) trait AtnaAction {
-    /// The `ParticipantObjectDataLifeCycle` most fitting for the action
-    /// (DICOM PS3.15 §A.5.1): create is origination, update amendment, read
-    /// and execute access or use, delete logical deletion.
-    fn data_life_cycle(&self) -> &'static str;
-    /// The `EventActionCode` (`C`, `R`, `U`, `D`, `E`).
-    fn as_code(&self) -> &'static str;
-}
-
-/// ATNA (DICOM PS3.15 §A.5.1) rendering of an [`EventOutcome`].
-pub(crate) trait AtnaOutcome {
-    /// The `EventOutcomeIndicator` (`0`, `4`, `8`).
-    fn as_code(&self) -> &'static str;
-    /// The `EventOutcomeDescription` text.
-    fn description(&self) -> &'static str;
-}
-
 /// ATNA (DICOM PS3.15 §A.5.1) rendering of an [`EventType`].
-pub(crate) trait AtnaEventType {
-    /// The `EventTypeCode` coded value.
-    fn coded(&self) -> ihe_atna::atna::message::CodedValue;
-}
-
-impl AtnaEventType for EventType {
-    /// DCM login/logout codes; ITS-REST operation ids under our own
-    /// `openEHR-ITS-REST` system name (see [`OPENEHR_ITS_REST`]).
-    fn coded(&self) -> ihe_atna::atna::message::CodedValue {
+impl EventType {
+    /// The `EventTypeCode` coded value: DCM login/logout codes, and ITS-REST
+    /// operation ids under our own `openEHR-ITS-REST` system name (see [`OPENEHR_ITS_REST`]).
+    pub(crate) fn coded(&self) -> ihe_atna::atna::message::CodedValue {
         use ihe_atna::atna::message::CodedValue;
         let fixed =
             |code: Code| CodedValue::new(code.csd_code, code.code_system, code.original_text);
@@ -158,24 +132,12 @@ impl AtnaEventType for EventType {
     }
 }
 
-/// ATNA (DICOM / RFC-3881) rendering of an [`ObjectClass`] — the `EventID`
-/// (DICOM PS3.15 §A.5.1) and the participant-object shape
-/// (`ParticipantObjectIdentification`, DICOM PS3.15 §A.5 / RFC 3881 §5.5).
-pub(crate) trait AtnaObject {
-    /// The DICOM `EventID` `(csd-code, originalText)` for this object class
-    /// under the given action (the action disambiguates direction-coded
-    /// `EventID`s: Export vs Import for extracts).
-    fn event_id(&self, action: EventActionCode) -> (&'static str, &'static str);
-    /// Whether this class carries a patient (Patient-Number) participant object.
-    fn is_patient_centric(&self) -> bool;
-    /// Whether this class carries an object-URI participant.
-    fn has_object_uri(&self) -> bool;
-    /// Whether this class renders a Search-Criteria (query) participant.
-    fn is_query(&self) -> bool;
-}
-
-impl AtnaAction for EventActionCode {
-    fn data_life_cycle(&self) -> &'static str {
+/// ATNA (DICOM PS3.15 §A.5.1) rendering of an [`EventActionCode`].
+impl EventActionCode {
+    /// The `ParticipantObjectDataLifeCycle` most fitting for the action
+    /// (DICOM PS3.15 §A.5.1): create is origination, update amendment, read
+    /// and execute access or use, delete logical deletion.
+    pub(crate) fn data_life_cycle(self) -> &'static str {
         match self {
             EventActionCode::Create => atna::LIFE_CYCLE_ORIGINATION,
             EventActionCode::Update => atna::LIFE_CYCLE_AMENDMENT,
@@ -184,7 +146,8 @@ impl AtnaAction for EventActionCode {
         }
     }
 
-    fn as_code(&self) -> &'static str {
+    /// The `EventActionCode` (`C`, `R`, `U`, `D`, `E`).
+    pub(crate) fn as_code(self) -> &'static str {
         match self {
             EventActionCode::Create => "C",
             EventActionCode::Read => "R",
@@ -195,8 +158,10 @@ impl AtnaAction for EventActionCode {
     }
 }
 
-impl AtnaOutcome for EventOutcome {
-    fn as_code(&self) -> &'static str {
+/// ATNA (DICOM PS3.15 §A.5.1) rendering of an [`EventOutcome`].
+impl EventOutcome {
+    /// The `EventOutcomeIndicator` (`0`, `4`, `8`).
+    pub(crate) fn as_code(self) -> &'static str {
         match self {
             EventOutcome::Success => "0",
             EventOutcome::MinorFailure => "4",
@@ -204,7 +169,8 @@ impl AtnaOutcome for EventOutcome {
         }
     }
 
-    fn description(&self) -> &'static str {
+    /// The `EventOutcomeDescription` text.
+    pub(crate) fn description(self) -> &'static str {
         match self {
             EventOutcome::Success => "Operation performed successfully",
             EventOutcome::MinorFailure | EventOutcome::SeriousFailure => "Operation failed",
@@ -212,14 +178,17 @@ impl AtnaOutcome for EventOutcome {
     }
 }
 
-impl AtnaObject for ObjectClass {
+/// ATNA (DICOM / RFC-3881) rendering of an [`ObjectClass`]: the `EventID`
+/// (DICOM PS3.15 §A.5.1) and the participant-object shape
+/// (`ParticipantObjectIdentification`, DICOM PS3.15 §A.5 / RFC 3881 §5.5).
+impl ObjectClass {
     /// The DICOM `EventID` `(csd-code, originalText)` for this class
     /// (DICOM PS3.15 §A.5.1). Classes with a dedicated DICOM `EventID` use it
     /// (Query 110112, Export 110106 / Import 110107, User Authentication
     /// 110114); the clinical-record classes share Patient Record (110110)
     /// with a per-resource `originalText` — the varied-display pattern the
     /// DICOM `EventID` coding permits.
-    fn event_id(&self, action: EventActionCode) -> (&'static str, &'static str) {
+    pub(crate) fn event_id(self, action: EventActionCode) -> (&'static str, &'static str) {
         match self {
             ObjectClass::Ehr => (EVENT_PATIENT_RECORD_CODE, "Patient Record"),
             ObjectClass::Composition => (EVENT_PATIENT_RECORD_CODE, "composition"),
@@ -258,7 +227,7 @@ impl AtnaObject for ObjectClass {
     }
 
     /// Whether this class carries a patient (Patient-Number) participant object.
-    fn is_patient_centric(&self) -> bool {
+    pub(crate) fn is_patient_centric(self) -> bool {
         matches!(
             self,
             ObjectClass::Ehr
@@ -275,7 +244,7 @@ impl AtnaObject for ObjectClass {
     /// An EHR-class record names its object when it has one, as the FHIR
     /// `AuditEvent` of the same record does: the held composition of an EHDS
     /// Art. 3(3) access delay (`access-delay:<vo>`), or the EHR a read served.
-    fn has_object_uri(&self) -> bool {
+    pub(crate) fn has_object_uri(self) -> bool {
         matches!(
             self,
             ObjectClass::Ehr
@@ -289,7 +258,7 @@ impl AtnaObject for ObjectClass {
     }
 
     /// Whether this class renders a Search-Criteria (query) participant.
-    fn is_query(&self) -> bool {
+    pub(crate) fn is_query(self) -> bool {
         matches!(self, ObjectClass::Query)
     }
 }

@@ -651,7 +651,7 @@ async fn the_append_only_versioning_model_behaves() {
 async fn a_trunk_position_is_unique_across_creating_systems_but_a_branch_id_is_not() {
     use ferroehr::ids::{EhrId, VoId};
     use ferroehr::storage::error::StorageError;
-    use ferroehr::storage::version_repo::import::{VerbatimVersionRow, insert_version_verbatim};
+    use ferroehr::storage::version_repo::import::{VerbatimVersionRow, insert_versions_verbatim};
 
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
@@ -692,7 +692,7 @@ async fn a_trunk_position_is_unique_across_creating_systems_but_a_branch_id_is_n
 
     // A second creating system claiming the SAME trunk position is refused,
     // and the refusal names the container, the position and the holder.
-    let clash = insert_version_verbatim(&mut conn, &row(1, 0, 0, "sysB.example.org", 2)).await;
+    let clash = insert_versions_verbatim(&mut conn, &[row(1, 0, 0, "sysB.example.org", 2)]).await;
     match clash {
         Err(StorageError::TrunkPositionInUse {
             vo_id,
@@ -727,10 +727,10 @@ async fn a_trunk_position_is_unique_across_creating_systems_but_a_branch_id_is_n
 
     // A BRANCH id, however, may repeat across creating systems: `1.1.1` minted
     // by two different systems off trunk node 1 are two distinct versions.
-    insert_version_verbatim(&mut conn, &row(1, 1, 1, "sysB.example.org", 3))
+    insert_versions_verbatim(&mut conn, &[row(1, 1, 1, "sysB.example.org", 3)])
         .await
         .expect("a foreign branch off trunk 1");
-    insert_version_verbatim(&mut conn, &row(1, 1, 1, "sysC.example.org", 4))
+    insert_versions_verbatim(&mut conn, &[row(1, 1, 1, "sysC.example.org", 4)])
         .await
         .expect("another system's branch with the SAME branch id is a distinct version");
     let branches: i64 =
@@ -766,7 +766,7 @@ async fn a_trunk_position_is_unique_across_creating_systems_but_a_branch_id_is_n
 #[tokio::test]
 async fn an_as_of_read_resolves_along_the_trunk() {
     use ferroehr::ids::{EhrId, VoId};
-    use ferroehr::storage::version_repo::import::{VerbatimVersionRow, insert_version_verbatim};
+    use ferroehr::storage::version_repo::import::{VerbatimVersionRow, insert_versions_verbatim};
     use ferroehr::storage::version_repo::read::version_at;
 
     let db = testkit::db().await.expect("testkit database");
@@ -804,7 +804,7 @@ async fn an_as_of_read_resolves_along_the_trunk() {
 
     // The seeded container's trunk version 1 was committed at `now()`; a branch
     // tip live at the same instant does not displace it.
-    insert_version_verbatim(&mut conn, &branch_row(VoId(vo), 2))
+    insert_versions_verbatim(&mut conn, &[branch_row(VoId(vo), 2)])
         .await
         .expect("branch beside the trunk");
     // The server clock, not the test process's: `committed_at` is stamped by
@@ -829,7 +829,7 @@ async fn an_as_of_read_resolves_along_the_trunk() {
     // A container with branches and no trunk version has no as-of answer — the
     // copy-closure rule says such a container should not exist.
     let branch_only = VoId(Uuid::now_v7());
-    insert_version_verbatim(&mut conn, &branch_row(branch_only, 1))
+    insert_versions_verbatim(&mut conn, &[branch_row(branch_only, 1)])
         .await
         .expect("a branch-only container");
     assert!(
@@ -1242,7 +1242,8 @@ async fn materialized_body_matches_node_reassembly_on_a_real_commit() {
     let body: Value =
         serde_json::from_str(&body.expect("a content-bearing version materializes its body"))
             .expect("the stored body text parses");
-    let reassembled = read_version_canonical(&pool, ferroehr::ids::VoId(vo), 1)
+    let mut conn = pool.acquire().await.expect("a connection");
+    let reassembled = read_version_canonical(&mut conn, ferroehr::ids::VoId(vo), 1)
         .await
         .expect("node reassembly");
     assert_eq!(

@@ -216,13 +216,6 @@ impl PrivacyPolicy {
         })
     }
 
-    /// The active identifier rules, in registry order — what the boot log
-    /// states so an operator can see which jurisdictions are covered.
-    #[must_use]
-    pub fn active_rules(&self) -> &[&'static IdentifierRule] {
-        &self.rules
-    }
-
     /// The pseudonym namespaces this deployment declared, in configuration
     /// order; the first is the one the server mints into (#3232).
     #[must_use]
@@ -246,12 +239,6 @@ impl PrivacyPolicy {
     #[must_use]
     pub fn admits_subject(&self, namespace: &str, id: &str) -> bool {
         self.subject_namespaces.iter().any(|n| n == namespace) && is_uuid(id)
-    }
-
-    /// Whether clinical content may carry a named or identified party proxy.
-    #[must_use]
-    pub fn identified_parties_allowed(&self) -> bool {
-        self.allow_identified_parties
     }
 
     /// The scanner's mode, or `None` when no scanner is installed (the
@@ -515,4 +502,42 @@ fn relationship_is_self(relationship: Option<&Value>) -> bool {
 fn is_uuid(value: &str) -> bool {
     uuid::Uuid::try_parse(value)
         .is_ok_and(|parsed| parsed.hyphenated().to_string().eq_ignore_ascii_case(value))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{PrivacyPolicy, detect};
+    use crate::privacy::config::{IdentifierScanConfig, PrivacyConfig};
+
+    /// The shipped default keeps identified parties out and scans for every
+    /// rule the build carries.
+    #[test]
+    fn the_configuration_default_admits_no_identified_party_and_every_rule() {
+        let compiled = PrivacyPolicy::compile(&PrivacyConfig::default()).expect("compiles");
+        assert!(!compiled.allow_identified_parties);
+        assert_eq!(compiled.rules.len(), detect::built_in_rules().len());
+    }
+
+    #[test]
+    fn narrowing_the_rule_list_keeps_the_named_rule_only() {
+        let nl_only = PrivacyPolicy::compile(&PrivacyConfig {
+            identifier_scan: IdentifierScanConfig {
+                rules: vec!["nl-bsn".to_owned()],
+                ..IdentifierScanConfig::default()
+            },
+            ..PrivacyConfig::default()
+        })
+        .expect("compiles");
+        assert_eq!(nl_only.rules.len(), 1);
+    }
+
+    #[test]
+    fn the_default_policy_carries_every_shipped_rule() {
+        let configured = PrivacyPolicy::compile(&PrivacyConfig::default()).expect("compiles");
+        assert_eq!(
+            PrivacyPolicy::default().rules.len(),
+            configured.rules.len(),
+            "the default carries every shipped rule, as the default configuration does"
+        );
+    }
 }

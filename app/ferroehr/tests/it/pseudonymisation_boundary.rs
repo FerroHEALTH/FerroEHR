@@ -1901,8 +1901,7 @@ async fn the_split_clinical_role_writes_and_reads_the_audit_trail() {
         .mark_fhir_feed_delivered(seq)
         .await
         .expect("a delivery stamp is the one sanctioned mutation");
-    store
-        .verify_chain()
+    crate::fixtures::verify_chain(&clinical)
         .await
         .expect("the clinical role verifies the chain");
 

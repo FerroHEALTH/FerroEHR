@@ -217,32 +217,6 @@ pub async fn ehr_subject_columns(
     .await?)
 }
 
-/// The `ehr` row header `(system_id, time_created)`, or `None` when the EHR
-/// does not exist.
-///
-/// `system_id` is the stored per-EHR value (immutable, arch-overview master06
-/// §System Identity), never the live config.
-///
-/// # Errors
-/// Returns [`StorageError::Database`] on a driver failure.
-pub async fn ehr_header(
-    pool: &PgPool,
-    ehr_id: EhrId,
-) -> Result<Option<(String, jiff::Timestamp)>, StorageError> {
-    let Some(row) = sqlx::query("SELECT system_id, time_created FROM ehr WHERE id = $1")
-        .bind(ehr_id)
-        .fetch_optional(&mut *acquire(pool).await?)
-        .await?
-    else {
-        return Ok(None);
-    };
-    let system_id: String = row.try_get("system_id")?;
-    let time_created = row
-        .try_get::<jiff_sqlx::Timestamp, _>("time_created")?
-        .to_jiff();
-    Ok(Some((system_id, time_created)))
-}
-
 /// Reads the whole `GET /ehr/{ehr_id}` representation in ONE statement.
 ///
 /// Returns the EHR header, the current `EHR_STATUS` version identity, the
