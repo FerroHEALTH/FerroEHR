@@ -82,9 +82,12 @@ crashes, the bug is in the parser until proven otherwise. Specifically:
   reach it.
 - **A scheduled-only lane rots silently.** This one sat broken for nights
   because nothing on the PR path compiled the harnesses. The `build` job exists
-  for exactly that and must keep firing on changes to `fuzz/**` or any fuzzed
-  crate — a target that stops compiling because a crate renamed a function is
-  the most likely failure, and the campaign is far too late to learn it.
+  for exactly that: ci.yml calls it on a pull request and in the merge queue
+  whenever the change reaches `fuzz/` or any crate in the path-dependency
+  closure of `fuzz/Cargo.toml` (`scripts/lib/change-lanes.sh` derives the set,
+  #4740), and `conclusion` counts it. A target that stops compiling because a
+  crate renamed a function is the most likely failure, and the campaign is far
+  too late to learn it.
 
 ## Adding a target
 
@@ -102,7 +105,7 @@ crashes, the bug is in the parser until proven otherwise. Specifically:
 
 | Property | Check |
 |---|---|
-| The harnesses compile | the `build` job, on every PR touching `fuzz/**` or a fuzzed crate |
+| The harnesses compile | the `build` job of fuzz.yml, called by ci.yml on every pull request and merge-queue entry that reaches `fuzz/` or a crate the harnesses build, and gated by `conclusion` |
 | Crashes surface | the nightly campaign; a crash uploads its artifact and fails the job |
 | Corpus accumulates | the Actions cache, keyed per target |
 | Harness purity (no I/O, deterministic) | **review-enforced** — no tool can judge it |

@@ -179,6 +179,7 @@ jobs:
       vex: ${{ steps.filter.outputs.vex }}
       conformance: ${{ steps.filter.outputs.conformance }}
       msrv: ${{ steps.filter.outputs.msrv }}
+      fuzz: ${{ steps.filter.outputs.fuzz }}
       queue_verified: ${{ steps.push.outputs.queue_verified }}
       cache_refresh: ${{ steps.push.outputs.cache_refresh }}
       test_shards: ${{ steps.shards.outputs.test_list }}
@@ -238,6 +239,7 @@ jobs:
               echo "vex=true"
               echo "cache=true"
               echo "conformance=true"
+              echo "fuzz=true"
             } >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -2989,6 +2991,18 @@ jobs:
     with:
       server-binary-artifact: ui-e2e-server-binary
 
+  # The fuzz harnesses still compile (#4740): fuzz.yml's `build`, on a pull
+  # request and in the merge queue whenever the change reaches fuzz/ or a crate
+  # the harnesses build, and counted by `conclusion`. A push the queue already
+  # passed does not build them again.
+  harnesses:
+    name: harnesses
+    needs: changes
+    if: needs.changes.outputs.fuzz == 'true' && needs.changes.outputs.queue_verified != 'true'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/fuzz.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
+
   veredictum-action:
     name: veredictum-action
     needs: changes
@@ -3081,6 +3095,7 @@ jobs:
       - quickstart-config
       - ferropix-pins
       - veredictum-action
+      - harnesses
       - conformance
       - crate-version
       - chart-version
