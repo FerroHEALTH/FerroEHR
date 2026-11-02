@@ -45,6 +45,7 @@ use crate::overview::version_id::{
     object_id_uuid, parse_ehr_id, parse_version_uid, require_if_match,
 };
 use crate::state::AppState;
+use crate::system_log::middleware::AuditObject;
 use crate::{negotiate, params};
 
 /// The representations a COMPOSITION endpoint negotiates: canonical JSON/XML
@@ -456,7 +457,11 @@ async fn delete(state: AppState, parts: RequestParts) -> Result<Response, RestEr
     }
 }
 
-/// `composition_tags_get` — serve the item tags of a COMPOSITION.
+/// `composition_tags_get`: serve the item tags of a COMPOSITION.
+///
+/// The response records the tagged COMPOSITION's ids, from which the ABAC
+/// post-check reads its patient and content as it does for the COMPOSITION
+/// read itself.
 ///
 /// # Errors
 /// The parameter and read rejections the operation declares.
@@ -468,15 +473,18 @@ async fn tags_get(state: AppState, parts: RequestParts) -> Result<Response, Rest
         CompositionTagsGetParams::PARAMS,
     )?;
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
+    let object = AuditObject {
+        ehr_id: Some(ehr_id.to_string()),
+        uid: Some(p.uid_based_id.clone()),
+        ..AuditObject::default()
+    };
     let tags = state
         .backend()
         .target_tags_get(ehr_id, p.uid_based_id, "COMPOSITION")
         .await?;
-    Ok(negotiate::respond(
-        h,
-        ok,
-        &openehr_its::json::to_canonical_value(&tags),
-    ))
+    let mut resp = negotiate::respond(h, ok, &openehr_its::json::to_canonical_value(&tags));
+    resp.extensions_mut().insert(object);
+    Ok(resp)
 }
 
 /// `composition_tags_update` — replace the item tags of a COMPOSITION.
