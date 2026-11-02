@@ -59,6 +59,7 @@ mod definition_archetype_http;
 mod definition_conversion_http;
 mod demographic_ehr_join_http;
 mod demographic_http;
+mod demographic_refusals_http;
 mod demographic_tags_http;
 mod demographic_template_http;
 mod directory_http;
