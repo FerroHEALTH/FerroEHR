@@ -396,6 +396,17 @@ const STORED_NAME: &str = "org.example.test::ehr_access_population";
 /// The router over [`EHR_ID`] (restricted to `user:bob`) and [`OPEN_EHR_ID`]
 /// (default-open), with Basic auth on.
 async fn query_app() -> (testkit::TestDb, Router) {
+    query_app_with(&json!({
+        "_type": "FERROEHR_ACCESS_CONTROL_V1",
+        "default_access": "restricted",
+        "access_list": [ { "principal": "user:bob", "access": "full" } ]
+    }))
+    .await
+}
+
+/// The router over [`EHR_ID`] (carrying `scheme`) and [`OPEN_EHR_ID`]
+/// (default-open), with Basic auth on.
+async fn query_app_with(scheme: &Value) -> (testkit::TestDb, Router) {
     let (pg, pool) = common::migrated_pool().await;
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
     let ehr_id: ferroehr::ids::EhrId = EHR_ID.parse().expect("valid ehr uuid");
@@ -406,16 +417,7 @@ async fn query_app() -> (testkit::TestDb, Router) {
     Box::pin(svc.create_ehr_with_id_meta(open_id, WriteRequest::new(None)))
         .await
         .expect("create open ehr");
-    seed_scheme(
-        &svc,
-        ehr_id,
-        &json!({
-            "_type": "FERROEHR_ACCESS_CONTROL_V1",
-            "default_access": "restricted",
-            "access_list": [ { "principal": "user:bob", "access": "full" } ]
-        }),
-    )
-    .await;
+    seed_scheme(&svc, ehr_id, scheme).await;
     let app = ferroehr_rest::build_full(
         rest_config(true),
         Arc::new(svc),
@@ -614,5 +616,64 @@ async fn a_restricted_default_holds_with_rbac_disabled() {
     assert_eq!(
         ehr_ids_of(&app, aql(&by_where, "root")).await,
         vec![EHR_ID.to_owned()]
+    );
+}
+
+/// Settings that carry the scheme's `_type` but do not parse hold the EHR
+/// closed: a read and an export of it are refused with `500`, and no query
+/// reaches it, for the caller its access list would have named too. Before,
+/// the EHR was served as if it carried no settings.
+#[tokio::test]
+async fn unreadable_settings_hold_the_ehr_closed() {
+    let (_pg, app) = query_app_with(&json!({
+        "_type": "FERROEHR_ACCESS_CONTROL_V1",
+        "default_access": "bogus",
+        "access_list": [ { "principal": "user:bob", "access": "full" } ]
+    }))
+    .await;
+
+    for user in ["bob", "carol"] {
+        assert_eq!(
+            status(
+                &app,
+                req("GET", &format!("/ehr/{EHR_ID}"), Some(&basic(user)), "")
+            )
+            .await,
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "a read of the EHR is refused to {user}"
+        );
+        assert_eq!(
+            status(
+                &app,
+                req(
+                    "GET",
+                    &format!("/message/export/{EHR_ID}"),
+                    Some(&basic(user)),
+                    ""
+                )
+            )
+            .await,
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "an export of the EHR is refused to {user}"
+        );
+        assert_eq!(
+            ehr_ids_of(&app, aql("SELECT e/ehr_id/value FROM EHR e", user)).await,
+            vec![OPEN_EHR_ID.to_owned()],
+            "the population query serves {user} the readable EHR only"
+        );
+    }
+    assert_eq!(
+        status(
+            &app,
+            req(
+                "GET",
+                &format!("/ehr/{OPEN_EHR_ID}"),
+                Some(&basic("carol")),
+                ""
+            )
+        )
+        .await,
+        StatusCode::OK,
+        "the EHR beside it is served as before"
     );
 }

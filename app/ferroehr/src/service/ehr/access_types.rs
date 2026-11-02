@@ -236,22 +236,54 @@ pub struct EhrAccessSettings {
     pub privacy: Privacy,
 }
 
+/// Settings that carry this scheme's `_type` but do not parse as it.
+///
+/// A privacy control that cannot be read is never read as permissive: the
+/// caller refuses the EHR or holds it at [`EhrAccessSettings::held_closed`].
+#[derive(Debug, thiserror::Error)]
+#[error(
+    "the EHR_ACCESS settings carry the {EHR_ACCESS_CONTROL_V1_SCHEME} scheme but do not parse as it"
+)]
+pub struct UnreadableSettings(#[source] serde_json::Error);
+
 impl EhrAccessSettings {
     /// Parse the settings of the `ferroehr.access_control.v1` scheme from an
-    /// `EHR_ACCESS` canonical-JSON object. Returns `None` when there are no
-    /// settings, they belong to another scheme, or they cannot be parsed as
-    /// this scheme — all of which the caller treats as **default-open** (the
-    /// gateway clause is dead weight without a scheme it understands — RM
-    /// `org.openehr.rm.ehr.ehr_access.adoc`).
-    #[must_use]
-    pub fn from_ehr_access(access: &Value) -> Option<Self> {
-        let settings = access.get("settings")?;
+    /// `EHR_ACCESS` canonical-JSON object. `None` when there are no settings
+    /// or they belong to another scheme, which the caller treats as
+    /// **default-open** (the gateway clause is dead weight without a scheme it
+    /// understands — RM `org.openehr.rm.ehr.ehr_access.adoc`).
+    ///
+    /// # Errors
+    /// [`UnreadableSettings`] when the settings carry this scheme's `_type`
+    /// but do not parse as it; the caller must fail closed.
+    pub fn from_ehr_access(access: &Value) -> Result<Option<Self>, UnreadableSettings> {
+        let Some(settings) = access.get("settings") else {
+            return Ok(None);
+        };
         let is_our_scheme =
             settings.get("_type").and_then(Value::as_str) == Some(EHR_ACCESS_CONTROL_V1_TYPE);
         if !is_our_scheme {
-            return None;
+            return Ok(None);
         }
-        serde_json::from_value(settings.clone()).ok()
+        serde_json::from_value(settings.clone())
+            .map(Some)
+            .map_err(UnreadableSettings)
+    }
+
+    /// The settings an EHR is held at when its own cannot be read: restricted,
+    /// with no principal on the access list and every composition at the
+    /// highest privacy level, so no caller reads it.
+    #[must_use]
+    pub fn held_closed() -> Self {
+        Self {
+            gate_keeper: None,
+            default_access: DefaultAccess::Restricted,
+            access_list: Vec::new(),
+            privacy: Privacy {
+                default_level: i64::MAX,
+                composition_overrides: Vec::new(),
+            },
+        }
     }
 
     /// The first access-list entry matching the given principal:
@@ -309,7 +341,9 @@ mod tests {
                 }
             }
         });
-        let s = EhrAccessSettings::from_ehr_access(&access).expect("our scheme");
+        let s = EhrAccessSettings::from_ehr_access(&access)
+            .expect("the settings parse")
+            .expect("our scheme");
         assert_eq!(s.gate_keeper.as_deref(), Some("user:alice"));
         assert_eq!(s.default_access, DefaultAccess::Restricted);
         assert_eq!(s.access_list.len(), 2);
@@ -345,7 +379,9 @@ mod tests {
                 }
             }
         });
-        let s = EhrAccessSettings::from_ehr_access(&access).expect("our scheme");
+        let s = EhrAccessSettings::from_ehr_access(&access)
+            .expect("the settings parse")
+            .expect("our scheme");
         assert_eq!(s.default_access, DefaultAccess::Restricted);
         assert_eq!(s.privacy.composition_overrides.len(), 1);
         assert_eq!(s.privacy.level_for(held.parse().expect("a uuid")), 3);
@@ -376,14 +412,35 @@ mod tests {
 
     #[test]
     fn absent_settings_and_foreign_scheme_are_none() {
-        assert!(EhrAccessSettings::from_ehr_access(&json!({ "_type": "EHR_ACCESS" })).is_none());
-        assert!(
+        assert!(matches!(
+            EhrAccessSettings::from_ehr_access(&json!({ "_type": "EHR_ACCESS" })),
+            Ok(None)
+        ));
+        assert!(matches!(
             EhrAccessSettings::from_ehr_access(&json!({
                 "_type": "EHR_ACCESS",
                 "settings": { "_type": "SOME_OTHER_SCHEME" }
-            }))
-            .is_none()
-        );
+            })),
+            Ok(None)
+        ));
+    }
+
+    /// Settings of this scheme that do not parse are an error, never the
+    /// absent settings a default-open EHR has.
+    #[test]
+    fn unreadable_settings_of_this_scheme_are_an_error() {
+        let access = json!({
+            "_type": "EHR_ACCESS",
+            "settings": { "_type": EHR_ACCESS_CONTROL_V1_TYPE, "default_access": "bogus" }
+        });
+        assert!(matches!(
+            EhrAccessSettings::from_ehr_access(&access),
+            Err(UnreadableSettings(_))
+        ));
+        let held = EhrAccessSettings::held_closed();
+        assert_eq!(held.default_access, DefaultAccess::Restricted);
+        assert_eq!(held.access_list, Vec::new());
+        assert_eq!(held.privacy.default_level, i64::MAX);
     }
 
     #[test]
