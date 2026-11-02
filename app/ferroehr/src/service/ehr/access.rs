@@ -33,10 +33,10 @@ use serde_json::Value;
 use sqlx::PgConnection;
 
 use crate::service::FerroEhrService;
+use crate::storage::version_repo::read::VersionAt;
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
 use crate::versioning::change::{Change, commit_contribution};
-use crate::versioning::read::read_current;
 
 impl FerroEhrService {
     /// Drop the cached `EHR_ACCESS` settings for `ehr_id`, called after any
@@ -111,7 +111,10 @@ impl FerroEhrService {
         let Some((vo_id, _)) = self.current_vo(ehr_id, Kind::EhrAccess).await? else {
             return Ok(None);
         };
-        let Some(read) = read_current(&self.pool, self.spec_profile, vo_id).await? else {
+        let Some(read) =
+            crate::versioning::read::read(&self.pool, self.spec_profile, VersionAt::Current(vo_id))
+                .await?
+        else {
             return Ok(None);
         };
         Ok(EhrAccessSettings::from_ehr_access(&read.canonical))

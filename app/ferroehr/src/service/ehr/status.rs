@@ -29,11 +29,11 @@ use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
 use crate::service::version_update::WriteRequest;
 use crate::service::write::{Mode, Resolved};
+use crate::storage::version_repo::read::VersionAt;
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
 use crate::versioning::change::{Change, Write, ensure_preceding, lock_current, tip_uid};
 use crate::versioning::object_version_id::{TreeId, VersionIdError, parse_tree_id};
-use crate::versioning::read::{read_current, read_version, version_at};
 use crate::versioning::wire::{revision_history, version_envelope, versioned_object};
 
 use crate::service::datetime::parse_at_time;
@@ -54,21 +54,18 @@ impl FerroEhrService {
         // (an EHR holds exactly one EHR_STATUS container — RM ehr `ehr.adoc`).
         let read = match at {
             Some(at) => {
-                crate::versioning::read::version_at_of_kind(
+                crate::versioning::read::read(
                     &self.pool,
                     self.spec_profile,
-                    ehr_id,
-                    Kind::EhrStatus,
-                    at,
+                    VersionAt::InstantOfKind(ehr_id, Kind::EhrStatus.as_str(), at),
                 )
                 .await?
             }
             None => {
-                crate::versioning::read::read_current_of_kind(
+                crate::versioning::read::read(
                     &self.pool,
                     self.spec_profile,
-                    ehr_id,
-                    Kind::EhrStatus,
+                    VersionAt::CurrentOfKind(ehr_id, Kind::EhrStatus.as_str()),
                 )
                 .await?
             }
@@ -92,15 +89,19 @@ impl FerroEhrService {
         vo_id: VoId,
         version: TreeId,
     ) -> Result<ServiceResponse, ServiceError> {
-        let read = read_version(&self.pool, self.spec_profile, vo_id, version)
-            .await?
-            .filter(|r| r.ehr_id == Some(ehr_id) && r.kind == Kind::EhrStatus)
-            .ok_or_else(|| {
-                ServiceError::not_found(
-                    Missing::ObjectVersion,
-                    format!("EHR_STATUS {vo_id} v{version}"),
-                )
-            })?;
+        let read = crate::versioning::read::read(
+            &self.pool,
+            self.spec_profile,
+            VersionAt::Tree(vo_id, version),
+        )
+        .await?
+        .filter(|r| r.ehr_id == Some(ehr_id) && r.kind == Kind::EhrStatus)
+        .ok_or_else(|| {
+            ServiceError::not_found(
+                Missing::ObjectVersion,
+                format!("EHR_STATUS {vo_id} v{version}"),
+            )
+        })?;
         Ok(self.version_response(ehr_id, vo_id, read)?)
     }
 
@@ -174,15 +175,19 @@ impl FerroEhrService {
         vo_id: VoId,
         version: TreeId,
     ) -> Result<Value, ServiceError> {
-        let read = read_version(&self.pool, self.spec_profile, vo_id, version)
-            .await?
-            .filter(|r| r.ehr_id == Some(ehr_id) && r.kind == Kind::EhrStatus)
-            .ok_or_else(|| {
-                ServiceError::not_found(
-                    Missing::ObjectVersion,
-                    format!("EHR_STATUS {vo_id} v{version}"),
-                )
-            })?;
+        let read = crate::versioning::read::read(
+            &self.pool,
+            self.spec_profile,
+            VersionAt::Tree(vo_id, version),
+        )
+        .await?
+        .filter(|r| r.ehr_id == Some(ehr_id) && r.kind == Kind::EhrStatus)
+        .ok_or_else(|| {
+            ServiceError::not_found(
+                Missing::ObjectVersion,
+                format!("EHR_STATUS {vo_id} v{version}"),
+            )
+        })?;
         version_envelope(&read, self.signer())
     }
 
@@ -205,8 +210,22 @@ impl FerroEhrService {
                 ServiceError::not_found(Missing::Ehr, format!("EHR_STATUS for EHR {ehr_id}"))
             })?;
         let read = match at {
-            Some(at) => version_at(&self.pool, self.spec_profile, vo_id, at).await?,
-            None => read_current(&self.pool, self.spec_profile, vo_id).await?,
+            Some(at) => {
+                crate::versioning::read::read(
+                    &self.pool,
+                    self.spec_profile,
+                    VersionAt::Instant(vo_id, at),
+                )
+                .await?
+            }
+            None => {
+                crate::versioning::read::read(
+                    &self.pool,
+                    self.spec_profile,
+                    VersionAt::Current(vo_id),
+                )
+                .await?
+            }
         }
         .ok_or_else(|| {
             ServiceError::not_found(

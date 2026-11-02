@@ -30,13 +30,13 @@ use crate::service::refusal::Missing;
 use crate::service::response::{RawServiceResponse, ReadBody, ResourceMeta, ServiceResponse};
 use crate::service::version_update::WriteRequest;
 use crate::service::write::{Mode, Resolved};
+use crate::storage::version_repo::read::VersionAt;
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
 use crate::versioning::change::{
     Change, Committed, Write, ensure_preceding, lock_current, tip_uid,
 };
 use crate::versioning::object_version_id::{TreeId, VersionIdError, components, parse_tree_id};
-use crate::versioning::read::{read_current, read_version, version_at};
 use crate::versioning::wire::{revision_history, version_envelope, versioned_object};
 use openehr_rm::prelude::Composition;
 
@@ -125,12 +125,20 @@ impl FerroEhrService {
     ) -> Result<RawServiceResponse, ServiceError> {
         let raw = match version {
             Some(v) => {
-                crate::versioning::read::read_version_raw(&self.pool, self.spec_profile, vo_id, v)
-                    .await?
+                crate::versioning::read::read_raw(
+                    &self.pool,
+                    self.spec_profile,
+                    VersionAt::Tree(vo_id, v),
+                )
+                .await?
             }
             None => {
-                crate::versioning::read::read_current_raw(&self.pool, self.spec_profile, vo_id)
-                    .await?
+                crate::versioning::read::read_raw(
+                    &self.pool,
+                    self.spec_profile,
+                    VersionAt::Current(vo_id),
+                )
+                .await?
             }
         }
         .filter(|r| r.read.ehr_id == Some(ehr_id) && r.read.kind == Kind::Composition)
@@ -204,12 +212,16 @@ impl FerroEhrService {
         vo_id: VoId,
         at: jiff::Timestamp,
     ) -> Result<ServiceResponse, ServiceError> {
-        let read = version_at(&self.pool, self.spec_profile, vo_id, at)
-            .await?
-            .filter(|r| r.ehr_id == Some(ehr_id) && r.kind == Kind::Composition)
-            .ok_or_else(|| {
-                ServiceError::not_found(Missing::Composition, format!("COMPOSITION {vo_id}"))
-            })?;
+        let read = crate::versioning::read::read(
+            &self.pool,
+            self.spec_profile,
+            VersionAt::Instant(vo_id, at),
+        )
+        .await?
+        .filter(|r| r.ehr_id == Some(ehr_id) && r.kind == Kind::Composition)
+        .ok_or_else(|| {
+            ServiceError::not_found(Missing::Composition, format!("COMPOSITION {vo_id}"))
+        })?;
         if read.deleted() {
             return Ok(ServiceResponse::plain(Value::Null));
         }
@@ -278,15 +290,19 @@ impl FerroEhrService {
         vo_id: VoId,
         version: TreeId,
     ) -> Result<Value, ServiceError> {
-        let read = read_version(&self.pool, self.spec_profile, vo_id, version)
-            .await?
-            .filter(|r| r.ehr_id == Some(ehr_id) && r.kind == Kind::Composition)
-            .ok_or_else(|| {
-                ServiceError::not_found(
-                    Missing::ObjectVersion,
-                    format!("COMPOSITION {vo_id} v{version}"),
-                )
-            })?;
+        let read = crate::versioning::read::read(
+            &self.pool,
+            self.spec_profile,
+            VersionAt::Tree(vo_id, version),
+        )
+        .await?
+        .filter(|r| r.ehr_id == Some(ehr_id) && r.kind == Kind::Composition)
+        .ok_or_else(|| {
+            ServiceError::not_found(
+                Missing::ObjectVersion,
+                format!("COMPOSITION {vo_id} v{version}"),
+            )
+        })?;
         version_envelope(&read, self.signer())
     }
 
@@ -305,8 +321,22 @@ impl FerroEhrService {
         at: Option<jiff::Timestamp>,
     ) -> Result<ServiceResponse, ServiceError> {
         let read = match at {
-            Some(at) => version_at(&self.pool, self.spec_profile, vo_id, at).await?,
-            None => read_current(&self.pool, self.spec_profile, vo_id).await?,
+            Some(at) => {
+                crate::versioning::read::read(
+                    &self.pool,
+                    self.spec_profile,
+                    VersionAt::Instant(vo_id, at),
+                )
+                .await?
+            }
+            None => {
+                crate::versioning::read::read(
+                    &self.pool,
+                    self.spec_profile,
+                    VersionAt::Current(vo_id),
+                )
+                .await?
+            }
         }
         .filter(|r| r.ehr_id == Some(ehr_id) && r.kind == Kind::Composition)
         .ok_or_else(|| {
