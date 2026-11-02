@@ -80,7 +80,7 @@ use crate::service::FerroEhrService;
 use crate::service::admin::types::{
     CompressionFormat, DumpLoadFailReport, ExportFormat, ExportSpec,
 };
-use crate::service::demographic::identifier::store::{IdentifierStore, SealedRow, StoreError};
+use crate::service::demographic::identifier::store::StoreError;
 use crate::service::error::ServiceError;
 use crate::service::refusal::{Clash, Refusal};
 use crate::storage::codec::decompose;
@@ -90,6 +90,7 @@ use crate::storage::dump_repo::{
     Scope, VersionRecord,
 };
 use crate::storage::error::StorageError;
+use crate::storage::identifier_repo::{self, IdentifierRepoError, SealedRow};
 use crate::storage::{node_repo, version_repo};
 use crate::versioning::audit::AuditInput;
 use crate::versioning::object_version_id::{TreeId, object_version_id};
@@ -1400,8 +1401,8 @@ impl FerroEhrService {
         let mut conn = acquire(&self.demographic_pool).await?;
         let mut tx = conn.begin().await?;
         dump_repo::write::insert_audits(&mut tx, &record.audits, StoredAudit::Keep).await?;
-        if let Err(refusal) = IdentifierStore::restore_sealed(&mut tx, &record.identifiers).await {
-            return restore_refusal(refusal);
+        if let Err(refusal) = identifier_repo::restore_sealed(&mut tx, &record.identifiers).await {
+            return restore_refusal(refusal.into());
         }
         if let Some(engine) = self.identifiers.as_deref() {
             for version in record.versions.iter().filter(|v| !v.body.is_null()) {
@@ -1466,8 +1467,7 @@ impl FerroEhrService {
     ) -> Result<DemographicRecord, ServiceError> {
         let pool = &self.demographic_pool;
         let scope = Scope::Container(vo_id);
-        let identifiers = IdentifierStore::new(pool.clone())
-            .sealed_rows(vo_id.0)
+        let identifiers = identifier_repo::sealed_rows(pool, vo_id)
             .await
             .map_err(|e| ServiceError::internal("read the sealed national identifiers", e))?;
         Ok(DemographicRecord {
@@ -1612,14 +1612,16 @@ async fn with_bodies(
 /// [`ServiceError`] for a store fault that says nothing about the archive.
 fn restore_refusal(refusal: StoreError) -> Result<Option<String>, ServiceError> {
     match refusal {
-        StoreError::ValueTaken { .. }
-        | StoreError::SchemeRepeated { .. }
+        StoreError::Repo(
+            IdentifierRepoError::ValueTaken { .. }
+            | IdentifierRepoError::SchemeRepeated { .. }
+            | IdentifierRepoError::UnknownScheme { .. }
+            | IdentifierRepoError::MalformedRow(_),
+        )
         | StoreError::ForeignReference
         | StoreError::Unsealed { .. }
-        | StoreError::UnknownScheme { .. }
-        | StoreError::MalformedRow(_)
         | StoreError::Crypto(_) => Ok(Some(refusal.to_string())),
-        other => Err(ServiceError::internal(
+        other @ StoreError::Repo(_) => Err(ServiceError::internal(
             "restore the sealed national identifiers",
             other,
         )),

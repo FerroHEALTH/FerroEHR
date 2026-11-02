@@ -24,15 +24,13 @@
 
 use sqlx::Connection as _;
 use sqlx::PgConnection;
-use uuid::Uuid;
 
 use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
-use crate::service::demographic::identifier::store::IdentifierStore;
 use crate::service::error::ServiceError;
 use crate::service::refusal::Missing;
-use crate::storage::{erasure, template_repo, version_repo};
+use crate::storage::{erasure, identifier_repo, template_repo, version_repo};
 
 impl FerroEhrService {
     /// Admin extension `DELETE /admin/template/{template_id}`: physically delete
@@ -397,8 +395,7 @@ impl FerroEhrService {
         // The sealed national identifiers those versions referenced, live and
         // retired: the erasure removes the values with the record that held
         // them. No openEHR spec governs identifier protection — our own design.
-        let sealed_owners: Vec<Uuid> = vo_ids.iter().map(|vo| vo.0).collect();
-        IdentifierStore::erase(&mut tx, &sealed_owners)
+        identifier_repo::erase(&mut tx, &vo_ids)
             .await
             .map_err(|e| ServiceError::internal("erase the sealed national identifiers", e))?;
 

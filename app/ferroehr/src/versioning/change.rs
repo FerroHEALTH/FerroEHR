@@ -27,10 +27,10 @@ use sqlx::PgConnection;
 use uuid::Uuid;
 
 use crate::ids::{EhrId, VoId};
-use crate::service::demographic::identifier::store::{IdentifierStore, StoreError};
-use crate::service::error::{ServiceError, Violation};
-use crate::service::refusal::{Clash, Missing, Refusal};
+use crate::service::error::ServiceError;
+use crate::service::refusal::Missing;
 use crate::storage::codec::reassemble;
+use crate::storage::identifier_repo;
 use crate::storage::row::NodeRow;
 use crate::storage::version_repo::commit::{Folded, FoldedRows, commit_folded};
 use crate::versioning::attestation::{self, PendingAttest};
@@ -607,7 +607,7 @@ struct CommitScope<'a> {
 /// design/extension.
 ///
 /// # Errors
-/// The [`protection_refusal`] mapping of the store's refusals: `409` for a
+/// The [`ServiceError`] the store's refusal maps to: `409` for a
 /// value another party holds, `422` for a body the store cannot hold, `500`
 /// for a configuration or storage fault. The commit fails rather than
 /// proceeding, because proceeding would store the body with the identifier
@@ -625,10 +625,7 @@ async fn seal_protected_identifiers(
     if !kind.is_demographic() {
         return Ok(());
     }
-    engine
-        .externalize(tx, vo_id.0, canonical)
-        .await
-        .map_err(protection_refusal)?;
+    engine.externalize(tx, vo_id.0, canonical).await?;
     Ok(())
 }
 
@@ -641,7 +638,7 @@ async fn seal_protected_identifiers(
 /// openEHR spec governs identifier protection — our own design/extension.
 ///
 /// # Errors
-/// The [`protection_refusal`] mapping of a failed update.
+/// The [`ServiceError`] a failed update maps to: a `500` for a storage fault.
 async fn retire_protected_identifiers(
     tx: &mut PgConnection,
     ctx: &SigningCtx<'_>,
@@ -651,47 +648,8 @@ async fn retire_protected_identifiers(
     if ctx.identifiers.is_none() || !kind.is_demographic() {
         return Ok(());
     }
-    IdentifierStore::retire_live(tx, vo_id.0)
-        .await
-        .map_err(protection_refusal)?;
+    identifier_repo::retire_live(tx, vo_id).await?;
     Ok(())
-}
-
-/// Map a protected-identifier store refusal onto the commit's answer.
-///
-/// A value another party holds is ITS-REST `409 Conflict` ("the request could
-/// not be processed because it might generate a duplicate or a conflict",
-/// `ITS-REST/specifications/docs/overview/Requests_and_responses.md` §HTTP
-/// status codes). A body that repeats a scheme, carries a reference the party
-/// does not hold, or must be stored verbatim with a protected value in
-/// plaintext is `422` (`responses/422.yaml`: semantic errors in a resource
-/// that parsed). An unregistered scheme is the deployment's own
-/// configuration disagreeing with its registry, which the client cannot act
-/// on, so it stays a `500` whose logged context names the scheme. No message
-/// carries an identifier value.
-pub(crate) fn protection_refusal(error: StoreError) -> ServiceError {
-    match error {
-        StoreError::ValueTaken { ref scheme } => ServiceError::Conflict(
-            Refusal::new(
-                Clash::State,
-                format!("a `{scheme}` identifier of this party is already held by another party"),
-            )
-            .with_source(error),
-        ),
-        StoreError::SchemeRepeated { .. }
-        | StoreError::ForeignReference
-        | StoreError::Unsealed { .. } => {
-            ServiceError::content_invalid(Violation::new(error.to_string()))
-        }
-        StoreError::UnknownScheme { ref scheme } => ServiceError::internal(
-            format!(
-                "identifier scheme `{scheme}` is configured for protection but absent from \
-                 the identifier_scheme registry"
-            ),
-            error,
-        ),
-        other => ServiceError::internal("seal a protected national identifier", other),
-    }
 }
 
 async fn apply_change(
