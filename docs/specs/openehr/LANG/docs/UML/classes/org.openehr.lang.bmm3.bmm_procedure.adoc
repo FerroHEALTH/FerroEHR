@@ -6,7 +6,7 @@ h|*Class*
 2+^h|*BMM_PROCEDURE*
 
 h|*Description*
-2+a|A formal element with signature of the form: `name ({arg:TArg}*):TStatus`, where `TStatus` is the built-in type `BMM_STATUS_TYPE`.. A procedure is a computed (rather than data) element, generally assumed to be state-changing, and is usually called in the form `name ({arg:TArg}*)`.
+2+a|A formal element with signature of the form: `name ({arg:TArg}&#42;):TStatus`, where `TStatus` is the built-in type `BMM_STATUS_TYPE`.. A procedure is a computed (rather than data) element, generally assumed to be state-changing, and is usually called in the form `name ({arg:TArg}&#42;)`.
 
 h|*Inherit*
 2+|`<<_bmm_routine_class,BMM_ROUTINE>>`

@@ -16,7 +16,7 @@ h|*Constants*
 ^h|*Meaning*
 
 h|*1..1*
-|*base_name*: `link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^]{nbsp}={nbsp}`
+|*base_name*: `link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^]`
 a|Base name (built-in typename).
 
 h|*Functions*

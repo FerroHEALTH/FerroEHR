@@ -8,6 +8,6 @@ h|*Class*
 h|*Description*
 2+a|Abstract parent of visibility representation.
 
-TODO: define schemes; probably need to support C++/Java scheme as well as better type-based schemes.
+TODO: define schemes; probably need to support C{plus}{plus}/Java scheme as well as better type-based schemes.
 
 |===

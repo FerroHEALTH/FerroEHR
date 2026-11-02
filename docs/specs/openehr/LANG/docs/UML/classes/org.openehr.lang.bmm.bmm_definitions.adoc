@@ -13,7 +13,7 @@ h|*Constants*
 ^h|*Meaning*
 
 h|*1..1*
-|*Bmm_internal_version*: `link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^]{nbsp}={nbsp}`
+|*Bmm_internal_version*: `link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^]`
 a|Current internal version of BMM meta-model, used to determine if a given schema can be processed by a given implementation of the model.
 
 h|*1..1*
