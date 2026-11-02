@@ -166,22 +166,14 @@ pub(crate) fn empty_root_folder() -> Value {
 /// state, not an error).
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session; CDR transport
-/// errors pass through; a non-2xx, non-404 CDR answer normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 pub async fn fetch_directory(
     // The EHR whose directory to read.
     ehr_id: String,
 ) -> Result<Option<DirectoryState>, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = state
-        .cdr
-        .rest_v1(&format!("ehr/{}/directory", urlencoding::encode(&ehr_id)));
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
+    let cdr = crate::bff::cdr()?;
+    let url = cdr.rest_v1(&format!("ehr/{}/directory", urlencoding::encode(&ehr_id)));
+    let response = cdr.get(&url).send().await?;
     // 404 = the EHR has no directory; 204 = the latest version is a logical
     // delete (`204_deleted_at_time` — ITS-REST `directory_get_at_time.yaml`).
     // Both are the first-class "no live directory" state: the create flow
@@ -190,9 +182,7 @@ pub async fn fetch_directory(
     if response.is(http::StatusCode::NOT_FOUND) || response.is(http::StatusCode::NO_CONTENT) {
         return Ok(None);
     }
-    Ok(Some(directory_state(
-        crate::cdr::CdrClient::expect_success(response)?,
-    )))
+    Ok(Some(directory_state(response.ok()?)))
 }
 
 /// Take a served FOLDER answer as the viewer's [`DirectoryState`], reading the
@@ -223,39 +213,29 @@ fn directory_state(response: crate::cdr::CdrResponse) -> DirectoryState {
 /// operations per ITS-REST `specifications/operations/directory_create.yaml`.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] on an empty body; CDR transport errors pass
-/// through; a non-2xx CDR answer (its validation diagnostics, which the UI
-/// renders verbatim, included) normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] on an empty body; a non-2xx CDR answer (its
+/// validation diagnostics, which the UI renders verbatim, included) normalizes
+/// via [`CdrResponse::ok`](crate::cdr::CdrResponse::ok).
 pub async fn create_directory(
     // The EHR to create the directory in.
     ehr_id: String,
     // The root FOLDER document to commit, as canonical JSON text.
     body: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     if body.trim().is_empty() {
         return Err(ViewerError::Invalid(tr_served(
             RecordsMsg::DirectoryBodyEmpty,
         )));
     }
-    let url = state
-        .cdr
-        .rest_v1(&format!("ehr/{}/directory", urlencoding::encode(&ehr_id)));
-    let response = state
-        .cdr
-        .post(
-            &session.credential,
-            &url,
-            "application/json",
-            "application/json",
-            &[("Prefer", "return=representation")],
-            body,
-        )
+    let url = cdr.rest_v1(&format!("ehr/{}/directory", urlencoding::encode(&ehr_id)));
+    let response = cdr
+        .post(&url)
+        .body("application/json", body)
+        .headers(&[("Prefer", "return=representation")])
+        .ok()
         .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
     Ok(uid_value_of(&response.body))
 }
 
@@ -269,11 +249,11 @@ pub async fn create_directory(
 /// `412` by the CDR and surfaces as `is_conflict`.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] on an empty body or missing current version uid;
-/// CDR transport errors pass through; a non-2xx CDR answer (its validation
-/// diagnostics, which the UI renders verbatim, included) normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] on an empty body or missing current version uid; a
+/// non-2xx CDR answer (its validation diagnostics, which the UI renders
+/// verbatim, included) normalizes via
+/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok).
 pub async fn update_directory(
     // The EHR holding the directory.
     ehr_id: String,
@@ -282,8 +262,7 @@ pub async fn update_directory(
     // The replacement root FOLDER document, as canonical JSON text.
     body: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     if body.trim().is_empty() {
         return Err(ViewerError::Invalid(tr_served(
             RecordsMsg::DirectoryBodyEmpty,
@@ -296,24 +275,16 @@ pub async fn update_directory(
         )));
     }
     let if_match = format!("\"{current}\"");
-    let url = state
-        .cdr
-        .rest_v1(&format!("ehr/{}/directory", urlencoding::encode(&ehr_id)));
-    let response = state
-        .cdr
-        .put(
-            &session.credential,
-            &url,
-            "application/json",
-            "application/json",
-            &[
-                ("If-Match", if_match.as_str()),
-                ("Prefer", "return=representation"),
-            ],
-            body,
-        )
+    let url = cdr.rest_v1(&format!("ehr/{}/directory", urlencoding::encode(&ehr_id)));
+    let response = cdr
+        .put(&url)
+        .body("application/json", body)
+        .headers(&[
+            ("If-Match", if_match.as_str()),
+            ("Prefer", "return=representation"),
+        ])
+        .ok()
         .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
     Ok(uid_value_of(&response.body))
 }
 
@@ -325,18 +296,15 @@ pub async fn update_directory(
 /// `412` and surfaces as `is_conflict`.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] on a missing current version uid; CDR transport
-/// errors pass through; a non-2xx CDR answer normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] on a missing current version uid.
 pub async fn delete_directory(
     // The EHR holding the directory.
     ehr_id: String,
     // The version being deleted, sent as `If-Match`.
     current_version_uid: String,
 ) -> Result<(), ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let current = current_version_uid.trim();
     if current.is_empty() {
         return Err(ViewerError::Invalid(tr_served(
@@ -344,18 +312,11 @@ pub async fn delete_directory(
         )));
     }
     let if_match = format!("\"{current}\"");
-    let url = state
-        .cdr
-        .rest_v1(&format!("ehr/{}/directory", urlencoding::encode(&ehr_id)));
-    let response = state
-        .cdr
-        .delete(
-            &session.credential,
-            &url,
-            &[("If-Match", if_match.as_str())],
-        )
+    let url = cdr.rest_v1(&format!("ehr/{}/directory", urlencoding::encode(&ehr_id)));
+    cdr.delete(&url)
+        .headers(&[("If-Match", if_match.as_str())])
+        .ok()
         .await?;
-    crate::cdr::CdrClient::expect_success(response)?;
     Ok(())
 }
 
@@ -377,9 +338,7 @@ pub async fn delete_directory(
 /// latest version number rather than read from the CDR.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session; CDR transport
-/// errors pass through; a non-2xx, non-404 CDR answer normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 pub async fn list_directory_versions(
     // The EHR whose directory version list to read.
     ehr_id: String,
@@ -388,15 +347,9 @@ pub async fn list_directory_versions(
 ) -> Result<DirectoryHistory, ViewerError> {
     use futures::stream::{StreamExt, TryStreamExt};
 
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let base = state
-        .cdr
-        .rest_v1(&format!("ehr/{}/directory", urlencoding::encode(&ehr_id)));
-    let current = state
-        .cdr
-        .get(&session.credential, &base, "application/json")
-        .await?;
+    let cdr = crate::bff::cdr()?;
+    let base = cdr.rest_v1(&format!("ehr/{}/directory", urlencoding::encode(&ehr_id)));
+    let current = cdr.get(&base).send().await?;
     // 204 = a logically deleted directory (the same split `fetch_directory`
     // makes): there is no live version to anchor the walk, so the panel
     // renders the empty state instead of a bogus row built from the empty
@@ -404,7 +357,7 @@ pub async fn list_directory_versions(
     if current.is(http::StatusCode::NOT_FOUND) || current.is(http::StatusCode::NO_CONTENT) {
         return Ok(DirectoryHistory::default());
     }
-    let current_body = crate::cdr::CdrClient::expect_success(current)?.body;
+    let current_body = current.ok()?.body;
     let latest_uid = uid_value_of(&current_body);
     let Some((prefix, latest_n)) = split_version_uid(&latest_uid) else {
         // A non-integer version tree id (a branch) — surface just the latest.
@@ -416,23 +369,20 @@ pub async fn list_directory_versions(
     let numbers = version_window(latest_n, window);
     let requested = numbers.len();
     let oldest_requested = numbers.last().copied().unwrap_or(latest_n);
-    let (state, session, ehr_id, prefix) = (&state, &session, &ehr_id, &prefix);
+    let (cdr, ehr_id, prefix) = (&cdr, &ehr_id, &prefix);
     let fetched: Vec<Option<DirectoryVersion>> =
         futures::stream::iter(numbers.into_iter().map(|number| async move {
             let uid = format!("{prefix}::{number}");
-            let url = state.cdr.rest_v1(&format!(
+            let url = cdr.rest_v1(&format!(
                 "ehr/{}/directory/{}",
                 urlencoding::encode(ehr_id),
                 urlencoding::encode(&uid)
             ));
-            let response = state
-                .cdr
-                .get(&session.credential, &url, "application/json")
-                .await?;
+            let response = cdr.get(&url).send().await?;
             if response.is(http::StatusCode::NOT_FOUND) {
                 return Ok(None);
             }
-            let body = crate::cdr::CdrClient::expect_success(response)?.body;
+            let body = response.ok()?.body;
             Ok::<_, ViewerError>(Some(summarize_directory_version(
                 &body,
                 number,
@@ -472,39 +422,32 @@ fn version_window(latest_n: i32, window: u32) -> Vec<i32> {
 /// [`DirectoryAtTime::DeletedAtTime`], `404` → [`DirectoryAtTime::NoneAtTime`].
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] on an empty time; CDR transport errors pass
-/// through; any other non-2xx answer normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] on an empty time; any other non-2xx answer
+/// normalizes via [`CdrResponse::ok`](crate::cdr::CdrResponse::ok).
 pub async fn fetch_directory_at_time(
     // The EHR holding the directory.
     ehr_id: String,
     // The instant to resolve the directory at.
     time: String,
 ) -> Result<DirectoryAtTime, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let time = time.trim();
     if time.is_empty() {
         return Err(ViewerError::Invalid(tr_served(
             RecordsMsg::DateTimeRequired,
         )));
     }
-    let url = state.cdr.rest_v1(&format!(
+    let url = cdr.rest_v1(&format!(
         "ehr/{}/directory?version_at_time={}",
         urlencoding::encode(&ehr_id),
         urlencoding::encode(time)
     ));
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
+    let response = cdr.get(&url).send().await?;
     match response.status {
         http::StatusCode::NO_CONTENT => Ok(DirectoryAtTime::DeletedAtTime),
         http::StatusCode::NOT_FOUND => Ok(DirectoryAtTime::NoneAtTime),
-        _ => Ok(DirectoryAtTime::Present(directory_state(
-            crate::cdr::CdrClient::expect_success(response)?,
-        ))),
+        _ => Ok(DirectoryAtTime::Present(directory_state(response.ok()?))),
     }
 }
 
@@ -515,35 +458,30 @@ pub async fn fetch_directory_at_time(
 /// `200` → [`DirectorySubtree::Found`], `404` → [`DirectorySubtree::Missing`].
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] on an empty path; CDR transport errors pass
-/// through; any other non-2xx answer normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] on an empty path; any other non-2xx answer
+/// normalizes via [`CdrResponse::ok`](crate::cdr::CdrResponse::ok).
 pub async fn fetch_directory_subtree(
     // The EHR holding the directory.
     ehr_id: String,
     // The folder path within the directory to read.
     path: String,
 ) -> Result<DirectorySubtree, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let path = path.trim();
     if path.is_empty() {
         return Err(ViewerError::Invalid(tr_served(RecordsMsg::APathIsRequired)));
     }
-    let url = state.cdr.rest_v1(&format!(
+    let url = cdr.rest_v1(&format!(
         "ehr/{}/directory?path={}",
         urlencoding::encode(&ehr_id),
         urlencoding::encode(path)
     ));
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
+    let response = cdr.get(&url).send().await?;
     if response.is(http::StatusCode::NOT_FOUND) {
         return Ok(DirectorySubtree::Missing);
     }
-    let body = crate::cdr::CdrClient::expect_success(response)?.body;
+    let body = response.ok()?.body;
     Ok(DirectorySubtree::Found(body))
 }
 

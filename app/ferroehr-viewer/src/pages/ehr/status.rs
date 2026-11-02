@@ -141,7 +141,7 @@ enum StatusPanel {
 /// versions.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_status(
     // The EHR the route names.
     ehr_id: String,
@@ -374,7 +374,7 @@ enum EditModel {
 /// status.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_edit(
     // The EHR the route names.
     ehr_id: String,

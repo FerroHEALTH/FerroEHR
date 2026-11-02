@@ -537,7 +537,7 @@ fn unreadable(error: &serde_json::Error) -> Refused {
 /// address asks for, its versions and the folder at the path asked for.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_tab(
     // The EHR the route names.
     ehr_id: String,
@@ -953,7 +953,7 @@ enum EditModel {
 /// tree, Save, Overwrite) over the directory the CDR holds.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_edit(
     // The EHR the route names.
     ehr_id: String,

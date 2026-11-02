@@ -82,25 +82,17 @@ pub struct EhrSummary {
 /// claim.)
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session; CDR transport
-/// errors pass through; a non-2xx CDR answer (the `404` for an unknown
-/// `ehr_id` included) normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
-/// [`ViewerError::Internal`] when the body is not valid JSON.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)); a non-2xx CDR answer
+/// (the `404` for an unknown `ehr_id` included) normalizes via
+/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok); [`ViewerError::Internal`]
+/// when the body is not valid JSON.
 pub async fn fetch_ehr_summary(
     // The EHR whose summary facts to read.
     ehr_id: String,
 ) -> Result<EhrSummary, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = state
-        .cdr
-        .rest_v1(&format!("ehr/{}", urlencoding::encode(&ehr_id)));
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
+    let cdr = crate::bff::cdr()?;
+    let url = cdr.rest_v1(&format!("ehr/{}", urlencoding::encode(&ehr_id)));
+    let response = cdr.get(&url).ok().await?;
     parse_ehr_summary(&response.body)
 }
 

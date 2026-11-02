@@ -89,10 +89,8 @@ pub fn renders_admin_ops(probe: &Result<AdminAvailability, ViewerError>) -> bool
 /// manifest (see this module's NOTE for the spec citation).
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::CdrUnreachable`] on transport failure;
-/// [`ViewerError::Cdr`] / [`ViewerError::Internal`] when the manifest cannot
-/// be read.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)); [`ViewerError::Cdr`] /
+/// [`ViewerError::Internal`] when the manifest cannot be read.
 pub async fn probe_admin_api() -> Result<AdminAvailability, ViewerError> {
     let manifest = crate::system_api::fetch_conformance_manifest().await?;
     Ok(availability_of(&manifest))
@@ -107,27 +105,25 @@ pub async fn probe_admin_api() -> Result<AdminAvailability, ViewerError> {
 /// a committed version is refused `409`, the CDR's diagnostic naming why.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] for an empty id;
-/// [`ViewerError::Cdr`] / [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] /
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] for an empty id; [`ViewerError::Cdr`] /
+/// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] /
 /// [`ViewerError::CdrUnreachable`] from the CDR.
 pub async fn admin_delete_template(
     // The `template_id` of the OPT to delete.
     template_id: String,
 ) -> Result<(), ViewerError> {
-    let session = crate::session::require_session()?;
+    let cdr = crate::bff::cdr()?;
     if template_id.trim().is_empty() {
         return Err(ViewerError::Invalid(tr_served(
             ServerMsg::NoTemplateIdDelete,
         )));
     }
-    let state = crate::scope::state()?;
-    let url = state.cdr.extensions_v1(&format!(
+    let url = cdr.extensions_v1(&format!(
         "admin/template/{}",
         urlencoding::encode(&template_id)
     ));
-    let response = state.cdr.delete(&session.credential, &url, &[]).await?;
-    crate::cdr::CdrClient::expect_success(response)?;
+    cdr.delete(&url).ok().await?;
     Ok(())
 }
 
@@ -138,9 +134,9 @@ pub async fn admin_delete_template(
 /// Both segments are percent-encoded (the qualified name carries `::`).
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] for an empty name or version;
-/// [`ViewerError::Cdr`] / [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] /
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] for an empty name or version; [`ViewerError::Cdr`]
+/// / [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] /
 /// [`ViewerError::CdrUnreachable`] from the CDR.
 pub async fn admin_delete_stored_query(
     // The qualified stored-query name (`[{namespace}::]{query-name}`).
@@ -148,20 +144,18 @@ pub async fn admin_delete_stored_query(
     // The concrete `major.minor.patch` version to delete.
     version: String,
 ) -> Result<(), ViewerError> {
-    let session = crate::session::require_session()?;
+    let cdr = crate::bff::cdr()?;
     if name.trim().is_empty() || version.trim().is_empty() {
         return Err(ViewerError::Invalid(tr_served(
             ServerMsg::StoredQueryDeleteNeedsBothQualified,
         )));
     }
-    let state = crate::scope::state()?;
-    let url = state.cdr.extensions_v1(&format!(
+    let url = cdr.extensions_v1(&format!(
         "admin/query/{}/{}",
         urlencoding::encode(&name),
         urlencoding::encode(&version)
     ));
-    let response = state.cdr.delete(&session.credential, &url, &[]).await?;
-    crate::cdr::CdrClient::expect_success(response)?;
+    cdr.delete(&url).ok().await?;
     Ok(())
 }
 
@@ -174,24 +168,20 @@ pub async fn admin_delete_stored_query(
 /// audit trail are gone.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] for an empty id;
-/// [`ViewerError::Cdr`] / [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] /
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] for an empty id; [`ViewerError::Cdr`] /
+/// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] /
 /// [`ViewerError::CdrUnreachable`] from the CDR.
 pub async fn admin_delete_ehr(
     // The EHR to delete, with everything committed under it.
     ehr_id: String,
 ) -> Result<(), ViewerError> {
-    let session = crate::session::require_session()?;
+    let cdr = crate::bff::cdr()?;
     if ehr_id.trim().is_empty() {
         return Err(ViewerError::Invalid(tr_served(ServerMsg::NoEhrIdDelete)));
     }
-    let state = crate::scope::state()?;
-    let url = state
-        .cdr
-        .rest_v1(&format!("admin/ehr/{}", urlencoding::encode(&ehr_id)));
-    let response = state.cdr.delete(&session.credential, &url, &[]).await?;
-    crate::cdr::CdrClient::expect_success(response)?;
+    let url = cdr.rest_v1(&format!("admin/ehr/{}", urlencoding::encode(&ehr_id)));
+    cdr.delete(&url).ok().await?;
     Ok(())
 }
 

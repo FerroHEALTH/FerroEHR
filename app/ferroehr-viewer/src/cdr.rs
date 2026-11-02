@@ -47,6 +47,45 @@ pub struct CdrResponse {
 }
 
 impl CdrResponse {
+    /// This answer when it is `2xx`, otherwise the normalized error, extracting
+    /// the diagnostic from the openEHR error body when present. 2xx passes
+    /// through.
+    ///
+    /// The two refusals stay apart, because the CDR sends them apart: a `401`
+    /// means the request "lacks valid authentication credentials for the target
+    /// resource" while a `403` means the service "understood the request but
+    /// refuses to authorize it"
+    /// (`docs/specs/openehr/ITS-REST/specifications/docs/overview/Requests_and_responses.md`
+    /// §HTTP status codes, mandated as a pair by §Authentication and
+    /// authorization) — one asks the operator to sign in again, the other to
+    /// sign in as someone else.
+    ///
+    /// A `401` also ends the page's session ([`crate::session_client`]).
+    ///
+    /// # Errors
+    /// [`ViewerError::CdrUnauthorized`] on 401, [`ViewerError::Forbidden`] on
+    /// 403, [`ViewerError::Cdr`] on any other non-2xx status.
+    pub fn ok(self) -> Result<Self, ViewerError> {
+        if self.status.is_success() {
+            return Ok(self);
+        }
+        let message = diagnostic_of(&self);
+        match self.status {
+            http::StatusCode::UNAUTHORIZED => {
+                let refused = ViewerError::CdrUnauthorized(without_lead(&message, "unauthorized"));
+                crate::session_client::note_if_over(&refused);
+                Err(refused)
+            }
+            http::StatusCode::FORBIDDEN => {
+                Err(ViewerError::Forbidden(without_lead(&message, "forbidden")))
+            }
+            status => Err(ViewerError::Cdr {
+                status: status.as_u16(),
+                message,
+            }),
+        }
+    }
+
     /// Whether the response carries exactly this status.
     ///
     /// The status is typed all the way from `reqwest` to the branch that reads
@@ -235,70 +274,18 @@ impl CdrClient {
         format!("{}/{}", self.management_base, path.trim_start_matches('/'))
     }
 
-    /// `OPTIONS url` with no credential, asking for `accept`.
-    ///
-    /// The System API's conformance manifest is served above the CORS layer and
-    /// outside authentication (ITS-REST System API — `security: []`), so this
-    /// probe carries no credential.
-    ///
-    /// # Errors
-    /// [`ViewerError::CdrUnreachable`] on transport failure; the response
-    /// itself (any status) is returned for the caller to interpret.
-    pub async fn options_public(
-        &self,
-        url: &str,
-        accept: &str,
-    ) -> Result<CdrResponse, ViewerError> {
-        Self::finish(
-            self.http
-                .request(http::Method::OPTIONS, url)
-                .header(http::header::ACCEPT, accept),
-        )
-        .await
+    /// One request to `url` as `credential`, asking for `application/json`
+    /// until [`CdrCall::accept`] says otherwise.
+    pub fn call(&self, method: http::Method, url: &str, credential: &Credential) -> CdrCall {
+        CdrCall::new(self.http.clone(), method, url, Some(credential.clone()))
     }
 
-    /// GET `url` as `credential`, asking for `accept`.
-    ///
-    /// # Errors
-    /// [`ViewerError::CdrUnreachable`] on transport failure; the response
-    /// itself (any status) is returned for the caller to interpret.
-    pub async fn get(
-        &self,
-        credential: &Credential,
-        url: &str,
-        accept: &str,
-    ) -> Result<CdrResponse, ViewerError> {
-        let request = self.http.get(url).header(http::header::ACCEPT, accept);
-        Self::finish(Self::authorize(request, credential)).await
-    }
-
-    /// GET `url` as `credential`, asking for `accept`, with extra `headers`
-    /// (`Prefer: return=representation`, so a refusal carries its `errors`).
-    ///
-    /// # Errors
-    /// [`ViewerError::CdrUnreachable`] on transport failure; the response
-    /// itself (any status) is returned for the caller to interpret.
-    pub async fn get_with(
-        &self,
-        credential: &Credential,
-        url: &str,
-        accept: &str,
-        headers: &[(&str, &str)],
-    ) -> Result<CdrResponse, ViewerError> {
-        let mut request = self.http.get(url).header(http::header::ACCEPT, accept);
-        for (name, value) in headers {
-            request = request.header(*name, *value);
-        }
-        Self::finish(Self::authorize(request, credential)).await
-    }
-
-    /// GET `url` without any credential (pre-auth surfaces: `/ferroehr/rest/status`,
-    /// the SMART discovery document).
-    ///
-    /// # Errors
-    /// [`ViewerError::CdrUnreachable`] on transport failure.
-    pub async fn get_public(&self, url: &str, accept: &str) -> Result<CdrResponse, ViewerError> {
-        Self::finish(self.http.get(url).header(http::header::ACCEPT, accept)).await
+    /// One request to `url` with no credential, for the surfaces the CDR
+    /// serves outside authentication: `/status`, the SMART discovery
+    /// document and the System API's conformance manifest (ITS-REST System
+    /// API, `security: []`).
+    pub fn public(&self, method: http::Method, url: &str) -> CdrCall {
+        CdrCall::new(self.http.clone(), method, url, None)
     }
 
     /// The auth schemes the CDR advertises, as `(basic, bearer)`.
@@ -331,159 +318,91 @@ impl CdrClient {
             .unwrap_or_default();
         Ok((challenge.contains("Basic"), challenge.contains("Bearer")))
     }
+}
 
-    /// POST `body` to `url` as `credential` with the given `Content-Type` +
-    /// `Accept` and extra headers (e.g. `openehr-template-id` on simplified
-    /// commits, `Prefer: return=representation`).
+/// One request to the CDR, built up and sent once.
+///
+/// Every request asks for `application/json` unless [`Self::accept`] names
+/// another representation, so a refusal carries the openEHR diagnostic in the
+/// format the viewer reads.
+#[derive(Debug)]
+#[must_use]
+pub struct CdrCall {
+    http: reqwest::Client,
+    method: http::Method,
+    url: String,
+    credential: Option<Credential>,
+    accept: String,
+    headers: Vec<(String, String)>,
+    body: Option<(String, String)>,
+}
+
+impl CdrCall {
+    fn new(
+        http: reqwest::Client,
+        method: http::Method,
+        url: &str,
+        credential: Option<Credential>,
+    ) -> Self {
+        Self {
+            http,
+            method,
+            url: url.to_owned(),
+            credential,
+            accept: "application/json".to_owned(),
+            headers: Vec::new(),
+            body: None,
+        }
+    }
+
+    /// Asks for `accept` in place of `application/json`.
+    pub fn accept(mut self, accept: &str) -> Self {
+        accept.clone_into(&mut self.accept);
+        self
+    }
+
+    /// Adds the request headers `headers` (`If-Match`, `Prefer`,
+    /// `openehr-template-id`).
+    pub fn headers(mut self, headers: &[(&str, &str)]) -> Self {
+        self.headers.extend(
+            headers
+                .iter()
+                .map(|(name, value)| ((*name).to_owned(), (*value).to_owned())),
+        );
+        self
+    }
+
+    /// Sends `body` as `content_type`.
+    pub fn body(mut self, content_type: &str, body: String) -> Self {
+        self.body = Some((content_type.to_owned(), body));
+        self
+    }
+
+    /// Sends the request and returns the CDR's answer, whatever its status.
     ///
     /// # Errors
-    /// [`ViewerError::CdrUnreachable`] on transport failure.
-    pub async fn post(
-        &self,
-        credential: &Credential,
-        url: &str,
-        content_type: &str,
-        accept: &str,
-        headers: &[(&str, &str)],
-        body: String,
-    ) -> Result<CdrResponse, ViewerError> {
+    /// [`ViewerError::CdrUnreachable`] when the CDR does not answer or its
+    /// body does not read.
+    pub async fn send(self) -> Result<CdrResponse, ViewerError> {
         let mut request = self
             .http
-            .post(url)
-            .header(http::header::CONTENT_TYPE, content_type)
-            .header(http::header::ACCEPT, accept)
-            .body(body);
-        for (name, value) in headers {
-            request = request.header(*name, *value);
+            .request(self.method, &self.url)
+            .header(http::header::ACCEPT, self.accept);
+        for (name, value) in &self.headers {
+            request = request.header(name, value);
         }
-        Self::finish(Self::authorize(request, credential)).await
-    }
-
-    /// PUT `body` to `url` as `credential` with the given `Content-Type` +
-    /// `Accept` and extra headers (e.g. `If-Match` = the preceding
-    /// `version_uid` on a versioned COMPOSITION update, `openehr-template-id`
-    /// on a simplified commit). Mirrors [`Self::post`] for the write paths
-    /// that need conditional/representation headers on a PUT.
-    ///
-    /// # Errors
-    /// [`ViewerError::CdrUnreachable`] on transport failure.
-    pub async fn put(
-        &self,
-        credential: &Credential,
-        url: &str,
-        content_type: &str,
-        accept: &str,
-        headers: &[(&str, &str)],
-        body: String,
-    ) -> Result<CdrResponse, ViewerError> {
-        let mut request = self
-            .http
-            .put(url)
-            .header(http::header::CONTENT_TYPE, content_type)
-            .header(http::header::ACCEPT, accept)
-            .body(body);
-        for (name, value) in headers {
-            request = request.header(*name, *value);
+        if let Some((content_type, body)) = self.body {
+            request = request
+                .header(http::header::CONTENT_TYPE, content_type)
+                .body(body);
         }
-        Self::finish(Self::authorize(request, credential)).await
-    }
-
-    /// DELETE `url` as `credential` with the given extra headers (e.g.
-    /// `If-Match` = the preceding `version_uid` on a versioned directory
-    /// delete). No request body; asks for `application/json` so an error body
-    /// (the openEHR diagnostic) is returned in the negotiated format.
-    ///
-    /// # Errors
-    /// [`ViewerError::CdrUnreachable`] on transport failure.
-    pub async fn delete(
-        &self,
-        credential: &Credential,
-        url: &str,
-        headers: &[(&str, &str)],
-    ) -> Result<CdrResponse, ViewerError> {
-        let mut request = self
-            .http
-            .delete(url)
-            .header(http::header::ACCEPT, "application/json");
-        for (name, value) in headers {
-            request = request.header(*name, *value);
-        }
-        Self::finish(Self::authorize(request, credential)).await
-    }
-
-    /// PUT a text body to `url` as `credential` (stored-query writes use
-    /// `text/plain` AQL per the Definition API).
-    ///
-    /// # Errors
-    /// [`ViewerError::CdrUnreachable`] on transport failure.
-    pub async fn put_text(
-        &self,
-        credential: &Credential,
-        url: &str,
-        content_type: &str,
-        body: String,
-    ) -> Result<CdrResponse, ViewerError> {
-        let request = self
-            .http
-            .put(url)
-            .header(http::header::CONTENT_TYPE, content_type)
-            .header(http::header::ACCEPT, "application/json")
-            .body(body);
-        Self::finish(Self::authorize(request, credential)).await
-    }
-
-    /// Map a non-2xx [`CdrResponse`] into the normalized error, extracting
-    /// the diagnostic from the openEHR error body when present. 2xx passes
-    /// through.
-    ///
-    /// The two refusals stay apart, because the CDR sends them apart: a `401`
-    /// means the request "lacks valid authentication credentials for the target
-    /// resource" while a `403` means the service "understood the request but
-    /// refuses to authorize it"
-    /// (`docs/specs/openehr/ITS-REST/specifications/docs/overview/Requests_and_responses.md`
-    /// §HTTP status codes, mandated as a pair by §Authentication and
-    /// authorization) — one asks the operator to sign in again, the other to
-    /// sign in as someone else.
-    ///
-    /// A `401` also ends the page's session ([`crate::session_client`]).
-    ///
-    /// # Errors
-    /// [`ViewerError::CdrUnauthorized`] on 401, [`ViewerError::Forbidden`] on
-    /// 403, [`ViewerError::Cdr`] on any other non-2xx status.
-    pub fn expect_success(response: CdrResponse) -> Result<CdrResponse, ViewerError> {
-        if response.status.is_success() {
-            return Ok(response);
-        }
-        let message = diagnostic_of(&response);
-        match response.status {
-            http::StatusCode::UNAUTHORIZED => {
-                let refused = ViewerError::CdrUnauthorized(without_lead(&message, "unauthorized"));
-                crate::session_client::note_if_over(&refused);
-                Err(refused)
-            }
-            http::StatusCode::FORBIDDEN => {
-                Err(ViewerError::Forbidden(without_lead(&message, "forbidden")))
-            }
-            status => Err(ViewerError::Cdr {
-                status: status.as_u16(),
-                message,
-            }),
-        }
-    }
-
-    fn authorize(
-        request: reqwest::RequestBuilder,
-        credential: &Credential,
-    ) -> reqwest::RequestBuilder {
-        match credential {
-            Credential::Basic { username, password } => {
+        request = match &self.credential {
+            Some(Credential::Basic { username, password }) => {
                 request.basic_auth(username, Some(password))
             }
-            Credential::Bearer { access_token } => request.bearer_auth(access_token),
-        }
-    }
-
-    async fn finish(request: reqwest::RequestBuilder) -> Result<CdrResponse, ViewerError> {
+            Some(Credential::Bearer { access_token }) => request.bearer_auth(access_token),
+            None => request,
+        };
         let response = request
             .send()
             .await
@@ -495,6 +414,15 @@ impl CdrClient {
             .await
             .map_err(|e| ViewerError::CdrUnreachable(format!("reading body: {e}")))?;
         Ok(CdrResponse::from_parts(status, &headers, body))
+    }
+
+    /// Sends the request and returns a `2xx` answer.
+    ///
+    /// # Errors
+    /// The errors of [`Self::send`], and any other answer normalized by
+    /// [`CdrResponse::ok`].
+    pub async fn ok(self) -> Result<CdrResponse, ViewerError> {
+        self.send().await?.ok()
     }
 }
 
@@ -591,10 +519,11 @@ mod tests {
         // §HTTP status codes: 401 "lacks valid authentication credentials",
         // 403 "understood the request but refuses to authorize it" — two
         // different next actions, so two variants.
-        let unauthorized = CdrClient::expect_success(response(
+        let unauthorized = response(
             http::StatusCode::UNAUTHORIZED,
             r#"{"status":401,"detail":"the bearer token has expired"}"#,
-        ))
+        )
+        .ok()
         .unwrap_err();
         assert_eq!(
             unauthorized,
@@ -605,32 +534,35 @@ mod tests {
             Some(http::StatusCode::UNAUTHORIZED)
         );
 
-        let err = CdrClient::expect_success(response(
+        let err = response(
             http::StatusCode::FORBIDDEN,
             r#"{"status":403,"detail":"scope"}"#,
-        ))
+        )
+        .ok()
         .unwrap_err();
         assert_eq!(err, ViewerError::Forbidden("scope".to_owned()));
         assert_eq!(err.status_code(), Some(http::StatusCode::FORBIDDEN));
 
         // A diagnostic that repeats the refusal's own word reads once.
-        let err = CdrClient::expect_success(response(
+        let err = response(
             http::StatusCode::FORBIDDEN,
             r#"{"status":403,"detail":"forbidden: operation requires the 'ADMIN' role"}"#,
-        ))
+        )
+        .ok()
         .unwrap_err();
         assert_eq!(
             err.to_string(),
             "forbidden: operation requires the 'ADMIN' role"
         );
-        let err = CdrClient::expect_success(response(
+        let err = response(
             http::StatusCode::FORBIDDEN,
             r#"{"status":403,"detail":"forbidden"}"#,
-        ))
+        )
+        .ok()
         .unwrap_err();
         assert_eq!(err.to_string(), "forbidden: the CDR refused this session");
 
-        let err = CdrClient::expect_success(response(http::StatusCode::NOT_FOUND, "")).unwrap_err();
+        let err = response(http::StatusCode::NOT_FOUND, "").ok().unwrap_err();
         assert_eq!(
             err,
             ViewerError::Cdr {
@@ -640,7 +572,7 @@ mod tests {
         );
         // The typed status survives the round trip into the error's own reader.
         assert_eq!(err.status_code(), Some(http::StatusCode::NOT_FOUND));
-        assert!(CdrClient::expect_success(response(http::StatusCode::CREATED, "ok")).is_ok());
+        assert!(response(http::StatusCode::CREATED, "ok").ok().is_ok());
     }
 
     #[test]

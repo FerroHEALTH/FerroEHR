@@ -1128,7 +1128,7 @@ struct Build {
 /// the save the post asks.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_build() -> Result<Build, ViewerError> {
     crate::session::require_session()?;
     Ok(read_build().await)
@@ -1566,7 +1566,7 @@ struct Written {
 /// or the save the post asks.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_written() -> Result<Written, ViewerError> {
     crate::session::require_session()?;
     Ok(read_written().await)

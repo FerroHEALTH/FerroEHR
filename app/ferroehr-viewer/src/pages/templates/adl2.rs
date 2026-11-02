@@ -81,7 +81,7 @@ pub(super) fn adl2_tabs(older: bool, several: bool) -> Vec<TemplateTab> {
 /// the archetypes it lacks and what its tab `tab` draws.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 pub(super) async fn load_adl2_template(
     // The template id the address names.
     asked_id: String,

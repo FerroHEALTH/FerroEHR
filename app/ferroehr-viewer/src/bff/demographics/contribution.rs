@@ -63,33 +63,27 @@ pub struct ContributionState {
 /// Read one demographic CONTRIBUTION.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] on an empty uid; CDR transport errors pass
-/// through; a non-2xx CDR answer (the `404` for an unknown contribution, or for
-/// an EHR-scoped one, included) normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] on an empty uid; a non-2xx CDR answer (the `404`
+/// for an unknown contribution, or for an EHR-scoped one, included) normalizes
+/// via [`CdrResponse::ok`](crate::cdr::CdrResponse::ok);
 /// [`ViewerError::Internal`] when the body is not valid JSON.
 pub async fn fetch_demographic_contribution(
     // The CONTRIBUTION uid to read.
     contribution_uid: String,
 ) -> Result<ContributionState, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let contribution_uid = contribution_uid.trim();
     if contribution_uid.is_empty() {
         return Err(ViewerError::Invalid(tr_served(
             RecordsMsg::ContributionUidRequired,
         )));
     }
-    let url = state.cdr.rest_v1(&format!(
+    let url = cdr.rest_v1(&format!(
         "demographic/contribution/{}",
         urlencoding::encode(contribution_uid)
     ));
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
-    let body = crate::cdr::CdrClient::expect_success(response)?.body;
+    let body = cdr.get(&url).ok().await?.body;
     parse_contribution(&body)
 }
 

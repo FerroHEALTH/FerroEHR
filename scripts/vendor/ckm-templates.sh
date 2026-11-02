@@ -248,6 +248,21 @@ if [[ "$MODE" != curated ]]; then
         bad: ($all | map(select($outcome[.cid] | IN("BAD", "FAIL")))) }
   ' < "$WORK/full.log" > "$WORK/classified.json"
 
+  # The licence each vendored file names, counted here so the provenance never
+  # carries a figure the files no longer support.
+  lic3=0 lic4=0 lic_both=0 lic_none=0
+  for opt in "$FULL"/*.opt; do
+    has3=0 has4=0
+    grep -q 'creativecommons.org/licenses/by-sa/3.0' "$opt" && has3=1
+    grep -q 'creativecommons.org/licenses/by-sa/4.0' "$opt" && has4=1
+    case "$has3$has4" in
+      11) lic_both=$((lic_both + 1)) ;;
+      10) lic3=$((lic3 + 1)) ;;
+      01) lic4=$((lic4 + 1)) ;;
+      *) lic_none=$((lic_none + 1)) ;;
+    esac
+  done
+
   # The static prose stays in shell `echo`s, matching the curated pack above.
   # It also keeps apostrophes out of the jq programs, where they would have to
   # fight the surrounding single quotes.
@@ -266,10 +281,14 @@ if [[ "$MODE" != curated ]]; then
     echo "## Licensing"
     echo
     echo "CKM publishes no repository-level license; each OPT embeds its source"
-    echo "archetypes' \`licence\` metadata (predominantly CC-BY-SA 3.0 where"
-    echo "stated — see the individual file). Vendored verbatim, so authorship"
-    echo "and licence metadata ride along; root reference copy:"
-    echo "\`LICENSE-CC-BY-SA-3.0\`."
+    echo "archetypes' \`licence\` metadata, and the pack is **mixed**. Counted by"
+    echo "this script over the vendored files at the stamp above: **$lic4** name"
+    echo "CC-BY-SA 4.0, **$lic3** name CC-BY-SA 3.0, **$lic_both** name both, and"
+    echo "**$lic_none** name no Creative Commons licence. Read the individual"
+    echo "file; its own metadata is the authority. Vendored verbatim, so"
+    echo "authorship and licence metadata ride along; root reference copies:"
+    echo "\`LICENSE-CC-BY-SA-3.0\` and \`LICENSE-CC-BY-SA-4.0\`, and \`REUSE.toml\`"
+    echo "declares this tree as \`CC-BY-SA-3.0 AND CC-BY-SA-4.0\`."
     echo
     jq -r '
       [ "- published by CKM: **\(.published)**",

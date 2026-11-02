@@ -224,7 +224,7 @@ async fn catalog(
 /// counts on the Overview, the comparison `ask` names on Compare.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 pub async fn load_releases(
     // The family of the template.
     family: TemplateFamily,

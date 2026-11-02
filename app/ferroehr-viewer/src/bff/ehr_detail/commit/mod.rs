@@ -66,12 +66,11 @@ pub struct CommitOutcome {
 /// CONTRIBUTION and every version it minted.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::Invalid`] when nothing is staged or a staged change is
-/// structurally unusable; CDR transport errors pass through; a non-2xx CDR
-/// answer (its validation diagnostics, which the UI renders verbatim,
-/// included) normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
+/// structurally unusable; a non-2xx CDR answer (its validation diagnostics,
+/// which the UI renders verbatim, included) normalizes via
+/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok).
 pub async fn commit_contribution(
     // The EHR to commit the change set into.
     ehr_id: String,
@@ -82,31 +81,24 @@ pub async fn commit_contribution(
     // The optional `AUDIT_DETAILS.description`; blank omits the attribute.
     description: String,
 ) -> Result<CommitOutcome, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let committer = if committer.trim().is_empty() {
-        session.identity.clone()
+        cdr.identity().to_owned()
     } else {
         committer.trim().to_owned()
     };
     let body = staged::contribution_body(&changes, &committer, &description)
         .map_err(ViewerError::Invalid)?;
-    let url = state.cdr.rest_v1(&format!(
+    let url = cdr.rest_v1(&format!(
         "ehr/{}/contribution",
         urlencoding::encode(&ehr_id)
     ));
-    let response = state
-        .cdr
-        .post(
-            &session.credential,
-            &url,
-            "application/json",
-            "application/json",
-            &[("Prefer", "return=representation")],
-            body,
-        )
+    let response = cdr
+        .post(&url)
+        .body("application/json", body)
+        .headers(&[("Prefer", "return=representation")])
+        .ok()
         .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
     Ok(parse_commit_outcome(&response.body))
 }
 

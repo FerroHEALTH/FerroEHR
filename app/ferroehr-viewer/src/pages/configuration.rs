@@ -402,7 +402,7 @@ enum Shown {
 /// that belong to it.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load(
     // The section the route names.
     section: String,

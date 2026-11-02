@@ -112,10 +112,12 @@ pub async fn download_template(
     };
     let (accept, extension) = served_as(family);
     let url = state.cdr.rest_v1(&path);
-    let answer = match state.cdr.get(&viewer.credential, &url, accept).await {
-        Ok(response) => crate::cdr::CdrClient::expect_success(response),
-        Err(error) => Err(error),
-    };
+    let answer = state
+        .cdr
+        .call(http::Method::GET, &url, &viewer.credential)
+        .accept(accept)
+        .ok()
+        .await;
     match answer {
         Ok(response) => {
             let disposition = format!(

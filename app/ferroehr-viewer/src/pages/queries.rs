@@ -193,7 +193,7 @@ fn grouped(rows: &[StoredQueryRow], only: Option<&str>) -> Listing {
 /// Loads Stored queries: the listing, kept to the namespace the address names.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_listing() -> Result<Listed, ViewerError> {
     crate::session::require_session()?;
     Ok(read_listing().await)
@@ -686,7 +686,7 @@ enum Definition {
 /// Loads the Definition: the version's AQL and its facts.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_definition(
     // The stored query the route names.
     name: String,
@@ -822,7 +822,7 @@ enum Run {
 /// Loads Run: the form as the post leaves it, and the run it asks.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_run(
     // The stored query the route names.
     name: String,
@@ -1010,7 +1010,7 @@ struct VersionRow {
 /// Loads Versions: every version of the stored query, newest first.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_versions(
     // The stored query the route names.
     name: String,
