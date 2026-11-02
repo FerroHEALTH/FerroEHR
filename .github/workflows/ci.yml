@@ -2753,10 +2753,11 @@ jobs:
   # 23 seconds ahead of it in the queue, and the plan refused the tag. On a
   # change that moves the workspace version this job runs the plan's own
   # fragment check at the merge ref or the merge group, whose first parent is
-  # main or the queue entry ahead.
+  # main or the queue entry ahead. It runs on a push to main too (#4803): a
+  # release commit merged past the queue skips both runs, as v5.6.0-rc9's did,
+  # so main turns red and names the missing fragments before anyone tags.
   release-fragments:
     name: release-fragments
-    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
