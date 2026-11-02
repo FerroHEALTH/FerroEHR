@@ -18,6 +18,7 @@ use serde_json::{Value, json};
 use sqlx::{AssertSqlSafe, PgPool};
 use uuid::Uuid;
 
+use ferroehr::ids::{EhrId, VoId};
 use ferroehr::service::FerroEhrService;
 
 use crate::admin_fixture::{count_for_ehr, party_relationship, repository, seed_full_ehr};
@@ -107,9 +108,7 @@ async fn admin_delete_cascades_and_leaves_other_ehr_untouched() {
     assert!(before1.contribution >= 3 && before1.item_tag == 1 && before1.audit >= 3);
 
     // Physical delete via the ADMIN seam.
-    svc.admin_ehr_delete(ehr1.to_string())
-        .await
-        .expect("admin delete");
+    svc.admin_ehr_delete(ehr1).await.expect("admin delete");
 
     // Every trace of ehr1 is physically gone (CNF cascade contract).
     let after1 = ehr_rows(pool, ehr1.into()).await;
@@ -129,7 +128,7 @@ async fn admin_delete_unknown_ehr_is_not_found() {
 
     // `has_ehr` is false → `ehr_id_does_not_exist` (→ HTTP 404), preserved
     // through the ServiceError round-trip.
-    let missing = Uuid::now_v7().to_string();
+    let missing = EhrId(Uuid::now_v7());
     let res = svc.admin_ehr_delete(missing).await;
     assert!(
         matches!(
@@ -141,19 +140,6 @@ async fn admin_delete_unknown_ehr_is_not_found() {
         ),
         "unknown EHR must be ehr_id_does_not_exist, got {res:?}"
     );
-
-    // A malformed id is a 400.
-    let bad = svc.admin_ehr_delete("not-a-uuid".to_owned()).await;
-    assert!(
-        matches!(
-            bad,
-            Err(ServiceError::BadRequest(Refusal {
-                kind: Malformed::Precondition,
-                ..
-            }))
-        ),
-        "malformed id must be BadRequest, got {bad:?}"
-    );
 }
 
 #[tokio::test]
@@ -164,39 +150,20 @@ async fn admin_delete_all_deletes_present_and_skips_missing() {
     let b = seed_full_ehr(&svc).await;
 
     // A two-id list of existing EHRs deletes both.
-    let deleted = svc
-        .admin_ehr_delete_all(vec![a.to_string(), b.to_string()])
-        .await
-        .expect("delete all");
+    let deleted = svc.admin_ehr_delete_all(&[a, b]).await.expect("delete all");
     assert_eq!(deleted, 2, "both existing EHRs deleted");
 
     // A list mixing one existing and one missing id deletes only the existing
     // (idempotent bulk: missing ids are skipped).
     let c = seed_full_ehr(&svc).await;
-    let missing = Uuid::now_v7().to_string();
+    let missing = EhrId(Uuid::now_v7());
     let deleted = svc
-        .admin_ehr_delete_all(vec![c.to_string(), missing])
+        .admin_ehr_delete_all(&[c, missing])
         .await
         .expect("delete all with a bogus id");
     assert_eq!(
         deleted, 1,
         "only the existing EHR is deleted; missing skipped"
-    );
-
-    // A malformed id in the list rejects the whole request (400), no deletion.
-    let d = seed_full_ehr(&svc).await;
-    let res = svc
-        .admin_ehr_delete_all(vec![d.to_string(), "not-a-uuid".to_owned()])
-        .await;
-    assert!(
-        matches!(
-            res,
-            Err(ServiceError::BadRequest(Refusal {
-                kind: Malformed::Precondition,
-                ..
-            }))
-        ),
-        "a malformed id must be BadRequest, got {res:?}"
     );
 }
 
@@ -215,14 +182,14 @@ async fn admin_delete_all_with_empty_list_deletes_every_ehr() {
 
     // Empty selector → every seeded EHR deleted.
     let deleted = svc
-        .admin_ehr_delete_all(vec![])
+        .admin_ehr_delete_all(&[])
         .await
         .expect("delete all (empty selector)");
     assert_eq!(deleted, 3, "an empty list deletes ALL EHRs");
 
     // Idempotent: a second empty delete now finds nothing.
     let again = svc
-        .admin_ehr_delete_all(vec![])
+        .admin_ehr_delete_all(&[])
         .await
         .expect("delete all again");
     assert_eq!(again, 0, "no EHRs remain after the all-delete");
@@ -230,7 +197,7 @@ async fn admin_delete_all_with_empty_list_deletes_every_ehr() {
     // A freshly seeded EHR is again the whole set for an empty selector.
     seed_full_ehr(&svc).await;
     let after = svc
-        .admin_ehr_delete_all(vec![])
+        .admin_ehr_delete_all(&[])
         .await
         .expect("delete all after reseed");
     assert_eq!(after, 1, "empty selector deletes the one remaining EHR");
@@ -393,6 +360,11 @@ async fn make_person(svc: &FerroEhrService, name: &str) -> String {
         .next()
         .expect("vo uuid")
         .to_owned()
+}
+
+/// The typed id of a versioned object a fixture returned as a string.
+fn vo(id: &str) -> VoId {
+    VoId(id.parse().expect("a versioned-object uuid"))
 }
 
 /// The number of `version` rows for one versioned object (0 = physically gone).
@@ -569,7 +541,7 @@ async fn physical_party_delete_tombstones_the_party_outbox() {
     .await
     .expect("register a reader over the party outbox");
 
-    svc.physical_party_delete(p1.clone())
+    svc.physical_party_delete(vo(&p1))
         .await
         .expect("physical party delete");
 
@@ -696,7 +668,7 @@ async fn physical_party_delete_cascades_relationships_and_spares_partner() {
     assert_eq!(orphan_audits_before, 0);
 
     // Delete p1 physically.
-    svc.physical_party_delete(p1.clone())
+    svc.physical_party_delete(vo(&p1))
         .await
         .expect("physical party delete");
 
@@ -729,7 +701,7 @@ async fn physical_party_delete_cascades_relationships_and_spares_partner() {
 
     // An unknown party id → 404 (party_id_does_not_exist), preserved through
     // the ServiceError round-trip.
-    let unknown = svc.physical_party_delete(Uuid::now_v7().to_string()).await;
+    let unknown = svc.physical_party_delete(VoId(Uuid::now_v7())).await;
     assert!(
         matches!(
             unknown,
@@ -740,16 +712,6 @@ async fn physical_party_delete_cascades_relationships_and_spares_partner() {
         ),
         "unknown party must be party_id_does_not_exist, got {unknown:?}"
     );
-
-    // A malformed id → 400.
-    let bad = svc.physical_party_delete("not-a-uuid".to_owned()).await;
-    assert!(matches!(
-        bad,
-        Err(ServiceError::BadRequest(Refusal {
-            kind: Malformed::Precondition,
-            ..
-        }))
-    ));
 }
 
 #[tokio::test]
@@ -771,9 +733,7 @@ async fn archive_marks_vos_idempotently_and_reads_stay_unchanged() {
     assert!(ehr_vo_count > 0, "the seeded EHR holds versioned objects");
 
     // archive_ehrs marks every VO of the EHR.
-    svc.archive_ehrs(vec![ehr.to_string()])
-        .await
-        .expect("archive ehr");
+    svc.archive_ehrs(&[ehr]).await.expect("archive ehr");
     let archived: i64 = sqlx::query_scalar(
         "SELECT count(*) FROM vo_head va \
          WHERE EXISTS (SELECT 1 FROM version v \
@@ -786,9 +746,7 @@ async fn archive_marks_vos_idempotently_and_reads_stay_unchanged() {
     assert_eq!(archived, ehr_vo_count, "every EHR VO is marked archived");
 
     // Idempotent: a second archive_ehrs adds nothing and does not error.
-    svc.archive_ehrs(vec![ehr.to_string()])
-        .await
-        .expect("re-archive ehr");
+    svc.archive_ehrs(&[ehr]).await.expect("re-archive ehr");
     let archived_again: i64 =
         sqlx::query_scalar("SELECT count(*) FROM vo_head WHERE archived_at IS NOT NULL")
             .fetch_one(pool)
@@ -797,7 +755,7 @@ async fn archive_marks_vos_idempotently_and_reads_stay_unchanged() {
     assert_eq!(archived_again, ehr_vo_count, "re-archive is idempotent");
 
     // archive_parties marks the party VO.
-    svc.archive_parties(vec![person.clone()])
+    svc.archive_parties(&[vo(&person)])
         .await
         .expect("archive party");
     let party_marked: i64 = sqlx::query_scalar(
@@ -831,9 +789,7 @@ async fn archive_marks_vos_idempotently_and_reads_stay_unchanged() {
             .fetch_one(pool)
             .await
             .expect("before");
-    let res = svc
-        .archive_ehrs(vec![fresh.to_string(), Uuid::now_v7().to_string()])
-        .await;
+    let res = svc.archive_ehrs(&[fresh, EhrId(Uuid::now_v7())]).await;
     assert!(
         matches!(
             res,
@@ -852,7 +808,7 @@ async fn archive_marks_vos_idempotently_and_reads_stay_unchanged() {
     assert_eq!(before, after, "all-or-nothing: nothing archived on failure");
 
     // Unknown party → 404 (`party_id_does_not_exist`).
-    let bad_party = svc.archive_parties(vec![Uuid::now_v7().to_string()]).await;
+    let bad_party = svc.archive_parties(&[VoId(Uuid::now_v7())]).await;
     assert!(matches!(
         bad_party,
         Err(ServiceError::NotFound(Refusal {
@@ -873,7 +829,7 @@ async fn vo_rows(pool: &PgPool, relation: &str, vo_id: &str) -> i64 {
 }
 
 /// Row counts in one relation of one storage tier, for an EHR.
-async fn tier_rows(pool: &PgPool, relation: &str, ehr: ferroehr::ids::EhrId) -> i64 {
+async fn tier_rows(pool: &PgPool, relation: &str, ehr: EhrId) -> i64 {
     let sql = format!("SELECT count(*) FROM {relation} WHERE ehr_id = $1");
     sqlx::query_scalar(AssertSqlSafe(sql))
         .bind(ehr)
@@ -910,9 +866,7 @@ async fn archive_physically_moves_rows_to_the_cold_tier_and_back() {
         .map(|r| r.body)
         .expect("status before archive");
 
-    svc.archive_ehrs(vec![ehr.to_string()])
-        .await
-        .expect("archive ehr");
+    svc.archive_ehrs(&[ehr]).await.expect("archive ehr");
 
     // 1. The primary tier shrank to nothing for this EHR; the cold tier holds
     //    exactly what left.
@@ -954,13 +908,11 @@ async fn archive_physically_moves_rows_to_the_cold_tier_and_back() {
     );
 
     // 4. Re-archiving is still a no-op (nothing left to move).
-    svc.archive_ehrs(vec![ehr.to_string()])
-        .await
-        .expect("re-archive");
+    svc.archive_ehrs(&[ehr]).await.expect("re-archive");
     assert_eq!(tier_rows(pool, "version_cold", ehr).await, hot_versions);
 
     // 5. The move reverses exactly, markers included.
-    svc.restore_archived_ehrs(vec![ehr.to_string()])
+    svc.restore_archived_ehrs(&[ehr])
         .await
         .expect("restore ehr");
     assert_eq!(tier_rows(pool, "version_hot", ehr).await, hot_versions);
@@ -992,12 +944,10 @@ async fn physical_delete_removes_archived_rows_from_the_cold_tier() {
     let pool = &pool;
 
     let ehr = seed_full_ehr(&svc).await;
-    svc.archive_ehrs(vec![ehr.to_string()])
-        .await
-        .expect("archive ehr");
+    svc.archive_ehrs(&[ehr]).await.expect("archive ehr");
     assert!(tier_rows(pool, "version_cold", ehr).await > 0);
 
-    svc.admin_ehr_delete(ehr.to_string())
+    svc.admin_ehr_delete(ehr)
         .await
         .expect("delete archived ehr");
 
@@ -1031,9 +981,7 @@ async fn writing_an_archived_object_thaws_it_back_to_the_primary_tier() {
     let status_vo = preceding.split("::").next().expect("vo uuid").to_owned();
 
     // Creation mints an EHR_STATUS and an EHR_ACCESS; archiving moves both.
-    svc.archive_ehrs(vec![ehr.to_string()])
-        .await
-        .expect("archive ehr");
+    svc.archive_ehrs(&[ehr]).await.expect("archive ehr");
     assert_eq!(tier_rows(pool, "version_hot", ehr).await, 0);
     assert_eq!(tier_rows(pool, "version_cold", ehr).await, 2);
 
@@ -1136,10 +1084,10 @@ async fn erasure_leaves_no_row_in_any_domain_and_tombstones_the_outbox() {
 
     // The marks, the cross-reference and a reader cursor: every relation the
     // erasure has to reach, populated before it runs.
-    svc.restrict_processing(&erased.to_string(), None, "gdpr-18-1-c", None)
+    svc.restrict_processing(erased, None, "gdpr-18-1-c", None)
         .await
         .expect("record the restriction");
-    svc.put_retention_anchor(&erased.to_string(), "nl", None, None)
+    svc.put_retention_anchor(erased, "nl", None, None)
         .await
         .expect("record the retention anchor");
     sqlx::query(
@@ -1169,9 +1117,7 @@ async fn erasure_leaves_no_row_in_any_domain_and_tombstones_the_outbox() {
     .expect("the EHR's audit rows");
 
     // Archived, so the delete has to reach the cold partition too.
-    svc.archive_ehrs(vec![erased.to_string()])
-        .await
-        .expect("archive the EHR");
+    svc.archive_ehrs(&[erased]).await.expect("archive the EHR");
     let cold: i64 =
         sqlx::query_scalar("SELECT count(*) FROM version WHERE ehr_id = $1 AND tier = 'cold'")
             .bind(erased.0)
@@ -1180,9 +1126,7 @@ async fn erasure_leaves_no_row_in_any_domain_and_tombstones_the_outbox() {
             .expect("count the archived versions");
     assert!(cold > 0, "the versions really moved to the cold tier");
 
-    svc.admin_ehr_delete(erased.to_string())
-        .await
-        .expect("admin delete");
+    svc.admin_ehr_delete(erased).await.expect("admin delete");
 
     let by_ehr = |sql: &'static str| {
         let pool = pool.clone();
@@ -1319,9 +1263,7 @@ async fn a_blob_reference_follows_its_version_across_the_tier_move() {
     .await
     .expect("record the reference");
 
-    svc.archive_ehrs(vec![ehr.to_string()])
-        .await
-        .expect("archive the EHR");
+    svc.archive_ehrs(&[ehr]).await.expect("archive the EHR");
     let tier: String = sqlx::query_scalar("SELECT tier FROM blob_ref WHERE vo_id = $1")
         .bind(vo_id)
         .fetch_one(&pool)
@@ -1329,9 +1271,7 @@ async fn a_blob_reference_follows_its_version_across_the_tier_move() {
         .expect("the reference survived the move");
     assert_eq!(tier, "cold", "the reference followed its version");
 
-    svc.admin_ehr_delete(ehr.to_string())
-        .await
-        .expect("admin delete");
+    svc.admin_ehr_delete(ehr).await.expect("admin delete");
     let left: i64 = sqlx::query_scalar("SELECT count(*) FROM blob_ref WHERE vo_id = $1")
         .bind(vo_id)
         .fetch_one(&pool)

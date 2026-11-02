@@ -1120,12 +1120,9 @@ async fn an_archived_ehr_and_party_round_trip_with_their_marker_and_tier() {
     let person_vo = crate::fixtures::create_party(&source, wave_uv(&wave_person("Archie")))
         .await
         .expect("create_party");
+    source.archive_ehrs(&[ehr]).await.expect("archive the EHR");
     source
-        .archive_ehrs(vec![ehr.to_string()])
-        .await
-        .expect("archive the EHR");
-    source
-        .archive_parties(vec![person_vo.to_string()])
+        .archive_parties(&[person_vo])
         .await
         .expect("archive the party");
 

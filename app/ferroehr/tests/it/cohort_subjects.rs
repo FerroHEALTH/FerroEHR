@@ -324,10 +324,10 @@ async fn a_cohort_leaves_out_every_ehr_the_population_gate_leaves_out() {
         panic!("four EHRs were seeded");
     };
     crate::fixtures::set_not_queryable(&svc, hidden).await;
-    svc.restrict_processing(&restricted.to_string(), None, "gdpr-18-1-d", None)
+    svc.restrict_processing(restricted, None, "gdpr-18-1-d", None)
         .await
         .expect("restrict the whole EHR");
-    svc.set_research_objection(&objecting.to_string(), true, None)
+    svc.set_research_objection(objecting, true, None)
         .await
         .expect("record the research objection");
 

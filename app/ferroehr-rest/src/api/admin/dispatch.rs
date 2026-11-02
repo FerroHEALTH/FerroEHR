@@ -31,6 +31,7 @@ use openehr_its::rest::runtime::ApiError;
 
 use crate::api::{BoxResponse, RequestParts};
 use crate::overview::error::RestError;
+use crate::overview::version_id::{parse_ehr_id, parse_party_id};
 
 use crate::negotiate;
 use crate::state::AppState;
@@ -65,7 +66,10 @@ async fn run(
             )?;
             // Physical EHR delete → 204 No Content; unknown EHR → 404
             // (the service maps `ehr_id_does_not_exist` to NotFound).
-            state.backend().admin_ehr_delete(p.ehr_id).await?;
+            state
+                .backend()
+                .admin_ehr_delete(parse_ehr_id(&p.ehr_id)?)
+                .await?;
             Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
         // NOTE: no openEHR spec governs the routes below — our own extensions;
@@ -81,7 +85,10 @@ async fn run(
         // one 404.
         "admin_party_delete" => {
             let party_id = path_segment(&parts, "party_id")?;
-            state.backend().physical_party_delete(party_id).await?;
+            state
+                .backend()
+                .physical_party_delete(parse_party_id(&party_id)?)
+                .await?;
             Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
         "admin_query_delete" => {
@@ -107,8 +114,11 @@ async fn run(
             // (`parameters/query/ehr_id_Admin.yaml`), so an empty list means
             // "delete ALL EHRs" (`operations/admin_ehr_delete_all.yaml`), which
             // is the semantics the service seam honours.
-            let ids = ehr_id_list(q);
-            state.backend().admin_ehr_delete_all(ids).await?;
+            let ids = ehr_id_list(q)
+                .iter()
+                .map(|id| parse_ehr_id(id))
+                .collect::<Result<Vec<_>, _>>()?;
+            state.backend().admin_ehr_delete_all(&ids).await?;
             // The only declared success responses are a bodyless `204` (sync)
             // and `202` (async); this server is synchronous.
             Ok(negotiate::body::empty(StatusCode::NO_CONTENT))

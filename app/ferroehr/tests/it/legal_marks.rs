@@ -25,7 +25,7 @@ use serde_json::json;
 use sqlx::PgPool;
 
 use ferroehr::extensions::outbox::{OutboxDomain, reconcile};
-use ferroehr::ids::EhrId;
+use ferroehr::ids::{EhrId, VoId};
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::error::ServiceError;
 use ferroehr::service::query::request::AqlQueryRequest;
@@ -37,7 +37,7 @@ use crate::fixtures::uv;
 
 /// A fresh repository plus one EHR carrying an `EHR_STATUS` and a directory
 /// `FOLDER`, and the `EHR_STATUS` version-container id.
-async fn seed(svc: &FerroEhrService) -> (EhrId, String) {
+async fn seed(svc: &FerroEhrService) -> (EhrId, VoId) {
     let ehr_id = crate::fixtures::create_ehr(svc).await;
     let status = svc
         .ehr_status(ehr_id, None)
@@ -45,11 +45,14 @@ async fn seed(svc: &FerroEhrService) -> (EhrId, String) {
         .map(|r| r.body)
         .expect("status get");
     let status_ovid = status["uid"]["value"].as_str().expect("uid").to_owned();
-    let status_vo = status_ovid
-        .split("::")
-        .next()
-        .expect("object id")
-        .to_owned();
+    let status_vo = VoId(
+        status_ovid
+            .split("::")
+            .next()
+            .expect("object id")
+            .parse()
+            .expect("vo uuid"),
+    );
     svc.create_directory(
         ehr_id,
         uv(
@@ -149,7 +152,7 @@ async fn a_restricted_object_is_refused_on_every_read_and_write_path() {
         "the EHR is in the population"
     );
 
-    svc.restrict_processing(&ehr_id.to_string(), Some(&status_vo), "gdpr-18-1-a", None)
+    svc.restrict_processing(ehr_id, Some(status_vo), "gdpr-18-1-a", None)
         .await
         .expect("restrict the EHR_STATUS");
 
@@ -189,14 +192,14 @@ async fn a_restricted_object_is_refused_on_every_read_and_write_path() {
     // The stored rows are untouched: a restriction limits processing, it does
     // not remove anything.
     let versions: i64 = sqlx::query_scalar("SELECT count(*) FROM version WHERE vo_id = $1")
-        .bind(status_vo.parse::<uuid::Uuid>().expect("vo uuid"))
+        .bind(status_vo.0)
         .fetch_one(&pool)
         .await
         .expect("version count");
     assert!(versions >= 1, "the stored versions stay in storage");
 
     // The lift is a later act on the same register, and the read works again.
-    svc.lift_restriction(&ehr_id.to_string(), Some(&status_vo))
+    svc.lift_restriction(ehr_id, Some(status_vo))
         .await
         .expect("lift");
     svc.ehr_status(ehr_id, None)
@@ -205,10 +208,7 @@ async fn a_restricted_object_is_refused_on_every_read_and_write_path() {
         .expect("a lifted status reads again");
 
     // Art. 18(3) needs the sequence, so the register still carries the request.
-    let register = svc
-        .restriction_register(&ehr_id.to_string())
-        .await
-        .expect("register");
+    let register = svc.restriction_register(ehr_id).await.expect("register");
     assert_eq!(register.len(), 1, "the lift did not erase the request");
     assert_eq!(register[0].ground, "gdpr-18-1-a");
     assert!(
@@ -224,14 +224,9 @@ async fn a_whole_ehr_restriction_reaches_every_object_and_the_event_stream() {
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
     let (ehr_id, _status_vo) = seed(&svc).await;
 
-    svc.restrict_processing(
-        &ehr_id.to_string(),
-        None,
-        "gdpr-18-1-b",
-        Some("under review"),
-    )
-    .await
-    .expect("restrict the whole EHR");
+    svc.restrict_processing(ehr_id, None, "gdpr-18-1-b", Some("under review"))
+        .await
+        .expect("restrict the whole EHR");
 
     assert!(
         svc.ehr_status(ehr_id, None).await.map(|r| r.body).is_err(),
@@ -264,9 +259,7 @@ async fn a_whole_ehr_restriction_reaches_every_object_and_the_event_stream() {
     );
 
     // Lifting the whole-EHR restriction restores every path.
-    svc.lift_restriction(&ehr_id.to_string(), None)
-        .await
-        .expect("lift");
+    svc.lift_restriction(ehr_id, None).await.expect("lift");
     svc.ehr_status(ehr_id, None)
         .await
         .map(|r| r.body)
@@ -283,14 +276,14 @@ async fn an_object_restriction_survives_a_whole_ehr_lift() {
     let (_db, svc) = crate::fixtures::service().await;
     let (ehr_id, status_vo) = seed(&svc).await;
 
-    svc.restrict_processing(&ehr_id.to_string(), None, "gdpr-18-1-c", None)
+    svc.restrict_processing(ehr_id, None, "gdpr-18-1-c", None)
         .await
         .expect("whole-EHR restriction");
-    svc.restrict_processing(&ehr_id.to_string(), Some(&status_vo), "gdpr-18-1-a", None)
+    svc.restrict_processing(ehr_id, Some(status_vo), "gdpr-18-1-a", None)
         .await
         .expect("object restriction");
 
-    svc.lift_restriction(&ehr_id.to_string(), None)
+    svc.lift_restriction(ehr_id, None)
         .await
         .expect("lift the whole-EHR grain only");
 
@@ -310,7 +303,7 @@ async fn an_unknown_target_or_ground_is_refused_before_anything_is_recorded() {
     let (ehr_id, status_vo) = seed(&svc).await;
 
     let bad_ground = svc
-        .restrict_processing(&ehr_id.to_string(), None, "because-we-felt-like-it", None)
+        .restrict_processing(ehr_id, None, "because-we-felt-like-it", None)
         .await
         .expect_err("a ground outside the closed list is refused");
     assert!(
@@ -318,15 +311,15 @@ async fn an_unknown_target_or_ground_is_refused_before_anything_is_recorded() {
     );
 
     let unknown_ehr = svc
-        .restrict_processing(&uuid::Uuid::now_v7().to_string(), None, "national", None)
+        .restrict_processing(EhrId(uuid::Uuid::now_v7()), None, "national", None)
         .await
         .expect_err("an unknown EHR is refused");
     assert!(matches!(&unknown_ehr, ServiceError::NotFound(r) if r.kind == Missing::Ehr));
 
     let foreign = svc
         .restrict_processing(
-            &crate::fixtures::create_ehr(&svc).await.to_string(),
-            Some(&status_vo),
+            crate::fixtures::create_ehr(&svc).await,
+            Some(status_vo),
             "national",
             None,
         )
@@ -335,7 +328,7 @@ async fn an_unknown_target_or_ground_is_refused_before_anything_is_recorded() {
     assert!(matches!(&foreign, ServiceError::NotFound(r) if r.kind == Missing::VersionedObject));
 
     assert!(
-        svc.restriction_register(&ehr_id.to_string())
+        svc.restriction_register(ehr_id)
             .await
             .expect("register")
             .is_empty(),
@@ -352,7 +345,7 @@ async fn a_research_objection_leaves_the_population_and_the_care_record_alone() 
 
     assert_eq!(population_rows(&svc).await, 1);
 
-    svc.set_research_objection(&ehr_id.to_string(), true, None)
+    svc.set_research_objection(ehr_id, true, None)
         .await
         .expect("record the objection");
 
@@ -388,13 +381,9 @@ async fn a_research_objection_leaves_the_population_and_the_care_record_alone() 
 
     // The controller's Art. 21(6) public-interest override puts it back, and
     // says on whose authority.
-    svc.set_research_objection(
-        &ehr_id.to_string(),
-        true,
-        Some("public-health surveillance"),
-    )
-    .await
-    .expect("record the override");
+    svc.set_research_objection(ehr_id, true, Some("public-health surveillance"))
+        .await
+        .expect("record the override");
     assert_eq!(population_rows(&svc).await, 1);
     svc.extract_ehrs(ehr_id)
         .await
@@ -403,11 +392,11 @@ async fn a_research_objection_leaves_the_population_and_the_care_record_alone() 
 
     // Withdrawing carries no ground: there is nothing left to override.
     let bad = svc
-        .set_research_objection(&ehr_id.to_string(), false, Some("still important"))
+        .set_research_objection(ehr_id, false, Some("still important"))
         .await
         .expect_err("a withdrawal with a ground is refused");
     assert!(matches!(&bad, ServiceError::BadRequest(r) if r.kind == Malformed::Precondition));
-    svc.set_research_objection(&ehr_id.to_string(), false, None)
+    svc.set_research_objection(ehr_id, false, None)
         .await
         .expect("withdraw");
     assert_eq!(population_rows(&svc).await, 1);
@@ -454,14 +443,9 @@ async fn the_retention_register_lists_what_is_due_and_deletes_nothing() {
     assert!(matches!(&bad, ServiceError::BadRequest(r) if r.kind == Malformed::Precondition));
 
     // Anchored in the past, the EHR falls due.
-    svc.put_retention_anchor(
-        &ehr_id.to_string(),
-        "CH",
-        Some("1990-01-01T00:00:00Z"),
-        None,
-    )
-    .await
-    .expect("anchor");
+    svc.put_retention_anchor(ehr_id, "CH", Some("1990-01-01T00:00:00Z"), None)
+        .await
+        .expect("anchor");
     let due = svc.retention_due(100).await.expect("due list");
     assert_eq!(due.len(), 1, "one category in force, one row");
     assert_eq!(due[0].ehr_id, ehr_id);
@@ -478,16 +462,14 @@ async fn the_retention_register_lists_what_is_due_and_deletes_nothing() {
     // A per-object hold moves the object from due to held (EPDV Art. 10
     // Abs. 2 lit. b).
     let due_before = due[0].objects_due;
-    svc.set_retention_hold(&status_vo, true)
-        .await
-        .expect("hold");
+    svc.set_retention_hold(status_vo, true).await.expect("hold");
     let held = svc.retention_due(100).await.expect("due list");
     assert_eq!(held[0].objects_held, 1);
     assert_eq!(held[0].objects_due, due_before - 1);
 
     // An EHR-wide hold takes the EHR off the list entirely.
     svc.put_retention_anchor(
-        &ehr_id.to_string(),
+        ehr_id,
         "CH",
         Some("1990-01-01T00:00:00Z"),
         Some(("2026-09-15T00:00:00Z", "litigation hold")),
@@ -598,14 +580,9 @@ async fn a_category_keyed_period_lists_its_objects_and_unclassified_takes_the_lo
         "one row per kind, category and jurisdiction"
     );
 
-    svc.put_retention_anchor(
-        &ehr_id.to_string(),
-        "DE",
-        Some("1990-01-01T00:00:00Z"),
-        None,
-    )
-    .await
-    .expect("anchor");
+    svc.put_retention_anchor(ehr_id, "DE", Some("1990-01-01T00:00:00Z"), None)
+        .await
+        .expect("anchor");
     let due = svc.retention_due(100).await.expect("due list");
     let row = |category: Option<String>| {
         due.iter()
@@ -722,14 +699,9 @@ async fn an_origin_keyed_period_lists_the_objects_of_its_origin() {
         1
     );
 
-    svc.put_retention_anchor(
-        &ehr_id.to_string(),
-        "DE",
-        Some("1950-01-01T00:00:00Z"),
-        None,
-    )
-    .await
-    .expect("anchor");
+    svc.put_retention_anchor(ehr_id, "DE", Some("1950-01-01T00:00:00Z"), None)
+        .await
+        .expect("anchor");
     let due = svc.retention_due(100).await.expect("due list");
     let row = |origin: Option<&str>| {
         due.iter()
@@ -772,13 +744,11 @@ async fn setting_and_lifting_a_mark_is_recorded_in_the_access_trail() {
         .with_audit(sender);
     let (ehr_id, _status_vo) = seed(&svc).await;
 
-    svc.restrict_processing(&ehr_id.to_string(), None, "gdpr-18-1-d", None)
+    svc.restrict_processing(ehr_id, None, "gdpr-18-1-d", None)
         .await
         .expect("restrict");
-    svc.lift_restriction(&ehr_id.to_string(), None)
-        .await
-        .expect("lift");
-    svc.set_research_objection(&ehr_id.to_string(), true, None)
+    svc.lift_restriction(ehr_id, None).await.expect("lift");
+    svc.set_research_objection(ehr_id, true, None)
         .await
         .expect("object");
 

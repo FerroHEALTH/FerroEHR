@@ -53,7 +53,7 @@ impl FerroEhrService {
     /// and one mark.
     ///
     /// # Errors
-    /// - `precondition_violation` (`400`) — a malformed id, or a ground outside
+    /// - `precondition_violation` (`400`) — a ground outside
     ///   [`RESTRICTION_GROUNDS`].
     /// - `ehr_id_does_not_exist` (`404`) — the EHR is unknown.
     /// - `versioned_object_does_not_exist` (`404`) — the object is unknown, or
@@ -61,15 +61,11 @@ impl FerroEhrService {
     /// - `exception` — a database fault mid-transaction (rolled back).
     pub async fn restrict_processing(
         &self,
-        ehr_id: &str,
-        vo_id: Option<&str>,
+        ehr_id: EhrId,
+        vo_id: Option<VoId>,
         ground: &str,
         note: Option<&str>,
     ) -> Result<(), ServiceError> {
-        let ehr_id = EhrId(super::parse_uuid(ehr_id, "EHR")?);
-        let vo_id = vo_id
-            .map(|raw| super::parse_uuid(raw, "versioned object").map(VoId))
-            .transpose()?;
         if !RESTRICTION_GROUNDS.contains(&ground) {
             return Err(ServiceError::precondition(format!(
                 "restriction ground {ground:?} is not one of {}",
@@ -97,13 +93,9 @@ impl FerroEhrService {
     /// The [`Self::restrict_processing`] rejections, minus the ground check.
     pub async fn lift_restriction(
         &self,
-        ehr_id: &str,
-        vo_id: Option<&str>,
+        ehr_id: EhrId,
+        vo_id: Option<VoId>,
     ) -> Result<(), ServiceError> {
-        let ehr_id = EhrId(super::parse_uuid(ehr_id, "EHR")?);
-        let vo_id = vo_id
-            .map(|raw| super::parse_uuid(raw, "versioned object").map(VoId))
-            .transpose()?;
         self.check_mark_target(ehr_id, vo_id).await?;
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
@@ -121,16 +113,14 @@ impl FerroEhrService {
     /// the Art. 18(3) notification is prepared against.
     ///
     /// # Errors
-    /// - `precondition_violation` (`400`) — a malformed EHR id.
     /// - `ehr_id_does_not_exist` (`404`) — the EHR is unknown.
     /// - `exception` — a database fault.
     /// - `service_overloaded` — the access record was refused under
     ///   `[audit] fail_mode = "closed"`.
     pub async fn restriction_register(
         &self,
-        ehr_id: &str,
+        ehr_id: EhrId,
     ) -> Result<Vec<marks::RestrictionRow>, ServiceError> {
-        let ehr_id = EhrId(super::parse_uuid(ehr_id, "EHR")?);
         self.check_mark_target(ehr_id, None).await?;
         self.emit_mark_access(EventActionCode::Read, ehr_id, None, "restriction")?;
         marks::restrictions(&self.pool, ehr_id)
@@ -145,17 +135,16 @@ impl FerroEhrService {
     /// and is meaningful only while the objection stands.
     ///
     /// # Errors
-    /// - `precondition_violation` (`400`) — a malformed EHR id, or a ground
-    ///   given together with a withdrawal (the two contradict each other).
+    /// - `precondition_violation` (`400`) — a ground given
+    ///   together with a withdrawal (the two contradict each other).
     /// - `ehr_id_does_not_exist` (`404`) — the EHR is unknown.
     /// - `exception` — a database fault mid-transaction (rolled back).
     pub async fn set_research_objection(
         &self,
-        ehr_id: &str,
+        ehr_id: EhrId,
         objected: bool,
         ground: Option<&str>,
     ) -> Result<(), ServiceError> {
-        let ehr_id = EhrId(super::parse_uuid(ehr_id, "EHR")?);
         if !objected && ground.is_some() {
             return Err(ServiceError::precondition(
                 "a withdrawal of the objection carries no override ground: there is nothing \
@@ -290,18 +279,17 @@ impl FerroEhrService {
     /// EHR-wide hold that suspends disposal.
     ///
     /// # Errors
-    /// - `precondition_violation` (`400`) — a malformed EHR id, or a hold
-    ///   instant with no ground.
+    /// - `precondition_violation` (`400`) — a hold instant with no
+    ///   ground.
     /// - `ehr_id_does_not_exist` (`404`) — the EHR is unknown.
     /// - `exception` — a database fault mid-transaction (rolled back).
     pub async fn put_retention_anchor(
         &self,
-        ehr_id: &str,
+        ehr_id: EhrId,
         jurisdiction: &str,
         anchored_at: Option<&str>,
         hold: Option<(&str, &str)>,
     ) -> Result<(), ServiceError> {
-        let ehr_id = EhrId(super::parse_uuid(ehr_id, "EHR")?);
         self.check_mark_target(ehr_id, None).await?;
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
@@ -324,11 +312,9 @@ impl FerroEhrService {
     /// grain, and `retention_due` counts what it covers.
     ///
     /// # Errors
-    /// - `precondition_violation` (`400`) — a malformed id.
     /// - `versioned_object_does_not_exist` (`404`) — the object is unknown.
     /// - `exception` — a database fault mid-transaction (rolled back).
-    pub async fn set_retention_hold(&self, vo_id: &str, held: bool) -> Result<(), ServiceError> {
-        let vo_id = VoId(super::parse_uuid(vo_id, "versioned object")?);
+    pub async fn set_retention_hold(&self, vo_id: VoId, held: bool) -> Result<(), ServiceError> {
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
         let found = marks::set_retention_hold(&mut tx, vo_id, held)
@@ -380,21 +366,16 @@ impl FerroEhrService {
     /// restriction of access — our own design/extension.
     ///
     /// # Errors
-    /// - `precondition_violation` (`400`) — a malformed id.
     /// - `ehr_id_does_not_exist` (`404`) — the EHR is unknown.
     /// - `versioned_object_does_not_exist` (`404`) — the object is unknown, or
     ///   is not in that EHR.
     /// - `exception` — a database fault mid-transaction (rolled back).
     pub async fn restrict_access(
         &self,
-        ehr_id: &str,
-        vo_id: Option<&str>,
+        ehr_id: EhrId,
+        vo_id: Option<VoId>,
         note: Option<&str>,
     ) -> Result<(), ServiceError> {
-        let ehr_id = EhrId(super::parse_uuid(ehr_id, "EHR")?);
-        let vo_id = vo_id
-            .map(|raw| super::parse_uuid(raw, "versioned object").map(VoId))
-            .transpose()?;
         self.check_mark_target(ehr_id, vo_id).await?;
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
@@ -413,13 +394,9 @@ impl FerroEhrService {
     /// The [`Self::restrict_access`] rejections.
     pub async fn lift_access_restriction(
         &self,
-        ehr_id: &str,
-        vo_id: Option<&str>,
+        ehr_id: EhrId,
+        vo_id: Option<VoId>,
     ) -> Result<(), ServiceError> {
-        let ehr_id = EhrId(super::parse_uuid(ehr_id, "EHR")?);
-        let vo_id = vo_id
-            .map(|raw| super::parse_uuid(raw, "versioned object").map(VoId))
-            .transpose()?;
         self.check_mark_target(ehr_id, vo_id).await?;
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
@@ -435,14 +412,12 @@ impl FerroEhrService {
     /// first.
     ///
     /// # Errors
-    /// - `precondition_violation` (`400`) — a malformed id.
     /// - `ehr_id_does_not_exist` (`404`) — the EHR is unknown.
     /// - `exception` — a database fault.
     pub async fn access_restriction_register(
         &self,
-        ehr_id: &str,
+        ehr_id: EhrId,
     ) -> Result<Vec<marks::AccessRestrictionRow>, ServiceError> {
-        let ehr_id = EhrId(super::parse_uuid(ehr_id, "EHR")?);
         self.check_mark_target(ehr_id, None).await?;
         self.emit_mark_access(EventActionCode::Read, ehr_id, None, "access-restriction")?;
         marks::access_restrictions(&self.pool, ehr_id)

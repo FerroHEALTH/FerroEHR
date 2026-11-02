@@ -908,9 +908,7 @@ async fn an_archived_version_is_rebuilt_and_stays_archived() {
         sys_version,
     )
     .await;
-    svc.archive_ehrs(vec![ehr_id.0.to_string()])
-        .await
-        .expect("archive");
+    svc.archive_ehrs(&[ehr_id]).await.expect("archive");
     let cold_before: i64 =
         sqlx::query_scalar("SELECT count(*) FROM node_cold WHERE vo_id = $1 AND sys_version = $2")
             .bind(vo_id)
