@@ -48,9 +48,9 @@ composition_access_delay_update	false	-	Some(Composition)	Some(Update)	-	Pre	Non
 composition_create	true	Some(Clinical)	Some(Composition)	Some(Create)	true	Pre	Some(Audited { action: Create, object: Composition })	Create	true	true	false
 composition_delete	true	Some(Clinical)	Some(Composition)	Some(Delete)	true	Pre	Some(Audited { action: Delete, object: Composition })	Delete	true	true	false
 composition_get	true	Some(Clinical)	Some(Composition)	Some(Read)	false	Post	Some(Audited { action: Read, object: Composition })	Read	true	false	true
-composition_tags_delete	true	Some(Clinical)	Some(Composition)	Some(Delete)	true	Skip	Some(Audited { action: Delete, object: Composition })	Delete	false	false	false
-composition_tags_get	true	Some(Clinical)	Some(Composition)	Some(Read)	false	Skip	Some(Audited { action: Read, object: Composition })	Read	false	false	false
-composition_tags_update	true	Some(Clinical)	Some(Composition)	Some(Update)	true	Skip	Some(Audited { action: Update, object: Composition })	Update	false	false	false
+composition_tags_delete	true	Some(Clinical)	Some(Composition)	Some(Delete)	true	Pre	Some(Audited { action: Delete, object: Composition })	Delete	false	false	false
+composition_tags_get	true	Some(Clinical)	Some(Composition)	Some(Read)	false	Post	Some(Audited { action: Read, object: Composition })	Read	false	false	true
+composition_tags_update	true	Some(Clinical)	Some(Composition)	Some(Update)	true	Pre	Some(Audited { action: Update, object: Composition })	Update	false	false	false
 composition_update	true	Some(Clinical)	Some(Composition)	Some(Update)	true	Pre	Some(Audited { action: Update, object: Composition })	Update	true	true	false
 contribution_create	true	Some(Clinical)	Some(Contribution)	Some(Create)	true	Pre	Some(Audited { action: Create, object: Contribution })	Create	false	false	false
 contribution_get	true	Some(Clinical)	Some(Contribution)	Some(Read)	false	Post	Some(Audited { action: Read, object: Contribution })	Read	false	false	false
@@ -98,7 +98,7 @@ ehr_status_tags_delete	true	Some(Clinical)	Some(EhrStatus)	Some(Delete)	true	Pre
 ehr_status_tags_get	true	Some(Clinical)	Some(EhrStatus)	Some(Read)	false	Pre	Some(Audited { action: Read, object: Ehr })	Read	false	false	false
 ehr_status_tags_update	true	Some(Clinical)	Some(EhrStatus)	Some(Update)	true	Pre	Some(Audited { action: Update, object: Ehr })	Update	false	false	false
 ehr_status_update	true	Some(Clinical)	Some(EhrStatus)	Some(Update)	true	Pre	Some(Audited { action: Update, object: Ehr })	Update	false	false	false
-ehr_tags_get	true	Some(Clinical)	Some(Ehr)	Some(Read)	false	Skip	Some(Audited { action: Read, object: Ehr })	Read	false	false	false
+ehr_tags_get	true	Some(Clinical)	Some(Ehr)	Some(Read)	false	Pre	Some(Audited { action: Read, object: Ehr })	Read	false	false	false
 env_view	false	-	None	None	-	Skip	None	-	false	false	false
 event_subscription_create	false	-	None	None	-	Skip	None	-	false	false	false
 event_subscription_delete	false	-	None	None	-	Skip	None	-	false	false	false

@@ -1,30 +1,25 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The policy-enforcement point (PEP) for the ITS-REST surface.
+//! The policy-enforcement point (PEP) for the ITS-REST surface: the ABAC gate
+//! and the SMART resource-scope and launch-context gate, driven from the
+//! generic dispatch mount (`crate::api`).
 //!
-//! Composes the ABAC gate with the SMART resource-scope + launch-context gate,
-//! driven from the generic dispatch mount (`crate::api`).
-//!
-//! ABAC and RBAC are our own enterprise design — no openEHR spec governs them. SMART is
-//! spec-grounded: the scope grammar and launch-context binding come from
+//! ABAC and RBAC are our own design; no openEHR spec governs them. SMART takes
+//! its scope grammar and launch-context binding from
 //! `ITS-REST/docs/smart_app_launch/master08-scopes.adoc` §Resource Scopes and
 //! `master07-*.adoc` §Context Selection, and the 401/403 discipline from
 //! `.../overview/Requests_and_responses.md` §Authentication and authorization.
 //!
-//! The gates AND-compose as `EHR_ACCESS` → RBAC → ABAC → SMART, each an
-//! additive restriction, so the SMART gate runs after the RBAC/Cedar decision
-//! has permitted, never in place of it. Pre-checks run before the backend call
-//! (op id, path params, query, body); post-checks run after it on a successful
-//! response, from the
-//! [`AuditObject`](crate::system_log::middleware::AuditObject) the dispatch set.
-//! Every deny is a `403` and every engine failure a `500` (fail-closed), each
-//! carrying the [`Principal`] on the response extensions for the ATNA layer.
-//! ABAC is inert without a wired `crate::extensions::access::authz::AbacGate`.
-//! The SMART gate here covers the COMPOSITION operations, whose template only
-//! the body or the stored version names (`crate::smart::routes`); every other
-//! route's SMART requirement is checked by the authentication middleware. It
-//! runs whenever authentication is on.
+//! The gates AND-compose as `EHR_ACCESS` → RBAC → ABAC → SMART. Pre-checks run
+//! before the backend call (op id, path params, query, body); post-checks run on
+//! a successful response, from the dispatch's
+//! [`AuditObject`](crate::system_log::middleware::AuditObject). A deny is a
+//! `403` and an engine failure a `500`, each carrying the [`Principal`] for the
+//! ATNA layer. ABAC is inert without a wired
+//! `crate::extensions::access::authz::AbacGate`. The SMART gate here, run
+//! whenever authentication is on, covers the COMPOSITION operations, whose
+//! template only the body or the stored version names (`crate::smart::routes`).
 #![expect(
     clippy::result_large_err,
     reason = "the Err variant of every decision point in this module is a \
@@ -204,8 +199,7 @@ async fn abac_pre(
     else {
         return Ok(());
     };
-    // DIRECTORY is gated only when `abac.check_directory` says so — engine-
-    // independent, so a Cedar deployment can enable it too.
+    // DIRECTORY is gated only under `abac.check_directory`, whatever the engine.
     if kind == ResourceKind::Directory && !abac.directory_checked {
         return Ok(());
     }
@@ -300,10 +294,9 @@ async fn abac_post(state: &AppState, op: &'static str, resp: Response) -> Respon
         return deny;
     }
 
-    // The template, category and origin attributes: for a composition read,
-    // from the returned version uid.
+    // A composition's template, category and origin, from the returned uid.
     let content = match kind {
-        ResourceKind::Composition => match post_content(abac, &principal, uid.as_deref()).await {
+        ResourceKind::Composition => match stored_content(abac, &principal, uid.as_deref()).await {
             Ok(content) => content,
             Err(deny) => return deny,
         },
@@ -512,15 +505,23 @@ async fn pre_content(
             }))
         }
         (CompositionGate::Write, _) => Ok(composition_content(rules, principal, parts)),
+        // An item-tag write: the attributes of the COMPOSITION it tags.
+        (CompositionGate::None, Verb::Update | Verb::Delete)
+            if row.kind == Some(ResourceKind::Composition) =>
+        {
+            let uid = parts.path.get("uid_based_id").map(String::as_str);
+            stored_content(abac, principal, uid).await
+        }
         _ if row.commits_contribution() => contribution_content(rules, parts, principal),
         // EHR / EHR_STATUS / DIRECTORY carry no template.
         _ => Ok(ContentAttrs::default()),
     }
 }
 
-/// Returns the template, category and origin attributes of a returned
-/// composition version, via the version uid the dispatch recorded.
-async fn post_content(
+/// Returns the template, category and origin attributes of the stored
+/// composition version `uid` names: the one a read returned or a tag write
+/// targets.
+async fn stored_content(
     abac: &AbacGate,
     principal: &Principal,
     uid: Option<&str>,
@@ -1151,9 +1152,8 @@ mod tests {
 
     /// Every ITS-REST operation the route tables name is either gated
     /// (`Pre`/`Post`) or belongs to a family the matrix deliberately leaves to
-    /// RBAC: the item tags, and the definition, demographic, admin, query and
-    /// system groups. An EHR-area operation reaching `Skip` by falling through
-    /// fails here.
+    /// RBAC: the definition, demographic, admin, query and system groups. An
+    /// EHR-area operation reaching `Skip`, item tags included, fails here.
     #[test]
     fn every_route_is_gated_or_rbac_only_by_family() {
         use openehr_its::rest::generated::{admin, definition, demographic, ehr, query, system};
@@ -1173,7 +1173,7 @@ mod tests {
             for (_, _, op) in routes {
                 if mode_of(op) == Mode::Skip {
                     assert!(
-                        group != "ehr" || op.contains("_tags_"),
+                        group != "ehr",
                         "{op} ({group}) falls through to Skip without a decision"
                     );
                 }
@@ -1204,7 +1204,7 @@ mod tests {
         // cohort extension included.
         assert_eq!(mode_of("query_execute_adhoc_query"), Mode::Skip);
         assert_eq!(mode_of("query_execute_cohort"), Mode::Skip);
-        assert_eq!(mode_of("ehr_tags_get"), Mode::Skip);
+        assert_eq!(mode_of("ehr_tags_get"), Mode::Pre);
         assert_eq!(mode_of("definition_template_adl1.4_upload"), Mode::Skip);
     }
 
