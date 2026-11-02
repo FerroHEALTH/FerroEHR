@@ -26,7 +26,7 @@ use crate::state::AppState;
 
 /// Execute the two ad-hoc operations. The single wire `ehr_id` (query parameter
 /// or `openehr-ehr-id` header — resolved for both methods by
-/// [`response::ehr_id_from_request`], `Request.md` §About the `ehr_id`
+/// [`response::ehr_scope`], `Request.md` §About the `ehr_id`
 /// parameter) is collected into the one-element [`AqlQueryRequest::ehr_ids`]
 /// scope (a list scope is our own extension; the conformant wire binds one
 /// `ehr_id`).
@@ -51,9 +51,7 @@ pub(super) async fn execute(
             // an accepted superset.
             let parameters = params::aql_binds(p.query_parameters)?;
             let request = scope.apply(AqlQueryRequest {
-                ehr_ids: response::ehr_id_from_request(p.ehr_id, h)?
-                    .into_iter()
-                    .collect(),
+                ehr_ids: response::ehr_scope(p.ehr_id, h)?,
                 offset: p.offset,
                 fetch: p.fetch,
                 parameters,
@@ -75,9 +73,7 @@ pub(super) async fn execute(
                 q,
             )?;
             let request = scope.apply(AqlQueryRequest {
-                ehr_ids: response::ehr_id_from_request(params::query_param(q, "ehr_id"), h)?
-                    .into_iter()
-                    .collect(),
+                ehr_ids: response::ehr_scope(params::query_param(q, "ehr_id"), h)?,
                 offset,
                 fetch,
                 parameters,

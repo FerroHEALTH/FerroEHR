@@ -554,7 +554,7 @@ async fn a_simplified_commit_stores_the_names_and_archetype_details_of_the_canon
 /// The single row an ad hoc AQL query scoped to `ehr` returns.
 async fn one_row(svc: &FerroEhrService, ehr: EhrId, aql: &str) -> Value {
     let request = ferroehr::service::query::request::AqlQueryRequest {
-        ehr_ids: vec![ehr.0.to_string()],
+        ehr_ids: vec![ehr],
         ..Default::default()
     };
     let result = svc

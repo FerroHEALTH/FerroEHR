@@ -1339,10 +1339,11 @@ fn rm_base_twin_classes_keep_both_generations() {
         }
     }
 
-    // The ADL-1.4 generation's two member placements that look like defects and
-    // are not: the RM twin keeps the pre-SPECPUB-6 spelling, and puts
-    // `copyright` on the ITEM (which the vendored ADL-1.4 `Resource.xsd` also
-    // does), while the BASE twin carries the corrected/relocated forms.
+    // The ADL-1.4 generation's member placements: the RM twin now carries the
+    // SPECPUB-6 spelling as BASE does (RM
+    // `docs/UML/classes/org.openehr.rm.common.translation_details.adoc`), and
+    // still puts `copyright` on the ITEM (which the vendored ADL-1.4
+    // `Resource.xsd` also does), while the BASE twin carries the relocated form.
     let rm_translation = testsupport::declared_attributes("rm", "TRANSLATION_DETAILS")
         .unwrap()
         .unwrap();
@@ -1350,8 +1351,8 @@ fn rm_base_twin_classes_keep_both_generations() {
         .unwrap()
         .unwrap();
     assert!(
-        rm_translation.contains("accreditaton") && !rm_translation.contains("accreditation"),
-        "the RM (ADL-1.4) TRANSLATION_DETAILS no longer carries the retained `accreditaton` \
+        rm_translation.contains("accreditation") && !rm_translation.contains("accreditaton"),
+        "the RM (ADL-1.4) TRANSLATION_DETAILS no longer carries the corrected `accreditation` \
          spelling — re-adjudicate against RM \
          docs/UML/classes/org.openehr.rm.common.translation_details.adoc",
     );
@@ -1417,11 +1418,21 @@ fn rm_base_twin_classes_keep_both_generations() {
 /// guard agree about what is covered.
 #[test]
 fn profile_generation_delta_is_pinned() {
-    // RM: 1.2.0 adds exactly `EHR.tags` over 1.1.0 (and no classes).
+    // RM: 1.2.0 adds exactly `EHR.tags` over 1.1.0 (and no classes), plus the
+    // corrected spelling `TRANSLATION_DETAILS.accreditation` of the retained
+    // ADL 1.4 resource package, whose released 1.1.0 BMM keeps `accreditaton`.
+    // That class reaches no version body: OPT 1.4 documents carry it as XML,
+    // and every published `Resource.xsd` spells `accreditation`.
     let rm =
         testsupport::generation_attribute_delta("rm", "v1_1", "v1_2").expect("rm generations load");
     assert_eq!(rm.classes_added, Vec::<String>::new());
-    assert_eq!(rm.attributes_added, vec!["EHR.tags".to_owned()]);
+    assert_eq!(
+        rm.attributes_added,
+        vec![
+            "EHR.tags".to_owned(),
+            "TRANSLATION_DETAILS.accreditation".to_owned()
+        ]
+    );
 
     // RM REMOVED direction (#1961): the development generation drops the
     // nine 1.1.0-BMM-only classes (undocumented machine-readable classes of
@@ -1446,7 +1457,10 @@ fn profile_generation_delta_is_pinned() {
     );
     assert_eq!(
         rm.attributes_removed,
-        vec!["PARTY.reverse_relationships".to_owned()]
+        vec![
+            "PARTY.reverse_relationships".to_owned(),
+            "TRANSLATION_DETAILS.accreditaton".to_owned()
+        ]
     );
 
     // RM RETYPED direction (#2382): the development generation widens

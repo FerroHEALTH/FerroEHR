@@ -138,3 +138,45 @@ fn feeder_audit_details_other_details_round_trips() {
     .expect("serialize 2");
     assert_eq!(xml1, xml2, "the round trip must be byte-stable");
 }
+
+/// The RM 1.2.0 `TRANSLATION_DETAILS` carries `accreditation` in both canonical
+/// forms. RM `docs/UML/classes/org.openehr.rm.common.translation_details.adoc`
+/// §Attributes names it `accreditation`, as every published `Resource.xsd`
+/// does, so the XML reader binds the element instead of skipping it, and the
+/// pre-fix key `accreditaton` is refused as undeclared.
+#[test]
+fn rm_translation_details_accreditation_round_trips() {
+    use openehr_rm::v1_2::common::resource::translation_details::TranslationDetails;
+    let json = r#"{
+        "_type": "TRANSLATION_DETAILS",
+        "language": {
+            "_type": "CODE_PHRASE",
+            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ISO_639-1" },
+            "code_string": "nl"
+        },
+        "author": { "name": "Translator 1" },
+        "accreditation": "NL-TR-0042"
+    }"#;
+    let details: TranslationDetails =
+        openehr_its::json::from_canonical_json(json).expect("deserialize TRANSLATION_DETAILS");
+    assert_eq!(details.accreditation.as_deref(), Some("NL-TR-0042"));
+
+    let xml = to_xml(
+        &details,
+        "translations",
+        openehr_its::xml::runtime::Namespace::V2,
+    )
+    .expect("serialize");
+    assert!(
+        xml.contains("<accreditation>NL-TR-0042</accreditation>"),
+        "the emitted XML must carry the accreditation element"
+    );
+    let parsed: TranslationDetails = from_xml(&xml).expect("parse back");
+    assert_eq!(parsed, details, "accreditation must survive the round trip");
+
+    let typo = json.replace("\"accreditation\"", "\"accreditaton\"");
+    assert!(
+        openehr_its::json::from_canonical_json::<TranslationDetails>(&typo).is_err(),
+        "the pre-fix key accreditaton is not an RM 1.2.0 attribute"
+    );
+}

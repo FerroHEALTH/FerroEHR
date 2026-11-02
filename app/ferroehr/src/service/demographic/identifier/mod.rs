@@ -32,10 +32,10 @@ use crate::service::error::ServiceError;
 use crate::system_log::event::{
     AccessDomain, AuditEvent, EventActionCode, EventOutcome, ObjectClass,
 };
-use crate::versioning::object_version_id::parse_version_uid;
+use crate::versioning::object_version_id::TreeId;
 
 impl FerroEhrService {
-    /// The `ORIGINAL_VERSION` of the party version `version_uid` with its
+    /// The `ORIGINAL_VERSION` of version `tree` of the party `party` with its
     /// protected identifiers expanded back to their values, and the scheme of
     /// each value expanded, recorded as an access.
     ///
@@ -52,14 +52,15 @@ impl FerroEhrService {
     ///
     /// # Errors
     /// [`ServiceError::precondition`] when the deployment configures no identifier
-    /// protection or `version_uid` is no `OBJECT_VERSION_ID`, the
+    /// protection, the
     /// `object_version_does_not_exist` [`ServiceError`] when no party holds that
     /// version, `exception` when a sealed value cannot be read or does not
     /// authenticate, and `service_overloaded` when the access record is
     /// refused under `fail_mode = "closed"`, which withholds the values.
     pub async fn read_party_identifiers(
         &self,
-        version_uid: &str,
+        party: VoId,
+        tree: TreeId,
     ) -> Result<(Value, Vec<String>), ServiceError> {
         let Some(engine) = self.identifier_protection() else {
             return Err(ServiceError::precondition(
@@ -67,12 +68,6 @@ impl FerroEhrService {
                  carries no protected identifier to expand",
             ));
         };
-        let (party, tree) = parse_version_uid(version_uid).map_err(|error| {
-            ServiceError::bad_request(
-                format!("`{version_uid}` is not an OBJECT_VERSION_ID"),
-                error,
-            )
-        })?;
         let mut version = self.party_version(party, tree).await?;
         let schemes = engine.expand(&mut version).await.map_err(|error| {
             if let StoreError::Acquire(acquire) = error {

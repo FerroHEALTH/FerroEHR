@@ -33,6 +33,9 @@ use utoipa_axum::routes;
 
 use openehr_its::rest::runtime::ApiError;
 
+use ferroehr::service::error::ServiceError;
+use ferroehr::versioning::object_version_id::parse_version_uid;
+
 use crate::api::{BoxResponse, RequestParts, guarded_dispatch};
 use crate::overview::error::RestError;
 use crate::state::AppState;
@@ -134,7 +137,16 @@ async fn run(
                 "the `version_uid` query parameter is required".to_owned(),
             ))
         })?;
-    let (version, schemes) = state.backend().read_party_identifiers(&version_uid).await?;
+    let (party_id, version) = parse_version_uid(&version_uid).map_err(|error| {
+        ServiceError::bad_request(
+            format!("`{version_uid}` is not an OBJECT_VERSION_ID"),
+            error,
+        )
+    })?;
+    let (version, schemes) = state
+        .backend()
+        .read_party_identifiers(party_id, version)
+        .await?;
     Ok(negotiate::body::respond(
         &parts.headers,
         StatusCode::OK,

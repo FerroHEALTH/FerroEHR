@@ -57,7 +57,7 @@ pub(crate) async fn seed_full_ehr(svc: &FerroEhrService) -> EhrId {
     updated.as_object_mut().expect("status obj").remove("uid");
     svc.target_tags_replace(
         ehr_id,
-        status_vo,
+        crate::fixtures::at(status_vo),
         "EHR_STATUS",
         vec![crate::item_tag_fixture::ehr_tag(
             "priority",

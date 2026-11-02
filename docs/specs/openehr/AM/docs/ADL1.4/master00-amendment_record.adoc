@@ -4,12 +4,20 @@
 |===
 |Issue|Details|Raiser, Implementer|Completed
 
+4+^h|*AM Release 2.4.0 (unreleased)*
+
+|[[latest_issue]]1.4.7
+|{spec_tickets}/SPECAM-107[SPECAM-107^]. Document the convention for recording additional translators in `other_details["other_contributors"]` in <<_language_section_and_language_translation>> (see {spec_tickets}/SPECBASE-23[SPECBASE-23^]).
+|S Garde, +
+S Kohler
+|[[latest_issue_date]]23 Oct 2026
+
 4+^h|*AM Release 2.3.0*
 
-|[[latest_issue]]1.4.6
+|1.4.6
 |{spec_tickets}/SPECAM-84[SPECAM-84^]. Fix typos in AOM, ADL 1.4.
 |R Kavanagh
-|[[latest_issue_date]]03 Apr 2023
+|03 Apr 2023
 
 |1.4.5
 |{spec_tickets}/SPECAM-75[SPECAM-75^]. Improve specification of constraint patterns (addresses problem {spec_tickets}/SPECPR-374[SPECPR-374^]). Modified <<#date_time_constraint_patterns>> to include timezone constraints.

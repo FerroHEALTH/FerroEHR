@@ -1262,7 +1262,7 @@ async fn item_tag_crud() {
     let upserted = svc
         .target_tags_replace(
             ehr_uuid,
-            vo_id.clone(),
+            crate::fixtures::at(vo_id.clone()),
             "COMPOSITION",
             vec![ehr_tag("priority", Some("high"), None)],
         )
@@ -1271,7 +1271,7 @@ async fn item_tag_crud() {
     assert!(has_key(&upserted, "priority"));
 
     let on_comp = svc
-        .target_tags_get(ehr_uuid, vo_id.clone(), "COMPOSITION")
+        .target_tags_get(ehr_uuid, crate::fixtures::at(vo_id.clone()), "COMPOSITION")
         .await
         .expect("comp tags");
     assert_eq!(on_comp.len(), 1);
@@ -1284,14 +1284,14 @@ async fn item_tag_crud() {
 
     svc.target_tag_delete(
         ehr_uuid,
-        vo_id.clone(),
+        crate::fixtures::at(vo_id.clone()),
         "COMPOSITION",
         "priority".to_owned(),
     )
     .await
     .expect("delete tag");
     let after = svc
-        .target_tags_get(ehr_uuid, vo_id.clone(), "COMPOSITION")
+        .target_tags_get(ehr_uuid, crate::fixtures::at(vo_id.clone()), "COMPOSITION")
         .await
         .expect("comp tags after");
     assert_eq!(after, Vec::<ItemTag>::new());
@@ -1316,7 +1316,7 @@ async fn item_tag_wire_shape_is_the_rm_item_tag() {
     let put = svc
         .target_tags_replace(
             ehr_uuid,
-            vo_id.clone(),
+            crate::fixtures::at(vo_id.clone()),
             "COMPOSITION",
             vec![ehr_tag("priority", Some("high"), Some("/context"))],
         )
@@ -1373,7 +1373,7 @@ async fn item_tag_identity_is_the_key_and_target_path_pair() {
     let stored = svc
         .target_tags_replace(
             ehr_uuid,
-            vo_id.clone(),
+            crate::fixtures::at(vo_id.clone()),
             "COMPOSITION",
             vec![
                 ehr_tag("flag", Some("a"), Some("/context/start_time/value")),
@@ -1399,11 +1399,16 @@ async fn item_tag_identity_is_the_key_and_target_path_pair() {
     );
 
     // The Release-1.1.0 wire deletes by key alone → the whole key SET goes.
-    svc.target_tag_delete(ehr_uuid, vo_id.clone(), "COMPOSITION", "flag".to_owned())
-        .await
-        .expect("key delete");
+    svc.target_tag_delete(
+        ehr_uuid,
+        crate::fixtures::at(vo_id.clone()),
+        "COMPOSITION",
+        "flag".to_owned(),
+    )
+    .await
+    .expect("key delete");
     let rest = svc
-        .target_tags_get(ehr_uuid, vo_id, "COMPOSITION")
+        .target_tags_get(ehr_uuid, crate::fixtures::at(vo_id), "COMPOSITION")
         .await
         .expect("list after delete");
     assert!(rest.is_empty(), "a key delete removes every path under it");
@@ -1430,7 +1435,7 @@ async fn item_tag_version_and_container_targets_are_distinct() {
     let on_version = svc
         .target_tags_replace(
             ehr_uuid,
-            version_uid.clone(),
+            crate::fixtures::at(version_uid.clone()),
             "COMPOSITION",
             vec![ehr_tag("reviewed", Some("v1"), None)],
         )
@@ -1439,7 +1444,7 @@ async fn item_tag_version_and_container_targets_are_distinct() {
     let on_container = svc
         .target_tags_replace(
             ehr_uuid,
-            vo_id.clone(),
+            crate::fixtures::at(vo_id.clone()),
             "COMPOSITION",
             vec![ehr_tag("workflow", Some("open"), None)],
         )
@@ -1458,13 +1463,17 @@ async fn item_tag_version_and_container_targets_are_distinct() {
     assert_eq!(container_target["value"], vo_id);
 
     let version_list = svc
-        .target_tags_get(ehr_uuid, version_uid.clone(), "COMPOSITION")
+        .target_tags_get(
+            ehr_uuid,
+            crate::fixtures::at(version_uid.clone()),
+            "COMPOSITION",
+        )
         .await
         .expect("version list");
     assert_eq!(version_list.len(), 1);
     assert_eq!(version_list[0].key(), "reviewed");
     let container_list = svc
-        .target_tags_get(ehr_uuid, vo_id.clone(), "COMPOSITION")
+        .target_tags_get(ehr_uuid, crate::fixtures::at(vo_id.clone()), "COMPOSITION")
         .await
         .expect("container list");
     assert_eq!(container_list.len(), 1);
@@ -1475,7 +1484,7 @@ async fn item_tag_version_and_container_targets_are_distinct() {
     let err = svc
         .target_tags_replace(
             ehr_uuid,
-            ghost,
+            crate::fixtures::at(ghost),
             "COMPOSITION",
             vec![ehr_tag("nope", None, None)],
         )
@@ -1488,7 +1497,7 @@ async fn item_tag_version_and_container_targets_are_distinct() {
     let kind_err = svc
         .target_tags_replace(
             ehr_uuid,
-            vo_id,
+            crate::fixtures::at(vo_id),
             "EHR_STATUS",
             vec![ehr_tag("nope", None, None)],
         )
@@ -1525,7 +1534,7 @@ async fn a_surviving_tag_keeps_its_creation_instant_across_a_replace() {
 
     svc.target_tags_replace(
         ehr_uuid,
-        vo_id.clone(),
+        crate::fixtures::at(vo_id.clone()),
         "COMPOSITION",
         vec![ehr_tag("survivor", Some("v1"), None)],
     )
@@ -1551,7 +1560,7 @@ async fn a_surviving_tag_keeps_its_creation_instant_across_a_replace() {
     // value) and adds a second tag.
     svc.target_tags_replace(
         ehr_uuid,
-        vo_id.clone(),
+        crate::fixtures::at(vo_id.clone()),
         "COMPOSITION",
         vec![
             ehr_tag("survivor", Some("v2"), None),
@@ -1573,12 +1582,17 @@ async fn a_surviving_tag_keeps_its_creation_instant_across_a_replace() {
 
     // …and a tag REMOVED and later re-added is genuinely new: it did not
     // survive, so nothing of it is carried forward.
-    svc.target_tags_replace(ehr_uuid, vo_id.clone(), "COMPOSITION", vec![])
-        .await
-        .expect("clear");
     svc.target_tags_replace(
         ehr_uuid,
-        vo_id.clone(),
+        crate::fixtures::at(vo_id.clone()),
+        "COMPOSITION",
+        vec![],
+    )
+    .await
+    .expect("clear");
+    svc.target_tags_replace(
+        ehr_uuid,
+        crate::fixtures::at(vo_id.clone()),
         "COMPOSITION",
         vec![ehr_tag("survivor", Some("v3"), None)],
     )
@@ -1609,7 +1623,7 @@ async fn item_tag_put_replaces_the_whole_collection() {
     let two = svc
         .target_tags_replace(
             ehr_uuid,
-            vo_id.clone(),
+            crate::fixtures::at(vo_id.clone()),
             "COMPOSITION",
             vec![
                 ehr_tag("priority", Some("high"), None),
@@ -1624,7 +1638,7 @@ async fn item_tag_put_replaces_the_whole_collection() {
     let one = svc
         .target_tags_replace(
             ehr_uuid,
-            vo_id.clone(),
+            crate::fixtures::at(vo_id.clone()),
             "COMPOSITION",
             vec![ehr_tag("status", Some("final"), None)],
         )
@@ -1636,7 +1650,12 @@ async fn item_tag_put_replaces_the_whole_collection() {
 
     // An empty list clears every tag on the target.
     let cleared = svc
-        .target_tags_replace(ehr_uuid, vo_id.clone(), "COMPOSITION", vec![])
+        .target_tags_replace(
+            ehr_uuid,
+            crate::fixtures::at(vo_id.clone()),
+            "COMPOSITION",
+            vec![],
+        )
         .await
         .expect("clear with empty list");
     assert!(cleared.is_empty(), "empty list removes all tags");
@@ -1649,7 +1668,12 @@ async fn item_tag_put_replaces_the_whole_collection() {
         ehr_tag("ok", Some(""), None),
     ] {
         let res = svc
-            .target_tags_replace(ehr_uuid, vo_id.clone(), "COMPOSITION", vec![bad.clone()])
+            .target_tags_replace(
+                ehr_uuid,
+                crate::fixtures::at(vo_id.clone()),
+                "COMPOSITION",
+                vec![bad.clone()],
+            )
             .await;
         assert!(
             matches!(
@@ -1667,7 +1691,7 @@ async fn item_tag_put_replaces_the_whole_collection() {
     let accepted = svc
         .target_tags_replace(
             ehr_uuid,
-            vo_id.clone(),
+            crate::fixtures::at(vo_id.clone()),
             "COMPOSITION",
             vec![
                 ehr_tag("bare", None, None),

@@ -336,7 +336,7 @@ impl FerroEhrService {
             ));
         }
         let inner = AqlQueryRequest {
-            ehr_ids: ehr_ids.iter().map(EhrId::to_string).collect(),
+            ehr_ids,
             ehr_scope_kind: EhrScopeKind::PopulationSubset,
             ..request.query.clone()
         };

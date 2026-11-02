@@ -1532,7 +1532,11 @@ async fn an_extract_carries_its_parties_into_the_receivers_demographic_domain() 
     );
     assert_eq!(
         target
-            .party_get(PartyKind::Person, party.to_string(), None)
+            .party_get(
+                PartyKind::Person,
+                crate::fixtures::at(party.to_string()),
+                None
+            )
             .await
             .expect("the received party reads back")
             .body["_type"],

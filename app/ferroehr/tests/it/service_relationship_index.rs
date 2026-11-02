@@ -46,7 +46,7 @@ fn relationship(name: &str, source: &str, target: &str) -> Value {
 /// Whether a live relationship is served under `vo_id`: the read answers a
 /// body, where a deleted current version reads empty.
 async fn relationship_is_live(svc: &FerroEhrService, vo_id: ferroehr::ids::VoId) -> bool {
-    !svc.party_relationship_get(vo_id.to_string(), None)
+    !svc.party_relationship_get(crate::fixtures::at(vo_id.to_string()), None)
         .await
         .expect("the relationship reads")
         .is_empty()
@@ -72,7 +72,7 @@ async fn relationship_typed_calls_round_trip() {
 
     assert!(relationship_is_live(&svc, vo_id).await, "live relationship");
     let got = svc
-        .party_relationship_get(vo_id.to_string(), None)
+        .party_relationship_get(crate::fixtures::at(vo_id.to_string()), None)
         .await
         .expect("get_party_relationship")
         .body;
@@ -81,7 +81,10 @@ async fn relationship_typed_calls_round_trip() {
 
     let v1 = got["uid"]["value"].as_str().expect("uid.value").to_owned();
     let by_ver = svc
-        .party_relationship_version_get_by_id(vo_id.to_string(), v1.clone())
+        .party_relationship_version_get_by_id(
+            crate::fixtures::object(vo_id.to_string()),
+            crate::fixtures::tree(v1.clone()),
+        )
         .await
         .expect("get_party_relationship_at_version")
         .body;
@@ -90,8 +93,8 @@ async fn relationship_typed_calls_round_trip() {
     // The update under `If-Match` = the current version → the new version uid.
     let v2 = svc
         .party_relationship_update(
-            vo_id.to_string(),
-            v1.clone(),
+            crate::fixtures::object(vo_id.to_string()),
+            crate::fixtures::if_match(v1.clone()),
             uv(&relationship("guardian-of", src, tgt), "251", Some(&v1)),
         )
         .await
@@ -101,7 +104,7 @@ async fn relationship_typed_calls_round_trip() {
         .uid;
     assert!(v2.ends_with("::2"), "second version, got {v2}");
     let got2 = svc
-        .party_relationship_get(vo_id.to_string(), None)
+        .party_relationship_get(crate::fixtures::at(vo_id.to_string()), None)
         .await
         .expect("get after update")
         .body;
@@ -109,7 +112,11 @@ async fn relationship_typed_calls_round_trip() {
 
     // The delete of the latest version → the relationship is no longer present.
     let del = svc
-        .party_relationship_delete(v2.clone(), None, WriteRequest::new(()))
+        .party_relationship_delete(
+            crate::fixtures::object(&v2),
+            crate::fixtures::delete_precondition(&v2, None),
+            WriteRequest::new(()),
+        )
         .await
         .expect("delete_party_relationship")
         .meta
@@ -122,7 +129,7 @@ async fn relationship_typed_calls_round_trip() {
     );
     // A deleted relationship reads empty, served as `204`.
     let after = svc
-        .party_relationship_get(vo_id.to_string(), None)
+        .party_relationship_get(crate::fixtures::at(vo_id.to_string()), None)
         .await
         .expect("a deleted relationship reads");
     assert!(
@@ -163,14 +170,14 @@ async fn relationship_lifecycle_end_to_end() {
 
     // get current (bare HIER_OBJECT_ID)
     let got = svc
-        .party_relationship_get(vo.clone(), None)
+        .party_relationship_get(crate::fixtures::at(vo.clone()), None)
         .await
         .expect("get relationship");
     assert_eq!(got.body["name"]["value"], "parent-of");
 
     // get by OBJECT_VERSION_ID
     let by_ovid = svc
-        .party_relationship_get(ovid_v1.clone(), None)
+        .party_relationship_get(crate::fixtures::at(ovid_v1.clone()), None)
         .await
         .expect("get by ovid");
     assert_eq!(uid(&by_ovid.body), ovid_v1);
@@ -188,8 +195,8 @@ async fn relationship_lifecycle_end_to_end() {
     // update (If-Match = current OVID) → v2
     let updated = svc
         .party_relationship_update(
-            vo.clone(),
-            ovid_v1.clone(),
+            crate::fixtures::object(vo.clone()),
+            crate::fixtures::if_match(ovid_v1.clone()),
             WriteRequest::new(typed(&relationship("guardian-of", src, tgt))),
         )
         .await
@@ -200,7 +207,7 @@ async fn relationship_lifecycle_end_to_end() {
 
     // at-time read returns v1
     let at_v1 = svc
-        .party_relationship_get(vo.clone(), Some(t_v1.to_string()))
+        .party_relationship_get(crate::fixtures::at(vo.clone()), Some(t_v1.to_string()))
         .await
         .expect("at-time");
     assert_eq!(at_v1.body["name"]["value"], "parent-of");
@@ -208,8 +215,8 @@ async fn relationship_lifecycle_end_to_end() {
     // stale If-Match → 412
     let stale = svc
         .party_relationship_update(
-            vo.clone(),
-            ovid_v1.clone(),
+            crate::fixtures::object(vo.clone()),
+            crate::fixtures::if_match(ovid_v1.clone()),
             WriteRequest::new(typed(&relationship("stale", src, tgt))),
         )
         .await;
@@ -220,24 +227,27 @@ async fn relationship_lifecycle_end_to_end() {
 
     // VERSIONED_OBJECT + revision history + version-by-id
     let vp = svc
-        .versioned_party_relationship_get(vo.clone())
+        .versioned_party_relationship_get(crate::fixtures::object(vo.clone()))
         .await
         .expect("versioned relationship");
     assert_eq!(vp.body["_type"], "VERSIONED_OBJECT");
     let rh = svc
-        .party_relationship_revision_history(vo.clone())
+        .party_relationship_revision_history(crate::fixtures::object(vo.clone()))
         .await
         .expect("revision_history");
     assert_eq!(rh.body["items"].as_array().expect("items").len(), 2);
     let ov = svc
-        .party_relationship_version_get_by_id(vo.clone(), ovid_v1.clone())
+        .party_relationship_version_get_by_id(
+            crate::fixtures::object(vo.clone()),
+            crate::fixtures::tree(ovid_v1.clone()),
+        )
         .await
         .expect("version by id");
     assert_eq!(ov.body["_type"], "ORIGINAL_VERSION");
 
     // version at-time (VERSION resource + ETag/Location meta)
     let vat = svc
-        .party_relationship_version_get_at_time(vo.clone(), None)
+        .party_relationship_version_get_at_time(crate::fixtures::object(vo.clone()), None)
         .await
         .expect("version at time");
     assert_eq!(vat.body["_type"], "ORIGINAL_VERSION");
@@ -245,12 +255,16 @@ async fn relationship_lifecycle_end_to_end() {
 
     // delete (mandatory OBJECT_VERSION_ID) → 204; subsequent get → 204 (Null)
     let deleted = svc
-        .party_relationship_delete(ovid_v2.clone(), None, WriteRequest::new(()))
+        .party_relationship_delete(
+            crate::fixtures::object(&ovid_v2),
+            crate::fixtures::delete_precondition(&ovid_v2, None),
+            WriteRequest::new(()),
+        )
         .await
         .expect("delete");
     assert!(deleted.is_empty());
     let after = svc
-        .party_relationship_get(vo.clone(), None)
+        .party_relationship_get(crate::fixtures::at(vo.clone()), None)
         .await
         .expect("get after delete");
     assert!(after.is_empty(), "deleted current read is 204 (Null body)");
@@ -262,7 +276,7 @@ async fn relationship_error_cases() {
 
     // unknown id → 404
     let unknown = svc
-        .party_relationship_get(Uuid::now_v7().to_string(), None)
+        .party_relationship_get(crate::fixtures::at(Uuid::now_v7().to_string()), None)
         .await;
     assert!(
         matches!(
@@ -303,7 +317,7 @@ async fn relationship_error_cases() {
     // reading the same id as a relationship works; reading a fresh (unknown) id
     // as versioned_party_relationship is 404
     let vp_unknown = svc
-        .versioned_party_relationship_get(Uuid::now_v7().to_string())
+        .versioned_party_relationship_get(crate::fixtures::object(Uuid::now_v7().to_string()))
         .await;
     assert!(matches!(
         vp_unknown,
@@ -312,7 +326,11 @@ async fn relationship_error_cases() {
             ..
         }))
     ));
-    assert!(svc.party_relationship_get(vo, None).await.is_ok());
+    assert!(
+        svc.party_relationship_get(crate::fixtures::at(vo), None)
+            .await
+            .is_ok()
+    );
 }
 
 #[tokio::test]

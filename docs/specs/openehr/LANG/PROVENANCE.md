@@ -2,7 +2,7 @@
 
 - Source: https://github.com/openEHR/specifications-LANG
 - Ref: master (LANG 1.1.0)
-- Commit: `f80763abda184aa6cc94957152df83f3ef5d8f5e`
+- Commit: `46406fe57c606aba7c0c7a9fd60a31bc7749c175`
 - License: CC-BY-SA 3.0 Unported — the upstream `LICENSE` is vendored verbatim alongside
   this file, from the same pinned commit. Root reference copies:
   `LICENSE-CC-BY-SA-3.0` / `LICENSE-APACHE-2.0`.

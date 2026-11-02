@@ -27,10 +27,6 @@ const MODEL_ONLY: &[&str] = &[
     // RM 1.2.0 addition (RM ehr master04 §EHR: `tags`): the first RM
     // 1.2.0-only attribute; a served EHR carrying tags fails the 1.1.0 oracle.
     "EHR.tags",
-    // The RM 1.2.0 development text's misspelled attribute (upstream report
-    // #1849 — SPECPUB-6 was applied to BASE's resource copy only); the 1.1.0
-    // schema spells `accreditation`.
-    "TRANSLATION_DETAILS.accreditaton",
 ];
 
 /// Properties the 1.1.0 schema declares that the RM 1.2.0 model has dropped —
@@ -63,9 +59,6 @@ const SCHEMA_ONLY: &[&str] = &[
     "SYNC_EXTRACT_REQUEST.links",
     "SYNC_EXTRACT_REQUEST.name",
     "SYNC_EXTRACT_REQUEST.uid",
-    // The correctly-spelled 1.1.0 property — the twin of the MODEL_ONLY
-    // `accreditaton` pin (upstream report #1849).
-    "TRANSLATION_DETAILS.accreditation",
 ];
 
 /// Schema class definitions with no generated RM 1.2.0 class of that name.

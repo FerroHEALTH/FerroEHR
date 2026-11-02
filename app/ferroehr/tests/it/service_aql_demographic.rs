@@ -311,8 +311,8 @@ async fn latest_version_and_deleted_parties() {
     let updated = svc
         .party_update(
             PartyKind::Person,
-            vo.clone(),
-            v1.clone(),
+            crate::fixtures::object(vo.clone()),
+            crate::fixtures::if_match(v1.clone()),
             WriteRequest::new(typed(&person("Jane Roe", "P-9", "urn:bsn"))),
         )
         .await
@@ -338,8 +338,8 @@ async fn latest_version_and_deleted_parties() {
     let doomed = create(&svc, PartyKind::Person, &person("Gone", "P-5", "urn:bsn")).await;
     svc.party_delete(
         PartyKind::Person,
-        doomed.clone(),
-        Some(doomed),
+        crate::fixtures::object(&doomed),
+        crate::fixtures::delete_precondition(&doomed, Some(&doomed)),
         WriteRequest::new(()),
     )
     .await
@@ -413,7 +413,7 @@ async fn unserved_demographic_constructs_are_refused() {
         &svc,
         "SELECT p/uid/value FROM PERSON p",
         AqlQueryRequest {
-            ehr_ids: vec![ehr_id],
+            ehr_ids: vec![crate::fixtures::ehr(&ehr_id)],
             ..AqlQueryRequest::default()
         },
     )
@@ -468,8 +468,8 @@ async fn a_party_joins_to_the_content_of_its_ehr() {
     let gone = linked(&svc, "Gone", "P-3", &["visit d"]).await;
     svc.party_delete(
         PartyKind::Person,
-        gone.clone(),
-        Some(gone),
+        crate::fixtures::object(&gone),
+        crate::fixtures::delete_precondition(&gone, Some(&gone)),
         WriteRequest::new(()),
     )
     .await
@@ -692,8 +692,8 @@ async fn an_ehr_whose_subject_names_the_party_joins() {
     subject_ehr(&svc, party_id(&gone), "local", "PERSON", "visit g").await;
     svc.party_delete(
         PartyKind::Person,
-        gone.clone(),
-        Some(gone),
+        crate::fixtures::object(&gone),
+        crate::fixtures::delete_precondition(&gone, Some(&gone)),
         WriteRequest::new(()),
     )
     .await

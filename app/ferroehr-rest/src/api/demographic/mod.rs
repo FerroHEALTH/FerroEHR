@@ -36,9 +36,12 @@ use http::{HeaderMap, HeaderValue, header};
 use openehr_its::rest::runtime::ApiError;
 
 use crate::overview::error::RestError;
+use ferroehr::ids::VoId;
+use ferroehr::service::demographic::precondition::Precondition;
 use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::error::ServiceError;
 use ferroehr::service::response::{ResourceMeta, ServiceResponse};
+use ferroehr::versioning::object_version_id::parse_uid_based_id;
 
 mod contribution;
 pub(crate) mod dispatch;
@@ -47,6 +50,7 @@ mod party;
 pub(crate) mod relationship;
 mod tags;
 mod versioned_party;
+pub(crate) mod versioned_relationship;
 
 // The two symbols `app/ferroehr-rest/src/api/mod.rs` mounts: the group
 // dispatcher (`demographic::dispatch`) and the native `utoipa-axum` router for
@@ -72,6 +76,50 @@ fn parse_party_op(op: &str) -> Option<(PartyKind, &str)> {
         }
     }
     None
+}
+
+/// The versioned object a demographic `uid_based_id` or
+/// `versioned_object_uid` names, a `400` when malformed.
+///
+/// # Errors
+/// The `400` of [`parse_uid_based_id`].
+fn object_of(raw: &str) -> Result<VoId, RestError> {
+    Ok(parse_uid_based_id(raw)?.vo_id)
+}
+
+/// The target of a demographic update and its mandatory `If-Match`, whose
+/// `W/"…"` or quoted entity-tag syntax is decoded here so the precondition
+/// holds a bare `OBJECT_VERSION_ID` (overview §"`ETag` and Last-Modified").
+///
+/// # Errors
+/// A `400` when `raw` or the `If-Match` value is malformed.
+fn update_target(raw: &str, if_match: &str) -> Result<(VoId, Precondition), RestError> {
+    let vo_id = object_of(raw)?;
+    let token = crate::overview::version_id::strip_etag(if_match);
+    Ok((vo_id, Precondition::parse(Some(token), None)?))
+}
+
+/// The precondition of a demographic delete: the path names the version it
+/// deletes, and `If-Match`, when sent, names the version expected current.
+///
+/// # Errors
+/// A `400` when `raw` is malformed, names the versioned object rather than
+/// one of its versions, or a sent `If-Match` is malformed.
+fn delete_target(
+    raw: &str,
+    rm_type: &str,
+    if_match: Option<&str>,
+) -> Result<(VoId, Precondition), RestError> {
+    let address = parse_uid_based_id(raw)?;
+    // NOTE: ITS-REST `parameters/path/uid_based_id_as_version_uid.yaml` types the
+    // delete path as a `version_uid`, so a bare container id is an invalid parameter (400).
+    let Some(path) = address.tree() else {
+        return Err(RestError::from(ApiError::BadRequest(format!(
+            "uid_based_id {raw} must be the OBJECT_VERSION_ID of the latest {rm_type} \
+             version, not its versioned object id"
+        ))));
+    };
+    Ok((address.vo_id, Precondition::parse(if_match, Some(path))?))
 }
 
 /// Whether an error is the optimistic-concurrency precondition failure
