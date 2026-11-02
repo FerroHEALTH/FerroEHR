@@ -22,7 +22,8 @@
 //!   `x-discriminator-value` of its own and a `discriminator.mapping` to
 //!   `UPDATE_ATTESTATION`, the `AUDIT_DETAILS`/`ATTESTATION` pair of RM common
 //!   `master06-change_control_package.adoc` §Committal and Audits, so
-//!   [`audit_base`] reads the inherited attributes of whichever form arrived.
+//!   [`crate::versioning::audit::audit_base`] reads the inherited attributes of
+//!   whichever form arrived.
 //! - `description` is a `DV_TEXT` object on the wire (`UpdateAudit.yaml`), so a
 //!   body-borne commit audit can carry a coded description. The
 //!   `openehr-audit-details` header
