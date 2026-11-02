@@ -51,7 +51,7 @@ use crate::locale::queries::QueriesMsg;
 use crate::locale::{Msg, current, tr, tr_with};
 use crate::markup::{flag, h, opt, t};
 use crate::pages::common::{
-    Refused, count, drawn, info_note, marks_of, panel, plain_section, section, warn_note,
+    Refused, count, info_note, marks_of, panel, plain_section, section, warn_note,
 };
 use crate::pages::results::Answer;
 use crate::routes::Drawn;
@@ -1124,17 +1124,7 @@ struct Build {
     save: SaveFields,
 }
 
-/// Loads Build: the draft the post leaves, the AQL it builds, and the run or
-/// the save the post asks.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_build() -> Result<Build, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_build().await)
-}
-
-/// What [`load_build`] reads.
+/// What the page reads.
 async fn read_build() -> Build {
     let posted = crate::posted::posted();
     let templates = crate::bff::templates::list_templates().await;
@@ -1367,7 +1357,7 @@ fn build(model: Build) -> Html {
 
 /// Query: Build.
 pub async fn build_page() -> Drawn {
-    Drawn::page(tr(Msg::NavQuery), drawn(load_build().await, build))
+    Drawn::page(tr(Msg::NavQuery), build(read_build().await))
 }
 
 /// The grammar check of `aql`: its findings, placed on their lines, or
@@ -1562,17 +1552,7 @@ struct Written {
     save: SaveFields,
 }
 
-/// Loads the AQL tab: the query the post or the address names, and the run
-/// or the save the post asks.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_written() -> Result<Written, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_written().await)
-}
-
-/// What [`load_written`] reads.
+/// What the page reads.
 async fn read_written() -> Written {
     let posted = crate::posted::posted();
     let mut note = None;
@@ -1730,10 +1710,7 @@ fn written(model: Written) -> Html {
 
 /// Query: AQL.
 pub async fn aql_page() -> Drawn {
-    Drawn::page(
-        tr(QueriesMsg::QueryAqlTitle),
-        drawn(load_written().await, written),
-    )
+    Drawn::page(tr(QueriesMsg::QueryAqlTitle), written(read_written().await))
 }
 
 #[cfg(test)]

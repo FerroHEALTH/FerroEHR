@@ -40,7 +40,7 @@ use crate::locale::console::ConsoleMsg;
 use crate::locale::{Msg, current, tr, tr_with};
 use crate::markup::{flag, h, opt, t};
 use crate::pages::common::{
-    Refused, ago, card_panel, date_range, document_section, drawn, section, state_mark, when,
+    Refused, ago, card_panel, date_range, document_section, section, state_mark, when,
 };
 use crate::paging::Listing;
 use crate::routes::Drawn;
@@ -353,18 +353,7 @@ enum LogModel {
     Refused(Refused),
 }
 
-/// Loads the Audit log: the page of records the request's filters and the
-/// kept position find, read again at the last page when the kept one is past
-/// it.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_log() -> Result<LogModel, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_log().await)
-}
-
-/// What [`load_log`] reads.
+/// What the page reads.
 async fn read_log() -> LogModel {
     let filters = Filters::read();
     let paging = Paging {
@@ -441,7 +430,7 @@ fn log_card(page: &Listed, filters: &Filters) -> Html {
 /// The Audit log.
 /// The audit log.
 pub async fn page() -> Drawn {
-    let body = drawn(load_log().await, |model| match model {
+    let body = match read_log().await {
         LogModel::Listed(page) => {
             let filters = Filters::read();
             let card = log_card(&page, &filters);
@@ -453,7 +442,7 @@ pub async fn page() -> Drawn {
         }
         LogModel::StoreOff => store_off(),
         LogModel::Refused(refusal) => refusal.view(),
-    });
+    };
     Drawn::page(tr(Msg::NavAudit), heading().then(body))
 }
 
@@ -475,20 +464,7 @@ enum RecordModel {
     Refused(Refused),
 }
 
-/// Loads one audit record: found again by the filters and the instant it
-/// was recorded at.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_record(
-    // The record's place the route names.
-    id: Option<String>,
-) -> Result<RecordModel, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_record(id).await)
-}
-
-/// What [`load_record`] reads.
+/// What the page reads.
 async fn read_record(id: Option<String>) -> RecordModel {
     let place = id.and_then(|id| id.parse::<u32>().ok());
     if place.is_none() {
@@ -567,21 +543,17 @@ fn record(row: &AuditRow, masked: String) -> Html {
 /// One audit record.
 pub async fn record_page() -> Drawn {
     let id = crate::routes::params().get("id");
-    match load_record(id).await {
-        Ok(RecordModel::Found { row, masked }) => Drawn::page(event(&row), record(&row, masked)),
-        Ok(RecordModel::Gone) => Drawn::page(
+    match read_record(id).await {
+        RecordModel::Found { row, masked } => Drawn::page(event(&row), record(&row, masked)),
+        RecordModel::Gone => Drawn::page(
             tr(Msg::NavAudit),
             heading().then(crate::pages::common::info_note(t(tr(
                 ConsoleMsg::AuditRecordGone,
             )))),
         ),
-        Ok(RecordModel::StoreOff) => Drawn::page(tr(Msg::NavAudit), heading().then(store_off())),
-        Ok(RecordModel::Refused(refusal)) => {
+        RecordModel::StoreOff => Drawn::page(tr(Msg::NavAudit), heading().then(store_off())),
+        RecordModel::Refused(refusal) => {
             Drawn::page(tr(Msg::NavAudit), heading().then(refusal.view()))
         }
-        Err(error) => Drawn::page(
-            tr(Msg::NavAudit),
-            heading().then(drawn(Err::<(), _>(error), |()| Html::empty())),
-        ),
     }
 }

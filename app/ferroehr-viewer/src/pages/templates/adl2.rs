@@ -11,7 +11,7 @@ use crate::bff::templates::list_adl2_templates;
 use crate::builder::catalog::CatalogNode;
 use crate::error::ViewerError;
 use crate::format::ReprFormat;
-use crate::pages::template_releases::{CompareAsk, Releases, load_releases};
+use crate::pages::template_releases::{CompareAsk, Releases, read_releases};
 
 use super::{ExampleAsk, TemplateTab, delete_posted};
 
@@ -79,10 +79,7 @@ pub(super) fn adl2_tabs(older: bool, several: bool) -> Vec<TemplateTab> {
 /// Answers a delete posted to the ADL 2 template `asked_id` and reads the
 /// release `asked_release` names, the latest for none, with its releases,
 /// the archetypes it lacks and what its tab `tab` draws.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-pub(super) async fn load_adl2_template(
+pub(super) async fn read_adl2_template(
     // The template id the address names.
     asked_id: String,
     // The release the address names.
@@ -91,8 +88,7 @@ pub(super) async fn load_adl2_template(
     tab: TemplateTab,
     // The example options the address names.
     ask: ExampleAsk,
-) -> Result<Adl2Template, ViewerError> {
-    crate::session::require_session()?;
+) -> Adl2Template {
     let acted = delete_posted("/templates?family=adl2").await;
     let (stem, named) = split_hrid(&asked_id);
     let stem = stem.to_owned();
@@ -116,14 +112,14 @@ pub(super) async fn load_adl2_template(
     } else {
         TemplateTab::Overview
     };
-    let releases = load_releases(
+    let releases = read_releases(
         TemplateFamily::Adl2,
         listed,
         &hrid,
         tab,
         CompareAsk::asked(),
     )
-    .await?;
+    .await;
     let version = release.clone();
     // Every tab asks whether the template compiles, so each can name the
     // archetypes it lacks (our own design: no openEHR spec governs the viewer).
@@ -159,7 +155,7 @@ pub(super) async fn load_adl2_template(
         TemplateTab::Overview | TemplateTab::Compare => Adl2Body::Overview,
     };
     let download = crate::download::template_href(TemplateFamily::Adl2, &hrid);
-    Ok(Adl2Template {
+    Adl2Template {
         acted,
         stem,
         latest,
@@ -170,5 +166,5 @@ pub(super) async fn load_adl2_template(
         body,
         missing,
         download,
-    })
+    }
 }

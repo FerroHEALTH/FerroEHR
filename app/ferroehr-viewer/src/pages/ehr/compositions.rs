@@ -21,11 +21,10 @@ use ferrohealth_ui::table::view::{
 use ferrohealth_ui::view::template::list::{ActiveFilters, FilterChip, active_filters, list_empty};
 
 use crate::bff::ehrs::cell_text;
-use crate::error::ViewerError;
 use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, current, tr, tr_with};
 use crate::markup::{h, opt, t};
-use crate::pages::common::{Refused, ago, drawn, shortened};
+use crate::pages::common::{Refused, ago, shortened};
 use crate::pages::ehr::EhrModel;
 use crate::pages::ehr::{EhrTab, ehr_href, ehr_id_param, ehr_view};
 use crate::paging::Listing;
@@ -176,16 +175,7 @@ struct Panel {
     rows: Result<Vec<Row>, Refused>,
 }
 
-/// Loads the tab: the page of compositions the request's filters find.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load(ehr_id: String) -> Result<EhrModel<Panel>, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_page(ehr_id).await)
-}
-
-/// What [`load`] reads.
+/// What the page reads.
 async fn read_page(ehr_id: String) -> EhrModel<Panel> {
     crate::pages::ehr::load_ehr(&ehr_id, async |_facts| {
         let filters = Filters::read();
@@ -306,10 +296,11 @@ fn panel(ehr_id: &str, panel: Panel) -> Html {
 pub async fn page() -> Drawn {
     let ehr_id = ehr_id_param();
     let title = tr_with(RecordsMsg::EhrTitle, &[("id", shortened(&ehr_id).into())]);
-    let body = drawn(load(ehr_id.clone()).await, |model| {
+    let body = {
+        let model = read_page(ehr_id.clone()).await;
         ehr_view(&ehr_id, EhrTab::Compositions, model, |found| {
             panel(&ehr_id, found)
         })
-    });
+    };
     Drawn::page(title, body)
 }

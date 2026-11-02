@@ -30,13 +30,12 @@ use ferrohealth_ui::view::template::list::{
 };
 use ferrohealth_ui::view::versions::{Standing, version_cell};
 
-use crate::error::ViewerError;
 use crate::flash::{Done, redirect_with};
 use crate::locale::queries::QueriesMsg;
 use crate::locale::{Msg, current, tr, tr_with};
 use crate::markup::{h, opt, t};
 use crate::pages::common::{
-    Refused, count, document_section, drawn, info_note, panel, plain_section, section, when,
+    Refused, count, document_section, info_note, panel, plain_section, section, when,
 };
 use crate::pages::results::Answer;
 use crate::queries_api::{
@@ -190,16 +189,7 @@ fn grouped(rows: &[StoredQueryRow], only: Option<&str>) -> Listing {
     Listing::Groups { groups, names }
 }
 
-/// Loads Stored queries: the listing, kept to the namespace the address names.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_listing() -> Result<Listed, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_listing().await)
-}
-
-/// What [`load_listing`] reads.
+/// What the page reads.
 async fn read_listing() -> Listed {
     let only = crate::request::query("namespace").filter(|namespace| !namespace.is_empty());
     let listing = match list_stored_queries().await {
@@ -360,7 +350,7 @@ pub async fn list_page() -> Drawn {
         },
         ActionGroup::none(),
     );
-    let body = drawn(load_listing().await, listed);
+    let body = listed(read_listing().await);
     Drawn::page(tr(Msg::NavStoredQueries), heading.then(body))
 }
 
@@ -683,21 +673,7 @@ enum Definition {
     },
 }
 
-/// Loads the Definition: the version's AQL and its facts.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_definition(
-    // The stored query the route names.
-    name: String,
-    // The version the route names.
-    version: String,
-) -> Result<Page<Definition>, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_definition(name, version).await)
-}
-
-/// What [`load_definition`] reads.
+/// What the page reads.
 async fn read_definition(name: String, version: String) -> Page<Definition> {
     load_page(name, version, async |name, versions, version| {
         let aql = match fetch_stored_query(name.clone(), version.clone()).await {
@@ -786,13 +762,11 @@ fn definition(name: &str, version: &str, found: Definition) -> Html {
 /// A stored query's Definition tab.
 pub async fn page() -> Drawn {
     let (name, version) = params();
-    match load_definition(name, version).await {
-        Ok(page) => page_view(page, QueryTab::Definition, definition),
-        Err(error) => Drawn::page(
-            String::new(),
-            drawn(Err::<(), _>(error), |()| Html::empty()),
-        ),
-    }
+    page_view(
+        read_definition(name, version).await,
+        QueryTab::Definition,
+        definition,
+    )
 }
 
 /// A stored query's Run form as the post leaves it.
@@ -819,21 +793,7 @@ enum Run {
     Form(Box<RunForm>),
 }
 
-/// Loads Run: the form as the post leaves it, and the run it asks.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_run(
-    // The stored query the route names.
-    name: String,
-    // The version the route names.
-    version: String,
-) -> Result<Page<Run>, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_run(name, version).await)
-}
-
-/// What [`load_run`] reads.
+/// What the page reads.
 async fn read_run(name: String, version: String) -> Page<Run> {
     let posted = crate::posted::posted();
     load_page(name, version, async move |name, _versions, version| {
@@ -987,13 +947,7 @@ fn run(name: &str, version: &str, found: Run) -> Html {
 /// A stored query's Run tab.
 pub async fn run_page() -> Drawn {
     let (name, version) = params();
-    match load_run(name, version).await {
-        Ok(page) => page_view(page, QueryTab::Run, run),
-        Err(error) => Drawn::page(
-            String::new(),
-            drawn(Err::<(), _>(error), |()| Html::empty()),
-        ),
-    }
+    page_view(read_run(name, version).await, QueryTab::Run, run)
 }
 
 /// One version of a stored query, as Versions lists it.
@@ -1007,19 +961,7 @@ struct VersionRow {
     parameters: Vec<String>,
 }
 
-/// Loads Versions: every version of the stored query, newest first.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_versions(
-    // The stored query the route names.
-    name: String,
-) -> Result<Page<Vec<VersionRow>>, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_versions(name).await)
-}
-
-/// What [`load_versions`] reads.
+/// What the page reads.
 async fn read_versions(name: String) -> Page<Vec<VersionRow>> {
     load_page(name, String::new(), async |_name, versions, _version| {
         versions
@@ -1089,11 +1031,5 @@ fn versions(name: &str, _version: &str, versions: Vec<VersionRow>) -> Html {
 /// A stored query's Versions tab.
 pub async fn versions_page() -> Drawn {
     let (name, _) = params();
-    match load_versions(name).await {
-        Ok(page) => page_view(page, QueryTab::Versions, versions),
-        Err(error) => Drawn::page(
-            String::new(),
-            drawn(Err::<(), _>(error), |()| Html::empty()),
-        ),
-    }
+    page_view(read_versions(name).await, QueryTab::Versions, versions)
 }

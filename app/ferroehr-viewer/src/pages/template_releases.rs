@@ -222,10 +222,7 @@ async fn catalog(
 /// Reads the releases of the template `template_id` of `family` among the
 /// listed `rows`, with what the tab `tab` draws of them: the composition
 /// counts on the Overview, the comparison `ask` names on Compare.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-pub async fn load_releases(
+pub async fn read_releases(
     // The family of the template.
     family: TemplateFamily,
     // The templates the CDR lists of that family, or its refusal.
@@ -236,19 +233,18 @@ pub async fn load_releases(
     tab: TemplateTab,
     // The comparison the address names.
     ask: CompareAsk,
-) -> Result<Releases, ViewerError> {
-    crate::session::require_session()?;
+) -> Releases {
     let rows = match rows {
         Ok(rows) => rows,
         Err(error) => {
-            return Ok(Releases {
+            return Releases {
                 unlisted: Some(error),
                 ..Releases::default()
-            });
+            };
         }
     };
     let Some(lineage) = lineage_of(rows, template_id) else {
-        return Ok(Releases::default());
+        return Releases::default();
     };
     let counts = match tab {
         TemplateTab::Overview => Some(
@@ -286,12 +282,12 @@ pub async fn load_releases(
             compared = Some(Compared { from, to, change });
         }
     }
-    Ok(Releases {
+    Releases {
         unlisted: None,
         lineage: Some(lineage),
         counts,
         compared,
-    })
+    }
 }
 
 impl Releases {

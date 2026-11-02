@@ -49,11 +49,12 @@ use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, current, message, tr, tr_with};
 use crate::markup::{h, opt, t};
 use crate::pages::common::{
-    EditorDock, Refused, card_panel, dock_editor, document_section, drawn, findings_of, info_note,
+    EditorDock, Refused, card_panel, dock_editor, document_section, findings_of, info_note,
     marks_of, panel, plain_section, section, short, shortened, state_mark, version_number, when,
 };
 use crate::pages::common::{discarded, is_status, version_uid_at};
 use crate::pages::ehr::{crumbs, ehr_href, ehr_id_param};
+use crate::pages::form::Form;
 use crate::pages::item_tags::{TagAct, tag_act, tag_done};
 use crate::pages::item_tags::{TagPanel, tag_panel};
 use crate::pages::versions::History;
@@ -693,23 +694,7 @@ enum CompositionModel {
     Missing(Refused),
 }
 
-/// Loads the composition `uid` of the EHR `ehr_id`: answers its post, reads
-/// its versions, the version in view and what the tab asked for shows; a
-/// composition the CDR does not hold answers `404`.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load(
-    // The EHR the route names.
-    ehr_id: String,
-    // The id the route names.
-    uid: String,
-) -> Result<CompositionModel, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_page(ehr_id, uid).await)
-}
-
-/// What [`load`] reads.
+/// What the page reads.
 #[expect(
     clippy::too_many_lines,
     reason = "one loader: the versions, the version in view, the post and the tab's read"
@@ -1005,19 +990,15 @@ fn composition_view(ehr_id: &str, uid: &str, composition: Composition) -> (Strin
 pub async fn page() -> Drawn {
     let ehr_id = ehr_id_param();
     let uid = uid_param();
-    match load(ehr_id.clone(), uid.clone()).await {
-        Ok(CompositionModel::Shown(composition)) => {
+    match read_page(ehr_id.clone(), uid.clone()).await {
+        CompositionModel::Shown(composition) => {
             let (title, body) = composition_view(&ehr_id, &uid, *composition);
             Drawn::page(title, body)
         }
-        Ok(CompositionModel::Missing(refusal)) => {
+        CompositionModel::Missing(refusal) => {
             let (title, body) = missing(&ehr_id, &uid, &refusal);
             Drawn::page(title, body)
         }
-        Err(error) => Drawn::page(
-            tr(RecordsMsg::CompositionRefused),
-            drawn(Err::<(), _>(error), |()| Html::empty()),
-        ),
     }
 }
 
@@ -1079,47 +1060,19 @@ struct Editor {
     unsaved: Option<Unsaved>,
 }
 
-/// Edit as a new version's model.
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum EditModel {
-    /// The form.
-    Editor(Box<Editor>),
-    /// The composition is deleted.
-    Deleted,
-    /// The CDR's refusal.
-    Refused(Refused),
-    /// The post redirected.
-    Left,
-}
-
-/// Loads Edit as a new version: answers its post (Discard, Save) over the
-/// latest version.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_edit(
-    // The EHR the route names.
-    ehr_id: String,
-    // The id the route names.
-    uid: String,
-) -> Result<EditModel, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_edit(ehr_id, uid).await)
-}
-
-/// What [`load_edit`] reads.
-async fn read_edit(ehr_id: String, uid: String) -> EditModel {
+/// What the page reads.
+async fn read_edit(ehr_id: String, uid: String) -> Form<Editor, ()> {
     let posted = crate::posted::posted();
     if discarded(posted.as_ref()) {
         crate::request::redirect(&composition_href(&ehr_id, &uid));
-        return EditModel::Left;
+        return Form::Left;
     }
     let current =
         match fetch_composition(ehr_id.clone(), uid.clone(), ReprFormat::CanonicalJson).await {
             Ok(Some(body)) => crate::bff::pretty_body(&body, ReprFormat::CanonicalJson),
-            Ok(None) => return EditModel::Deleted,
+            Ok(None) => return Form::Not(()),
             Err(error) => {
-                return EditModel::Refused(Refused::new(tr(RecordsMsg::CompositionRefused), error));
+                return Form::Refused(Refused::new(tr(RecordsMsg::CompositionRefused), error));
             }
         };
     let latest = match fetch_versions(ehr_id.clone(), uid.clone()).await {
@@ -1133,7 +1086,7 @@ async fn read_edit(ehr_id: String, uid: String) -> EditModel {
             .map(|version| version.version_id)
             .unwrap_or_default(),
         Err(error) => {
-            return EditModel::Refused(Refused::new(
+            return Form::Refused(Refused::new(
                 tr(RecordsMsg::CompositionHistoryRefused),
                 error,
             ));
@@ -1163,7 +1116,7 @@ async fn read_edit(ehr_id: String, uid: String) -> EditModel {
                         &[("version", version_number(&saved).into())],
                     )),
                 );
-                return EditModel::Left;
+                return Form::Left;
             }
             Err(error) => {
                 unsaved = Some(Unsaved {
@@ -1173,7 +1126,7 @@ async fn read_edit(ehr_id: String, uid: String) -> EditModel {
             }
         }
     }
-    EditModel::Editor(Box::new(Editor {
+    Form::Shown(Box::new(Editor {
         current,
         latest,
         opened,
@@ -1291,18 +1244,14 @@ fn edit_page(ehr_id: &str, uid: &str, editor: Editor) -> (String, Html) {
 pub async fn edit_composition_page() -> Drawn {
     let ehr_id = ehr_id_param();
     let uid = uid_param();
-    let (title, body) = match load_edit(ehr_id.clone(), uid.clone()).await {
-        Ok(EditModel::Editor(editor)) => edit_page(&ehr_id, &uid, *editor),
-        Ok(EditModel::Deleted) => (
+    let (title, body) = match read_edit(ehr_id.clone(), uid.clone()).await {
+        Form::Shown(editor) => edit_page(&ehr_id, &uid, *editor),
+        Form::Not(()) => (
             tr(RecordsMsg::CompositionDeletedNoEdit),
             info_note(t(tr(RecordsMsg::CompositionDeletedNoEdit))),
         ),
-        Ok(EditModel::Refused(refusal)) => (tr(RecordsMsg::CompositionRefused), refusal.view()),
-        Ok(EditModel::Left) => (String::new(), Html::empty()),
-        Err(error) => (
-            tr(RecordsMsg::CompositionRefused),
-            drawn(Err::<(), _>(error), |()| Html::empty()),
-        ),
+        Form::Refused(refusal) => (tr(RecordsMsg::CompositionRefused), refusal.view()),
+        Form::Left => (String::new(), Html::empty()),
     };
     Drawn::page(title, body)
 }
@@ -1329,15 +1278,6 @@ struct NewForm {
     templates: Result<Vec<String>, Refused>,
 }
 
-/// New composition's model.
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum NewModel {
-    /// The form.
-    Form(Box<NewForm>),
-    /// The post redirected.
-    Left,
-}
-
 /// The format the key `format_key` names, canonical JSON for none.
 fn new_format(format_key: &str) -> ReprFormat {
     NEW_FORMATS
@@ -1346,25 +1286,12 @@ fn new_format(format_key: &str) -> ReprFormat {
         .map_or(ReprFormat::CanonicalJson, |(_, format)| *format)
 }
 
-/// Loads New composition: answers its post (Discard, Commit) and reads the
-/// templates.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_new(
-    // The EHR the route names.
-    ehr_id: String,
-) -> Result<NewModel, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_new(ehr_id).await)
-}
-
-/// What [`load_new`] reads.
-async fn read_new(ehr_id: String) -> NewModel {
+/// What the page reads.
+async fn read_new(ehr_id: String) -> Form<NewForm> {
     let posted = crate::posted::posted();
     if discarded(posted.as_ref()) {
         crate::request::redirect(&ehr_href(&ehr_id));
-        return NewModel::Left;
+        return Form::Left;
     }
     let format_key = posted
         .as_ref()
@@ -1399,7 +1326,7 @@ async fn read_new(ehr_id: String) -> NewModel {
                     &composition_href(&ehr_id, &object),
                     &Done::ok(tr(RecordsMsg::CompositionCommitted)).line(shortened(&object)),
                 );
-                return NewModel::Left;
+                return Form::Left;
             }
             Err(error) => {
                 refused = Some(Refused::new(
@@ -1422,7 +1349,7 @@ async fn read_new(ehr_id: String) -> NewModel {
             ids
         })
         .map_err(|error| Refused::new(tr(RecordsMsg::CompositionTemplatesRefused), error));
-    NewModel::Form(Box::new(NewForm {
+    Form::Shown(Box::new(NewForm {
         format_key,
         template,
         text,
@@ -1530,9 +1457,10 @@ fn new_form(ehr_id: &str, form: NewForm) -> Html {
 /// New composition.
 pub async fn new_page() -> Drawn {
     let ehr_id = ehr_id_param();
-    let body = drawn(load_new(ehr_id.clone()).await, |model| match model {
-        NewModel::Form(form) => new_form(&ehr_id, *form),
-        NewModel::Left => Html::empty(),
-    });
+    let body = match read_new(ehr_id.clone()).await {
+        Form::Shown(form) => new_form(&ehr_id, *form),
+        Form::Refused(refusal) => refusal.view(),
+        Form::Left => Html::empty(),
+    };
     Drawn::page(tr(RecordsMsg::CompositionNewPageTitle), body)
 }

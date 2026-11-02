@@ -19,10 +19,8 @@ use ferrohealth_ui::view::preferences::{
     preference_row, preferences_page, select_preference,
 };
 
-use crate::error::ViewerError;
 use crate::locale::console::ConsoleMsg;
 use crate::locale::{current, tr, tr_with};
-use crate::pages::common::drawn;
 use crate::routes::Drawn;
 
 /// The tab the address names: Appearance for none.
@@ -93,16 +91,7 @@ fn reveal_row(back: &str, saved: bool) -> Html {
     )
 }
 
-/// Loads the languages the browser asks for, its `Accept-Language` header.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-fn load() -> Result<String, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_page())
-}
-
-/// What [`load`] reads: the request's `Accept-Language`.
+/// What the page reads: the request's `Accept-Language`.
 fn read_page() -> String {
     crate::scope::with(|scope| {
         scope
@@ -119,7 +108,8 @@ fn read_page() -> String {
 /// Your preferences.
 #[must_use]
 pub fn page() -> Drawn {
-    let page = drawn(load(), |accepted: String| {
+    let page = {
+        let accepted = read_page();
         let section = section();
         let routes = routes();
         let saved = crate::request::query("saved");
@@ -151,6 +141,6 @@ pub fn page() -> Drawn {
                 own,
             },
         )
-    });
+    };
     Drawn::page(tr(ConsoleMsg::YourPreferences), page)
 }

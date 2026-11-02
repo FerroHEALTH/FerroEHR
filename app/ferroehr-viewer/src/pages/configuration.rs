@@ -28,7 +28,7 @@ use crate::error::ViewerError;
 use crate::locale::console::ConsoleMsg;
 use crate::locale::{Msg, current, tr};
 use crate::markup::{h, t};
-use crate::pages::common::{Refused, drawn};
+use crate::pages::common::Refused;
 use crate::routes::Drawn;
 
 /// The id of the dialog the file line's How configuration works opens.
@@ -398,20 +398,7 @@ enum Shown {
     Refused(Refused),
 }
 
-/// Loads the settings of `section`: the viewer's own, or the CDR's leaves
-/// that belong to it.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load(
-    // The section the route names.
-    section: String,
-) -> Result<Shown, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_page(section).await)
-}
-
-/// What [`load`] reads.
+/// What the page reads.
 #[expect(
     clippy::disallowed_types,
     reason = "the viewer reads the CDR's configuration JSON tree to draw its leaves"
@@ -449,7 +436,8 @@ pub async fn page() -> Drawn {
         .get("section")
         .filter(|section| SECTIONS.iter().any(|(key, _, _)| key == section))
         .unwrap_or_else(|| "deployment".to_owned());
-    let page = drawn(load(section.clone()).await, |shown| {
+    let page = {
+        let shown = read_page(section.clone()).await;
         let viewer = section == "viewer";
         let (settings, trouble) = match shown {
             Shown::Cdr(rows) => (
@@ -502,6 +490,6 @@ pub async fn page() -> Drawn {
             },
         );
         Html::join([page, trouble.unwrap_or_default(), how_dialog()])
-    });
+    };
     Drawn::page(tr(Msg::NavConfiguration), page)
 }

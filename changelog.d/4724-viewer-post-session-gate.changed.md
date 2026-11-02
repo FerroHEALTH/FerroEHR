@@ -1,0 +1,1 @@
+- The viewer answers every request other than `GET` and `HEAD` that arrives without a session, to any path but the sign-in page, the OIDC routes, sign-out and the search answer, with the sign-in page that says the session ended, before any handler runs. The preference, sidebar, paging and export posts used to run without a session.

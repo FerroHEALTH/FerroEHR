@@ -166,7 +166,6 @@ pub struct NamespaceTile {
 pub async fn namespace_tiles() -> Result<Vec<NamespaceTile>, ViewerError> {
     use futures::stream::StreamExt;
 
-    crate::session::require_session()?;
     let rows = crate::queries_api::list_stored_queries().await?;
     let groups = crate::query_namespace::group_by_namespace(&rows);
 

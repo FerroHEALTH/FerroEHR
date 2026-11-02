@@ -39,9 +39,10 @@ use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, current, tr, tr_with};
 use crate::markup::{attr, h, opt, t};
 use crate::pages::common::{
-    EditorDock, Refused, card_panel, dock_editor, drawn, is_status, section, short,
+    EditorDock, Refused, card_panel, dock_editor, is_status, section, short,
 };
 use crate::pages::ehr::ehr_href;
+use crate::pages::form::Form;
 use crate::paging::Listing;
 use crate::routes::Drawn;
 
@@ -219,26 +220,22 @@ async fn found(typed: String, namespace: String) -> EhrsModel {
     }
 }
 
-/// Loads the EHRs list: the find a post asks, or the page of the list.
-///
-/// # Errors
-/// [`crate::error::ViewerError::Unauthenticated`] without a viewer session.
-async fn load_list() -> Result<EhrsModel, crate::error::ViewerError> {
-    crate::session::require_session()?;
+/// Reads the EHRs list: the find a post asks, or the page of the list.
+async fn read_list() -> EhrsModel {
     if let Some(posted) = crate::posted::posted_for("find") {
         let typed = posted.text("find");
         let namespace = posted.text("namespace");
         if !typed.is_empty() {
-            return Ok(found(typed, namespace).await);
+            return found(typed, namespace).await;
         }
     }
     let window = OpenWindow::of(crate::paging::current(Listing::Ehrs), 0);
-    Ok(EhrsModel::List(
+    EhrsModel::List(
         list_ehrs(window.start, window.size)
             .await
             .map(|page| rows_of(&page))
             .map_err(|error| Refused::new(tr(RecordsMsg::EhrsRefused), error)),
-    ))
+    )
 }
 
 /// The EHRs list's body.
@@ -299,7 +296,7 @@ fn list_view(model: EhrsModel) -> Html {
 
 /// The EHRs list.
 pub async fn list_page() -> Drawn {
-    let body = drawn(load_list().await, list_view);
+    let body = list_view(read_list().await);
     Drawn::page(
         tr(Msg::NavEhrs),
         heading().then(h(format!(r#"<div class="fui-list-page">{body}</div>"#))),
@@ -387,35 +384,26 @@ fn new_form(draft: &Draft, ehr_id_error: Option<String>) -> Html {
     ))
 }
 
-/// New EHR's model.
+/// New EHR's form.
 #[derive(Debug, Clone, PartialEq, Eq)]
-enum NewModel {
-    /// The form.
-    Form {
-        /// What it holds.
-        draft: Draft,
-        /// Whether a create was asked for and did not happen.
-        failed: bool,
-        /// What is wrong with the EHR id asked for.
-        ehr_id_error: Option<String>,
-        /// The CDR's refusal of the create, with the id already in use when
-        /// that is why.
-        refused: Option<(Refused, Option<String>)>,
-    },
-    /// The post redirected.
-    Left,
+struct NewEhr {
+    /// What it holds.
+    draft: Draft,
+    /// Whether a create was asked for and did not happen.
+    failed: bool,
+    /// What is wrong with the EHR id asked for.
+    ehr_id_error: Option<String>,
+    /// The CDR's refusal of the create, with the id already in use when that
+    /// is why.
+    refused: Option<(Refused, Option<String>)>,
 }
 
-/// Loads New EHR: answers its post (Discard, Create).
-///
-/// # Errors
-/// [`crate::error::ViewerError::Unauthenticated`] without a viewer session.
-async fn load_new() -> Result<NewModel, crate::error::ViewerError> {
-    crate::session::require_session()?;
+/// Reads New EHR: answers its post (Discard, Create).
+async fn read_new() -> Form<NewEhr> {
     let posted = crate::posted::posted();
     if crate::pages::common::discarded(posted.as_ref()) {
         crate::request::redirect("/ehrs");
-        return Ok(NewModel::Left);
+        return Form::Left;
     }
     let draft = posted.as_ref().map_or_else(Draft::default, |posted| Draft {
         subject_id: posted.text("subject_id"),
@@ -447,7 +435,7 @@ async fn load_new() -> Result<NewModel, crate::error::ViewerError> {
                         &Done::ok(tr(RecordsMsg::EhrCreated))
                             .line(crate::pages::common::shortened(&created)),
                     );
-                    return Ok(NewModel::Left);
+                    return Form::Left;
                 }
                 Err(error) => {
                     let conflict = is_status(&error, http::StatusCode::CONFLICT);
@@ -462,25 +450,25 @@ async fn load_new() -> Result<NewModel, crate::error::ViewerError> {
             }
         }
     }
-    Ok(NewModel::Form {
+    Form::Shown(Box::new(NewEhr {
         draft,
         failed,
         ehr_id_error,
         refused,
-    })
+    }))
 }
 
 /// New EHR's form, its decision bar docked.
-fn new_view(model: NewModel) -> Html {
-    let NewModel::Form {
+fn new_view(model: Form<NewEhr>) -> Html {
+    let Form::Shown(new) = model else {
+        return Html::empty();
+    };
+    let NewEhr {
         draft,
         failed,
         ehr_id_error,
         refused,
-    } = model
-    else {
-        return Html::empty();
-    };
+    } = *new;
     let line = if failed {
         (Glyph::CIRCLE_X, tr(RecordsMsg::EhrNewNotCreated))
     } else {
@@ -515,7 +503,7 @@ fn new_view(model: NewModel) -> Html {
 
 /// New EHR.
 pub async fn new_page() -> Drawn {
-    let body = drawn(load_new().await, new_view);
+    let body = new_view(read_new().await);
     let heading = page_heading(
         &current(),
         Header {

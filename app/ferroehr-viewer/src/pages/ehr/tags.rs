@@ -25,7 +25,7 @@ use crate::error::ViewerError;
 use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, current, tr, tr_with};
 use crate::markup::{h, opt, t};
-use crate::pages::common::{Refused, drawn, shortened};
+use crate::pages::common::{Refused, shortened};
 use crate::pages::ehr::EhrModel;
 use crate::pages::ehr::{EhrTab, ehr_id_param, ehr_view, tab_href};
 use crate::routes::Drawn;
@@ -222,19 +222,7 @@ async fn tagged(ehr_id: &str, groups: Vec<TagGroup>) -> Result<Vec<Tagged>, View
     Ok(named)
 }
 
-/// Loads the tab: the tags the request's filters find.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load(
-    // The EHR the route names.
-    ehr_id: String,
-) -> Result<EhrModel<Panel>, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_page(ehr_id).await)
-}
-
-/// What [`load`] reads.
+/// What the page reads.
 async fn read_page(ehr_id: String) -> EhrModel<Panel> {
     crate::pages::ehr::load_ehr(&ehr_id, async |_facts| {
         let filters = Filters::read();
@@ -328,8 +316,9 @@ fn panel(ehr_id: &str, panel: Panel) -> Html {
 pub async fn page() -> Drawn {
     let ehr_id = ehr_id_param();
     let title = tr_with(RecordsMsg::TagsTitle, &[("id", shortened(&ehr_id).into())]);
-    let body = drawn(load(ehr_id.clone()).await, |model| {
+    let body = {
+        let model = read_page(ehr_id.clone()).await;
         ehr_view(&ehr_id, EhrTab::Tags, model, |found| panel(&ehr_id, found))
-    });
+    };
     Drawn::page(title, body)
 }

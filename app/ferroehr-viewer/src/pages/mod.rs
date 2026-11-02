@@ -18,6 +18,7 @@ pub mod ehr;
 pub mod ehrs;
 pub mod errors;
 pub mod find;
+pub mod form;
 pub mod item_tags;
 pub mod login;
 pub mod parties;
