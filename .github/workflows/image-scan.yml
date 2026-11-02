@@ -28,6 +28,13 @@
 # products match a PUBLISHED reference (by tag and by digest), and the build lane
 # scans `ferroehr-postgres` under a local tag, which is what fails to match.
 #
+# THE RECORD (#4795). Beside that gate the lane runs the release's
+# vulnerability record (scripts/security/vulnerability-record.sh) over the
+# published (`latest`) and main images: every severity, unfixed findings
+# included, each needing an OpenVEX judgement. A finding without one files
+# or updates its own tracking issue within a day, so it is judged before the
+# next release candidate is tagged rather than after.
+#
 # RUN COLOUR (the watcher family's uniform rule, #2778). The run is RED only when
 # the PROBE fails — an image that cannot be resolved or pulled, a trivy crash,
 # output jq cannot read. A FINDING files or updates the tracking issue and the
@@ -39,10 +46,10 @@ name: Published image scan
 
 on:
   schedule:
-    # Mondays 07:13 UTC — off the hour (GitHub delays on-the-hour runs under
-    # load) and in a slot of its own; read the estate's slots with
+    # Daily 07:13 UTC (#4795), off the hour (GitHub delays on-the-hour runs
+    # under load) and in a slot of its own; read the estate's slots with
     # `grep -rE '^ +- cron:' .github/workflows/`.
-    - cron: "13 7 * * 1"
+    - cron: "13 7 * * *"
   workflow_dispatch:
     inputs:
       report_only:
@@ -139,11 +146,55 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           echo "total findings: $total"
 
+      # The record over the published and the main images. The script exits
+      # 1 for a finding without a judgement, which files the issue below;
+      # any other failure is the probe's and turns the run red.
+      - name: Every finding on the published and main images carries a judgement
+        id: record
+        env:
+          OWNER: ferrohealth
+        run: |
+          set -euo pipefail
+          uncovered=0
+          : > uncovered.md
+          for tag in latest main; do
+            args=()
+            app=""
+            for image in ferroehr ferroehr-viewer ferroehr-postgres; do
+              digest="$(docker buildx imagetools inspect "ghcr.io/${OWNER}/${image}:${tag}" --format '{{.Manifest.Digest}}')"
+              args+=(--image "${image}=ghcr.io/${OWNER}/${image}@${digest}")
+              if [ "$image" = ferroehr ]; then
+                app="ghcr.io/${OWNER}/ferroehr@${digest}"
+              fi
+            done
+            rc=0
+            bash scripts/security/vulnerability-record.sh \
+              --reports "record-${tag}" --record "record-${tag}/vulnerability-record.json" \
+              "${args[@]}" --binaries-from "$app" > "record-${tag}.log" 2>&1 || rc=$?
+            cat "record-${tag}.log"
+            case "$rc" in
+              0) ;;
+              1)
+                uncovered=1
+                {
+                  printf '\n### `%s`\n\n```\n' "$tag"
+                  grep -E '^ +UNCOVERED ' "record-${tag}.log" || true
+                  printf '```\n'
+                } >> uncovered.md
+                ;;
+              *) exit "$rc" ;;
+            esac
+          done
+          echo "uncovered=$uncovered" >> "$GITHUB_OUTPUT"
+
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: image-scan-reports
-          path: "*.json"
+          path: |
+            *.json
+            record-latest/
+            record-main/
           if-no-files-found: warn
           retention-days: 30
 
@@ -215,4 +266,28 @@ jobs:
         with:
           title: "security(images): published images carry fixable HIGH/CRITICAL findings"
           body-file: body.md
+          type: Bug
+
+      - name: Write the record issue body
+        if: steps.record.outputs.uncovered == '1' && !inputs.report_only
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          {
+            printf 'The daily vulnerability record found findings without an OpenVEX judgement'
+            printf ' on the published (`latest`) or main images. The release record refuses'
+            printf ' a release candidate while one is open, so judge or fix each before the next tag.\n'
+            cat uncovered.md
+            printf '\nReports and records are attached to the run as `image-scan-reports`: %s\n' "$RUN_URL"
+            printf '\nA finding with a fix is fixed by a rebuild; one without a fix gets a statement'
+            printf ' in `security/vex/` with its argument, per `security/vex/README.md`.\n'
+          } > record-body.md
+
+      - name: File or update the record issue
+        if: steps.record.outputs.uncovered == '1' && !inputs.report_only
+        uses: ./.github/actions/file-watcher-issue # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
+        with:
+          title: "security(images): image findings without an exploitability judgement"
+          body-file: record-body.md
           type: Bug
