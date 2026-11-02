@@ -827,7 +827,7 @@ async fn archive_marks_vos_idempotently_and_reads_stay_unchanged() {
     // Reads are UNCHANGED after archival (zero wire drift): the EHR_STATUS and
     // the party still serve their content.
     let status = svc
-        .ehr_status_at_time_response(ehr, None)
+        .ehr_status(ehr, None)
         .await
         .map(|r| r.body)
         .expect("status still readable after archive");
@@ -920,7 +920,7 @@ async fn archive_physically_moves_rows_to_the_cold_tier_and_back() {
     // The composition/EHR_STATUS content served before archiving, to compare
     // against the post-archive read.
     let status_before = svc
-        .ehr_status_at_time_response(ehr, None)
+        .ehr_status(ehr, None)
         .await
         .map(|r| r.body)
         .expect("status before archive");
@@ -941,7 +941,7 @@ async fn archive_physically_moves_rows_to_the_cold_tier_and_back() {
     assert_eq!(tier_rows(pool, "node_hot", other).await, other_nodes);
     assert_eq!(tier_rows(pool, "version_cold", other).await, 0);
     assert_eq!(tier_rows(pool, "node_cold", other).await, 0);
-    svc.ehr_status_at_time_response(other, None)
+    svc.ehr_status(other, None)
         .await
         .map(|r| r.body)
         .expect("the unarchived EHR still reads");
@@ -949,13 +949,13 @@ async fn archive_physically_moves_rows_to_the_cold_tier_and_back() {
     // 3. The archived EHR still serves the same content, now from the cold
     //    tier (archiving MOVES storage, it does not remove the object).
     let status_after = svc
-        .ehr_status_at_time_response(ehr, None)
+        .ehr_status(ehr, None)
         .await
         .map(|r| r.body)
         .expect("status after archive");
     assert_eq!(status_before, status_after, "archived read is unchanged");
     let revisions = svc
-        .ehr_status_revision_history_response(ehr)
+        .ehr_status_revision_history(ehr)
         .await
         .map(|r| r.body)
         .expect("revision history after archive");
@@ -991,7 +991,7 @@ async fn archive_physically_moves_rows_to_the_cold_tier_and_back() {
     .expect("marker count");
     assert_eq!(markers, 0, "restore drops the archive markers");
     assert_eq!(
-        svc.ehr_status_at_time_response(ehr, None)
+        svc.ehr_status(ehr, None)
             .await
             .map(|r| r.body)
             .expect("status after restore"),
@@ -1038,7 +1038,7 @@ async fn writing_an_archived_object_thaws_it_back_to_the_primary_tier() {
 
     let ehr = crate::fixtures::create_ehr(&svc).await;
     let before = svc
-        .ehr_status_at_time_response(ehr, None)
+        .ehr_status(ehr, None)
         .await
         .map(|r| r.body)
         .expect("status get");
@@ -1054,7 +1054,7 @@ async fn writing_an_archived_object_thaws_it_back_to_the_primary_tier() {
 
     let mut updated = before.clone();
     updated.as_object_mut().expect("status obj").remove("uid");
-    Box::pin(svc.replace_ehr_status_meta(ehr, uv(&updated, "251", Some(&preceding))))
+    Box::pin(svc.replace_ehr_status(ehr, uv(&updated, "251", Some(&preceding))))
         .await
         .map(|m| m.uid)
         .expect("update the archived EHR_STATUS");
@@ -1067,7 +1067,7 @@ async fn writing_an_archived_object_thaws_it_back_to_the_primary_tier() {
     assert_eq!(tier_rows(pool, "version_cold", ehr).await, 1);
     assert_eq!(tier_rows(pool, "version_hot", ehr).await, 2);
     let revisions = svc
-        .ehr_status_revision_history_response(ehr)
+        .ehr_status_revision_history(ehr)
         .await
         .map(|r| r.body)
         .expect("revision history");

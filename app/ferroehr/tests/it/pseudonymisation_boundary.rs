@@ -1481,7 +1481,7 @@ async fn an_imported_party_with_a_plaintext_identifier_is_refused() {
 
     let ehr = crate::fixtures::create_ehr(&source).await;
     let mut status = source
-        .ehr_status_at_time_response(ehr, None)
+        .ehr_status(ehr, None)
         .await
         .map(|r| r.body)
         .expect("status get");
@@ -1501,8 +1501,7 @@ async fn an_imported_party_with_a_plaintext_identifier_is_refused() {
         }
     });
     Box::pin(
-        source
-            .replace_ehr_status_meta(ehr, crate::fixtures::uv(&status, "251", Some(&status_ovid))),
+        source.replace_ehr_status(ehr, crate::fixtures::uv(&status, "251", Some(&status_ovid))),
     )
     .await
     .map(|m| m.uid)
@@ -1559,7 +1558,7 @@ async fn an_imported_party_with_another_deployments_sealed_identifier_is_refused
 
     let ehr = crate::fixtures::create_ehr(&source).await;
     let mut status = source
-        .ehr_status_at_time_response(ehr, None)
+        .ehr_status(ehr, None)
         .await
         .map(|r| r.body)
         .expect("status get");
@@ -1579,8 +1578,7 @@ async fn an_imported_party_with_another_deployments_sealed_identifier_is_refused
         }
     });
     Box::pin(
-        source
-            .replace_ehr_status_meta(ehr, crate::fixtures::uv(&status, "251", Some(&status_ovid))),
+        source.replace_ehr_status(ehr, crate::fixtures::uv(&status, "251", Some(&status_ovid))),
     )
     .await
     .map(|m| m.uid)

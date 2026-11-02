@@ -71,7 +71,7 @@ async fn seed_ehr(svc: &FerroEhrService) -> ferroehr::ids::EhrId {
     let ehr_uuid = crate::fixtures::create_ehr(svc).await;
 
     let mut status = svc
-        .ehr_status_at_time_response(ehr_uuid, None)
+        .ehr_status(ehr_uuid, None)
         .await
         .map(|r| r.body)
         .expect("status get");
@@ -99,7 +99,7 @@ async fn seed_ehr(svc: &FerroEhrService) -> ferroehr::ids::EhrId {
     .expect("directory");
 
     status["is_modifiable"] = json!(false);
-    Box::pin(svc.replace_ehr_status_meta(ehr_uuid, uv(&status, "251", Some(&status_ovid))))
+    Box::pin(svc.replace_ehr_status(ehr_uuid, uv(&status, "251", Some(&status_ovid))))
         .await
         .map(|m| m.uid)
         .expect("status update");
@@ -174,7 +174,7 @@ async fn import_ehr_clone_into_fresh_target_reuses_source_id() {
 
     let ehr = seed_ehr(&source).await;
     let source_status = source
-        .ehr_status_at_time_response(ehr, None)
+        .ehr_status(ehr, None)
         .await
         .map(|r| r.body)
         .expect("source status");
@@ -186,7 +186,7 @@ async fn import_ehr_clone_into_fresh_target_reuses_source_id() {
     // The clone exists under the *same* EHR id in the target, which holds no
     // other EHR.
     let target_status = target
-        .ehr_status_at_time_response(ehr, None)
+        .ehr_status(ehr, None)
         .await
         .map(|r| r.body)
         .expect("cloned status readable under the reused ehr_id");
@@ -257,7 +257,7 @@ async fn import_ehr_without_ehr_access_bootstraps_the_mandatory_default() {
         .expect("import an extract with no EHR_ACCESS");
 
     // The served EHR body carries the mandatory ehr_access reference.
-    let body = target.ehr_object(ehr).await.expect("EHR body");
+    let body = target.ehr_read(ehr).await.expect("EHR body").body;
     assert_eq!(body["ehr_access"]["_type"], json!("OBJECT_REF"));
     assert_eq!(body["ehr_access"]["type"], json!("VERSIONED_EHR_ACCESS"));
     assert!(
@@ -422,7 +422,7 @@ async fn import_ehr_into_fixed_fresh_id() {
 
     let ehr = seed_ehr(&source).await;
     let source_status = source
-        .ehr_status_at_time_response(ehr, None)
+        .ehr_status(ehr, None)
         .await
         .map(|r| r.body)
         .expect("source status");
@@ -445,7 +445,7 @@ async fn import_ehr_into_fixed_fresh_id() {
         ServiceError::NotFound(r) if r.kind == Missing::Ehr
     ));
     let mut target_status = target
-        .ehr_status_at_time_response(fixed, None)
+        .ehr_status(fixed, None)
         .await
         .map(|r| r.body)
         .expect("status under the fixed id");
@@ -621,7 +621,8 @@ async fn an_imported_version_serves_the_wrapper_and_wrapped_split() {
     let served = target
         .ehr_status_version_envelope(ehr, vo_id, &version)
         .await
-        .expect("the imported version reads back");
+        .expect("the imported version reads back")
+        .body;
 
     // The wrapper.
     assert_eq!(
@@ -701,7 +702,7 @@ async fn an_imported_container_reports_the_local_chronology() {
         .expect("import_ehr");
 
     let container = target
-        .versioned_ehr_status_response(ehr)
+        .versioned_ehr_status(ehr)
         .await
         .expect("VERSIONED_EHR_STATUS");
     let time_created = container.body["time_created"]["value"]
@@ -723,7 +724,7 @@ async fn an_imported_container_reports_the_local_chronology() {
     // audit of the version IN THIS CONTAINER, which for an imported version is
     // the IMPORTED_VERSION's own, i.e. the local import act.
     let history = target
-        .ehr_status_revision_history_response(ehr)
+        .ehr_status_revision_history(ehr)
         .await
         .map(|r| r.body)
         .expect("REVISION_HISTORY");
@@ -846,7 +847,8 @@ async fn a_signed_import_signs_the_wrapper_and_the_read_verifies_it() {
     let served = target
         .ehr_status_version_envelope(ehr, vo_id, &version)
         .await
-        .expect("the signed IMPORTED_VERSION verifies on read");
+        .expect("the signed IMPORTED_VERSION verifies on read")
+        .body;
     assert_eq!(served["_type"], json!("IMPORTED_VERSION"));
     assert!(
         served["signature"].as_str().is_some_and(|s| !s.is_empty()),
@@ -976,7 +978,8 @@ async fn an_as_of_read_before_the_import_does_not_see_the_imported_version() {
     let source_instant = source
         .composition_version_envelope(ehr, composition_uid.parse().expect("ovid"))
         .await
-        .expect("source version")["commit_audit"]["time_committed"]["value"]
+        .expect("source version")
+        .body["commit_audit"]["time_committed"]["value"]
         .as_str()
         .expect("source commit instant")
         .to_owned();
@@ -991,7 +994,7 @@ async fn an_as_of_read_before_the_import_does_not_see_the_imported_version() {
 
     // At the pre-import instant the container held nothing locally.
     let illusion = target
-        .composition_at_time_response(ehr, vo_id, Some(before_import.clone()))
+        .composition_at_time(ehr, vo_id, Some(before_import.clone()))
         .await
         .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"));
     assert!(
@@ -1000,7 +1003,7 @@ async fn an_as_of_read_before_the_import_does_not_see_the_imported_version() {
     );
     // …while an as-of read now does see it.
     target
-        .composition_at_time_response(ehr, vo_id, None)
+        .composition_at_time(ehr, vo_id, None)
         .await
         .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("the imported version is current now");
@@ -1011,7 +1014,8 @@ async fn an_as_of_read_before_the_import_does_not_see_the_imported_version() {
     let served = target
         .composition_version_envelope(ehr, composition_uid.parse().expect("ovid"))
         .await
-        .expect("imported version");
+        .expect("imported version")
+        .body;
     assert_eq!(
         served["item"]["commit_audit"]["time_committed"]["value"],
         json!(source_instant),
@@ -1076,7 +1080,8 @@ async fn a_two_hop_copy_wraps_at_each_system_over_one_unchanged_original() {
     let at_b = system_b
         .ehr_status_version_envelope(ehr, vo_id, &version)
         .await
-        .expect("the version at B");
+        .expect("the version at B")
+        .body;
 
     // Hop 2: B → C, from B's own re-export.
     system_c
@@ -1086,7 +1091,8 @@ async fn a_two_hop_copy_wraps_at_each_system_over_one_unchanged_original() {
     let at_c = system_c
         .ehr_status_version_envelope(ehr, vo_id, &version)
         .await
-        .expect("the version at C");
+        .expect("the version at C")
+        .body;
 
     for (system, served) in [("B", &at_b), ("C", &at_c)] {
         assert_eq!(
@@ -1364,7 +1370,8 @@ async fn import_accepts_a_branch_version_whose_closure_is_already_stored() {
     let served = target
         .ehr_status_version_envelope(ehr_id, vo_id, "2.1.1")
         .await
-        .expect("the imported branch version reads back");
+        .expect("the imported branch version reads back")
+        .body;
     assert_eq!(served["_type"], json!("IMPORTED_VERSION"));
 }
 
@@ -1422,7 +1429,8 @@ async fn import_advances_an_open_branch_lineage_and_rejects_a_stale_branch_versi
     let served = target
         .ehr_status_version_envelope(ehr_id, vo_id, "2.1.2")
         .await
-        .expect("the advanced branch version reads back");
+        .expect("the advanced branch version reads back")
+        .body;
     assert_eq!(served["_type"], json!("IMPORTED_VERSION"));
 
     // The stale tip is refused by name, exactly like a stale trunk re-import.
@@ -1480,7 +1488,7 @@ async fn an_extract_carries_its_parties_into_the_receivers_demographic_domain() 
     // `demographic` namespace the extract builder follows.
     let ehr = crate::fixtures::create_ehr(&source).await;
     let mut status = source
-        .ehr_status_at_time_response(ehr, None)
+        .ehr_status(ehr, None)
         .await
         .map(|r| r.body)
         .expect("status get");
@@ -1495,7 +1503,7 @@ async fn an_extract_carries_its_parties_into_the_receivers_demographic_domain() 
             "id": { "_type": "HIER_OBJECT_ID", "value": party.to_string() }
         }
     });
-    Box::pin(source.replace_ehr_status_meta(ehr, uv(&status, "251", Some(&status_ovid))))
+    Box::pin(source.replace_ehr_status(ehr, uv(&status, "251", Some(&status_ovid))))
         .await
         .map(|m| m.uid)
         .expect("status update");

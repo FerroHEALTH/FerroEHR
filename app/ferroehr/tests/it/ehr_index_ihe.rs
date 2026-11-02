@@ -170,7 +170,7 @@ async fn a_subject_is_resolved_through_the_pix_manager() {
         crate::fixtures::create_ehr_subject(&svc, &SubjectRef::person(&pseudonym, CLINICAL)).await;
 
     let stored = svc
-        .ehr_status_at_time_response(ehr, None)
+        .ehr_status(ehr, None)
         .await
         .map(|r| r.body)
         .expect("the status reads");

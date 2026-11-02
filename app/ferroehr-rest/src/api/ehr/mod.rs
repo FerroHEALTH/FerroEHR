@@ -15,9 +15,10 @@
 //! service's native argument types through [`crate::overview::version_id`],
 //! decodes any body (RM-typed bodies accept JSON or canonical XML), calls the
 //! service methods on the platform service `S`, and rebuilds a
-//! [`ServiceResponse`] from the result, which the `negotiate::*` helpers render
-//! with the spec's `ETag`/`Location`/`Prefer` behaviour. The shared write, read
-//! and committal helpers below back all seven modules; the `ITEM_TAG`
+//! [`ServiceResponse`](ferroehr::service::response::ServiceResponse) from the
+//! result, which the `negotiate::*` helpers render with the spec's
+//! `ETag`/`Location`/`Prefer` behaviour. The shared write, read and committal
+//! helpers below back all seven modules; the `ITEM_TAG`
 //! write-wrapper headers they accept are handled by `crate::api::item_tags`,
 //! the one implementation this group shares with the demographic group.
 
@@ -49,47 +50,9 @@ use openehr_base::prelude::ObjectVersionId;
 use openehr_its::rest::runtime::ApiError;
 use openehr_rm::prelude::PartyProxy;
 
-use ferroehr::service::response::{ResourceMeta, ServiceResponse};
-
 use crate::overview::error::RestError;
 use crate::overview::params::query_param;
 use crate::state::AppState;
-
-/// The `uid`/`value` of a returned RM object → the resource metadata a read
-/// with an `ETag`/`Last-Modified` needs (the version id is the object's own
-/// `uid`).
-///
-/// When the served body is a VERSION envelope, its `commit_audit.time_committed`
-/// is also read as the `Last-Modified` instant: "For openEHR resources, this
-/// value should be derived from `VERSION.commit_audit.time_committed.value`"
-/// (`Requests_and_responses.md` §"`ETag` and Last-Modified").
-///
-/// A bare RM body carries no commit audit, so those routes take their metadata
-/// from the service layer, which reads the commit instant off the version row.
-fn resource_meta_from(ehr_id: &str, body: &Value) -> Option<ResourceMeta> {
-    let uid = body
-        .pointer("/uid/value")
-        .or_else(|| body.pointer("/item/uid/value"))
-        .and_then(Value::as_str)?;
-    let meta = ResourceMeta::new(ehr_id.to_owned(), uid.to_owned());
-    Some(match commit_instant(body) {
-        Some(at) => meta.with_last_modified(at),
-        None => meta,
-    })
-}
-
-/// The commit instant of a served VERSION envelope —
-/// `VERSION.commit_audit.time_committed.value` (RM common master04
-/// §Audit Details; the `Last-Modified` source named by ITS-REST overview
-/// §"`ETag` and Last-Modified"). `None` for a body that is not a VERSION.
-fn commit_instant(body: &Value) -> Option<jiff::Timestamp> {
-    body.get("commit_audit")
-        .and_then(|a| a.get("time_committed"))
-        .and_then(|t| t.get("value"))
-        .and_then(Value::as_str)?
-        .parse::<jiff::Timestamp>()
-        .ok()
-}
 
 /// The canonical-XML root tag for a served VERSION envelope: the document
 /// element the published ITS-XML schemas declare for the resource.
@@ -138,16 +101,6 @@ pub(super) async fn expand_multimedia_if_requested(
         return Ok(state.backend().expand_multimedia(body).await?);
     }
     Ok(body)
-}
-
-/// Wrap a read body as a [`ServiceResponse`], attaching resource metadata drawn
-/// from the body's own `uid` (and, for a VERSION envelope, its commit instant)
-/// when present.
-pub(super) fn read_resp(ehr_id: &str, body: Value) -> ServiceResponse {
-    match resource_meta_from(ehr_id, &body) {
-        Some(m) => ServiceResponse::new(body, m),
-        None => ServiceResponse::plain(body),
-    }
 }
 
 /// The committer `PARTY_PROXY` a write states when the client sent none: the

@@ -37,7 +37,8 @@ use crate::versioning::change::{
     Change, Committed, Write, ensure_preceding, lock_current, tip_uid,
 };
 use crate::versioning::object_version_id::{TreeId, VersionIdError, components, parse_tree_id};
-use crate::versioning::wire::{revision_history, version_envelope, versioned_object};
+use crate::versioning::read::VersionRead;
+use crate::versioning::wire::{revision_history, versioned_object};
 use openehr_rm::prelude::Composition;
 
 use super::validation::composition_template_id;
@@ -199,19 +200,25 @@ impl FerroEhrService {
         })
     }
 
-    /// A COMPOSITION as it was at an instant (time-travel), with its `uid`
-    /// set. A deleted version resolves to an empty body (→ `204`).
+    /// The COMPOSITION current at `a_time` (time-travel), or the latest when
+    /// `a_time` is `None`, with the version metadata the wire's
+    /// `ETag`/`Last-Modified` need. A deleted version resolves to an empty
+    /// body (→ `204`).
     ///
     /// # Errors
-    /// [`ServiceError::NotFound`] when no version existed at `at` or the
-    /// object belongs to another EHR; [`ServiceError::Database`] on a storage
-    /// failure.
-    pub(in crate::service) async fn composition_at_time(
+    /// [`ServiceError`] for a malformed `a_time` (400-equivalent);
+    /// [`ServiceError::NotFound`] when no version existed at that instant or
+    /// the object belongs to another EHR; [`ServiceError::Database`] on a
+    /// storage failure.
+    pub async fn composition_at_time(
         &self,
         ehr_id: EhrId,
         vo_id: VoId,
-        at: jiff::Timestamp,
-    ) -> Result<ServiceResponse, ServiceError> {
+        a_time: Option<String>,
+    ) -> Result<RawServiceResponse, ServiceError> {
+        let Some(at) = a_time.as_deref().map(parse_at_time).transpose()? else {
+            return self.read_composition_raw(ehr_id, vo_id, None).await;
+        };
         let read = crate::versioning::read::read(
             &self.pool,
             self.spec_profile,
@@ -223,9 +230,38 @@ impl FerroEhrService {
             ServiceError::not_found(Missing::Composition, format!("COMPOSITION {vo_id}"))
         })?;
         if read.deleted() {
-            return Ok(ServiceResponse::plain(Value::Null));
+            return Ok(RawServiceResponse {
+                body: ReadBody::Value(Value::Null),
+                meta: None,
+            });
         }
-        Ok(self.version_response(ehr_id, vo_id, read)?)
+        let resp = self.version_response(ehr_id, vo_id, read)?;
+        Ok(RawServiceResponse {
+            body: ReadBody::Value(resp.body),
+            meta: resp.meta,
+        })
+    }
+
+    /// The bare COMPOSITION at the named version, with the version metadata
+    /// the wire's `ETag`/`Last-Modified` need. A deleted version resolves to
+    /// an empty body (→ `204`).
+    ///
+    /// # Errors
+    /// [`ServiceError`] for a malformed `OBJECT_VERSION_ID`, an unknown version
+    /// (404-equivalent), or a read failure.
+    pub async fn composition_at_version(
+        &self,
+        ehr_id: EhrId,
+        a_version_uid: ObjectVersionId,
+    ) -> Result<RawServiceResponse, ServiceError> {
+        let (vo_id, version) = components(&a_version_uid).map_err(VersionIdError::into_argument)?;
+        let read = self
+            .read_composition_raw(ehr_id, vo_id, Some(version))
+            .await?;
+        if let Some(meta) = read.meta.as_ref() {
+            super::ensure_addressed_version(&a_version_uid, &meta.uid)?;
+        }
+        Ok(read)
     }
 
     /// The `VERSIONED_COMPOSITION` container object with the container
@@ -237,7 +273,7 @@ impl FerroEhrService {
     /// # Errors
     /// [`ServiceError`] when the object does not exist in this EHR
     /// (404-equivalent) or a read fails.
-    pub async fn versioned_composition_response(
+    pub async fn versioned_composition(
         &self,
         ehr_id: EhrId,
         vo_id: VoId,
@@ -258,13 +294,12 @@ impl FerroEhrService {
 
     /// The `REVISION_HISTORY` of a COMPOSITION with the container metadata
     /// the wire's `ETag`/`Last-Modified` need (container uid + newest commit
-    /// instant — same derivation as
-    /// [`Self::versioned_composition_response`]).
+    /// instant, the derivation of [`Self::versioned_composition`]).
     ///
     /// # Errors
     /// [`ServiceError`] when the object does not exist in this EHR
     /// (404-equivalent) or a read fails.
-    pub async fn composition_revision_history_response(
+    pub async fn composition_revision_history(
         &self,
         ehr_id: EhrId,
         vo_id: VoId,
@@ -276,20 +311,23 @@ impl FerroEhrService {
         ))
     }
 
-    /// The VERSION envelope of a COMPOSITION at a specific version — an
+    /// The VERSION envelope of a COMPOSITION at the named version
+    /// (`GET …/versioned_composition/{uid}/version/{version_uid}`): an
     /// `ORIGINAL_VERSION`, or an `IMPORTED_VERSION` when the version was
     /// received from another system (RM common master06 §Version and its
-    /// Subtypes).
+    /// Subtypes), with the version metadata the wire's `ETag`/`Last-Modified`
+    /// need.
     ///
     /// # Errors
+    /// [`ServiceError`] for a malformed `OBJECT_VERSION_ID`;
     /// [`ServiceError::NotFound`] when the version does not exist or belongs
     /// to another EHR; [`ServiceError::Database`] on a storage failure.
-    pub(in crate::service) async fn composition_version(
+    pub async fn composition_version_envelope(
         &self,
         ehr_id: EhrId,
-        vo_id: VoId,
-        version: TreeId,
-    ) -> Result<Value, ServiceError> {
+        a_version_uid: ObjectVersionId,
+    ) -> Result<ServiceResponse, ServiceError> {
+        let (vo_id, version) = components(&a_version_uid).map_err(VersionIdError::into_argument)?;
         let read = crate::versioning::read::read(
             &self.pool,
             self.spec_profile,
@@ -303,64 +341,73 @@ impl FerroEhrService {
                 format!("COMPOSITION {vo_id} v{version}"),
             )
         })?;
-        version_envelope(&read, self.signer())
+        let resp = self.composition_envelope(ehr_id, &read)?;
+        // The served VERSION.uid is the stored full identity; the
+        // addressed uid must equal it (Resources.md §Identifier types; BASE
+        // master05 case rule) — a fabricated creating_system_id names no
+        // VERSION here.
+        if let Some(served) = resp
+            .body
+            .get("uid")
+            .and_then(|uid| uid.get("value"))
+            .and_then(Value::as_str)
+        {
+            super::ensure_addressed_version(&a_version_uid, served)?;
+        }
+        Ok(resp)
     }
 
-    /// The VERSION envelope of a COMPOSITION extant at `at`, or the latest
-    /// when `at` is `None` (`GET …/versioned_composition/{uid}/version`). A deleted version still returns `200` with the
-    /// deleted-lifecycle envelope (no `data`).
+    /// The VERSION envelope of a COMPOSITION extant at `a_time`, or the
+    /// latest when `a_time` is `None`
+    /// (`GET …/versioned_composition/{uid}/version`), with the version
+    /// metadata the wire's `ETag`/`Last-Modified` need. A deleted version
+    /// still returns `200` with the deleted-lifecycle envelope (no `data`).
     ///
     /// # Errors
-    /// [`ServiceError::NotFound`] when no version existed at `at` or the
-    /// object belongs to another EHR; [`ServiceError::Database`] on a storage
-    /// failure.
-    pub(in crate::service) async fn composition_version_at_time_read(
+    /// [`ServiceError`] for a malformed `a_time` (400-equivalent);
+    /// [`ServiceError::NotFound`] when no version existed at that instant or
+    /// the object belongs to another EHR; [`ServiceError::Database`] on a
+    /// storage failure.
+    pub async fn composition_version_at_time(
         &self,
         ehr_id: EhrId,
         vo_id: VoId,
-        at: Option<jiff::Timestamp>,
+        a_time: Option<String>,
     ) -> Result<ServiceResponse, ServiceError> {
-        let read = match at {
-            Some(at) => {
-                crate::versioning::read::read(
-                    &self.pool,
-                    self.spec_profile,
-                    VersionAt::Instant(vo_id, at),
+        let at = match a_time.as_deref().map(parse_at_time).transpose()? {
+            Some(at) => VersionAt::Instant(vo_id, at),
+            None => VersionAt::Current(vo_id),
+        };
+        let read = crate::versioning::read::read(&self.pool, self.spec_profile, at)
+            .await?
+            .filter(|r| r.ehr_id == Some(ehr_id) && r.kind == Kind::Composition)
+            .ok_or_else(|| {
+                ServiceError::not_found(
+                    Missing::ObjectVersion,
+                    format!("COMPOSITION {vo_id} version at time"),
                 )
-                .await?
-            }
-            None => {
-                crate::versioning::read::read(
-                    &self.pool,
-                    self.spec_profile,
-                    VersionAt::Current(vo_id),
-                )
-                .await?
-            }
-        }
-        .filter(|r| r.ehr_id == Some(ehr_id) && r.kind == Kind::Composition)
-        .ok_or_else(|| {
-            ServiceError::not_found(
-                Missing::ObjectVersion,
-                format!("COMPOSITION {vo_id} version at time"),
-            )
-        })?;
-        let meta = self
-            .version_meta(
-                ehr_id,
-                vo_id,
-                &read.creating_system_id,
-                read.tree,
-                read.time_committed,
-            )
-            .with_origins(crate::versioning::origins::of_stored(
-                read.origins.as_ref(),
-                &read.canonical,
-                &read.creating_system_id,
-            ))
-            .with_content(vec![read.content.clone()]);
-        let ov = version_envelope(&read, self.signer())?;
-        Ok(ServiceResponse::new(ov, meta))
+            })?;
+        self.composition_envelope(ehr_id, &read)
+    }
+
+    /// The VERSION envelope of a loaded COMPOSITION version, its metadata
+    /// carrying the origins of the data it serves, as the bare read's does.
+    ///
+    /// # Errors
+    /// The [`Self::envelope_response`] refusals.
+    fn composition_envelope(
+        &self,
+        ehr_id: EhrId,
+        read: &VersionRead,
+    ) -> Result<ServiceResponse, ServiceError> {
+        let origins = crate::versioning::origins::of_stored(
+            read.origins.as_ref(),
+            &read.canonical,
+            &read.creating_system_id,
+        );
+        let mut resp = self.envelope_response(ehr_id, read)?;
+        resp.meta = resp.meta.map(|meta| meta.with_origins(origins));
+        Ok(resp)
     }
 
     /// `update_composition`: commits a new version
@@ -697,145 +744,6 @@ impl FerroEhrService {
             return Err(crate::versioning::change::not_modifiable_error(ehr_id));
         }
         Ok(now)
-    }
-}
-
-// ── The COMPOSITION call surface ──────────────────────────────────────────────
-
-impl FerroEhrService {
-    /// The typed value of a [`ReadBody`], mapping an undecodable stored text
-    /// to an internal fault (the stored body is our own jsonb rendering).
-    fn read_body_value(vo_id: VoId, body: ReadBody) -> Result<Value, ServiceError> {
-        body.into_value().map_err(|e| {
-            ServiceError::exception(format!(
-                "the stored body of COMPOSITION {vo_id} is not decodable JSON: {e}"
-            ))
-        })
-    }
-
-    /// The bare
-    /// COMPOSITION at the named version.
-    ///
-    /// # Errors
-    /// [`ServiceError`] for a malformed `OBJECT_VERSION_ID`, an unknown version
-    /// (404-equivalent), or a read failure.
-    pub async fn get_composition_at_version(
-        &self,
-        an_ehr_id: EhrId,
-        a_version_uid: ObjectVersionId,
-    ) -> Result<Value, ServiceError> {
-        let (vo_id, _) = components(&a_version_uid).map_err(VersionIdError::into_argument)?;
-        let resp = self
-            .composition_at_version_response(an_ehr_id, a_version_uid)
-            .await?;
-        Self::read_body_value(vo_id, resp.body)
-    }
-
-    /// The VERSION envelope of a COMPOSITION extant at `a_time`, or the
-    /// latest when `a_time` is `None`
-    /// (`GET …/versioned_composition/{uid}/version`).
-    ///
-    /// # Errors
-    /// [`ServiceError`] for a malformed `a_time` (400-equivalent), a missing
-    /// version at that instant (404-equivalent), or a read failure.
-    pub async fn composition_version_at_time(
-        &self,
-        an_ehr_id: EhrId,
-        a_versioned_object_uid: VoId,
-        a_time: Option<String>,
-    ) -> Result<Value, ServiceError> {
-        let at = a_time.as_deref().map(parse_at_time).transpose()?;
-        Ok(self
-            .composition_version_at_time_read(an_ehr_id, a_versioned_object_uid, at)
-            .await?
-            .body)
-    }
-
-    /// The VERSION envelope of a COMPOSITION at the named version
-    /// (`GET …/versioned_composition/{uid}/version/{version_uid}`).
-    ///
-    /// # Errors
-    /// [`ServiceError`] for a malformed `OBJECT_VERSION_ID`, an unknown version
-    /// (404-equivalent), or a read failure.
-    pub async fn composition_version_envelope(
-        &self,
-        an_ehr_id: EhrId,
-        a_version_uid: ObjectVersionId,
-    ) -> Result<Value, ServiceError> {
-        let (vo_id, version) = components(&a_version_uid).map_err(VersionIdError::into_argument)?;
-        let body = self.composition_version(an_ehr_id, vo_id, version).await?;
-        // The served VERSION.uid is the stored full identity; the
-        // addressed uid must equal it (Resources.md §Identifier types; BASE
-        // master05 case rule) — a fabricated creating_system_id names no
-        // VERSION here.
-        if let Some(served) = body
-            .get("uid")
-            .and_then(|uid| uid.get("value"))
-            .and_then(Value::as_str)
-        {
-            super::ensure_addressed_version(&a_version_uid, served)?;
-        }
-        Ok(body)
-    }
-}
-
-// ── ITS-REST read-response adapter (adapter-support extension) ────────────────
-//
-// A bare COMPOSITION carries no commit audit, yet ITS-REST derives
-// `Last-Modified` from `VERSION.commit_audit.time_committed.value`
-// (`Requests_and_responses.md` §"`ETag` and Last-Modified"), so these reads
-// return the COMPOSITION plus its [`ResourceMeta`] (no openEHR spec governs the
-// envelope — our own design).
-
-impl FerroEhrService {
-    /// The COMPOSITION current at `a_time`, or the latest when `a_time` is
-    /// `None`, with the version metadata the wire's `ETag`/`Last-Modified`
-    /// need.
-    ///
-    /// # Errors
-    /// [`ServiceError`] for a malformed `a_time` (400-equivalent), a missing
-    /// version at that instant (404-equivalent), or a read failure.
-    pub async fn composition_at_time_response(
-        &self,
-        an_ehr_id: EhrId,
-        a_versioned_object_uid: VoId,
-        a_time: Option<String>,
-    ) -> Result<RawServiceResponse, ServiceError> {
-        match a_time.as_deref() {
-            None => Ok(self
-                .read_composition_raw(an_ehr_id, a_versioned_object_uid, None)
-                .await?),
-            Some(raw) => {
-                let resp = self
-                    .composition_at_time(an_ehr_id, a_versioned_object_uid, parse_at_time(raw)?)
-                    .await?;
-                Ok(RawServiceResponse {
-                    body: ReadBody::Value(resp.body),
-                    meta: resp.meta,
-                })
-            }
-        }
-    }
-
-    /// [`Self::get_composition_at_version`] with the version metadata the
-    /// wire's `ETag`/`Last-Modified` need.
-    ///
-    /// # Errors
-    /// [`ServiceError`] for a malformed `OBJECT_VERSION_ID`, an unknown version
-    /// (404-equivalent), or a read failure.
-    pub async fn composition_at_version_response(
-        &self,
-        an_ehr_id: EhrId,
-        a_version_uid: ObjectVersionId,
-    ) -> Result<RawServiceResponse, ServiceError> {
-        let (vo_id, version) = components(&a_version_uid).map_err(VersionIdError::into_argument)?;
-        let read = self
-            .read_composition_raw(an_ehr_id, vo_id, Some(version))
-            .await?;
-        if let Some(meta) = read.meta.as_ref() {
-            super::ensure_addressed_version(&a_version_uid, &meta.uid)?;
-        }
-        Ok(read)
     }
 }
 

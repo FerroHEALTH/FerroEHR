@@ -17,12 +17,12 @@
 //!
 //! - [`types`] — the extract data model (`Terminology_description`,
 //!   `Terminology_extract`, `Term_code`/`Defined_term`, relationships).
-//! - `bundle` — the in-process `openehr-term` bundle provider (TERM 3.1.0), the
+//! - [`bundle`] — the in-process `openehr-term` bundle provider (TERM 3.1.0), the
 //!   openEHR support terminology.
 //! - [`fhir`] — [`FhirTerminologyProvider`](fhir::FhirTerminologyProvider), the
 //!   client of the one FHIR R4B terminology server (opt-in via
 //!   [`TerminologyServerConfig`](config::TerminologyServerConfig)).
-//! - `routing` — the 9 terminology calls on `FerroEhrService`.
+//! - `routing` — the lookup and validation calls on `FerroEhrService`.
 //! - `binding` — commit-time resolution of archetype constraint bindings
 //!   (ac-code value sets) against the terminology server.
 //! - `expander` — the AQL `TERMINOLOGY()` seam
@@ -43,7 +43,7 @@
 //! configured, the default, this is byte-identical to a bundle-only service.
 
 mod binding;
-mod bundle;
+pub mod bundle;
 pub mod config;
 mod expander;
 pub mod fhir;

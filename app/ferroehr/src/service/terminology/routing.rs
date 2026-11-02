@@ -1,12 +1,14 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The 9 terminology calls on [`FerroEhrService`], answered by the in-process
-//! bundle or the one terminology server (see the module docs in [`super`]).
+//! The terminology lookup and validation calls on [`FerroEhrService`],
+//! answered by the in-process bundle or the one terminology server (see the
+//! module docs in [`super`]).
 //!
-//! Enumeration is always the bundle's; lookup/validation goes to the bundle
-//! when it knows the terminology, else to the configured terminology server,
-//! else falls through to the bundle's unknown-terminology `NotFound`.
+//! Enumeration is the bundle's own ([`super::bundle`]); lookup and
+//! validation go to the bundle when it knows the terminology, else to the
+//! configured terminology server, else fall through to the bundle's
+//! unknown-terminology `NotFound`.
 
 use std::collections::BTreeMap;
 
@@ -17,62 +19,6 @@ use crate::service::terminology::types::{TerminologyDescription, TerminologyExtr
 use super::bundle;
 
 impl FerroEhrService {
-    /// `get_terminology_ids` — every terminology id this server knows:
-    /// `"openehr"` plus the bundle's external code-set ids (enumeration is
-    /// the bundle's).
-    ///
-    /// # Errors
-    ///
-    /// Infallible in practice (the bundle is compile-time-embedded); the
-    /// `Result` is the shape every terminology call shares.
-    #[expect(
-        clippy::unused_self,
-        clippy::unnecessary_wraps,
-        reason = "every service call shares one method-on-the-service, `Result`-returning \
-                  shape the protocol adapter invokes uniformly, so neither is dropped because \
-                  this implementation happens to be stateless and infallible"
-    )]
-    pub fn get_terminology_ids(&self) -> Result<Vec<String>, ServiceError> {
-        Ok(bundle::terminology_ids())
-    }
-
-    /// `has_terminology` — whether `terminology_id` names a terminology this
-    /// server can enumerate (enumeration is the bundle's).
-    ///
-    /// # Errors
-    ///
-    /// Infallible in practice; the `Result` is the shape every terminology call shares.
-    #[expect(
-        clippy::unused_self,
-        clippy::unnecessary_wraps,
-        reason = "every service call shares one method-on-the-service, `Result`-returning \
-                  shape the protocol adapter invokes uniformly, so neither is dropped because \
-                  this implementation happens to be stateless and infallible"
-    )]
-    pub fn has_terminology(&self, terminology_id: &str) -> Result<bool, ServiceError> {
-        Ok(bundle::has_terminology(terminology_id))
-    }
-
-    /// `get_terminology_description` — the descriptor of one terminology
-    /// (enumeration is the bundle's).
-    ///
-    /// # Errors
-    ///
-    /// `VersionedObjectDoesNotExist` when the bundle does not know
-    /// `terminology_id`.
-    #[expect(
-        clippy::unused_self,
-        reason = "every service call is a method on the service, which the protocol \
-                  adapter invokes uniformly, so the receiver stays even where this \
-                  implementation ignores it"
-    )]
-    pub fn get_terminology_description(
-        &self,
-        terminology_id: &str,
-    ) -> Result<TerminologyDescription, ServiceError> {
-        bundle::terminology_description(terminology_id)
-    }
-
     /// `has_term` — whether `code` is a term of `terminology_id`. Routed to
     /// the bundle when it knows the terminology, else to the configured
     /// terminology server (`CodeSystem/$lookup`).

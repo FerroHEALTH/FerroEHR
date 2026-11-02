@@ -158,10 +158,10 @@ fn bundle_version() -> Option<String> {
     openehr().terminology().version.clone()
 }
 
-// ─── the 9 calls, as DB-free functions the routing layer delegates to ────────
+// ─── the calls, as DB-free functions: enumeration, and what routing delegates ─
 
 /// `get_terminology_ids` — `"openehr"` plus every external code set's id.
-pub(super) fn terminology_ids() -> Vec<String> {
+pub fn terminology_ids() -> Vec<String> {
     let mut ids = vec![OPENEHR.to_owned()];
     ids.extend(openehr().external_code_sets().iter().map(|cs| {
         cs.external_id
@@ -177,7 +177,7 @@ pub(super) fn has_terminology(terminology_id: &str) -> bool {
 }
 
 /// `get_terminology_description`; an unknown terminology → `NotFound`.
-pub(super) fn terminology_description(
+pub fn terminology_description(
     terminology_id: &str,
 ) -> Result<TerminologyDescription, ServiceError> {
     if terminology_id == OPENEHR {

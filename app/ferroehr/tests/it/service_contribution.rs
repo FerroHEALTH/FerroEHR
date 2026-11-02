@@ -57,6 +57,7 @@ async fn read_version(svc: &FerroEhrService, ehr_id: &str, _vo: &str, ovid: &str
     )
     .await
     .expect("versioned composition version")
+    .body
 }
 
 #[tokio::test]
@@ -162,7 +163,7 @@ async fn accompanying_attestation_then_standalone_666_attestation() {
     // attestations (revision_history_item.adoc "there may also be further
     // attestations").
     let rh = svc
-        .composition_revision_history_response(
+        .composition_revision_history(
             ehr_id.parse().expect("ehr uuid"),
             vo_id.parse().expect("vo uuid"),
         )
@@ -757,19 +758,17 @@ async fn ehr_read_with_its_counts() {
 
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
     let status_uid = svc
-        .ehr_status_at_time_response(ehr_uuid, None)
+        .ehr_status(ehr_uuid, None)
         .await
         .map(|r| r.body)
         .expect("get current EHR_STATUS")["uid"]["value"]
         .as_str()
         .expect("status uid")
         .to_owned();
-    Box::pin(
-        svc.replace_ehr_status_meta(ehr_uuid, uv(&ehr_status(false), "251", Some(&status_uid))),
-    )
-    .await
-    .map(|m| m.uid)
-    .expect("EHR_STATUS update"); // contribution #2
+    Box::pin(svc.replace_ehr_status(ehr_uuid, uv(&ehr_status(false), "251", Some(&status_uid))))
+        .await
+        .map(|m| m.uid)
+        .expect("EHR_STATUS update"); // contribution #2
 
     svc.create_composition(ehr_uuid, uv(&composition("obs"), "249", None))
         .await
@@ -785,7 +784,7 @@ async fn ehr_read_with_its_counts() {
         "system_id (EHR.system_id)"
     );
     let status = svc
-        .ehr_status_at_time_response(ehr_uuid, None)
+        .ehr_status(ehr_uuid, None)
         .await
         .expect("the current EHR_STATUS")
         .body;
@@ -845,19 +844,17 @@ async fn ehr_contribution_list_page_extension() {
     let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
     let status_uid = svc
-        .ehr_status_at_time_response(ehr_uuid, None)
+        .ehr_status(ehr_uuid, None)
         .await
         .map(|r| r.body)
         .expect("get current EHR_STATUS")["uid"]["value"]
         .as_str()
         .expect("status uid")
         .to_owned();
-    Box::pin(
-        svc.replace_ehr_status_meta(ehr_uuid, uv(&ehr_status(false), "251", Some(&status_uid))),
-    )
-    .await
-    .map(|m| m.uid)
-    .expect("EHR_STATUS update");
+    Box::pin(svc.replace_ehr_status(ehr_uuid, uv(&ehr_status(false), "251", Some(&status_uid))))
+        .await
+        .map(|m| m.uid)
+        .expect("EHR_STATUS update");
     svc.create_composition(ehr_uuid, uv(&composition("obs"), "249", None))
         .await
         .expect("composition_create");
@@ -1469,7 +1466,7 @@ async fn create_composition_gate_error_surface_survives_the_writability_fold() {
     // content write is refused with a conflict (the modifiability signal of the
     // folded query, checked after existence).
     let status_uid = svc
-        .ehr_status_at_time_response(ehr_uuid, None)
+        .ehr_status(ehr_uuid, None)
         .await
         .map(|r| r.body)
         .expect("current EHR_STATUS")["uid"]["value"]
@@ -1490,7 +1487,7 @@ async fn create_composition_gate_error_surface_survives_the_writability_fold() {
         "is_queryable": true,
         "is_modifiable": false
     });
-    Box::pin(svc.replace_ehr_status_meta(ehr_uuid, uv(&deactivated, "251", Some(&status_uid))))
+    Box::pin(svc.replace_ehr_status(ehr_uuid, uv(&deactivated, "251", Some(&status_uid))))
         .await
         .map(|m| m.uid)
         .expect("EHR_STATUS deactivation");
@@ -1593,7 +1590,7 @@ async fn contribution_cannot_delete_the_ehr_status() {
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
     let status_uid = svc
-        .ehr_status_at_time_response(ehr_uuid, None)
+        .ehr_status(ehr_uuid, None)
         .await
         .map(|r| r.body)
         .expect("status read")["uid"]["value"]
@@ -1625,7 +1622,7 @@ async fn contribution_cannot_delete_the_ehr_status() {
 
     // the status is still there
     let still = svc
-        .ehr_status_at_time_response(ehr_uuid, None)
+        .ehr_status(ehr_uuid, None)
         .await
         .map(|r| r.body)
         .expect("status still present");
@@ -2735,7 +2732,7 @@ fn member(data: Value, change: (&str, &str), preceding: Option<&str>) -> Value {
 
 /// The current `EHR_STATUS` version uid of an EHR.
 async fn current_status_uid(svc: &FerroEhrService, ehr: ferroehr::ids::EhrId) -> String {
-    svc.ehr_status_at_time_response(ehr, None)
+    svc.ehr_status(ehr, None)
         .await
         .map(|r| r.body)
         .expect("current EHR_STATUS")["uid"]["value"]
@@ -2791,7 +2788,7 @@ async fn reactivating_contribution_unlocks_its_own_content() {
 
     // Deactivate up front.
     let status_uid = current_status_uid(&svc, ehr_uuid).await;
-    Box::pin(svc.replace_ehr_status_meta(
+    Box::pin(svc.replace_ehr_status(
         ehr_uuid,
         uv(&ehr_status_modifiable(false), "251", Some(&status_uid)),
     ))
@@ -2925,9 +2922,12 @@ async fn create_body_uid_is_replaced_by_the_minted_identity() {
     );
 
     let served = svc
-        .get_composition_at_version(ehr_uuid, minted.parse().expect("OBJECT_VERSION_ID"))
+        .composition_at_version(ehr_uuid, minted.parse().expect("OBJECT_VERSION_ID"))
         .await
-        .expect("the committed version exists");
+        .expect("the committed version exists")
+        .body
+        .into_value()
+        .expect("the stored COMPOSITION decodes");
     assert_eq!(
         served["uid"]["value"],
         json!(minted),
@@ -2947,7 +2947,7 @@ async fn a_deactivated_ehr_reports_the_state_conflict_before_a_content_defect() 
     let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
     let status_uid = current_status_uid(&svc, ehr_uuid).await;
-    Box::pin(svc.replace_ehr_status_meta(
+    Box::pin(svc.replace_ehr_status(
         ehr_uuid,
         uv(&ehr_status_modifiable(false), "251", Some(&status_uid)),
     ))

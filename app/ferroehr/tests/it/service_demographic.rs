@@ -201,31 +201,20 @@ async fn party_typed_calls_round_trip() {
     assert_eq!(got["_type"], "PERSON");
     assert_eq!(got["name"]["value"], "Jane");
 
-    // The current version id — the version read + get_party_at_version.
+    // The current version id reads as its ORIGINAL_VERSION.
     let v1 = got["uid"]["value"].as_str().expect("uid.value").to_owned();
     assert!(v1.ends_with("::1"), "first version, got {v1}");
-    assert!(
-        svc.versioned_party_version_get_by_id(vo_id.to_string(), v1.clone())
-            .await
-            .is_ok(),
-        "the current version reads"
-    );
     let by_ver = svc
-        .get_party_at_version(v1.clone())
+        .versioned_party_version_get_by_id(vo_id.to_string(), v1.clone())
         .await
-        .expect("get_party_at_version");
+        .expect("the current version reads")
+        .body;
     assert_eq!(by_ver["_type"], "ORIGINAL_VERSION");
     // An unknown version id → not found / object_version_does_not_exist.
     let bogus = format!("{vo_id}::ferroehr.local::9");
-    let unread = svc
-        .versioned_party_version_get_by_id(vo_id.to_string(), bogus.clone())
-        .await
-        .expect_err("an unknown version does not read");
-    assert!(
-        matches!(unread, ServiceError::NotFound(_)),
-        "an unknown version is not found"
-    );
-    let miss = svc.get_party_at_version(bogus).await;
+    let miss = svc
+        .versioned_party_version_get_by_id(vo_id.to_string(), bogus)
+        .await;
     assert!(
         matches!(
             miss,

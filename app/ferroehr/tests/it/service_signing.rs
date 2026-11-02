@@ -150,7 +150,8 @@ async fn composition_version_is_signed_and_digest_recomputes_from_served_version
         let ov = svc
             .composition_version_envelope(ehr_uuid, ovid.parse().expect("ovid"))
             .await
-            .expect("versioned composition version");
+            .expect("versioned composition version")
+            .body;
         assert_digest_recomputes(&ov);
     }
 }
@@ -165,7 +166,7 @@ async fn ehr_status_versions_are_signed_and_every_version_carries_a_digest() {
 
     // Update EHR_STATUS → v2, then read the ORIGINAL_VERSION of v1.
     let mut body = svc
-        .ehr_status_at_time_response(ehr_uuid, None)
+        .ehr_status(ehr_uuid, None)
         .await
         .map(|r| r.body)
         .expect("status get");
@@ -176,7 +177,7 @@ async fn ehr_status_versions_are_signed_and_every_version_carries_a_digest() {
     // (is_modifiable = false, RM ehr master04 §"EHR Active Status") would
     // refuse the directory commit below.
     body["is_queryable"] = json!(false);
-    Box::pin(svc.replace_ehr_status_meta(ehr_uuid, uv(&body, "251", Some(&status_ovid_v1))))
+    Box::pin(svc.replace_ehr_status(ehr_uuid, uv(&body, "251", Some(&status_ovid_v1))))
         .await
         .map(|m| m.uid)
         .expect("status update");
@@ -185,7 +186,8 @@ async fn ehr_status_versions_are_signed_and_every_version_carries_a_digest() {
     let ov = svc
         .ehr_status_version_envelope(ehr_uuid, status_vo, &status_ver)
         .await
-        .expect("versioned ehr_status version");
+        .expect("versioned ehr_status version")
+        .body;
     assert_eq!(ov["data"]["_type"], "EHR_STATUS");
     assert_digest_recomputes(&ov);
 
@@ -254,7 +256,8 @@ async fn contribution_versions_are_signed() {
     let ov = svc
         .composition_version_envelope(ehr_uuid, ovid.parse().expect("ovid"))
         .await
-        .expect("versioned composition version");
+        .expect("versioned composition version")
+        .body;
     assert_digest_recomputes(&ov);
 }
 
@@ -298,7 +301,8 @@ async fn client_supplied_signature_is_stored_verbatim() {
     let ov = svc
         .composition_version_envelope(ehr_uuid, ovid.parse().expect("ovid"))
         .await
-        .expect("versioned composition version");
+        .expect("versioned composition version")
+        .body;
     assert_eq!(
         ov["signature"].as_str(),
         Some(CLIENT_SIG),
@@ -573,7 +577,8 @@ async fn signing_disabled_folds_commit_and_preserves_master06_semantics() {
     let ov1 = svc
         .composition_version_envelope(ehr_uuid, ovid_v1.parse().expect("ovid"))
         .await
-        .expect("v1 original version");
+        .expect("v1 original version")
+        .body;
     assert_eq!(ov1["uid"]["value"], ovid_v1);
     assert!(
         ov1.get("signature").and_then(Value::as_str).is_none(),
@@ -647,7 +652,8 @@ async fn signing_disabled_folds_commit_and_preserves_master06_semantics() {
     let c_ov = svc
         .composition_version_envelope(ehr_uuid, c_ovid.parse().expect("ovid"))
         .await
-        .expect("contribution version");
+        .expect("contribution version")
+        .body;
     assert!(
         c_ov.get("signature").and_then(Value::as_str).is_none(),
         "signing off → contribution version is unsigned"
@@ -705,7 +711,8 @@ async fn creating_system_id_and_signature_survive_a_system_id_change() {
     let ov = svc_b
         .composition_version_envelope(ehr_uuid, ovid.parse().expect("ovid"))
         .await
-        .expect("versioned composition version");
+        .expect("versioned composition version")
+        .body;
     assert_eq!(ov["uid"]["value"], ovid);
     assert_digest_recomputes(&ov);
 }
@@ -743,7 +750,8 @@ async fn at_committal_attestation_is_signed_and_a_tamper_is_caught() {
     let ov = svc
         .composition_version_envelope(ehr_uuid, ovid.parse().expect("ovid"))
         .await
-        .expect("clean read verifies");
+        .expect("clean read verifies")
+        .body;
     assert_eq!(
         ov["attestations"].as_array().map(Vec::len),
         Some(1),
@@ -824,7 +832,8 @@ async fn after_committal_attestation_is_outside_the_signed_form() {
     let ov = svc
         .composition_version_envelope(ehr_uuid, ovid.parse().expect("ovid"))
         .await
-        .expect("a post-committal attestation does not invalidate the signature");
+        .expect("a post-committal attestation does not invalidate the signature")
+        .body;
     assert_eq!(
         ov["attestations"].as_array().map(Vec::len),
         Some(1),
