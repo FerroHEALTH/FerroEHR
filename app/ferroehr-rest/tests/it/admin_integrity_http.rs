@@ -20,6 +20,7 @@
               intended shape here (the Rust Book ch11)"
 )]
 
+use ferroehr::service::version_update::WriteRequest;
 use std::time::Duration;
 
 use axum::body::Body;
@@ -55,7 +56,7 @@ async fn app_with_impossible_timeout() -> (
     BoxCloneService<Request<Body>, Response, std::convert::Infallible>,
 ) {
     let (pg, service) = common::test_service().await;
-    Box::pin(service.create_ehr_meta(None, None))
+    Box::pin(service.create_ehr_meta(WriteRequest::new(None)))
         .await
         .map(|(id, _)| id)
         .expect("seed an EHR");
@@ -158,7 +159,7 @@ fn rebuild(query: &str) -> Request<Body> {
 #[tokio::test]
 async fn the_rebuild_answers_a_report_over_an_undamaged_repository() {
     let (_pg, service) = common::test_service().await;
-    Box::pin(service.create_ehr_meta(None, None))
+    Box::pin(service.create_ehr_meta(WriteRequest::new(None)))
         .await
         .map(|(id, _)| id)
         .expect("seed an EHR");

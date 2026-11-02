@@ -141,17 +141,11 @@ async fn create(state: AppState, parts: RequestParts) -> Result<Response, RestEr
     )?;
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
     let body = decode_composition_body(&state, h, &parts.body).await?;
-    let uv = super::mk_update_version(
-        h,
-        body,
-        super::CHANGE_CREATION,
-        "COMPOSITION creation",
-        None,
-    )?;
+    let uv = crate::overview::committal::write_request(h, super::committer_proxy(), body, None)?;
     // Tags are judged before the commit, so a defective tag refuses while
     // nothing is durable; the write itself stays post-commit.
     let pending_tags = item_tags::pending(h)?;
-    let committed = state.backend().create_composition(ehr_id, uv).await?;
+    let committed = Box::pin(state.backend().create_composition(ehr_id, uv)).await?;
     let uid = committed.version_uid();
     let stored_tags = item_tags::persist(
         &state,
@@ -306,11 +300,10 @@ async fn update(state: AppState, parts: RequestParts) -> Result<Response, RestEr
             .into());
         }
     }
-    let uv = super::mk_update_version(
+    let uv = crate::overview::committal::write_request(
         h,
+        super::committer_proxy(),
         body,
-        super::CHANGE_MODIFICATION,
-        "COMPOSITION update",
         Some(require_if_match(&p.if_match)?),
     )?;
     let pending_tags = item_tags::pending(h)?;
@@ -388,16 +381,14 @@ async fn delete(state: AppState, parts: RequestParts) -> Result<Response, RestEr
     };
     // A DELETE commits a `523|deleted|` version, so the committal headers
     // apply here too (overview §"openehr-version and openehr-audit-details").
-    let update_audit =
-        crate::overview::committal::committal_audit_for_delete(h, super::committer_proxy())?;
+    let request = crate::overview::committal::delete_request(
+        h,
+        super::committer_proxy(),
+        volunteered_if_match,
+    )?;
     match state
         .backend()
-        .delete_composition(
-            ehr_id,
-            &ovid,
-            volunteered_if_match.as_ref(),
-            update_audit.as_ref(),
-        )
+        .delete_composition(ehr_id, &ovid, request)
         .await
     {
         Ok(committed) => {

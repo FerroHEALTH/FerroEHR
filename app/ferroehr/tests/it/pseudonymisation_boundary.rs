@@ -32,6 +32,7 @@
               Rust Book ch11)"
 )]
 
+use ferroehr::service::version_update::WriteRequest;
 use sqlx::{Connection, PgConnection, PgPool, Row};
 use uuid::Uuid;
 
@@ -263,7 +264,7 @@ async fn a_party_committed_through_the_service_lands_only_in_the_demographic_dom
     let service = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
 
     let created = service
-        .party_create(PartyKind::Person, typed(&a_person()), None)
+        .party_create(PartyKind::Person, WriteRequest::new(typed(&a_person())))
         .await
         .expect("create a person through the service seam");
     let vo_id: Uuid = created.body["uid"]["value"]
@@ -778,7 +779,7 @@ async fn a_protected_identifier_never_reaches_the_versioned_body() {
         }));
 
     let created = service
-        .party_create(PartyKind::Person, typed(&person), None)
+        .party_create(PartyKind::Person, WriteRequest::new(typed(&person)))
         .await
         .expect("commit a person carrying a protected identifier");
     let vo_id: Uuid = created.body["uid"]["value"]
@@ -1100,8 +1101,10 @@ async fn each_party_version_keeps_the_identifier_it_committed() {
     let created = service
         .party_create(
             PartyKind::Person,
-            typed(&person_carrying("Lovelace", &[("nl-bsn", SYNTHETIC_BSN)])),
-            None,
+            WriteRequest::new(typed(&person_carrying(
+                "Lovelace",
+                &[("nl-bsn", SYNTHETIC_BSN)],
+            ))),
         )
         .await
         .expect("create the person");
@@ -1111,11 +1114,10 @@ async fn each_party_version_keeps_the_identifier_it_committed() {
             PartyKind::Person,
             vo.clone(),
             v1,
-            typed(&person_carrying(
+            WriteRequest::new(typed(&person_carrying(
                 "Lovelace",
                 &[("nl-bsn", SECOND_SYNTHETIC_BSN)],
-            )),
-            None,
+            ))),
         )
         .await
         .expect("change the person's identifier");
@@ -1148,11 +1150,10 @@ async fn each_party_version_keeps_the_identifier_it_committed() {
     let refused = service
         .party_create(
             PartyKind::Person,
-            typed(&person_carrying(
+            WriteRequest::new(typed(&person_carrying(
                 "Byron",
                 &[("nl-bsn", SECOND_SYNTHETIC_BSN)],
-            )),
-            None,
+            ))),
         )
         .await
         .expect_err("another party may not take a live value");
@@ -1169,8 +1170,10 @@ async fn each_party_version_keeps_the_identifier_it_committed() {
     service
         .party_create(
             PartyKind::Person,
-            typed(&person_carrying("Byron", &[("nl-bsn", SYNTHETIC_BSN)])),
-            None,
+            WriteRequest::new(typed(&person_carrying(
+                "Byron",
+                &[("nl-bsn", SYNTHETIC_BSN)],
+            ))),
         )
         .await
         .expect("a value no latest version holds is free for another party");
@@ -1187,8 +1190,10 @@ async fn a_carried_reference_is_sealed_again_for_the_new_version() {
     let created = service
         .party_create(
             PartyKind::Person,
-            typed(&person_carrying("Lovelace", &[("nl-bsn", SYNTHETIC_BSN)])),
-            None,
+            WriteRequest::new(typed(&person_carrying(
+                "Lovelace",
+                &[("nl-bsn", SYNTHETIC_BSN)],
+            ))),
         )
         .await
         .expect("create the person");
@@ -1208,7 +1213,12 @@ async fn a_carried_reference_is_sealed_again_for_the_new_version() {
         .expect("a PERSON object")
         .remove("uid");
     service
-        .party_update(PartyKind::Person, vo.clone(), v1, typed(&resent), None)
+        .party_update(
+            PartyKind::Person,
+            vo.clone(),
+            v1,
+            WriteRequest::new(typed(&resent)),
+        )
         .await
         .expect("commit the served body unchanged");
 
@@ -1251,8 +1261,10 @@ async fn a_reference_to_another_partys_identifier_is_refused() {
     let created = service
         .party_create(
             PartyKind::Person,
-            typed(&person_carrying("Lovelace", &[("nl-bsn", SYNTHETIC_BSN)])),
-            None,
+            WriteRequest::new(typed(&person_carrying(
+                "Lovelace",
+                &[("nl-bsn", SYNTHETIC_BSN)],
+            ))),
         )
         .await
         .expect("create the person");
@@ -1270,8 +1282,7 @@ async fn a_reference_to_another_partys_identifier_is_refused() {
     let refused = service
         .party_create(
             PartyKind::Person,
-            typed(&person_carrying("Byron", &[("nl-bsn", &foreign)])),
-            None,
+            WriteRequest::new(typed(&person_carrying("Byron", &[("nl-bsn", &foreign)]))),
         )
         .await
         .expect_err("another party's row cannot be carried");
@@ -1302,11 +1313,10 @@ async fn two_values_in_one_scheme_are_refused() {
     let refused = service
         .party_create(
             PartyKind::Person,
-            typed(&person_carrying(
+            WriteRequest::new(typed(&person_carrying(
                 "Lovelace",
                 &[("nl-bsn", SYNTHETIC_BSN), ("nl-bsn", SECOND_SYNTHETIC_BSN)],
-            )),
-            None,
+            ))),
         )
         .await
         .expect_err("one party, two values in one scheme");
@@ -1363,8 +1373,10 @@ async fn an_unregistered_configured_scheme_is_a_configuration_fault() {
     let refused = service
         .party_create(
             PartyKind::Person,
-            typed(&person_carrying("Lovelace", &[("zz-invented", "AB-12")])),
-            None,
+            WriteRequest::new(typed(&person_carrying(
+                "Lovelace",
+                &[("zz-invented", "AB-12")],
+            ))),
         )
         .await
         .expect_err("an unregistered scheme cannot be sealed");
@@ -1389,8 +1401,10 @@ async fn a_party_write_response_serves_the_stored_form() {
     let created = service
         .party_create(
             PartyKind::Person,
-            typed(&person_carrying("Lovelace", &[("nl-bsn", SYNTHETIC_BSN)])),
-            None,
+            WriteRequest::new(typed(&person_carrying(
+                "Lovelace",
+                &[("nl-bsn", SYNTHETIC_BSN)],
+            ))),
         )
         .await
         .expect("create the person");
@@ -1417,11 +1431,10 @@ async fn a_party_write_response_serves_the_stored_form() {
             PartyKind::Person,
             vo.clone(),
             v1,
-            typed(&person_carrying(
+            WriteRequest::new(typed(&person_carrying(
                 "Lovelace",
                 &[("nl-bsn", SECOND_SYNTHETIC_BSN)],
-            )),
-            None,
+            ))),
         )
         .await
         .expect("update the person");
@@ -1457,8 +1470,10 @@ async fn an_imported_party_with_a_plaintext_identifier_is_refused() {
     let created = source
         .party_create(
             PartyKind::Person,
-            typed(&person_carrying("Lovelace", &[("nl-bsn", SYNTHETIC_BSN)])),
-            None,
+            WriteRequest::new(typed(&person_carrying(
+                "Lovelace",
+                &[("nl-bsn", SYNTHETIC_BSN)],
+            ))),
         )
         .await
         .expect("an unprotected source stores the person as written");
@@ -1533,8 +1548,10 @@ async fn an_imported_party_with_another_deployments_sealed_identifier_is_refused
     let created = source
         .party_create(
             PartyKind::Person,
-            typed(&person_carrying("Lovelace", &[("nl-bsn", SYNTHETIC_BSN)])),
-            None,
+            WriteRequest::new(typed(&person_carrying(
+                "Lovelace",
+                &[("nl-bsn", SYNTHETIC_BSN)],
+            ))),
         )
         .await
         .expect("the source seals the identifier");
@@ -1620,8 +1637,10 @@ async fn a_dump_and_load_carries_the_sealed_identifiers() {
     let created = source
         .party_create(
             PartyKind::Person,
-            typed(&person_carrying("Lovelace", &[("nl-bsn", SYNTHETIC_BSN)])),
-            None,
+            WriteRequest::new(typed(&person_carrying(
+                "Lovelace",
+                &[("nl-bsn", SYNTHETIC_BSN)],
+            ))),
         )
         .await
         .expect("create the person");
@@ -1631,11 +1650,10 @@ async fn a_dump_and_load_carries_the_sealed_identifiers() {
             PartyKind::Person,
             vo.clone(),
             v1,
-            typed(&person_carrying(
+            WriteRequest::new(typed(&person_carrying(
                 "Lovelace",
                 &[("nl-bsn", SECOND_SYNTHETIC_BSN)],
-            )),
-            None,
+            ))),
         )
         .await
         .expect("change the identifier");
@@ -1691,8 +1709,10 @@ async fn a_load_refuses_a_plaintext_identifier_per_container() {
     let created = source
         .party_create(
             PartyKind::Person,
-            typed(&person_carrying("Lovelace", &[("nl-bsn", SYNTHETIC_BSN)])),
-            None,
+            WriteRequest::new(typed(&person_carrying(
+                "Lovelace",
+                &[("nl-bsn", SYNTHETIC_BSN)],
+            ))),
         )
         .await
         .expect("an unprotected source stores the person as written");
@@ -1730,8 +1750,10 @@ async fn erasing_a_party_removes_its_sealed_identifiers() {
     let created = service
         .party_create(
             PartyKind::Person,
-            typed(&person_carrying("Lovelace", &[("nl-bsn", SYNTHETIC_BSN)])),
-            None,
+            WriteRequest::new(typed(&person_carrying(
+                "Lovelace",
+                &[("nl-bsn", SYNTHETIC_BSN)],
+            ))),
         )
         .await
         .expect("create the person");
@@ -1741,11 +1763,10 @@ async fn erasing_a_party_removes_its_sealed_identifiers() {
             PartyKind::Person,
             vo.clone(),
             v1,
-            typed(&person_carrying(
+            WriteRequest::new(typed(&person_carrying(
                 "Lovelace",
                 &[("nl-bsn", SECOND_SYNTHETIC_BSN)],
-            )),
-            None,
+            ))),
         )
         .await
         .expect("change the identifier");
@@ -1753,7 +1774,7 @@ async fn erasing_a_party_removes_its_sealed_identifiers() {
     let party = ferroehr::ids::VoId(vo.parse().expect("a uuid"));
     let latest = changed.meta.expect("the update answers its version").uid;
     service
-        .party_delete(PartyKind::Person, latest, None, None)
+        .party_delete(PartyKind::Person, latest, None, WriteRequest::new(()))
         .await
         .expect("logically delete the person");
     let kept: i64 =

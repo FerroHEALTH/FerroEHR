@@ -27,8 +27,8 @@ use ferroehr::service::FerroEhrService;
 use ferroehr::service::committer::{CommitterIdentity, with_committer};
 use ferroehr::service::error::ServiceError;
 use ferroehr::service::refusal::Invalid;
-use ferroehr::service::version_update::Committal;
-use openehr_its::rest::generated::common::{UpdateAudit, UpdateVersion};
+use ferroehr::service::version_update::WriteRequest;
+use openehr_its::rest::generated::common::UpdateAudit;
 use serde_json::{Value, json};
 
 use crate::fixtures::setup;
@@ -72,24 +72,26 @@ fn mismatching() -> Value {
 
 /// An `UPDATE_VERSION` of `data` committed by `committer` with change type
 /// `code`, superseding `preceding` when given.
-fn version<T: serde::de::DeserializeOwned>(
+fn version<T: serde::de::DeserializeOwned, R: crate::fixtures::Envelope<T>>(
     data: &Value,
     code: &str,
     preceding: Option<&str>,
     committer: &Value,
-) -> UpdateVersion<T> {
-    let mut envelope = json!({
-        "lifecycle_state": lifecycle("532"),
-        "data": data,
-        "commit_audit": {
-            "change_type": change_type(code, "change"),
-            "committer": committer
+) -> R {
+    R::from_version({
+        let mut envelope = json!({
+            "lifecycle_state": lifecycle("532"),
+            "data": data,
+            "commit_audit": {
+                "change_type": change_type(code, "change"),
+                "committer": committer
+            }
+        });
+        if let Some(preceding) = preceding {
+            envelope["preceding_version_uid"] = json!({ "value": preceding });
         }
-    });
-    if let Some(preceding) = preceding {
-        envelope["preceding_version_uid"] = json!({ "value": preceding });
-    }
-    openehr_its::json::from_canonical_value(&envelope).expect("an UPDATE_VERSION")
+        openehr_its::json::from_canonical_value(&envelope).expect("an UPDATE_VERSION")
+    })
 }
 
 /// A minimal PERSON.
@@ -297,15 +299,15 @@ async fn ehr_create_checks_the_committer() {
     let create = |committer: Value| {
         let svc = svc.clone();
         async move {
-            let committal = Committal {
-                audit: openehr_its::json::from_canonical_value::<UpdateAudit>(&json!({
+            let mut request = WriteRequest::new(None);
+            request.audit = Some(
+                openehr_its::json::from_canonical_value::<UpdateAudit>(&json!({
                     "change_type": change_type("249", "creation"),
                     "committer": committer
                 }))
                 .expect("an UPDATE_AUDIT"),
-                lifecycle_state: None,
-            };
-            let write = svc.create_ehr_meta(None, Some(&committal));
+            );
+            let write = svc.create_ehr_meta(request);
             outcome(with_committer(Some(professional()), Box::pin(write)).await)
         }
     };

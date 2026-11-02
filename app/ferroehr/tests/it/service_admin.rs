@@ -28,6 +28,7 @@
               splitting a case would hide the order its assertions depend on"
 )]
 
+use ferroehr::service::version_update::WriteRequest;
 use serde_json::{Value, json};
 use sqlx::{AssertSqlSafe, PgPool};
 use uuid::Uuid;
@@ -394,8 +395,9 @@ async fn make_person(svc: &FerroEhrService, name: &str) -> String {
     let created = svc
         .party_create(
             PartyKind::Person,
-            openehr_its::json::from_canonical_value(&person(name)).expect("the PERSON decodes"),
-            None,
+            WriteRequest::new(
+                openehr_its::json::from_canonical_value(&person(name)).expect("the PERSON decodes"),
+            ),
         )
         .await
         .expect("create person");
@@ -561,7 +563,9 @@ async fn physical_party_delete_tombstones_the_party_outbox() {
     let p1 = make_person(&svc, "T1").await;
     let p2 = make_person(&svc, "T2").await;
     let rel = svc
-        .party_relationship_create(typed(&party_relationship("tr", &p1, &p2)), None)
+        .party_relationship_create(WriteRequest::new(typed(&party_relationship(
+            "tr", &p1, &p2,
+        ))))
         .await
         .expect("the relationship commits");
     let rel_id = rel.body["uid"]["value"]
@@ -655,7 +659,9 @@ async fn physical_party_delete_cascades_relationships_and_spares_partner() {
     // R1: p1 → p2 (references p1 as source). R2: p2 → p1 (references p1 as
     // target). R3: p2 → p3 (does NOT reference p1).
     let r1 = svc
-        .party_relationship_create(typed(&party_relationship("r1", &p1, &p2)), None)
+        .party_relationship_create(WriteRequest::new(typed(&party_relationship(
+            "r1", &p1, &p2,
+        ))))
         .await
         .expect("r1");
     let r1 = r1.body["uid"]["value"]
@@ -666,7 +672,9 @@ async fn physical_party_delete_cascades_relationships_and_spares_partner() {
         .unwrap()
         .to_owned();
     let r2 = svc
-        .party_relationship_create(typed(&party_relationship("r2", &p2, &p1)), None)
+        .party_relationship_create(WriteRequest::new(typed(&party_relationship(
+            "r2", &p2, &p1,
+        ))))
         .await
         .expect("r2");
     let r2 = r2.body["uid"]["value"]
@@ -677,7 +685,9 @@ async fn physical_party_delete_cascades_relationships_and_spares_partner() {
         .unwrap()
         .to_owned();
     let r3 = svc
-        .party_relationship_create(typed(&party_relationship("r3", &p2, &p3)), None)
+        .party_relationship_create(WriteRequest::new(typed(&party_relationship(
+            "r3", &p2, &p3,
+        ))))
         .await
         .expect("r3");
     let r3 = r3.body["uid"]["value"]

@@ -42,6 +42,7 @@
               fixture indexing are the intended shape here (the Rust Book ch11)"
 )]
 
+use ferroehr::service::version_update::WriteRequest;
 use std::sync::Arc;
 
 use serde_json::{Value, json};
@@ -312,9 +313,9 @@ async fn import_ehr_promotes_the_subject_for_lookup_and_uniqueness() {
     ))
     .with_ehr_index(EhrIndexProvider::Local);
 
-    let ehr = Box::pin(
-        source.create_ehr_meta(Some(typed(&status_for_subject("patient-import-1"))), None),
-    )
+    let ehr = Box::pin(source.create_ehr_meta(WriteRequest::new(Some(typed(
+        &status_for_subject("patient-import-1"),
+    )))))
     .await
     .map(|(id, _)| id)
     .expect("source EHR for the subject");
@@ -338,10 +339,9 @@ async fn import_ehr_promotes_the_subject_for_lookup_and_uniqueness() {
     // The subject is now taken in the target — under the "local" namespace
     // the extract normalized it to — so a later create naming that same
     // (id, namespace) pair is a 409.
-    let dup = Box::pin(target.create_ehr_meta(
-        Some(typed(&status_for_subject_in("patient-import-1", "local"))),
-        None,
-    ))
+    let dup = Box::pin(target.create_ehr_meta(WriteRequest::new(Some(typed(
+        &status_for_subject_in("patient-import-1", "local"),
+    )))))
     .await
     .map(|(id, _)| id);
     assert!(
@@ -374,16 +374,15 @@ async fn import_ehr_conflicting_subject_is_rejected_and_rolled_back() {
     // The import will carry the subject under namespace "local" (the
     // extract's master09 §Creation Semantics OBJECT_REF rewrite), so the
     // pre-existing holder must own it under that namespace to collide.
-    let owner = Box::pin(target.create_ehr_meta(
-        Some(typed(&status_for_subject_in("patient-import-2", "local"))),
-        None,
-    ))
+    let owner = Box::pin(target.create_ehr_meta(WriteRequest::new(Some(typed(
+        &status_for_subject_in("patient-import-2", "local"),
+    )))))
     .await
     .map(|(id, _)| id)
     .expect("the target already holds the subject");
-    let ehr = Box::pin(
-        source.create_ehr_meta(Some(typed(&status_for_subject("patient-import-2"))), None),
-    )
+    let ehr = Box::pin(source.create_ehr_meta(WriteRequest::new(Some(typed(
+        &status_for_subject("patient-import-2"),
+    )))))
     .await
     .map(|(id, _)| id)
     .expect("source EHR for the same subject");
@@ -926,7 +925,7 @@ async fn a_cloned_ehr_keeps_the_source_ehr_id_but_takes_the_local_system_id() {
     ))
     .with_system_id(TARGET_SYSTEM);
     third
-        .create_ehr_with_id_meta(ehr, None, None)
+        .create_ehr_with_id_meta(ehr, WriteRequest::new(None))
         .await
         .expect("create with a client-supplied id");
     let by_id = third.ehr_read(ehr).await.expect("summary").body;
@@ -1462,7 +1461,10 @@ async fn an_extract_carries_its_parties_into_the_receivers_demographic_domain() 
     ));
 
     let created = source
-        .party_create(PartyKind::Person, typed(&extract_person()), None)
+        .party_create(
+            PartyKind::Person,
+            WriteRequest::new(typed(&extract_person())),
+        )
         .await
         .expect("create the referenced person");
     let party: uuid::Uuid = created.body["uid"]["value"]

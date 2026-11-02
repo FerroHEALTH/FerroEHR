@@ -1110,7 +1110,7 @@ async fn root_folder_uid_is_the_version_uid() {
 /// Overview §"openehr-version and openehr-audit-details": the
 /// `openEHR-AUDIT_DETAILS.*` committal request headers "MUST be merged with the
 /// default VERSION and `VERSION.audit_details` attributes on commit". The
-/// directory write path threads them through `mk_update_version`; their presence
+/// directory write path threads them through `committal::write_request`; their presence
 /// must not break the create (`201`). (The merged values are not observable via
 /// the DIRECTORY endpoints — there is no versioned-directory version read — so
 /// this is the accept-level assertion.)

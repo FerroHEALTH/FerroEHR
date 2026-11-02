@@ -54,27 +54,32 @@ async fn amqp_url(rmq: &ContainerAsync<RabbitMq>) -> String {
 
 // ── fixtures ─────────────────────────────────────────────────────────────────
 
-fn uv<T: serde::de::DeserializeOwned>(data: &Value, change_code: &str) -> UpdateVersion<T> {
-    UpdateVersion {
-        preceding_version_uid: None,
-        lifecycle_state: lifecycle_state_coded("532"),
-        attestations: None,
-        data: openehr_its::json::from_canonical_value(data)
-            .expect("the fixture commit body decodes as its RM type"),
-        commit_audit: UpdateAudit::UpdateAudit(UpdateAuditData {
-            _type: None,
-            system_id: None,
-            change_type: change_type_coded(change_code),
-            description: None,
-            committer: openehr_its::json::from_canonical_value::<PartyProxy>(
-                &json!({ "_type": "PARTY_IDENTIFIED", "name": "event tester" }),
-            )
-            .expect("committer"),
+fn uv<T: serde::de::DeserializeOwned, R: crate::fixtures::Envelope<T>>(
+    data: &Value,
+    change_code: &str,
+) -> R {
+    R::from_version({
+        UpdateVersion {
+            preceding_version_uid: None,
+            lifecycle_state: lifecycle_state_coded("532"),
+            attestations: None,
+            data: openehr_its::json::from_canonical_value(data)
+                .expect("the fixture commit body decodes as its RM type"),
+            commit_audit: UpdateAudit::UpdateAudit(UpdateAuditData {
+                _type: None,
+                system_id: None,
+                change_type: change_type_coded(change_code),
+                description: None,
+                committer: openehr_its::json::from_canonical_value::<PartyProxy>(
+                    &json!({ "_type": "PARTY_IDENTIFIED", "name": "event tester" }),
+                )
+                .expect("committer"),
+                additional_properties: std::collections::BTreeMap::new(),
+            }),
+            signature: None,
             additional_properties: std::collections::BTreeMap::new(),
-        }),
-        signature: None,
-        additional_properties: std::collections::BTreeMap::new(),
-    }
+        }
+    })
 }
 
 fn composition(name: &str) -> Value {

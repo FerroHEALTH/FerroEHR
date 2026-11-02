@@ -53,27 +53,29 @@ const CODE_PATH: &str =
     "data[at0001]/events[at0002]/data[at0003]/items[at0004]/value/defining_code/code_string";
 
 /// The `UPDATE_VERSION` commit envelope for a bare-RM write.
-fn uv<T: serde::de::DeserializeOwned>(data: &Value) -> UpdateVersion<T> {
-    UpdateVersion {
-        preceding_version_uid: None,
-        lifecycle_state: lifecycle_state_coded("532"),
-        attestations: None,
-        data: openehr_its::json::from_canonical_value(data)
-            .expect("the fixture commit body decodes as its RM type"),
-        commit_audit: UpdateAudit::UpdateAudit(UpdateAuditData {
-            _type: None,
-            system_id: None,
-            change_type: change_type_coded("249"),
-            description: None,
-            committer: openehr_its::json::from_canonical_value::<PartyProxy>(
-                &json!({ "_type": "PARTY_IDENTIFIED", "name": "conformance tester" }),
-            )
-            .expect("committer"),
+fn uv<T: serde::de::DeserializeOwned, R: crate::fixtures::Envelope<T>>(data: &Value) -> R {
+    R::from_version({
+        UpdateVersion {
+            preceding_version_uid: None,
+            lifecycle_state: lifecycle_state_coded("532"),
+            attestations: None,
+            data: openehr_its::json::from_canonical_value(data)
+                .expect("the fixture commit body decodes as its RM type"),
+            commit_audit: UpdateAudit::UpdateAudit(UpdateAuditData {
+                _type: None,
+                system_id: None,
+                change_type: change_type_coded("249"),
+                description: None,
+                committer: openehr_its::json::from_canonical_value::<PartyProxy>(
+                    &json!({ "_type": "PARTY_IDENTIFIED", "name": "conformance tester" }),
+                )
+                .expect("committer"),
+                additional_properties: std::collections::BTreeMap::new(),
+            }),
+            signature: None,
             additional_properties: std::collections::BTreeMap::new(),
-        }),
-        signature: None,
-        additional_properties: std::collections::BTreeMap::new(),
-    }
+        }
+    })
 }
 
 /// A composition whose OBSERVATION leaf is a `DV_CODED_TEXT` with the given

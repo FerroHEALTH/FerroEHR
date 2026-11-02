@@ -20,6 +20,7 @@
               fixture indexing are the intended shape here (the Rust Book ch11)"
 )]
 
+use ferroehr::service::version_update::WriteRequest;
 use std::sync::Arc;
 
 use ferroehr::service::FerroEhrService;
@@ -272,7 +273,7 @@ async fn client_supplied_signature_is_stored_verbatim() {
     let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
-    let mut version = uv(&composition("Client signed"), "249", None);
+    let mut version: UpdateVersion<_> = uv(&composition("Client signed"), "249", None);
     version.signature = Some(CLIENT_SIG.to_owned());
     let contribution_uid = commit_contribution(
         &svc,
@@ -609,7 +610,7 @@ async fn signing_disabled_folds_commit_and_preserves_master06_semantics() {
     // DELETE → folded path (523|deleted|, no node rows); the current version
     // then resolves to an empty body (204), never 404.
     let ovid_v2_id: ObjectVersionId = ovid_v2.parse().expect("ovid");
-    svc.delete_composition(ehr_uuid, &ovid_v2_id, None, None)
+    svc.delete_composition(ehr_uuid, &ovid_v2_id, WriteRequest::new(()))
         .await
         .expect("delete_composition");
     let deleted = svc
@@ -728,8 +729,8 @@ async fn at_committal_attestation_is_signed_and_a_tamper_is_caught() {
     let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
-    let mut version = uv(&composition("attested"), "249", None);
-    version.attestations = Some(vec![update_attestation("witnessed")]);
+    let mut version: WriteRequest<_> = uv(&composition("attested"), "249", None);
+    version.attestations = vec![update_attestation("witnessed")];
     let ovid = svc
         .create_composition(ehr_uuid, version)
         .await

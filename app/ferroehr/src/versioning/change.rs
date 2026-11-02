@@ -332,8 +332,7 @@ async fn next_version(
     preplaced: Option<crate::storage::version_repo::placement::Placement>,
 ) -> Result<NextVersion, ServiceError> {
     // The caller may already hold the advisory lock and the placement read
-    // (the composition-update mega-read); otherwise both run here.
-    let preplaced_read = preplaced.is_some();
+    // ([`lock_current`]); otherwise both run here.
     let placement = if let Some(placement) = preplaced {
         placement
     } else {
@@ -385,18 +384,6 @@ async fn next_version(
     if !tip.open {
         return Err(ServiceError::version_conflict(format!(
             "expected version {} has been superseded",
-            tip.tree
-        )));
-    }
-    // A preplaced read is the CURRENT-trunk-tip form; the caller's `If-Match`
-    // gate pinned `expected` to it, and this guard keeps that coupling honest
-    // instead of silently continuing from a different tip.
-    if preplaced_read
-        && let Some(expected) = expected
-        && tip.tree != expected
-    {
-        return Err(ServiceError::version_conflict(format!(
-            "expected version {expected}, current is {}",
             tip.tree
         )));
     }
@@ -1102,26 +1089,93 @@ pub(crate) async fn ensure_content_writable_tx(
     }
 }
 
+/// Take the per-object lock of `vo_id` and read its current trunk tip, the
+/// placement a single-object modify or delete then continues
+/// ([`Write::placed`]), so its preconditions are judged against the tip the
+/// write holds.
+///
+/// # Errors
+/// [`ServiceError::NotFound`] when the object has no current version or is
+/// not a `kind` in `ehr_id`; [`ServiceError::Database`] if the read fails.
+pub(crate) async fn lock_current(
+    tx: &mut PgConnection,
+    ehr_id: Option<EhrId>,
+    vo_id: VoId,
+    kind: Kind,
+) -> Result<crate::storage::version_repo::placement::Placement, ServiceError> {
+    crate::storage::version_repo::commit::advisory_lock(tx, vo_id).await?;
+    let placement =
+        crate::storage::version_repo::placement::next_placement(tx, vo_id, None).await?;
+    if placement
+        .tip
+        .as_ref()
+        .is_some_and(|tip| tip.ehr_id == ehr_id && tip.kind == kind.as_str())
+    {
+        Ok(placement)
+    } else {
+        Err(ServiceError::not_found(
+            Missing::VersionedObject,
+            format!("{} {vo_id} in EHR {ehr_id:?}", kind.as_str()),
+        ))
+    }
+}
+
+/// The full `OBJECT_VERSION_ID` of the tip a [`lock_current`] placement holds.
+pub(crate) fn tip_uid(
+    vo_id: VoId,
+    tip: &crate::storage::version_repo::placement::TipRow,
+) -> String {
+    object_version_id(
+        vo_id,
+        &tip.creating_system_id,
+        TreeId::from_columns(tip.trunk_version, tip.branch_number, tip.branch_version),
+    )
+}
+
+/// The `If-Match` precondition of a single-object write, judged once against
+/// the tip the write locked: `preceding` must name that version in full,
+/// compared case-insensitively (ITS-REST overview `Requests_and_responses.md`
+/// §"If-Match and accidental overwrites"; BASE `base_types` master05
+/// §"Composite Identifiers and Case").
+///
+/// # Errors
+/// [`ServiceError::VersionConflict`] (`412`) when `preceding` names another
+/// version.
+pub(crate) fn ensure_preceding(
+    tip_uid: &str,
+    preceding: Option<&ObjectVersionId>,
+) -> Result<(), ServiceError> {
+    match preceding {
+        Some(pre) if !composite_ids_equal(tip_uid, pre.value()) => {
+            Err(ServiceError::version_conflict(format!(
+                "If-Match {:?} does not match the current latest version {tip_uid:?}",
+                pre.value()
+            )))
+        }
+        _ => Ok(()),
+    }
+}
+
 /// One single-object write under its own CONTRIBUTION.
-pub(crate) struct Write<'a> {
+pub(crate) struct Write {
     /// The owning EHR, or `None` for an ehr-less object (a demographic party).
     pub(crate) ehr_id: Option<EhrId>,
     /// What the write commits.
     pub(crate) change: Change,
     /// This version's own `commit_audit`.
-    pub(crate) audit: &'a AuditInput,
+    pub(crate) audit: AuditInput,
     /// The transaction timestamp the caller already read, if any.
     pub(crate) known_now: Option<jiff::Timestamp>,
     /// A placement the caller already read under the per-object lock it holds
-    /// (the composition-update mega-read); `None` makes the write take the lock
-    /// and read its own.
+    /// ([`lock_current`], or the composition-update mega-read); `None` makes
+    /// the write take the lock and read its own.
     pub(crate) placement: Option<crate::storage::version_repo::placement::Placement>,
 }
 
-impl<'a> Write<'a> {
+impl Write {
     /// A write of `change` to the object in `ehr_id` (or an ehr-less one),
     /// reading its own commit instant and placement.
-    pub(crate) fn new(ehr_id: Option<EhrId>, change: Change, audit: &'a AuditInput) -> Self {
+    pub(crate) fn new(ehr_id: Option<EhrId>, change: Change, audit: AuditInput) -> Self {
         Self {
             ehr_id,
             change,
@@ -1218,7 +1272,7 @@ impl Change {
 /// state; plus the [`commit_resolved`] storage/signing errors.
 pub(crate) async fn commit(
     tx: &mut PgConnection,
-    write: Write<'_>,
+    write: Write,
     ctx: &SigningCtx<'_>,
 ) -> Result<Committed, ServiceError> {
     let Write {
@@ -1233,7 +1287,7 @@ pub(crate) async fn commit(
         CommitScope {
             ehr_id,
             contribution: ContributionCtx::New,
-            audit,
+            audit: &audit,
             ctx,
             known_now,
             preplaced: placement,

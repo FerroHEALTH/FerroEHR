@@ -297,7 +297,7 @@ async fn a_city_predicate_selects_only_the_linked_ehrs() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
         .with_cohort(cohort_config(0));
-    let corpus = seed_corpus(&svc).await;
+    let corpus = Box::pin(seed_corpus(&svc)).await;
 
     let outcome = svc
         .execute_cohort_query(request(&[("city", "Groningen")]))
@@ -355,7 +355,7 @@ async fn a_small_cell_is_suppressed() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
         .with_cohort(cohort_config(5));
-    seed_corpus(&svc).await;
+    Box::pin(seed_corpus(&svc)).await;
 
     let outcome = svc
         .execute_cohort_query(request(&[("city", "Groningen")]))
@@ -396,7 +396,7 @@ async fn predicates_intersect() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
         .with_cohort(cohort_config(0));
-    let corpus = seed_corpus(&svc).await;
+    let corpus = Box::pin(seed_corpus(&svc)).await;
 
     // city ∧ sex: Ada and Cato are the Groningen women.
     let intersected = svc
@@ -525,7 +525,7 @@ async fn every_execution_is_recorded_as_a_linkage_access() {
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
         .with_cohort(cohort_config(5))
         .with_audit(sender);
-    seed_corpus(&svc).await;
+    Box::pin(seed_corpus(&svc)).await;
 
     let outcome = svc
         .execute_cohort_query(request(&[("city", "Groningen")]))
@@ -705,7 +705,7 @@ async fn the_crossing_runs_on_separated_credentials() {
     ))
     .with_demographic_pool(pools.party.clone())
     .with_cohort(cohort_config(0));
-    let corpus = seed_corpus(&svc).await;
+    let corpus = Box::pin(seed_corpus(&svc)).await;
 
     let outcome = svc
         .execute_cohort_query(request(&[("city", "Groningen")]))
@@ -744,7 +744,7 @@ async fn the_result_carries_no_party_identifier() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
         .with_cohort(cohort_config(0));
-    let corpus = seed_corpus(&svc).await;
+    let corpus = Box::pin(seed_corpus(&svc)).await;
 
     let outcome = svc
         .execute_cohort_query(request(&[("city", "Groningen")]))
@@ -769,7 +769,7 @@ async fn a_predicate_cohort_leaves_out_a_non_queryable_and_an_objecting_ehr() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
         .with_cohort(cohort_config(0));
-    let corpus = seed_corpus(&svc).await;
+    let corpus = Box::pin(seed_corpus(&svc)).await;
     let [ada, bram, cato, ..] = corpus.as_slice() else {
         panic!("the corpus seeds six subjects");
     };
