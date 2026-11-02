@@ -1188,7 +1188,7 @@ slot assertion (#4770); chart 21.0.0-rc8 with `appVersion` 5.6.0-rc9.
 
 ## The review of 2026-11-02, for 5.6.0-rc10
 
-Read on the tree after commit `e4c1fe2c0`, for the FerroEHR release candidate
+Read on the tree after commit `797ceb527`, for the FerroEHR release candidate
 5.6.0-rc10. 5.6.0-rc8 and 5.6.0-rc9 were tagged and not published, so the
 claims of their reviews above reach users first with this release. The facts
 added since 5.6.0-rc9 and checked in every text in scope: the outbox served to
@@ -1197,7 +1197,8 @@ FerroEHR's own broker publisher, `[events]`, the subscription routes and the
 viewer's Subscriptions page removed (#4786, #4766); the access record of a
 VERSION read naming the content it served (#4660); the BASE 1.3.0 description
 invariants of an ADL 2 template under the `development` profile (#4776); a
-slow database connect no longer recorded as an outage (#4782); `Prefer`
+slow database connect no longer recorded as an outage, and a reset one
+recorded as an outage on the pool's own connect too (#4782, #4807); `Prefer`
 read on every route as RFC 7240 §2 defines it (#4722); chart
 21.0.0-rc9 with `appVersion` 5.6.0-rc10.
 
