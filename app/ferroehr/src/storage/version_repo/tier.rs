@@ -103,3 +103,23 @@ pub async fn archived(tx: &mut PgConnection, vo_ids: &[VoId]) -> Result<Vec<VoId
             .await?;
     Ok(rows.into_iter().map(VoId).collect())
 }
+
+/// The kind text of a demographic (ehr-less) versioned object, read from any
+/// of its versions in either tier, or `None` when no such object exists.
+///
+/// The archive, the restore and the physical erasure all address a party
+/// wherever it lives, so the three answer one way whichever tier holds it.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn demographic_kind(
+    conn: &mut PgConnection,
+    vo_id: VoId,
+) -> Result<Option<String>, StorageError> {
+    Ok(
+        sqlx::query_scalar("SELECT kind FROM version WHERE vo_id = $1 AND ehr_id IS NULL LIMIT 1")
+            .bind(vo_id)
+            .fetch_optional(conn)
+            .await?,
+    )
+}

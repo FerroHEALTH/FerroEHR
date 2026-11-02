@@ -23,6 +23,7 @@
 )]
 
 use sqlx::Connection as _;
+use sqlx::PgConnection;
 use uuid::Uuid;
 
 use crate::db::acquire::acquire;
@@ -31,6 +32,7 @@ use crate::service::FerroEhrService;
 use crate::service::demographic::identifier::store::IdentifierStore;
 use crate::service::error::ServiceError;
 use crate::service::refusal::Missing;
+use crate::storage::{erasure, template_repo, version_repo};
 
 impl FerroEhrService {
     /// Admin extension `DELETE /admin/template/{template_id}`: physically delete
@@ -52,13 +54,7 @@ impl FerroEhrService {
         let mut tx = conn.begin().await?;
         // Resolve the stored (case-preserved) id; absent → 404 (§Composite
         // Identifiers and Case: compare case-insensitively).
-        let stored: Option<String> = sqlx::query_scalar(
-            "SELECT template_id FROM template_store WHERE lower(template_id) = lower($1)",
-        )
-        .bind(template_id)
-        .fetch_optional(&mut *tx)
-        .await?;
-        let Some(stored) = stored else {
+        let Some(stored) = template_repo::stored_template_id(&mut tx, template_id).await? else {
             return Err(ServiceError::not_found(
                 Missing::Template,
                 format!("template {template_id}"),
@@ -67,32 +63,19 @@ impl FerroEhrService {
         // Counted over BOTH storage tiers: `version` is one relation
         // partitioned by tier, so this reaches an archived composition's
         // reference as well as a live one.
-        let refs: i64 = sqlx::query_scalar("SELECT count(*) FROM version WHERE template_id = $1")
-            .bind(&stored)
-            .fetch_one(&mut *tx)
-            .await?;
+        let refs = template_repo::template_use_count(&mut tx, &stored).await?;
         if refs > 0 {
             return Err(ServiceError::conflict(format!(
                 "template '{stored}' is still referenced by {refs} committed version(s); \
                  delete those compositions before deleting the template"
             )));
         }
-        sqlx::query("DELETE FROM template_store WHERE template_id = $1")
-            .bind(&stored)
-            .execute(&mut *tx)
-            .await?;
+        template_repo::delete_template(&mut tx, &stored).await?;
         // Deregister the wire address unless a template-kind ADL2 artefact
         // also claims it (`template_ref` is the union of both dialects'
         // addresses; the FK blocks the deregistration if a concurrent commit
         // referenced it after the count above).
-        sqlx::query(
-            "DELETE FROM template_ref WHERE template_id = $1 AND NOT EXISTS \
-             (SELECT 1 FROM adl2_artefact WHERE lower(hrid) = lower($1) \
-              AND kind IN ('template', 'operational_template'))",
-        )
-        .bind(&stored)
-        .execute(&mut *tx)
-        .await?;
+        template_repo::release_template_ref(&mut tx, &stored).await?;
         tx.commit().await?;
         // Evict the derived-runtime cache for the deleted id (case-canonical
         // key). No openEHR spec governs the cache.
@@ -148,45 +131,14 @@ impl FerroEhrService {
 
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
-
-        // Capture the audit ids the EHR's versions and contributions reference,
-        // before the cascade deletes those referencing rows. Read over BOTH
-        // storage tiers: an archived version still holds its audit row.
-        let commit_audit_ids: Vec<Uuid> = sqlx::query_scalar(
-            "SELECT commit_audit_id FROM version WHERE ehr_id = $1 \
-             UNION \
-             SELECT commit_audit_id FROM contribution WHERE ehr_id = $1",
-        )
-        .bind(ehr_id)
-        .fetch_all(&mut *tx)
-        .await?;
-
-        // Delete the EHR — one statement, cascading through the FK graph and
-        // across both tier partitions.
-        let deleted = sqlx::query("DELETE FROM ehr WHERE id = $1")
-            .bind(ehr_id)
-            .execute(&mut *tx)
-            .await?;
-        if deleted.rows_affected() == 0 {
+        if self.erase_ehrs(&mut tx, &[ehr_id]).await?.is_empty() {
             // No such EHR → `ehr_id_does_not_exist`. Rolls back
-            // (nothing was written), so the audit capture above is discarded.
+            // (nothing was written), so the audit capture is discarded.
             return Err(ServiceError::not_found(
                 Missing::Ehr,
                 format!("EHR {ehr_id}"),
             ));
         }
-
-        // The referencing version/contribution rows are gone, so the audit
-        // rows are now unreferenced and can be removed.
-        if !commit_audit_ids.is_empty() {
-            sqlx::query("DELETE FROM commit_audit WHERE id = ANY($1)")
-                .bind(&commit_audit_ids)
-                .execute(&mut *tx)
-                .await?;
-        }
-
-        self.write_erase_tombstones(&mut tx, &[ehr_id]).await?;
-
         tx.commit().await?;
 
         // The EHR and its versions are gone; GC any blob this EHR referenced
@@ -216,9 +168,7 @@ impl FerroEhrService {
         // An empty selector = the full EHR set (see `admin_ehr_delete_all`); a
         // non-empty selector deletes exactly the named EHRs.
         let targets: Vec<EhrId> = if ehr_ids.is_empty() {
-            sqlx::query_scalar("SELECT id FROM ehr")
-                .fetch_all(&mut *acquire(&self.pool).await?)
-                .await?
+            erasure::all_ehr_ids(&self.pool).await?
         } else {
             ehr_ids.to_vec()
         };
@@ -235,27 +185,7 @@ impl FerroEhrService {
             let candidate_blobs: Vec<String> = Vec::new();
             let mut conn = acquire(&self.pool).await?;
             let mut tx = conn.begin().await?;
-            let commit_audit_ids: Vec<Uuid> = sqlx::query_scalar(
-                "SELECT commit_audit_id FROM version WHERE ehr_id = ANY($1) \
-                 UNION \
-                 SELECT commit_audit_id FROM contribution WHERE ehr_id = ANY($1)",
-            )
-            .bind(chunk)
-            .fetch_all(&mut *tx)
-            .await?;
-            let removed: Vec<Uuid> =
-                sqlx::query_scalar("DELETE FROM ehr WHERE id = ANY($1) RETURNING id")
-                    .bind(chunk)
-                    .fetch_all(&mut *tx)
-                    .await?;
-            if !commit_audit_ids.is_empty() {
-                sqlx::query("DELETE FROM commit_audit WHERE id = ANY($1)")
-                    .bind(&commit_audit_ids)
-                    .execute(&mut *tx)
-                    .await?;
-            }
-            let removed_ids: Vec<EhrId> = removed.iter().copied().map(EhrId).collect();
-            self.write_erase_tombstones(&mut tx, &removed_ids).await?;
+            let removed = self.erase_ehrs(&mut tx, chunk).await?;
             tx.commit().await?;
             #[expect(
                 clippy::as_conversions,
@@ -267,6 +197,30 @@ impl FerroEhrService {
             self.gc_unreferenced_blobs(candidate_blobs).await;
         }
         Ok(deleted)
+    }
+
+    /// Erase `ehr_ids` on `tx` and return the ids that existed.
+    ///
+    /// 1. The audit ids the EHRs' versions and contributions reference are
+    ///    captured over both storage tiers, before the cascade deletes the
+    ///    rows that name them.
+    /// 2. `DELETE FROM ehr` cascades through the foreign-key graph and across
+    ///    both tier partitions.
+    /// 3. The captured audit rows, now unreferenced, are removed.
+    /// 4. One erasure tombstone per erased EHR is appended.
+    ///
+    /// # Errors
+    /// [`ServiceError::Storage`] when a statement fails.
+    async fn erase_ehrs(
+        &self,
+        tx: &mut PgConnection,
+        ehr_ids: &[EhrId],
+    ) -> Result<Vec<EhrId>, ServiceError> {
+        let commit_audit_ids = erasure::ehr_commit_audit_ids(&mut *tx, ehr_ids).await?;
+        let removed = erasure::delete_ehrs(&mut *tx, ehr_ids).await?;
+        erasure::delete_commit_audits(&mut *tx, &commit_audit_ids).await?;
+        self.write_erase_tombstones(tx, &removed).await?;
+        Ok(removed)
     }
 
     /// The externalized blob URIs the given EHRs' versions reference, read
@@ -284,21 +238,13 @@ impl FerroEhrService {
     /// orphan every one of them in the bucket.
     ///
     /// # Errors
-    /// [`ServiceError::Database`] when the read fails.
+    /// [`ServiceError::Storage`] when the read fails.
     #[cfg(feature = "multimedia")]
     async fn referenced_blob_uris(&self, ehr_ids: &[EhrId]) -> Result<Vec<String>, ServiceError> {
         if self.multimedia.is_none() || ehr_ids.is_empty() {
             return Ok(Vec::new());
         }
-        Ok(sqlx::query_scalar(
-            "SELECT DISTINCT b.uri FROM blob_ref b \
-             JOIN version v ON v.tier = b.tier AND v.vo_id = b.vo_id \
-                 AND v.sys_version = b.sys_version \
-             WHERE v.ehr_id = ANY($1)",
-        )
-        .bind(ehr_ids)
-        .fetch_all(&mut *acquire(&self.pool).await?)
-        .await?)
+        Ok(erasure::ehr_blob_uris(&self.pool, ehr_ids).await?)
     }
 
     /// The externalized blob URIs the given demographic versioned objects
@@ -312,22 +258,17 @@ impl FerroEhrService {
     /// Our own extension — no openEHR spec governs multimedia offload.
     ///
     /// # Errors
-    /// [`ServiceError::Database`] when the read fails.
+    /// [`ServiceError::Storage`] when the read fails.
     #[cfg(feature = "multimedia")]
     async fn party_blob_uris(
         &self,
-        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        tx: &mut PgConnection,
         vo_ids: &[VoId],
     ) -> Result<Vec<String>, ServiceError> {
         if self.multimedia.is_none() || vo_ids.is_empty() {
             return Ok(Vec::new());
         }
-        Ok(
-            sqlx::query_scalar("SELECT DISTINCT uri FROM blob_ref WHERE vo_id = ANY($1)")
-                .bind(vo_ids)
-                .fetch_all(&mut **tx)
-                .await?,
-        )
+        Ok(erasure::object_blob_uris(tx, vo_ids).await?)
     }
 
     /// Delete each candidate blob no surviving version still references.
@@ -355,16 +296,7 @@ impl FerroEhrService {
         }
         let mut still_referenced: Vec<String> = Vec::new();
         for domain in [&self.pool, &self.demographic_pool] {
-            let read: Result<Vec<String>, ServiceError> = async {
-                Ok(
-                    sqlx::query_scalar("SELECT DISTINCT uri FROM blob_ref WHERE uri = ANY($1)")
-                        .bind(&candidates)
-                        .fetch_all(&mut *acquire(domain).await?)
-                        .await?,
-                )
-            }
-            .await;
-            match read {
+            match erasure::referenced_blob_uris(domain, &candidates).await {
                 Ok(rows) => still_referenced.extend(rows),
                 Err(e) => {
                     tracing::warn!(error = %e, "multimedia blob GC reference read failed; keeping all candidates");
@@ -426,12 +358,7 @@ impl FerroEhrService {
 
         // The target must be a demographic PARTY (ehr-less; any version exists),
         // in either storage tier — an archived party is still deletable.
-        let kind: Option<String> = sqlx::query_scalar(
-            "SELECT kind FROM version WHERE vo_id = $1 AND ehr_id IS NULL LIMIT 1",
-        )
-        .bind(party_id)
-        .fetch_optional(&mut *tx)
-        .await?;
+        let kind = version_repo::tier::demographic_kind(&mut tx, party_id).await?;
         if !kind.as_deref().is_some_and(super::is_party_kind) {
             // `party_id_does_not_exist` → NotFound (→ 404). Rolls back cleanly.
             return Err(ServiceError::not_found(
@@ -441,43 +368,15 @@ impl FerroEhrService {
         }
 
         // Every PARTY_RELATIONSHIP VO referencing the party as source/target, in
-        // ANY version. The relationship stores `source`/`target` PARTY_REFs
-        // inline in its root node's canonical fragment (they are DATA attributes,
-        // not LOCATABLE children), so their `id.value` — the party's
-        // versioned-object id — is matched with a jsonb path extraction.
-        let party_txt = party_id.to_string();
-        let rel_ids: Vec<VoId> = sqlx::query_scalar(
-            "SELECT DISTINCT n.vo_id FROM node n \
-             JOIN version v ON v.vo_id = n.vo_id AND v.sys_version = n.sys_version \
-             WHERE v.kind = 'PARTY_RELATIONSHIP' \
-               AND (n.data #>> '{source,id,value}' = $1 OR n.data #>> '{target,id,value}' = $1)",
-        )
-        .bind(&party_txt)
-        .fetch_all(&mut *tx)
-        .await?;
-
-        let mut vo_ids = rel_ids;
+        // ANY version, goes with it.
+        let mut vo_ids = erasure::relationships_naming(&mut tx, party_id).await?;
         vo_ids.push(party_id);
 
         // Capture the CONTRIBUTION + audit ids these VOs reference before the
         // version delete cascades their node/attestation rows away.
-        let contribution_ids: Vec<Uuid> = sqlx::query_scalar(
-            "SELECT contribution_id FROM version WHERE vo_id = ANY($1) \
-             UNION \
-             SELECT contribution_id FROM vo_attestation WHERE vo_id = ANY($1)",
-        )
-        .bind(&vo_ids)
-        .fetch_all(&mut *tx)
-        .await?;
-        let commit_audit_ids: Vec<Uuid> = sqlx::query_scalar(
-            "SELECT commit_audit_id FROM version WHERE vo_id = ANY($1) \
-             UNION \
-             SELECT commit_audit_id FROM contribution WHERE id = ANY($2)",
-        )
-        .bind(&vo_ids)
-        .bind(&contribution_ids)
-        .fetch_all(&mut *tx)
-        .await?;
+        let contribution_ids = erasure::object_contribution_ids(&mut tx, &vo_ids).await?;
+        let commit_audit_ids =
+            erasure::object_commit_audit_ids(&mut tx, &vo_ids, &contribution_ids).await?;
 
         // The blob keys these rows reference, before the delete removes the
         // rows that name them (#3180). `admin_ehr_delete` has always done this; a
@@ -493,10 +392,7 @@ impl FerroEhrService {
 
         // Delete the versioned objects — cascades node + vo_attestation, over
         // both tier partitions of the one `version` relation.
-        sqlx::query("DELETE FROM version WHERE vo_id = ANY($1)")
-            .bind(&vo_ids)
-            .execute(&mut *tx)
-            .await?;
+        erasure::delete_object_versions(&mut tx, &vo_ids).await?;
 
         // The sealed national identifiers those versions referenced, live and
         // retired: the erasure removes the values with the record that held
@@ -506,43 +402,15 @@ impl FerroEhrService {
             .await
             .map_err(|e| ServiceError::internal("erase the sealed national identifiers", e))?;
 
-        // Orphaned CONTRIBUTIONs (guarded: keep any still referenced by a
-        // surviving version/attestation).
-        sqlx::query(
-            "DELETE FROM contribution c WHERE c.id = ANY($1) \
-               AND NOT EXISTS (SELECT 1 FROM version v WHERE v.contribution_id = c.id) \
-               AND NOT EXISTS (SELECT 1 FROM vo_attestation a WHERE a.contribution_id = c.id)",
-        )
-        .bind(&contribution_ids)
-        .execute(&mut *tx)
-        .await?;
+        // Orphaned CONTRIBUTIONs and audit rows (guarded: keep any still
+        // referenced by a surviving version, attestation or contribution).
+        erasure::delete_orphan_contributions(&mut tx, &contribution_ids).await?;
+        erasure::delete_orphan_commit_audits(&mut tx, &commit_audit_ids).await?;
 
-        // Orphaned audit rows (guarded the same way).
-        sqlx::query(
-            "DELETE FROM commit_audit a WHERE a.id = ANY($1) \
-               AND NOT EXISTS (SELECT 1 FROM version v WHERE v.commit_audit_id = a.id) \
-               AND NOT EXISTS (SELECT 1 FROM contribution c WHERE c.commit_audit_id = a.id)",
-        )
-        .bind(&commit_audit_ids)
-        .execute(&mut *tx)
-        .await?;
-
-        // The reverse-relationship index rows that name the erased objects,
-        // at either end: an erased party is neither a source nor a target.
-        sqlx::query(
-            "DELETE FROM party_relationship_target \
-             WHERE source_vo_id = ANY($1) OR target_party_id = ANY($1)",
-        )
-        .bind(&vo_ids)
-        .execute(&mut *tx)
-        .await?;
-
-        // The head rows of the deleted objects, which carry the archive
-        // marker among the rest of their state.
-        sqlx::query("DELETE FROM vo_head WHERE vo_id = ANY($1)")
-            .bind(&vo_ids)
-            .execute(&mut *tx)
-            .await?;
+        // The reverse-relationship index rows that name the erased objects, at
+        // either end (an erased party is neither a source nor a target), and
+        // their head rows, which carry the archive marker.
+        erasure::delete_object_index_rows(&mut tx, &vo_ids).await?;
 
         self.write_party_erase_tombstone(&mut tx, party_id, kind.as_deref(), &vo_ids)
             .await?;
@@ -577,31 +445,22 @@ impl FerroEhrService {
     /// defines no change notification.
     ///
     /// # Errors
-    /// [`ServiceError::Database`] when the insert fails.
+    /// [`ServiceError::Storage`] when the insert fails.
     async fn write_erase_tombstones(
         &self,
-        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        tx: &mut PgConnection,
         erased: &[EhrId],
     ) -> Result<(), ServiceError> {
         if !self.outbox_enabled {
             return Ok(());
         }
-        for ehr_id in erased {
+        for &ehr_id in erased {
             let envelope = serde_json::json!({
                 "event": "erase",
                 "ehr_id": ehr_id.0,
                 "versions": [{"kind": "EHR", "change_type": "erase"}],
             });
-            sqlx::query(
-                "WITH gate AS (SELECT pg_advisory_xact_lock_shared( \
-                     hashtext(current_schema() || '.event_outbox'), 0)) \
-                 INSERT INTO event_outbox (ehr_id, envelope, committed_at) \
-                 SELECT $1, $2, now() FROM gate",
-            )
-            .bind(*ehr_id)
-            .bind(&envelope)
-            .execute(&mut **tx)
-            .await?;
+            erasure::write_erase_tombstone(&mut *tx, Some(ehr_id), &envelope).await?;
         }
         Ok(())
     }
@@ -625,10 +484,10 @@ impl FerroEhrService {
     /// event is. No openEHR spec governs eventing — our own extension.
     ///
     /// # Errors
-    /// [`ServiceError::Database`] when the insert fails.
+    /// [`ServiceError::Storage`] when the insert fails.
     async fn write_party_erase_tombstone(
         &self,
-        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        tx: &mut PgConnection,
         party_id: VoId,
         party_kind: Option<&str>,
         erased: &[VoId],
@@ -657,15 +516,7 @@ impl FerroEhrService {
             "vo_id": party_id.0,
             "versions": versions,
         });
-        sqlx::query(
-            "WITH gate AS (SELECT pg_advisory_xact_lock_shared( \
-                 hashtext(current_schema() || '.event_outbox'), 0)) \
-             INSERT INTO event_outbox (ehr_id, envelope, committed_at) \
-             SELECT NULL::uuid, $1, now() FROM gate",
-        )
-        .bind(&envelope)
-        .execute(&mut **tx)
-        .await?;
+        erasure::write_erase_tombstone(tx, None, &envelope).await?;
         Ok(())
     }
 }
