@@ -26,8 +26,6 @@
               intended shape here (the Rust Book ch11)"
 )]
 
-use std::path::PathBuf;
-
 use axum::Router;
 use axum::body::Body;
 use http::{Request, StatusCode, header};
@@ -40,6 +38,7 @@ use ferroehr_rest::config::AppConfig;
 use ferrohealth_smart::config::AuthSection;
 
 use crate::common;
+use crate::common::demo_vitals_opt_xml;
 
 const BASE: &str = "/ferroehr/rest/openehr/v1";
 const TEMPLATE_ID: &str = "Demo Vitals";
@@ -47,15 +46,6 @@ const JSON_MIME: &str = "application/json";
 const XML_MIME: &str = "application/xml";
 const FLAT_MIME: &str = "application/openehr.wt.flat+json";
 const STRUCTURED_MIME: &str = "application/openehr.wt.structured+json";
-
-fn flat_crate_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../crates/openehr-sdt")
-}
-
-fn opt_xml() -> String {
-    std::fs::read_to_string(flat_crate_dir().join("tests/fixtures/better/Demo Vitals.opt"))
-        .expect("Demo Vitals.opt vendored in openehr-sdt")
-}
 
 fn config() -> AppConfig {
     AppConfig {
@@ -83,7 +73,7 @@ async fn app_with_template() -> (testkit::TestDb, Router) {
         .method("POST")
         .uri(format!("{BASE}/definition/template/adl1.4"))
         .header(header::CONTENT_TYPE, "application/xml")
-        .body(Body::from(opt_xml()))
+        .body(Body::from(demo_vitals_opt_xml()))
         .unwrap();
     let resp = app.clone().oneshot(req).await.expect("upload OPT");
     assert_eq!(

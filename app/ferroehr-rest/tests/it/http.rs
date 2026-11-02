@@ -12,7 +12,6 @@
 //! to the real server's behaviour for a fresh, empty database (a missing EHR is
 //! a `404`, an invalid AQL a `400`, an empty template list a `200 []`).
 #![expect(
-    clippy::unwrap_used,
     clippy::expect_used,
     clippy::indexing_slicing,
     reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
@@ -24,7 +23,6 @@
 use axum::Router;
 use axum::body::Body;
 use http::{Request, StatusCode, header};
-use http_body_util::BodyExt;
 use serde_json::json;
 use tower::ServiceExt;
 
@@ -33,6 +31,7 @@ use ferroehr_rest::config::AppConfig;
 use ferrohealth_server::section::CallerRate;
 
 use crate::common;
+use crate::common::{get, send};
 
 const ISSUER: &str = "https://issuer.test";
 /// The audience every fixture token is minted for: `audience` is mandatory
@@ -124,30 +123,10 @@ fn b64(bytes: &[u8]) -> String {
     out
 }
 
-async fn send(app: Router, req: Request<Body>) -> (StatusCode, header::HeaderMap, String) {
-    let resp = app.oneshot(req).await.expect("response");
-    let status = resp.status();
-    let headers = resp.headers().clone();
-    let bytes = resp.into_body().collect().await.expect("body").to_bytes();
-    (
-        status,
-        headers,
-        String::from_utf8_lossy(&bytes).into_owned(),
-    )
-}
-
-fn get(path: &str) -> Request<Body> {
-    Request::builder()
-        .method("GET")
-        .uri(path)
-        .body(Body::empty())
-        .unwrap()
-}
-
 #[tokio::test]
 async fn unauthenticated_request_is_401_with_challenge() {
     let (_pg, app) = app(true).await;
-    let (status, headers, body) = send(app, get(&format!("{BASE}/ehr/abc"))).await;
+    let (status, headers, body) = send(&app, get(&format!("{BASE}/ehr/abc"))).await;
     assert_eq!(status, StatusCode::UNAUTHORIZED);
     assert!(headers.contains_key(header::WWW_AUTHENTICATE));
     // RFC 9457 problem details.
@@ -173,7 +152,7 @@ async fn unauthenticated_request_is_401_with_challenge() {
 #[tokio::test]
 async fn status_endpoint_is_public() {
     let (_pg, app) = app(true).await;
-    let (status, _h, body) = send(app, get("/ferroehr/rest/status")).await;
+    let (status, _h, body) = send(&app, get("/ferroehr/rest/status")).await;
     assert_eq!(status, StatusCode::OK);
     let v: serde_json::Value = serde_json::from_str(&body).unwrap();
     assert_eq!(v["status"], "UP");
@@ -206,7 +185,7 @@ async fn status_endpoint_is_public() {
 #[tokio::test]
 async fn health_endpoint_is_public() {
     let (_pg, app) = app(true).await;
-    let (status, _h, body) = send(app, get("/health")).await;
+    let (status, _h, body) = send(&app, get("/health")).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body, r#"{"state":"up"}"#);
 }
@@ -223,12 +202,12 @@ async fn health_endpoint_is_public() {
 async fn health_family_is_public_without_the_management_surface() {
     let (_pg, app) = app(true).await;
     for path in ["/health", "/health/liveness"] {
-        let (status, _h, body) = send(app.clone(), get(path)).await;
+        let (status, _h, body) = send(&app, get(path)).await;
         assert_eq!(status, StatusCode::OK, "{path}");
         assert_eq!(body, r#"{"state":"up"}"#, "{path}");
     }
 
-    let (status, headers, body) = send(app.clone(), get("/health/readiness")).await;
+    let (status, headers, body) = send(&app, get("/health/readiness")).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(
         headers.get(header::CONTENT_TYPE).unwrap(),
@@ -243,7 +222,7 @@ async fn health_family_is_public_without_the_management_surface() {
 
     // There is no second name for health under the REST root: the retired
     // `/ferroehr/rest/status/health` alias is not routed at all.
-    let (status, _h, _body) = send(app, get("/ferroehr/rest/status/health")).await;
+    let (status, _h, _body) = send(&app, get("/ferroehr/rest/status/health")).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
 
@@ -259,7 +238,7 @@ async fn valid_basic_reaches_handler() {
         .header(header::AUTHORIZATION, basic("alice", "pw"))
         .body(Body::empty())
         .unwrap();
-    let (status, _h, _b) = send(app, req).await;
+    let (status, _h, _b) = send(&app, req).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
 
@@ -272,7 +251,7 @@ async fn wrong_basic_password_is_401() {
         .header(header::AUTHORIZATION, basic("alice", "wrong"))
         .body(Body::empty())
         .unwrap();
-    let (status, _h, _b) = send(app, req).await;
+    let (status, _h, _b) = send(&app, req).await;
     assert_eq!(status, StatusCode::UNAUTHORIZED);
 }
 
@@ -287,7 +266,7 @@ async fn valid_bearer_reaches_handler() {
         .header(header::AUTHORIZATION, bearer(common::FULL_SCOPES))
         .body(Body::empty())
         .unwrap();
-    let (status, _h, _b) = send(app, req).await;
+    let (status, _h, _b) = send(&app, req).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
 
@@ -304,7 +283,7 @@ async fn a_bearer_without_a_resource_scope_is_403() {
         .header(header::AUTHORIZATION, bearer("openid"))
         .body(Body::empty())
         .unwrap();
-    let (status, headers, _b) = send(app, req).await;
+    let (status, headers, _b) = send(&app, req).await;
     assert_eq!(status, StatusCode::FORBIDDEN);
     let challenge = headers
         .get(header::WWW_AUTHENTICATE)
@@ -334,7 +313,7 @@ async fn admin_route_reachable_without_rbac() {
         .header(header::AUTHORIZATION, basic("alice", "pw"))
         .body(Body::empty())
         .unwrap();
-    let (status, headers, _b) = send(app.clone(), create).await;
+    let (status, headers, _b) = send(&app, create).await;
     assert_eq!(status, StatusCode::CREATED);
     let ehr_id = etag_uid(&headers).expect("ETag carries the new ehr_id");
 
@@ -344,7 +323,7 @@ async fn admin_route_reachable_without_rbac() {
         .header(header::AUTHORIZATION, bearer(common::FULL_SCOPES))
         .body(Body::empty())
         .unwrap();
-    let (status, _h, _b) = send(app, req).await;
+    let (status, _h, _b) = send(&app, req).await;
     assert_eq!(status, StatusCode::NO_CONTENT);
 }
 
@@ -372,7 +351,7 @@ async fn json_composition_body_is_accepted_and_reaches_handler() {
         .header(header::CONTENT_TYPE, "application/json")
         .body(Body::from(minimal_composition_json()))
         .unwrap();
-    let (status, _h, _b) = send(app, req).await;
+    let (status, _h, _b) = send(&app, req).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
 
@@ -393,7 +372,7 @@ async fn bare_type_composition_stub_is_400() {
         .header(header::CONTENT_TYPE, "application/json")
         .body(Body::from(r#"{"_type":"COMPOSITION"}"#))
         .unwrap();
-    let (status, _h, body) = send(app, req).await;
+    let (status, _h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
     assert!(
         body.contains("missing field"),
@@ -456,7 +435,7 @@ async fn a_data_value_missing_an_rm_mandatory_member_is_422() {
             .header(header::CONTENT_TYPE, "application/json")
             .body(Body::from(composition.to_string()))
             .unwrap();
-        let (status, _h, body) = send(app.clone(), req).await;
+        let (status, _h, body) = send(&app, req).await;
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{label}: {body}");
         assert!(
             body.contains("missing field"),
@@ -504,7 +483,7 @@ async fn malformed_xml_composition_body_is_400() {
         .header(header::CONTENT_TYPE, "application/xml")
         .body(Body::from("<not-a-composition>"))
         .unwrap();
-    let (status, _h, _b) = send(app, req).await;
+    let (status, _h, _b) = send(&app, req).await;
     // The XML branch runs and fails to parse a COMPOSITION → BadRequest (before
     // the backend, so it is independent of whether the EHR exists).
     assert_eq!(status, StatusCode::BAD_REQUEST);
@@ -539,13 +518,13 @@ async fn xml_response_lineage_is_negotiated_by_the_version_parameter() {
         .header(header::AUTHORIZATION, basic("alice", "pw"))
         .body(Body::empty())
         .unwrap();
-    let (status, headers, _b) = send(app.clone(), create).await;
+    let (status, headers, _b) = send(&app, create).await;
     assert_eq!(status, StatusCode::CREATED);
     let ehr_id = etag_uid(&headers).expect("ETag carries the new ehr_id");
 
     // Default (bare `application/xml`): the v2 lineage (owner ruling
     // 2026-08-03, #1666), bare Content-Type.
-    let (status, headers, xml) = send(app.clone(), read(&ehr_id, "application/xml")).await;
+    let (status, headers, xml) = send(&app, read(&ehr_id, "application/xml")).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(
         headers.get(header::CONTENT_TYPE).unwrap(),
@@ -557,8 +536,7 @@ async fn xml_response_lineage_is_negotiated_by_the_version_parameter() {
     );
 
     // Negotiated non-default v1: the v1 root namespace, and the response says so.
-    let (status, headers, xml) =
-        send(app.clone(), read(&ehr_id, "application/xml; version=1")).await;
+    let (status, headers, xml) = send(&app, read(&ehr_id, "application/xml; version=1")).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(
         headers.get(header::CONTENT_TYPE).unwrap(),
@@ -570,7 +548,7 @@ async fn xml_response_lineage_is_negotiated_by_the_version_parameter() {
     );
 
     // A lineage this server does not serve cannot be fulfilled → 406.
-    let (status, _h, _b) = send(app, read(&ehr_id, "application/xml; version=3")).await;
+    let (status, _h, _b) = send(&app, read(&ehr_id, "application/xml; version=3")).await;
     assert_eq!(status, StatusCode::NOT_ACCEPTABLE);
 }
 
@@ -589,7 +567,7 @@ async fn xml_request_payload_in_an_unserved_lineage_is_415() {
         .header(header::CONTENT_TYPE, "application/xml; version=3")
         .body(Body::from("<composition/>"))
         .unwrap();
-    let (status, _h, _b) = send(app, req).await;
+    let (status, _h, _b) = send(&app, req).await;
     assert_eq!(status, StatusCode::UNSUPPORTED_MEDIA_TYPE);
 }
 
@@ -602,7 +580,7 @@ async fn unknown_route_is_404() {
         .header(header::AUTHORIZATION, basic("alice", "pw"))
         .body(Body::empty())
         .unwrap();
-    let (status, _h, _b) = send(app, req).await;
+    let (status, _h, _b) = send(&app, req).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
 
@@ -624,7 +602,7 @@ async fn recognized_but_unallowed_method_is_405_with_allow() {
         .uri(format!("{BASE}/ehr/{EHR}"))
         .body(Body::empty())
         .unwrap();
-    let (status, headers, body) = send(app, req).await;
+    let (status, headers, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::METHOD_NOT_ALLOWED);
     let allow = headers
         .get(header::ALLOW)
@@ -661,7 +639,7 @@ async fn unrecognized_method_is_405_with_allow() {
         .uri(format!("{BASE}/ehr/{EHR}"))
         .body(Body::empty())
         .unwrap();
-    let (status, headers, _b) = send(app, req).await;
+    let (status, headers, _b) = send(&app, req).await;
     assert_eq!(status, StatusCode::METHOD_NOT_ALLOWED);
     assert!(
         headers.contains_key(header::ALLOW),
@@ -687,7 +665,7 @@ async fn oversized_request_body_is_413_with_the_openehr_error_body() {
         .header(header::CONTENT_LENGTH, "999999999")
         .body(Body::from(r#"{"_type":"COMPOSITION"}"#))
         .unwrap();
-    let (status, headers, body) = send(app, req).await;
+    let (status, headers, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::PAYLOAD_TOO_LARGE);
     assert_eq!(
         headers.get(header::CONTENT_TYPE).unwrap(),
@@ -707,7 +685,7 @@ async fn auth_disabled_lets_requests_through() {
     // RE-TARGET: was a Mock `501`; with auth disabled the request reaches the
     // real handler, which answers `404` for the non-existent EHR.
     let (_pg, app) = app(false).await;
-    let (status, _h, _b) = send(app, get(&format!("{BASE}/ehr/{EHR}"))).await;
+    let (status, _h, _b) = send(&app, get(&format!("{BASE}/ehr/{EHR}"))).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
 
@@ -717,7 +695,7 @@ async fn auth_disabled_lets_requests_through() {
 #[tokio::test]
 async fn query_group_is_mounted_and_authenticated() {
     let (_pg, app) = app(true).await;
-    let (status, _h, _b) = send(app.clone(), get(&format!("{BASE}/query/aql?q=SELECT%20c"))).await;
+    let (status, _h, _b) = send(&app, get(&format!("{BASE}/query/aql?q=SELECT%20c"))).await;
     assert_eq!(status, StatusCode::UNAUTHORIZED);
 
     let req = Request::builder()
@@ -726,7 +704,7 @@ async fn query_group_is_mounted_and_authenticated() {
         .header(header::AUTHORIZATION, basic("alice", "pw"))
         .body(Body::empty())
         .unwrap();
-    let (status, _h, _b) = send(app, req).await;
+    let (status, _h, _b) = send(&app, req).await;
     // RE-TARGET: was a Mock `501`. The real query engine parses the AQL; the
     // incomplete `SELECT c` fails to parse → `400` (PreconditionViolation),
     // which still proves the authenticated request reached the real handler.
@@ -744,7 +722,7 @@ async fn demographic_group_is_mounted() {
         .header(header::AUTHORIZATION, basic("alice", "pw"))
         .body(Body::empty())
         .unwrap();
-    let (status, _h, _b) = send(app, req).await;
+    let (status, _h, _b) = send(&app, req).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
 
@@ -791,7 +769,7 @@ async fn implemented_groups_are_reachable() {
         let req = builder
             .body(body.map_or_else(Body::empty, Body::from))
             .unwrap();
-        let (status, _headers, _body) = send(app.clone(), req).await;
+        let (status, _headers, _body) = send(&app, req).await;
         assert_eq!(status, expected, "{method} {uri}");
         // None of these reach the retired not-implemented default.
         assert_ne!(status, StatusCode::NOT_IMPLEMENTED, "{method} {uri}");
@@ -810,7 +788,7 @@ async fn definition_group_is_mounted_with_dotted_route() {
         .header(header::AUTHORIZATION, basic("alice", "pw"))
         .body(Body::empty())
         .unwrap();
-    let (status, _h, body) = send(app, req).await;
+    let (status, _h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::OK);
     let v: serde_json::Value = serde_json::from_str(&body).unwrap();
     assert_eq!(v.as_array().map(Vec::len), Some(0), "no templates uploaded");
@@ -894,7 +872,7 @@ async fn query_post_body_optionality_and_url_forms() {
         .header(header::CONTENT_TYPE, "text/plain")
         .body(Body::from("SELECT e/ehr_id/value FROM EHR e"))
         .unwrap();
-    let (status, _h, body) = send(app.clone(), store).await;
+    let (status, _h, body) = send(&app, store).await;
     assert_eq!(status, StatusCode::OK, "store: {body}");
 
     let exec_empty = Request::builder()
@@ -903,7 +881,7 @@ async fn query_post_body_optionality_and_url_forms() {
         .header(header::CONTENT_TYPE, "application/json")
         .body(Body::from("{}"))
         .unwrap();
-    let (status, _h, body) = send(app.clone(), exec_empty).await;
+    let (status, _h, body) = send(&app, exec_empty).await;
     assert_eq!(status, StatusCode::OK, "empty body executes: {body}");
 
     // URL forms on the POST: fetch from the URL applies.
@@ -913,7 +891,7 @@ async fn query_post_body_optionality_and_url_forms() {
         .header(header::CONTENT_TYPE, "application/json")
         .body(Body::from("{}"))
         .unwrap();
-    let (status, _h, body) = send(app.clone(), exec_url).await;
+    let (status, _h, body) = send(&app, exec_url).await;
     assert_eq!(status, StatusCode::OK, "URL fetch on POST: {body}");
 
     // Conflict: the same key in both places with different values → 400.
@@ -923,7 +901,7 @@ async fn query_post_body_optionality_and_url_forms() {
         .header(header::CONTENT_TYPE, "application/json")
         .body(Body::from(r#"{"fetch": 2}"#))
         .unwrap();
-    let (status, _h, _b) = send(app.clone(), exec_conflict).await;
+    let (status, _h, _b) = send(&app, exec_conflict).await;
     assert_eq!(status, StatusCode::BAD_REQUEST, "body-vs-URL conflict");
 
     // Equal values in both places are accepted.
@@ -933,7 +911,7 @@ async fn query_post_body_optionality_and_url_forms() {
         .header(header::CONTENT_TYPE, "application/json")
         .body(Body::from(r#"{"fetch": 2}"#))
         .unwrap();
-    let (status, _h, body) = send(app.clone(), exec_equal).await;
+    let (status, _h, body) = send(&app, exec_equal).await;
     assert_eq!(status, StatusCode::OK, "equal values agree: {body}");
 }
 
@@ -949,7 +927,7 @@ async fn every_response_carries_the_security_headers() {
         .uri(format!("{BASE}/ehr/{EHR}"))
         .body(Body::empty())
         .unwrap();
-    let (_status, headers, _body) = send(app, req).await;
+    let (_status, headers, _body) = send(&app, req).await;
     for (name, expected) in [
         ("cache-control", "no-store"),
         ("x-content-type-options", "nosniff"),
@@ -992,7 +970,7 @@ async fn swagger_ui_gets_a_policy_it_can_run_under() {
         .uri("/ferroehr/rest/swagger-ui/index.html")
         .body(Body::empty())
         .unwrap();
-    let (status, headers, _body) = send(app, req).await;
+    let (status, headers, _body) = send(&app, req).await;
     assert_eq!(status, StatusCode::OK);
     let csp = headers
         .get(header::CONTENT_SECURITY_POLICY)
@@ -1022,7 +1000,7 @@ async fn the_swagger_page_needs_no_inline_allowance() {
         .uri("/ferroehr/rest/swagger-ui/index.html")
         .body(Body::empty())
         .unwrap();
-    let (status, headers, body) = send(app, req).await;
+    let (status, headers, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::OK);
 
     let csp = headers
@@ -1063,7 +1041,7 @@ async fn the_api_keeps_the_strict_policy() {
         .uri(format!("{BASE}/ehr/{EHR}"))
         .body(Body::empty())
         .unwrap();
-    let (_status, headers, _body) = send(app, req).await;
+    let (_status, headers, _body) = send(&app, req).await;
     assert_eq!(
         headers.get(header::CONTENT_SECURITY_POLICY).unwrap(),
         "default-src 'none'; frame-ancestors 'none'"
@@ -1090,7 +1068,7 @@ async fn no_server_header_and_no_store_coexists_with_etag() {
         .header(header::CONTENT_TYPE, "application/json")
         .body(Body::empty())
         .unwrap();
-    let (status, headers, body) = send(app, create).await;
+    let (status, headers, body) = send(&app, create).await;
     assert!(
         !headers.contains_key(header::SERVER),
         "a Server header would disclose the implementation for no benefit"
@@ -1115,7 +1093,7 @@ async fn hsts_is_deliberately_absent() {
         .uri(format!("{BASE}/ehr/{EHR}"))
         .body(Body::empty())
         .unwrap();
-    let (_status, headers, _body) = send(app, req).await;
+    let (_status, headers, _body) = send(&app, req).await;
     assert!(
         !headers.contains_key("strict-transport-security"),
         "HSTS belongs to the TLS edge, not this listener"
@@ -1146,7 +1124,7 @@ async fn an_over_limit_chunked_body_is_413_not_400() {
         .header(header::CONTENT_TYPE, "application/json")
         .body(Body::from_stream(stream))
         .unwrap();
-    let (status, headers, body) = send(app, req).await;
+    let (status, headers, body) = send(&app, req).await;
     assert_eq!(
         status,
         StatusCode::PAYLOAD_TOO_LARGE,
@@ -1177,7 +1155,7 @@ async fn a_declared_body_over_the_ceiling_is_413_in_the_openehr_body() {
         .header(header::CONTENT_LENGTH, "4096")
         .body(Body::from(vec![b'x'; 4096]))
         .unwrap();
-    let (status, headers, body) = send(app, req).await;
+    let (status, headers, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::PAYLOAD_TOO_LARGE, "{body}");
     assert_eq!(
         headers.get(header::CONTENT_TYPE).unwrap(),
@@ -1219,7 +1197,7 @@ async fn a_refusal_names_the_server_id_when_the_client_sends_its_own() {
         (oversized, StatusCode::PAYLOAD_TOO_LARGE),
         (unknown, StatusCode::NOT_FOUND),
     ] {
-        let (status, headers, body) = send(app.clone(), req).await;
+        let (status, headers, body) = send(&app, req).await;
         assert_eq!(status, expected, "{body}");
         assert_eq!(
             headers.get("x-request-id").and_then(|v| v.to_str().ok()),
@@ -1256,7 +1234,7 @@ async fn the_bulk_tier_accepts_what_the_clinical_tier_refuses() {
         .header(header::CONTENT_TYPE, "application/json")
         .body(Body::from(payload.clone()))
         .unwrap();
-    let (status, _h, _b) = send(app.clone(), clinical).await;
+    let (status, _h, _b) = send(&app, clinical).await;
     assert_eq!(status, StatusCode::PAYLOAD_TOO_LARGE);
 
     let bulk = Request::builder()
@@ -1265,7 +1243,7 @@ async fn the_bulk_tier_accepts_what_the_clinical_tier_refuses() {
         .header(header::CONTENT_TYPE, "application/xml")
         .body(Body::from(payload))
         .unwrap();
-    let (status, _h, _b) = send(app, bulk).await;
+    let (status, _h, _b) = send(&app, bulk).await;
     assert_ne!(
         status,
         StatusCode::PAYLOAD_TOO_LARGE,
@@ -1295,7 +1273,7 @@ async fn past_the_rate_a_caller_is_429_with_retry_after() {
             .uri(format!("{BASE}/ehr/{EHR}"))
             .body(Body::empty())
             .unwrap();
-        let (status, headers, body) = send(app.clone(), req).await;
+        let (status, headers, body) = send(&app, req).await;
         if status == StatusCode::TOO_MANY_REQUESTS {
             refused = Some((headers, body));
             break;
@@ -1329,7 +1307,7 @@ async fn a_disabled_limiter_leaves_no_trace_on_the_wire() {
             .uri(format!("{BASE}/ehr/{EHR}"))
             .body(Body::empty())
             .unwrap();
-        let (status, headers, _body) = send(app.clone(), req).await;
+        let (status, headers, _body) = send(&app, req).await;
         assert_ne!(status, StatusCode::TOO_MANY_REQUESTS);
         assert!(
             headers
@@ -1356,7 +1334,7 @@ async fn subject_lookup_by_query_parameter_still_answers() {
         ))
         .body(Body::empty())
         .unwrap();
-    let (status, _headers, _body) = send(app, req).await;
+    let (status, _headers, _body) = send(&app, req).await;
     assert!(
         status == StatusCode::NOT_FOUND || status == StatusCode::OK,
         "subject lookup answers on its own merits, got {status}"
@@ -1384,7 +1362,7 @@ async fn the_served_document_omits_paths_whose_features_are_off() {
         .uri(format!("{BASE}/ehr/{EHR}"))
         .body(Body::empty())
         .unwrap();
-    let (_status, _headers, _body) = send(app.clone(), req).await;
+    let (_status, _headers, _body) = send(&app, req).await;
 
     let document = ferroehr_rest::extensions::openapi::extensions_document(&config(false));
     let paths: Vec<String> = document.paths.paths.keys().cloned().collect();
@@ -1446,7 +1424,7 @@ async fn every_error_route_answers_problem_details() {
     ];
     for (req, expected) in cases {
         let call = format!("{} {}", req.method(), req.uri());
-        let (status, headers, body) = send(app.clone(), req).await;
+        let (status, headers, body) = send(&app, req).await;
         assert_eq!(status, expected, "{call}: {body}");
         assert_eq!(
             headers
@@ -1480,7 +1458,7 @@ async fn an_aql_parse_refusal_carries_its_position_on_request() {
         .header("prefer", "return=representation")
         .body(Body::empty())
         .unwrap();
-    let (status, headers, body) = send(app.clone(), req).await;
+    let (status, headers, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
     assert_eq!(
         headers
@@ -1502,7 +1480,7 @@ async fn an_aql_parse_refusal_carries_its_position_on_request() {
         .header(header::AUTHORIZATION, bearer(common::FULL_SCOPES))
         .body(Body::empty())
         .unwrap();
-    let (_status, headers, body) = send(app, minimal).await;
+    let (_status, headers, body) = send(&app, minimal).await;
     assert!(headers.get("preference-applied").is_none());
     let v: serde_json::Value = serde_json::from_str(&body).expect("problem details");
     assert!(v.get("position").is_none(), "{body}");

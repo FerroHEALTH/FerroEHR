@@ -36,15 +36,14 @@ use std::path::PathBuf;
 use axum::Router;
 use axum::body::Body;
 use http::{Request, StatusCode, header};
-use http_body_util::BodyExt;
 use serde_json::{Value, json};
-use tower::ServiceExt;
 
 use ferroehr::config::rest::RestConfig;
 use ferroehr_rest::config::AppConfig;
 use ferrohealth_smart::config::AuthSection;
 
 use crate::common;
+use crate::common::{etag_uid, ips_opt_xml, send};
 
 const BASE: &str = "/ferroehr/rest/openehr/v1";
 const FLAT_MIME: &str = "application/openehr.wt.flat+json";
@@ -54,14 +53,6 @@ const STRUCTURED_MIME: &str = "application/openehr.wt.structured+json";
 /// the header, not a query parameter, is the mechanism).
 const TEMPLATE_ID: &str = "International Patient Summary";
 const TEMPLATE_ID_HEADER: &str = "openehr-template-id";
-
-fn opt_xml() -> String {
-    std::fs::read_to_string(
-        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../crates/openehr-its/tests/fixtures/sdk/ips.v0.opt"),
-    )
-    .expect("ips.v0.opt vendored in openehr-its")
-}
 
 /// The IPS canonical composition (with its stored `uid` removed — a create
 /// assigns a fresh one).
@@ -79,7 +70,7 @@ fn canonical_composition() -> Value {
 
 /// The IPS `WebTemplate` (built from the vendored OPT).
 fn web_template() -> openehr_sdt::flat::webtemplate::model::WebTemplate {
-    let opt = openehr_its::opt14::from_xml(&opt_xml()).expect("parse OPT");
+    let opt = openehr_its::opt14::from_xml(&ips_opt_xml()).expect("parse OPT");
     openehr_sdt::flat::webtemplate::builder::build_web_template(&opt).expect("build web template")
 }
 
@@ -99,27 +90,6 @@ fn config() -> AppConfig {
         },
         ..Default::default()
     }
-}
-
-async fn send(app: &Router, req: Request<Body>) -> (StatusCode, header::HeaderMap, String) {
-    let resp = app.clone().oneshot(req).await.expect("response");
-    let status = resp.status();
-    let headers = resp.headers().clone();
-    let bytes = resp.into_body().collect().await.expect("body").to_bytes();
-    (
-        status,
-        headers,
-        String::from_utf8_lossy(&bytes).into_owned(),
-    )
-}
-
-fn etag_uid(h: &header::HeaderMap) -> String {
-    h.get(header::ETAG)
-        .and_then(|v| v.to_str().ok())
-        .expect("ETag present")
-        .trim_start_matches("W/")
-        .trim_matches('"')
-        .to_owned()
 }
 
 /// The full `OBJECT_VERSION_ID` carried in the weak `ETag` (`W/"<uid>"`).
@@ -163,7 +133,7 @@ async fn app_with_ehr() -> (testkit::TestDb, Router, String) {
             .method("POST")
             .uri(format!("{BASE}/definition/template/adl1.4"))
             .header(header::CONTENT_TYPE, "application/xml")
-            .body(Body::from(opt_xml()))
+            .body(Body::from(ips_opt_xml()))
             .unwrap(),
     )
     .await;

@@ -23,14 +23,12 @@
               fixture indexing are the intended shape here (the Rust Book ch11)"
 )]
 
-use axum::Router;
 use axum::body::Body;
 use http::{Request, StatusCode, header};
-use http_body_util::BodyExt;
-use tower::ServiceExt;
 
 use crate::common;
 use crate::common::EXT;
+use crate::common::send;
 
 /// A known-good ADL 1.4 source archetype: the same fixture the service-layer
 /// Definitions battery uses, read from the shared corpus at
@@ -43,18 +41,6 @@ fn adl14_source() -> String {
 }
 
 const ADL14_ID: &str = "openEHR-EHR-COMPOSITION.prescription.v1";
-
-async fn send(app: &Router, req: Request<Body>) -> (StatusCode, http::HeaderMap, String) {
-    let resp = app.clone().oneshot(req).await.expect("response");
-    let status = resp.status();
-    let headers = resp.headers().clone();
-    let bytes = resp.into_body().collect().await.expect("body").to_bytes();
-    (
-        status,
-        headers,
-        String::from_utf8_lossy(&bytes).into_owned(),
-    )
-}
 
 fn get(path: &str) -> Request<Body> {
     Request::builder()

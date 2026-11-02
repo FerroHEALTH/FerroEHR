@@ -32,6 +32,8 @@ use serde_json::Value;
 
 use crate::common;
 use crate::common::BASE;
+use crate::common::header;
+use crate::common::{create_ehr, etag_uid, send};
 
 async fn app() -> (testkit::TestDb, Router) {
     let (pg, service) = common::test_service().await;
@@ -39,18 +41,6 @@ async fn app() -> (testkit::TestDb, Router) {
         pg,
         common::router_with(common::api_config(false), service).await,
     )
-}
-
-async fn send(app: &Router, req: Request<Body>) -> (StatusCode, header::HeaderMap, String) {
-    common::send(app, req).await
-}
-
-fn etag(h: &header::HeaderMap) -> Option<&str> {
-    h.get(header::ETAG).and_then(|v| v.to_str().ok())
-}
-
-fn location(h: &header::HeaderMap) -> Option<&str> {
-    h.get(header::LOCATION).and_then(|v| v.to_str().ok())
 }
 
 fn last_modified(h: &header::HeaderMap) -> Option<&str> {
@@ -76,21 +66,11 @@ fn commit_instant(version: &Value) -> &str {
         .expect("ORIGINAL_VERSION.commit_audit.time_committed.value")
 }
 
-/// The bare uid inside a weak `ETag` (`W/"{uid}"`).
-fn etag_uid(h: &header::HeaderMap) -> String {
-    common::etag_uid(h)
-}
-
 fn vo_of(ovid: &str) -> &str {
     ovid.split("::").next().expect("vo uuid")
 }
 
 // ── wire setup helpers ───────────────────────────────────────────────────────
-
-/// Create an EHR through the wire; return its id (from the create `ETag`).
-async fn create_ehr(app: &Router) -> String {
-    common::create_ehr(app).await
-}
 
 /// Upload the Demo Vitals OPT (canonical XML) through the wire.
 async fn upload_opt(app: &Router) {
@@ -146,8 +126,14 @@ async fn ehr_create_default_is_minimal_with_headers() {
     // 201_EHR default (return=minimal): headers only, no body.
     assert_eq!(status, StatusCode::CREATED);
     let ehr_id = etag_uid(&h);
-    assert_eq!(etag(&h), Some(format!("W/\"{ehr_id}\"").as_str()));
-    assert_eq!(location(&h), Some(format!("{BASE}/ehr/{ehr_id}").as_str()));
+    assert_eq!(
+        header(&h, header::ETAG),
+        Some(format!("W/\"{ehr_id}\"").as_str())
+    );
+    assert_eq!(
+        header(&h, header::LOCATION),
+        Some(format!("{BASE}/ehr/{ehr_id}").as_str())
+    );
     assert!(body.is_empty(), "minimal create has no body, got {body:?}");
 }
 
@@ -164,7 +150,10 @@ async fn ehr_create_representation_returns_body() {
 
     assert_eq!(status, StatusCode::CREATED);
     let ehr_id = etag_uid(&h);
-    assert_eq!(etag(&h), Some(format!("W/\"{ehr_id}\"").as_str()));
+    assert_eq!(
+        header(&h, header::ETAG),
+        Some(format!("W/\"{ehr_id}\"").as_str())
+    );
     let v: Value = serde_json::from_str(&body).expect("json body");
     assert_eq!(v["_type"], "EHR");
 }
@@ -192,9 +181,12 @@ async fn ehr_status_update_default_is_204_with_headers() {
     assert_eq!(status, StatusCode::NO_CONTENT);
     let new_ovid = etag_uid(&h);
     assert_ne!(new_ovid, current, "a new version was created");
-    assert_eq!(etag(&h), Some(format!("W/\"{new_ovid}\"").as_str()));
     assert_eq!(
-        location(&h),
+        header(&h, header::ETAG),
+        Some(format!("W/\"{new_ovid}\"").as_str())
+    );
+    assert_eq!(
+        header(&h, header::LOCATION),
         Some(format!("{BASE}/ehr/{ehr_id}/ehr_status/{new_ovid}").as_str())
     );
     assert_eq!(body, "");
@@ -220,7 +212,10 @@ async fn ehr_status_update_representation_is_200_with_body() {
     // 200_EHR_STATUS_updated (representation): body present.
     assert_eq!(status, StatusCode::OK);
     let new_ovid = etag_uid(&h);
-    assert_eq!(etag(&h), Some(format!("W/\"{new_ovid}\"").as_str()));
+    assert_eq!(
+        header(&h, header::ETAG),
+        Some(format!("W/\"{new_ovid}\"").as_str())
+    );
     let v: Value = serde_json::from_str(&body).expect("json body");
     assert_eq!(v["_type"], "EHR_STATUS");
 }
@@ -244,9 +239,12 @@ async fn composition_get_sets_etag_and_location() {
 
     // 200_COMPOSITION_retrieved: ETag(version_uid) + Location deprecated (absent).
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(etag(&h), Some(format!("W/\"{ovid}\"").as_str()));
     assert_eq!(
-        location(&h),
+        header(&h, header::ETAG),
+        Some(format!("W/\"{ovid}\"").as_str())
+    );
+    assert_eq!(
+        header(&h, header::LOCATION),
         None,
         "200_COMPOSITION_retrieved marks Location Location_deprecated — not emitted"
     );
@@ -271,9 +269,12 @@ async fn versioned_ehr_status_version_at_time_sets_version_headers() {
     let (status, h, body) = send(&app, req).await;
 
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(etag(&h), Some(format!("W/\"{current}\"").as_str()));
     assert_eq!(
-        location(&h),
+        header(&h, header::ETAG),
+        Some(format!("W/\"{current}\"").as_str())
+    );
+    assert_eq!(
+        header(&h, header::LOCATION),
         None,
         "the OAS marks Location on this response Location_deprecated — not emitted"
     );
@@ -299,9 +300,12 @@ async fn composition_delete_is_204_with_headers() {
     // `Location_deprecated` in the OAS and is no longer emitted.
     assert_eq!(status, StatusCode::NO_CONTENT);
     let deleted = etag_uid(&h);
-    assert_eq!(etag(&h), Some(format!("W/\"{deleted}\"").as_str()));
     assert_eq!(
-        location(&h),
+        header(&h, header::ETAG),
+        Some(format!("W/\"{deleted}\"").as_str())
+    );
+    assert_eq!(
+        header(&h, header::LOCATION),
         None,
         "the OAS marks Location on this response Location_deprecated — not emitted"
     );
@@ -356,7 +360,7 @@ async fn version_read_last_modified_is_the_commit_audit_instant() {
     assert_eq!(status, StatusCode::OK);
     let v: Value = serde_json::from_str(&body).expect("json ORIGINAL_VERSION");
     assert_eq!(
-        etag(&h),
+        header(&h, header::ETAG),
         Some(format!("W/\"{version_uid}\"").as_str()),
         "overview §\"ETag and Last-Modified\": both headers SHOULD accompany a VERSION"
     );
@@ -421,7 +425,7 @@ async fn container_reads_carry_etag_and_newest_commit_last_modified() {
     let v: Value = serde_json::from_str(&body).expect("json VERSIONED_EHR_STATUS");
     assert_eq!(v["_type"], "VERSIONED_EHR_STATUS");
     assert_eq!(
-        etag(&h),
+        header(&h, header::ETAG),
         Some(format!("W/\"{container_uid}\"").as_str()),
         "overview §\"ETag and Last-Modified\": \"VERSIONED_OBJECT.uid.value\" is an ETag source"
     );
@@ -444,7 +448,10 @@ async fn container_reads_carry_etag_and_newest_commit_last_modified() {
     assert_eq!(status, StatusCode::OK);
     let rh: Value = serde_json::from_str(&body).expect("json REVISION_HISTORY");
     assert_eq!(rh["_type"], "REVISION_HISTORY");
-    assert_eq!(etag(&h), Some(format!("W/\"{container_uid}\"").as_str()));
+    assert_eq!(
+        header(&h, header::ETAG),
+        Some(format!("W/\"{container_uid}\"").as_str())
+    );
     assert_eq!(last_modified(&h), Some(newest_instant.as_str()));
 }
 
@@ -655,12 +662,12 @@ async fn ehr_get_carries_the_weak_ehr_id_etag() {
         "the served EHR names the addressed ehr_id"
     );
     assert_eq!(
-        etag(&h),
+        header(&h, header::ETAG),
         Some(format!("W/\"{ehr_id}\"").as_str()),
         "overview §\"ETag and Last-Modified\": EHR.ehr_id.value is the named ETag source"
     );
     assert_eq!(
-        location(&h),
+        header(&h, header::LOCATION),
         None,
         "overview §Location: Location MUST NOT indicate an alternate representation \
          of an existing resource (e.g. via GET)"
@@ -1065,7 +1072,7 @@ async fn contribution_get_carries_etag_and_last_modified() {
     let (status, h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::OK, "get: {body}");
     assert_eq!(
-        etag(&h),
+        header(&h, header::ETAG),
         Some(format!("W/\"{contribution_uid}\"").as_str()),
         "the GET's ETag is the contribution uid, weak form"
     );
@@ -1196,7 +1203,7 @@ async fn contribution_commit_carries_last_modified_on_both_prefer_branches() {
         .as_str()
         .expect("CONTRIBUTION.audit.time_committed.value");
     assert_eq!(
-        etag(&h),
+        header(&h, header::ETAG),
         Some(format!("W/\"{}\"", etag_uid(&h)).as_str()),
         "the 201 ETag is the contribution uid, weak form"
     );
@@ -1599,7 +1606,7 @@ async fn ehr_reads_carry_the_last_modified_of_the_create() {
     let (status, h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::CREATED, "{body}");
     let created = last_modified(&h).expect("create Last-Modified").to_owned();
-    let ehr_id = etag(&h)
+    let ehr_id = header(&h, header::ETAG)
         .expect("ETag")
         .trim_start_matches("W/")
         .trim_matches('"')
@@ -1629,7 +1636,7 @@ async fn an_ehr_read_is_dated_by_its_latest_folder_change() {
     let (status, h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::CREATED, "{body}");
     let created = last_modified(&h).expect("create Last-Modified").to_owned();
-    let ehr_id = etag(&h)
+    let ehr_id = header(&h, header::ETAG)
         .expect("ETag")
         .trim_start_matches("W/")
         .trim_matches('"')

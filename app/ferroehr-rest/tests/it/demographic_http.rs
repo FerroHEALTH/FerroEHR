@@ -30,9 +30,7 @@
 use axum::Router;
 use axum::body::Body;
 use http::{Request, StatusCode, header};
-use http_body_util::BodyExt;
 use serde_json::{Value, json};
-use tower::ServiceExt;
 
 use ferroehr::config::rest::RestConfig;
 use ferroehr_rest::config::AppConfig;
@@ -40,6 +38,8 @@ use ferrohealth_smart::config::AuthSection;
 
 use crate::common;
 use crate::common::EXT;
+use crate::common::header;
+use crate::common::{etag_uid, send};
 
 const BASE: &str = "/ferroehr/rest/openehr/v1";
 
@@ -136,18 +136,6 @@ async fn app() -> (testkit::TestDb, Router) {
     (pg, common::router_with(config(), service).await)
 }
 
-async fn send(app: &Router, req: Request<Body>) -> (StatusCode, header::HeaderMap, String) {
-    let resp = app.clone().oneshot(req).await.expect("response");
-    let status = resp.status();
-    let headers = resp.headers().clone();
-    let bytes = resp.into_body().collect().await.expect("body").to_bytes();
-    (
-        status,
-        headers,
-        String::from_utf8_lossy(&bytes).into_owned(),
-    )
-}
-
 /// A canonical-JSON `GET` against the composed router.
 async fn get_json(app: &Router, uri: String) -> (StatusCode, header::HeaderMap, String) {
     let req = Request::builder()
@@ -157,23 +145,6 @@ async fn get_json(app: &Router, uri: String) -> (StatusCode, header::HeaderMap, 
         .body(Body::empty())
         .unwrap();
     send(app, req).await
-}
-
-fn etag(h: &header::HeaderMap) -> Option<&str> {
-    h.get(header::ETAG).and_then(|v| v.to_str().ok())
-}
-
-fn location(h: &header::HeaderMap) -> Option<&str> {
-    h.get(header::LOCATION).and_then(|v| v.to_str().ok())
-}
-
-/// The bare uid inside a weak `ETag` (`W/"{uid}"`).
-fn etag_uid(h: &header::HeaderMap) -> String {
-    etag(h)
-        .expect("ETag present")
-        .trim_start_matches("W/")
-        .trim_matches('"')
-        .to_owned()
 }
 
 /// Create a party of `kind` (segment) and return its `version_uid` (`OVID`).
@@ -209,9 +180,12 @@ async fn person_create_default_is_minimal_with_headers() {
     assert_eq!(status, StatusCode::CREATED);
     let uid = etag_uid(&h);
     assert!(uid.ends_with("::1"), "first version_uid, got {uid}");
-    assert_eq!(etag(&h), Some(format!("W/\"{uid}\"").as_str()));
     assert_eq!(
-        location(&h),
+        header(&h, header::ETAG),
+        Some(format!("W/\"{uid}\"").as_str())
+    );
+    assert_eq!(
+        header(&h, header::LOCATION),
         Some(format!("{BASE}/demographic/person/{uid}").as_str())
     );
     assert!(body.is_empty(), "minimal create has no body, got {body:?}");
@@ -231,7 +205,10 @@ async fn person_create_representation_returns_body() {
 
     assert_eq!(status, StatusCode::CREATED);
     let uid = etag_uid(&h);
-    assert_eq!(etag(&h), Some(format!("W/\"{uid}\"").as_str()));
+    assert_eq!(
+        header(&h, header::ETAG),
+        Some(format!("W/\"{uid}\"").as_str())
+    );
     let v: Value = serde_json::from_str(&body).expect("json body");
     assert_eq!(v["_type"], "PERSON");
 }
@@ -255,9 +232,12 @@ async fn person_get_sets_etag_and_no_location() {
     let (status, h, body) = send(&app, req).await;
 
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(etag(&h), Some(format!("W/\"{ovid}\"").as_str()));
     assert_eq!(
-        location(&h),
+        header(&h, header::ETAG),
+        Some(format!("W/\"{ovid}\"").as_str())
+    );
+    assert_eq!(
+        header(&h, header::LOCATION),
         None,
         "ITS-REST overview §Location: Location MUST NOT indicate an alternate \
          representation of an existing resource (GET)"
@@ -311,9 +291,12 @@ async fn person_delete_is_204_with_etag_and_no_location() {
     assert_eq!(status, StatusCode::NO_CONTENT);
     // ETag of the deleted version (a new version_uid).
     let deleted = etag_uid(&h);
-    assert_eq!(etag(&h), Some(format!("W/\"{deleted}\"").as_str()));
     assert_eq!(
-        location(&h),
+        header(&h, header::ETAG),
+        Some(format!("W/\"{deleted}\"").as_str())
+    );
+    assert_eq!(
+        header(&h, header::LOCATION),
         None,
         "ITS-REST overview §Deprecated headers: Location is deprecated on DELETE responses"
     );
@@ -413,9 +396,12 @@ async fn stale_update_is_412_with_latest_etag_and_no_location() {
 
     // Precondition failure → 412, echoing the latest version_uid.
     assert_eq!(status, StatusCode::PRECONDITION_FAILED);
-    assert_eq!(etag(&h), Some(format!("W/\"{ovid}\"").as_str()));
     assert_eq!(
-        location(&h),
+        header(&h, header::ETAG),
+        Some(format!("W/\"{ovid}\"").as_str())
+    );
+    assert_eq!(
+        header(&h, header::LOCATION),
         None,
         "ITS-REST overview §Location: no Location on an error response"
     );
@@ -536,9 +522,12 @@ async fn delete_accepts_the_weak_if_match_form() {
         StatusCode::NO_CONTENT,
         "a weak-form If-Match must satisfy the delete precondition: {body}"
     );
-    assert!(etag(&h).is_some(), "the deleted version's ETag is echoed");
+    assert!(
+        header(&h, header::ETAG).is_some(),
+        "the deleted version's ETag is echoed"
+    );
     assert_eq!(
-        location(&h),
+        header(&h, header::LOCATION),
         None,
         "ITS-REST overview §Deprecated headers: Location is deprecated on DELETE responses"
     );
@@ -641,9 +630,12 @@ async fn versioned_party_reads_emit_versioning_headers() {
     let (status, h, body) =
         get_json(&app, format!("{BASE}/demographic/versioned_party/{vo}")).await;
     assert_eq!(status, StatusCode::OK, "container read: {body}");
-    assert_eq!(etag(&h), Some(format!("W/\"{vo}\"").as_str()));
     assert_eq!(
-        location(&h),
+        header(&h, header::ETAG),
+        Some(format!("W/\"{vo}\"").as_str())
+    );
+    assert_eq!(
+        header(&h, header::LOCATION),
         None,
         "ITS-REST overview §Location: not on GET"
     );
@@ -656,13 +648,16 @@ async fn versioned_party_reads_emit_versioning_headers() {
     )
     .await;
     assert_eq!(status, StatusCode::OK, "revision history: {body}");
-    assert_eq!(etag(&h), Some(format!("W/\"{vo}\"").as_str()));
+    assert_eq!(
+        header(&h, header::ETAG),
+        Some(format!("W/\"{vo}\"").as_str())
+    );
     assert!(
         h.contains_key(header::LAST_MODIFIED),
         "Last-Modified from REVISION_HISTORY.items.last().audits[0].time_committed"
     );
     assert_eq!(
-        location(&h),
+        header(&h, header::LOCATION),
         None,
         "ITS-REST overview §Location: not on GET"
     );
@@ -674,13 +669,16 @@ async fn versioned_party_reads_emit_versioning_headers() {
     )
     .await;
     assert_eq!(status, StatusCode::OK, "version read: {body}");
-    assert_eq!(etag(&h), Some(format!("W/\"{ovid}\"").as_str()));
+    assert_eq!(
+        header(&h, header::ETAG),
+        Some(format!("W/\"{ovid}\"").as_str())
+    );
     assert!(
         h.contains_key(header::LAST_MODIFIED),
         "Last-Modified from ORIGINAL_VERSION.commit_audit.time_committed"
     );
     assert_eq!(
-        location(&h),
+        header(&h, header::LOCATION),
         None,
         "ITS-REST overview §Location: not on GET"
     );
@@ -692,9 +690,12 @@ async fn versioned_party_reads_emit_versioning_headers() {
     )
     .await;
     assert_eq!(status, StatusCode::OK, "version at time: {body}");
-    assert_eq!(etag(&h), Some(format!("W/\"{ovid}\"").as_str()));
     assert_eq!(
-        location(&h),
+        header(&h, header::ETAG),
+        Some(format!("W/\"{ovid}\"").as_str())
+    );
+    assert_eq!(
+        header(&h, header::LOCATION),
         None,
         "ITS-REST overview §Location: not on GET"
     );
@@ -762,7 +763,7 @@ async fn version_at_time_without_offset_resolves_in_the_local_timezone() {
         "an offset-less extended datetime is a valid version_at_time: {body}"
     );
     assert_eq!(
-        etag(&h),
+        header(&h, header::ETAG),
         Some(format!("W/\"{v1}\"").as_str()),
         "the offset-less rendering names the same instant as its offset-carrying form, \
          so the version extant at it is still v1"
@@ -800,12 +801,12 @@ async fn versioned_party_relationship_reads_emit_versioning_headers() {
         let (status, h, body) = send(&app, req).await;
         assert_eq!(status, StatusCode::OK, "{uri}: {body}");
         assert_eq!(
-            etag(&h),
+            header(&h, header::ETAG),
             Some(format!("W/\"{expected_etag}\"").as_str()),
             "{uri} carries the versioned-resource ETag"
         );
         assert_eq!(
-            location(&h),
+            header(&h, header::LOCATION),
             None,
             "{uri}: ITS-REST overview §Location — no Location on a GET"
         );
@@ -826,7 +827,7 @@ async fn role_create_uses_role_segment() {
     assert_eq!(status, StatusCode::CREATED);
     let uid = etag_uid(&h);
     assert_eq!(
-        location(&h),
+        header(&h, header::LOCATION),
         Some(format!("{BASE}/demographic/role/{uid}").as_str())
     );
 }
@@ -848,9 +849,12 @@ async fn party_relationship_create_is_mounted_with_headers() {
 
     assert_eq!(status, StatusCode::CREATED);
     let uid = etag_uid(&h);
-    assert_eq!(etag(&h), Some(format!("W/\"{uid}\"").as_str()));
     assert_eq!(
-        location(&h),
+        header(&h, header::ETAG),
+        Some(format!("W/\"{uid}\"").as_str())
+    );
+    assert_eq!(
+        header(&h, header::LOCATION),
         Some(format!("{EXT}/demographic/party_relationship/{uid}").as_str())
     );
     let v: Value = serde_json::from_str(&body).expect("json body");
@@ -871,7 +875,10 @@ async fn party_relationship_get_is_mounted() {
     let (status, h, body) = send(&app, req).await;
 
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(etag(&h), Some(format!("W/\"{ovid}\"").as_str()));
+    assert_eq!(
+        header(&h, header::ETAG),
+        Some(format!("W/\"{ovid}\"").as_str())
+    );
     let v: Value = serde_json::from_str(&body).expect("json body");
     assert_eq!(v["_type"], "PARTY_RELATIONSHIP");
 }
@@ -1187,7 +1194,7 @@ async fn a_contribution_member_of_the_wrong_kind_is_400() {
         .unwrap();
     let (status, h, body) = send(&app, post).await;
     assert_eq!(status, StatusCode::CREATED, "{body}");
-    let ehr_id = location(&h)
+    let ehr_id = header(&h, header::LOCATION)
         .and_then(|l| l.rsplit('/').next())
         .expect("EHR location")
         .to_owned();
@@ -1260,7 +1267,10 @@ async fn demographic_contribution_get_carries_etag_and_last_modified() {
         h.get(header::LAST_MODIFIED).is_some(),
         "Last-Modified from audit.time_committed"
     );
-    assert!(location(&h).is_none(), "no Location on a GET");
+    assert!(
+        header(&h, header::LOCATION).is_none(),
+        "no Location on a GET"
+    );
 }
 
 /// An ACTOR carrying `languages: []` is a body the ITS-JSON schema refuses

@@ -25,21 +25,13 @@
 use axum::Router;
 use axum::body::Body;
 use http::{Request, StatusCode, header};
-use http_body_util::BodyExt;
-use tower::ServiceExt;
 
 use crate::common;
+use crate::common::send_body;
 
 const OBSERVATION: &str = "openEHR-EHR-OBSERVATION.del_constituent.v1.0.0";
 const PARENT: &str = "openEHR-EHR-OBSERVATION.del_parent.v1.0.0";
 const CHILD: &str = "openEHR-EHR-OBSERVATION.del_parent-child.v1.0.0";
-
-async fn send(app: &Router, req: Request<Body>) -> (StatusCode, String) {
-    let resp = app.clone().oneshot(req).await.expect("response");
-    let status = resp.status();
-    let bytes = resp.into_body().collect().await.expect("body").to_bytes();
-    (status, String::from_utf8_lossy(&bytes).into_owned())
-}
 
 /// Upload one ADL2 source and assert it is stored.
 async fn upload(app: &Router, source: String) {
@@ -50,7 +42,7 @@ async fn upload(app: &Router, source: String) {
         .header("prefer", "return=representation")
         .body(Body::from(source))
         .expect("request");
-    let (status, body) = send(app, req).await;
+    let (status, body) = send_body(app, req).await;
     assert_eq!(status, StatusCode::CREATED, "{body}");
 }
 
@@ -62,7 +54,7 @@ async fn delete(app: &Router, hrid: &str) -> (StatusCode, String) {
         .header("prefer", "return=representation")
         .body(Body::empty())
         .expect("request");
-    send(app, req).await
+    send_body(app, req).await
 }
 
 /// The stored artefact ids.
@@ -72,7 +64,7 @@ async fn stored(app: &Router) -> String {
         .uri(common::full("/definition/artefact/adl2"))
         .body(Body::empty())
         .expect("request");
-    let (status, body) = send(app, req).await;
+    let (status, body) = send_body(app, req).await;
     assert_eq!(status, StatusCode::OK, "{body}");
     body
 }
@@ -198,7 +190,7 @@ async fn deleting_an_archetype_nothing_uses_is_204() {
         .header(header::ACCEPT, "application/json")
         .body(Body::empty())
         .expect("request");
-    let (status, body) = send(&app, req).await;
+    let (status, body) = send_body(&app, req).await;
     assert_eq!(
         status,
         StatusCode::OK,

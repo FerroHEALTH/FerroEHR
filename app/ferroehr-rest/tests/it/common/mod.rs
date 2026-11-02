@@ -508,11 +508,17 @@ pub(crate) fn post_json(uri: &str, body: &str) -> Request<Body> {
         .expect("request")
 }
 
+/// The value of the response header `name`, when present and visible ASCII.
+pub(crate) fn header<K: header::AsHeaderName>(
+    headers: &header::HeaderMap,
+    name: K,
+) -> Option<&str> {
+    headers.get(name).and_then(|v| v.to_str().ok())
+}
+
 /// The bare uid inside a weak `ETag` (`W/"{uid}"`).
 pub(crate) fn etag_uid(headers: &header::HeaderMap) -> String {
-    headers
-        .get(header::ETAG)
-        .and_then(|v| v.to_str().ok())
+    header(headers, header::ETAG)
         .expect("ETag present")
         .trim_start_matches("W/")
         .trim_matches('"')
@@ -534,6 +540,15 @@ pub(crate) fn ips_opt_xml() -> String {
             .join("../../crates/openehr-its/tests/fixtures/sdk/ips.v0.opt"),
     )
     .expect("ips.v0.opt vendored in openehr-its")
+}
+
+/// The Demo Vitals operational template (canonical XML) vendored in `openehr-sdt`.
+pub(crate) fn demo_vitals_opt_xml() -> String {
+    std::fs::read_to_string(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../crates/openehr-sdt/tests/fixtures/better/Demo Vitals.opt"),
+    )
+    .expect("Demo Vitals.opt vendored in openehr-sdt")
 }
 
 /// The vendored IPS composition (canonical JSON) the template above validates.

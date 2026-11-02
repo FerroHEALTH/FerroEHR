@@ -16,7 +16,6 @@
 #![expect(
     clippy::expect_used,
     clippy::panic,
-    clippy::indexing_slicing,
     reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
               reaches `#[test]`-annotated functions, so it misses this integration \
               module's helpers and async bodies; panicking assertions and direct \
@@ -25,16 +24,13 @@
 
 use std::path::PathBuf;
 
-use axum::Router;
 use axum::body::Body;
 use http::{Request, StatusCode, header};
-use http_body_util::BodyExt;
 use serde_json::Value;
-use tower::ServiceExt;
 
 use crate::common;
+use crate::common::{create_ehr, send_body};
 
-const BASE: &str = "/ferroehr/rest/openehr/v1";
 /// A syntactically valid id that is never created — the "unknown" probe.
 const ABSENT: &str = "00000000-0000-0000-0000-000000000000";
 
@@ -45,13 +41,6 @@ fn corpus(name: &str) -> String {
         .join("../../corpus/fixtures/messaging")
         .join(name);
     std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()))
-}
-
-async fn send(app: &Router, req: Request<Body>) -> (StatusCode, String) {
-    let resp = app.clone().oneshot(req).await.expect("response");
-    let status = resp.status();
-    let bytes = resp.into_body().collect().await.expect("body").to_bytes();
-    (status, String::from_utf8_lossy(&bytes).into_owned())
 }
 
 fn get(path: &str) -> Request<Body> {
@@ -71,23 +60,6 @@ fn post(path: &str, content_type: &str, body: String) -> Request<Body> {
         .expect("request")
 }
 
-/// Create an EHR through the released wire and return its id.
-async fn create_ehr(app: &Router) -> String {
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/ehr"))
-        .header("Prefer", "return=representation")
-        .body(Body::empty())
-        .expect("request");
-    let (status, body) = send(app, req).await;
-    assert_eq!(status, StatusCode::CREATED, "EHR create: {body}");
-    let value: Value = serde_json::from_str(&body).expect("EHR json");
-    value["ehr_id"]["value"]
-        .as_str()
-        .expect("ehr_id")
-        .to_owned()
-}
-
 // ── EHR-Extract export and import ────────────────────────────────────────────
 
 /// `export_ehrs(an_ehr_id)` answers `200` with a list of `EXTRACT`s: one
@@ -98,7 +70,7 @@ async fn export_ehrs_returns_one_extract_for_an_existing_ehr() {
     let (_pg, app) = common::test_router().await;
     let ehr_id = create_ehr(&app).await;
 
-    let (status, body) = send(&app, get(&format!("/message/export/{ehr_id}"))).await;
+    let (status, body) = send_body(&app, get(&format!("/message/export/{ehr_id}"))).await;
     assert_eq!(status, StatusCode::OK, "export: {body}");
     let extracts: Value = serde_json::from_str(&body).expect("extract list json");
     let list = extracts.as_array().expect("a JSON array");
@@ -117,7 +89,7 @@ async fn export_ehrs_returns_one_extract_for_an_existing_ehr() {
 #[tokio::test]
 async fn export_ehrs_of_an_unknown_ehr_is_not_found() {
     let (_pg, app) = common::test_router().await;
-    let (status, _body) = send(&app, get(&format!("/message/export/{ABSENT}"))).await;
+    let (status, _body) = send_body(&app, get(&format!("/message/export/{ABSENT}"))).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
 
@@ -152,7 +124,7 @@ async fn export_ehr_extracts_honours_the_manifest() {
             } ]
         }
     });
-    let (status, body) = send(
+    let (status, body) = send_body(
         &app,
         post("/message/export", "application/json", spec.to_string()),
     )
@@ -186,7 +158,7 @@ async fn export_ehr_extracts_with_an_unresolvable_entity_is_bad_request() {
             "entities": [ { "_type": "EXTRACT_ENTITY_MANIFEST", "extract_id_key": "1" } ]
         }
     });
-    let (status, body) = send(
+    let (status, body) = send_body(
         &app,
         post("/message/export", "application/json", spec.to_string()),
     )
@@ -205,7 +177,7 @@ async fn export_ehr_extracts_with_an_unresolvable_entity_is_bad_request() {
 async fn import_ehr_without_an_id_reuses_the_source_identifier() {
     let (_pg, app) = common::test_router().await;
 
-    let (status, body) = send(
+    let (status, body) = send_body(
         &app,
         post(
             "/message/import",
@@ -219,7 +191,7 @@ async fn import_ehr_without_an_id_reuses_the_source_identifier() {
     assert_eq!(created["uid"], "9d1e6a7c-2f04-4c1b-9a41-0d5c7f2b8e10");
 
     // The clone is a real EHR on the released wire.
-    let (status, _body) = send(&app, get("/ehr/9d1e6a7c-2f04-4c1b-9a41-0d5c7f2b8e10")).await;
+    let (status, _body) = send_body(&app, get("/ehr/9d1e6a7c-2f04-4c1b-9a41-0d5c7f2b8e10")).await;
     assert_eq!(status, StatusCode::OK, "the cloned EHR is readable");
 }
 
@@ -230,7 +202,7 @@ async fn import_ehr_with_a_fixed_id_lands_under_it() {
     let (_pg, app) = common::test_router().await;
     let target = "7d44b88c-4199-4bad-97dc-d78268e01398";
 
-    let (status, body) = send(
+    let (status, body) = send_body(
         &app,
         post(
             &format!("/message/import?ehr_id={target}"),
@@ -251,7 +223,7 @@ async fn import_ehr_into_an_existing_id_is_a_conflict() {
     let (_pg, app) = common::test_router().await;
     let existing = create_ehr(&app).await;
 
-    let (status, body) = send(
+    let (status, body) = send_body(
         &app,
         post(
             &format!("/message/import?ehr_id={existing}"),
@@ -270,7 +242,7 @@ async fn import_ehr_extract_lands_content_in_an_existing_ehr() {
     let (_pg, app) = common::test_router().await;
     let ehr_id = create_ehr(&app).await;
 
-    let (status, body) = send(
+    let (status, body) = send_body(
         &app,
         post(
             &format!("/message/import/{ehr_id}"),
@@ -282,7 +254,7 @@ async fn import_ehr_extract_lands_content_in_an_existing_ehr() {
     assert_eq!(status, StatusCode::NO_CONTENT, "import extract: {body}");
 
     // The imported FOLDER hierarchy is readable on the released directory wire.
-    let (status, body) = send(&app, get(&format!("/ehr/{ehr_id}/directory"))).await;
+    let (status, body) = send_body(&app, get(&format!("/ehr/{ehr_id}/directory"))).await;
     assert_eq!(status, StatusCode::OK, "imported directory: {body}");
 }
 
@@ -290,7 +262,7 @@ async fn import_ehr_extract_lands_content_in_an_existing_ehr() {
 #[tokio::test]
 async fn import_ehr_extract_into_an_unknown_ehr_is_not_found() {
     let (_pg, app) = common::test_router().await;
-    let (status, _body) = send(
+    let (status, _body) = send_body(
         &app,
         post(
             &format!("/message/import/{ABSENT}"),
@@ -311,7 +283,7 @@ async fn import_ehr_extract_of_a_malformed_extract_is_bad_request() {
     let (_pg, app) = common::test_router().await;
     let ehr_id = create_ehr(&app).await;
 
-    let (status, body) = send(
+    let (status, body) = send_body(
         &app,
         post(
             &format!("/message/import/{ehr_id}"),
@@ -341,7 +313,7 @@ async fn import_ehr_with_a_malformed_merge_input_is_refused_and_stores_nothing()
     };
 
     let refused = "3a9e5c7d-1f2b-4d6e-9a8c-0b1d2e3f4a5b";
-    let (status, body) = send(
+    let (status, body) = send_body(
         &app,
         post(
             &format!("/message/import?ehr_id={refused}"),
@@ -362,7 +334,7 @@ async fn import_ehr_with_a_malformed_merge_input_is_refused_and_stores_nothing()
         body.contains("chapters[0].items[0].item.versions[0].other_input_version_uids[1]"),
         "the refusal names the entry's position in the extract: {body}"
     );
-    let (status, _body) = send(&app, get(&format!("/ehr/{refused}"))).await;
+    let (status, _body) = send_body(&app, get(&format!("/ehr/{refused}"))).await;
     assert_eq!(
         status,
         StatusCode::NOT_FOUND,
@@ -370,7 +342,7 @@ async fn import_ehr_with_a_malformed_merge_input_is_refused_and_stores_nothing()
     );
 
     let landed = "6b8f4d2c-0e1a-4f3b-8d7c-1a2b3c4d5e6f";
-    let (status, body) = send(
+    let (status, body) = send_body(
         &app,
         post(
             &format!("/message/import?ehr_id={landed}"),
@@ -394,7 +366,7 @@ async fn import_ehr_with_an_unstorable_version_uid_is_bad_request() {
     extract["chapters"][0]["items"][0]["item"]["versions"][0]["uid"]["value"] =
         Value::from("5f0c2a1e-7b3d-4e9a-8c21-6d4b2f1a0e77::cnf.source.openehr.org::99999999999");
     let refused = "4c7d9e1f-2a3b-4c5d-8e9f-0a1b2c3d4e5f";
-    let (status, body) = send(
+    let (status, body) = send_body(
         &app,
         post(
             &format!("/message/import?ehr_id={refused}"),
@@ -408,7 +380,7 @@ async fn import_ehr_with_an_unstorable_version_uid_is_bad_request() {
         StatusCode::BAD_REQUEST,
         "unstorable version uid: {body}"
     );
-    let (status, _body) = send(&app, get(&format!("/ehr/{refused}"))).await;
+    let (status, _body) = send_body(&app, get(&format!("/ehr/{refused}"))).await;
     assert_eq!(
         status,
         StatusCode::NOT_FOUND,
@@ -430,7 +402,8 @@ async fn the_former_tdd_routes_are_not_found() {
         format!("/message/tdd/{ehr_id}/batch"),
         "/message/tdd".to_owned(),
     ] {
-        let (status, body) = send(&app, post(&path, "application/xml", "<x/>".to_owned())).await;
+        let (status, body) =
+            send_body(&app, post(&path, "application/xml", "<x/>".to_owned())).await;
         assert_eq!(status, StatusCode::NOT_FOUND, "POST {path}: {body}");
     }
 }
