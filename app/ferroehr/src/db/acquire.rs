@@ -22,10 +22,12 @@
 //! until its acquire deadline (sqlx 0.9 `PoolInner::connect`), so a request
 //! would wait the whole `acquire_timeout_secs` for an answer the server could
 //! give at once. [`acquire`] therefore probes the database itself once an
-//! acquire has waited one second: a probe that cannot connect marks the
-//! database down, and while it is down every acquire answers at once, one
-//! probe at a time testing whether it is back. A probe that connects leaves a
-//! busy pool queueing as before.
+//! acquire has waited one second: only a probe whose connect is refused or
+//! reset, or that the server turns away as shutting down, marks the database
+//! down, and while it is down every acquire answers at once, one probe at a
+//! time testing whether it is back. A probe that connects, or is still
+//! connecting when its bound passes (a slow database, not a down one), leaves
+//! the acquire queueing on the pool as a busy pool does.
 //!
 //! Inside [`request_scope`], a request keeps the connection it checked out
 //! between its statements: a connection [`acquire`] handed out goes back to
@@ -104,7 +106,8 @@ impl AcquireError {
 /// How long an acquire waits for the pool before it probes the database.
 const PROBE_AFTER: Duration = Duration::from_secs(1);
 
-/// The longest a probe's connect may take before the database counts as down.
+/// The longest an acquire waits for a probe's connect; a probe still
+/// connecting then finds the database slow, which is no evidence of an outage.
 const PROBE_TIMEOUT: Duration = Duration::from_secs(2);
 
 /// While the database is down, the shortest gap between two probes.
@@ -192,11 +195,11 @@ fn claim_probe(key: &str) -> bool {
     })
 }
 
-/// Records a probe's outcome: a connect clears the entry, a failure marks
-/// the database down.
-fn record(key: &str, outcome: Result<(), Arc<sqlx::Error>>) {
+/// Records a probe's outcome: a reachable database clears the entry, an
+/// unreachable one is marked down.
+fn record(key: &str, outcome: Result<Reach, Arc<sqlx::Error>>) {
     with_health(|health| match outcome {
-        Ok(()) => {
+        Ok(_) => {
             health.remove(key);
         }
         Err(error) => {
@@ -212,11 +215,20 @@ fn record(key: &str, outcome: Result<(), Arc<sqlx::Error>>) {
     });
 }
 
-/// Opens and closes one connection outside the pool: `Err` when the database
-/// cannot be reached, `Ok` when it answers, including a refusal of the
-/// session itself (too many connections, a bad credential), which no outage
-/// explains.
-async fn probe(pool: &PgPool) -> Result<(), Arc<sqlx::Error>> {
+/// How a probe found a database it could reach.
+#[derive(Debug, Clone, Copy)]
+enum Reach {
+    /// The database answered: a connection opened, or the server refused the
+    /// session itself (too many connections, a bad credential).
+    Answered,
+    /// The connect was still in progress when [`PROBE_TIMEOUT`] passed.
+    Slow,
+}
+
+/// Opens and closes one connection outside the pool: `Err` only on evidence
+/// that the database cannot be reached ([`is_unreachable`]), `Ok` when it
+/// answers or is still connecting after [`PROBE_TIMEOUT`].
+async fn probe(pool: &PgPool) -> Result<Reach, Arc<sqlx::Error>> {
     let options = pool.connect_options();
     match tokio::time::timeout(
         PROBE_TIMEOUT,
@@ -229,23 +241,21 @@ async fn probe(pool: &PgPool) -> Result<(), Arc<sqlx::Error>> {
             if let Err(error) = conn.close().await {
                 tracing::debug!(%error, "database probe: closing the probe connection failed");
             }
-            Ok(())
+            Ok(Reach::Answered)
         }
         Ok(Err(error)) if is_unreachable(&error) => Err(Arc::new(error)),
-        Ok(Err(_)) => Ok(()),
-        Err(_elapsed) => Err(Arc::new(sqlx::Error::Io(std::io::Error::new(
-            std::io::ErrorKind::TimedOut,
-            "the database probe did not connect in time",
-        )))),
+        Ok(Err(_)) => Ok(Reach::Answered),
+        Err(_elapsed) => Ok(Reach::Slow),
     }
 }
 
 /// Whether a connect failure means the database cannot be reached: no
 /// listener, no route, a reset, or a server that is shutting down or not yet
-/// accepting connections (`57P01`, `57P02`, `57P03`).
+/// accepting connections (`57P01`, `57P02`, `57P03`). A connect that timed
+/// out shows a slow path, not an absent server.
 fn is_unreachable(error: &sqlx::Error) -> bool {
     match error {
-        sqlx::Error::Io(_) => true,
+        sqlx::Error::Io(io) => io.kind() != std::io::ErrorKind::TimedOut,
         sqlx::Error::Database(db) => db
             .code()
             .is_some_and(|code| matches!(&*code, "57P01" | "57P02" | "57P03")),
@@ -263,7 +273,7 @@ struct ProbeClaim<'k> {
 
 impl ProbeClaim<'_> {
     /// Records the probe's outcome.
-    fn record(mut self, outcome: Result<(), Arc<sqlx::Error>>) {
+    fn record(mut self, outcome: Result<Reach, Arc<sqlx::Error>>) {
         record(self.key, outcome);
         self.recorded = true;
     }
@@ -285,11 +295,15 @@ impl Drop for ProbeClaim<'_> {
 }
 
 /// Probes the database for the claimed key and records the outcome.
-async fn probe_and_record(pool: &PgPool, claim: ProbeClaim<'_>) -> Result<(), Arc<sqlx::Error>> {
+async fn probe_and_record(pool: &PgPool, claim: ProbeClaim<'_>) -> Result<Reach, Arc<sqlx::Error>> {
     let key = claim.key;
     let outcome = probe(pool).await;
     match &outcome {
-        Ok(()) => tracing::debug!(database = key, "database probe: reachable"),
+        Ok(Reach::Answered) => tracing::debug!(database = key, "database probe: reachable"),
+        Ok(Reach::Slow) => tracing::warn!(
+            database = key,
+            "database probe: still connecting at its bound; the database is slow, acquires keep queueing"
+        ),
         Err(error) => tracing::warn!(
             database = key,
             %error,
@@ -562,4 +576,19 @@ pub async fn lease(pool: &PgPool) -> Result<Lease, AcquireError> {
         conn: acquire(pool).await?,
         running: false,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io::{Error, ErrorKind};
+
+    use super::is_unreachable;
+
+    #[test]
+    fn a_refused_or_reset_connect_is_an_outage_and_a_timed_out_one_is_not() {
+        let io = |kind| sqlx::Error::Io(Error::from(kind));
+        assert!(is_unreachable(&io(ErrorKind::ConnectionRefused)));
+        assert!(is_unreachable(&io(ErrorKind::ConnectionReset)));
+        assert!(!is_unreachable(&io(ErrorKind::TimedOut)));
+    }
 }
