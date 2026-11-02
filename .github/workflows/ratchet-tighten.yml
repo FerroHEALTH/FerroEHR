@@ -145,8 +145,10 @@ jobs:
           tree_args=()
           while IFS= read -r f; do
             [ -n "$f" ] || continue
-            blob=$(gh api "repos/${REPO}/git/blobs" \
-                     -f encoding=base64 -f content="$(base64 -w0 "$f")" --jq .sha)
+            # The body goes through a file: a ratchet file's base64 content
+            # passed as one argument exceeds the kernel's limit (#4790).
+            base64 -w0 "$f" | jq -Rs '{encoding: "base64", content: .}' >blob.json
+            blob=$(gh api "repos/${REPO}/git/blobs" --input blob.json --jq .sha)
             tree_args+=( -f "tree[][path]=$f" -f "tree[][mode]=100644" \
                          -f "tree[][type]=blob" -f "tree[][sha]=$blob" )
             echo "staged $f ($blob)"
