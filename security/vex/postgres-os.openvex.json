@@ -3,8 +3,8 @@
   "@id": "https://ferroehr.eu/vex/postgres-os-packages",
   "author": "Cadasto B.V.",
   "role": "vendor",
-  "timestamp": "2026-10-31T00:00:00Z",
-  "version": 4,
+  "timestamp": "2026-11-02T00:00:00Z",
+  "version": 5,
   "tooling": "hand-authored; see security/vex/README.md",
   "statements": [
     {
@@ -2385,6 +2385,258 @@
       "status": "affected",
       "impact_statement": "The NULL dereference is in libkrb5's make_cred_list (rd_cred.c), reached through gss_accept_sec_context when an authenticated Kerberos client forwards mismatched credentials. PostgreSQL accepts a GSSAPI context only for gss or hostgssenc entries in pg_hba.conf with a server keytab (krb_server_keyfile). The configuration FerroEHR ships has neither, but an operator's configuration can, so the image is affected. The crash ends the one backend that accepted the context.",
       "action_statement": "Do not configure GSSAPI authentication or GSS encryption (gss or hostgssenc in pg_hba.conf with krb_server_keyfile) on the database until Debian ships the fix; FerroEHR connects with password (SCRAM) authentication and needs neither. Debian marks the fix no-dsa for trixie; the image's security-upgrade layer installs it on the first release build after Debian publishes it."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-114690"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/gcc-14-base"
+            },
+            {
+              "@id": "pkg:deb/debian/libgcc-s1"
+            },
+            {
+              "@id": "pkg:deb/debian/libstdc++6"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Debian security tracker, https://security-tracker.debian.org/tracker/CVE-2026-114690: an out-of-bounds access in the libstdc++ parallel search implementation, reached by crafted search data in an application compiled with parallel mode (trixie: no DSA, minor issue). The GCC fix, commit c1f32b67510f, changes only include/parallel/search.h, a header template compiled into a program built with _GLIBCXX_PARALLEL and OpenMP. libstdc++.so.6 does not contain it: its only __gnu_parallel exports are _Settings::get and _Settings::set (nm -D on the rc8 images). No program in this image is built in parallel mode: libgomp, the OpenMP runtime parallel mode requires, is not installed, and no ELF object in the image lists it in DT_NEEDED (readelf over every executable and shared object of the rc8 image). PostgreSQL itself is C and does not link libstdc++.so.6."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-114691"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/gcc-14-base"
+            },
+            {
+              "@id": "pkg:deb/debian/libgcc-s1"
+            },
+            {
+              "@id": "pkg:deb/debian/libstdc++6"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Debian security tracker, https://security-tracker.debian.org/tracker/CVE-2026-114691: an integer wrap in the std::vector<bool> constructors when a caller passes an excessively large element count, leaving the container inconsistent and leading to out-of-bounds access (trixie: no DSA, minor issue). The GCC fix, commit 2fd8866591b5, changes only include/bits/stl_bvector.h, adding a check that the count does not exceed max_size(); the constructors are header templates compiled into the program that calls them. libstdc++.so.6 does not contain them: it exports no std::vector<bool> symbol (nm -D on the rc8 images). PostgreSQL itself is C and does not link libstdc++.so.6. The C++ libraries it loads, ICU for collations and LLVM through llvmjit.so for JIT compilation, export no std::vector<bool> instantiation; a copy inlined into them belongs to libicu76 or libllvm19, not to the packages this finding names. The wrap needs a count above max_size(), which no count of objects held in memory can reach, only a negative value or an unchecked external integer converted to size_t."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-115455"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/gcc-14-base"
+            },
+            {
+              "@id": "pkg:deb/debian/libgcc-s1"
+            },
+            {
+              "@id": "pkg:deb/debian/libstdc++6"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Debian security tracker, https://security-tracker.debian.org/tracker/CVE-2026-115455: a stack buffer overflow when an application extracts data into a std::bitset from a wide-character stream, because the temporary buffer is sized in bytes, not in characters (trixie: no DSA, minor issue). The GCC fix, commit 5d419c69ce2e (PR libstdc++/124370), changes only include/std/bitset: operator>> for bitset is a header template compiled into the program that uses it. libstdc++.so.6 does not contain it: it exports no bitset symbol (nm -D on the rc8 images). PostgreSQL itself is C and does not link libstdc++.so.6. The C++ libraries it loads, ICU and LLVM (llvmjit.so), export no bitset extraction operator and import no std::basic_istream<wchar_t> symbol, which libstdc++.so.6 provides out of line, so neither reads a wide-character stream."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-119371"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libsqlite3-0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Debian security tracker, https://security-tracker.debian.org/tracker/CVE-2026-119371: SQLite before 3.54.0 has a stack exhaustion through a WITH clause chaining tens of thousands of common table expressions, which are not counted against SQLITE_LIMIT_EXPR_DEPTH, supplied as SQL or in a view of an untrusted database file (trixie 3.46.1-7+deb13u2: unfixed). In this image SQLite is linked only by liblastlog2, and liblastlog2 only by lslogins (readelf over every executable and shared object of the rc8 image). Nothing in the image runs lslogins, login, su or lastlog2: the entrypoint starts PostgreSQL through gosu, and PostgreSQL does not link SQLite. No SQLite database, WAL file, changeset or SQL text is ever opened or parsed by SQLite, so the defective code never runs."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-119372"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libsqlite3-0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Debian security tracker, https://security-tracker.debian.org/tracker/CVE-2026-119372: SQLite before 3.54.0 has a use-after-free in fts3BestSnippet() in builds with FTS3/FTS4 and SQLITE_ENABLE_FTS3_PARENTHESIS, reached by a full-text MATCH query combining OR and NEAR with snippet() (trixie 3.46.1-7+deb13u2: unfixed). In this image SQLite is linked only by liblastlog2, and liblastlog2 only by lslogins (readelf over every executable and shared object of the rc8 image). Nothing in the image runs lslogins, login, su or lastlog2: the entrypoint starts PostgreSQL through gosu, and PostgreSQL does not link SQLite. No SQLite database, WAL file, changeset or SQL text is ever opened or parsed by SQLite, so the defective code never runs."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-119373"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libsqlite3-0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Debian security tracker, https://security-tracker.debian.org/tracker/CVE-2026-119373: SQLite before 3.54.0 has a heap buffer overflow in fts5MergeRowidLists() in builds with FTS5, reached by a prefix MATCH query over a detail=none FTS5 table holding negative rowids (trixie 3.46.1-7+deb13u2: unfixed). In this image SQLite is linked only by liblastlog2, and liblastlog2 only by lslogins (readelf over every executable and shared object of the rc8 image). Nothing in the image runs lslogins, login, su or lastlog2: the entrypoint starts PostgreSQL through gosu, and PostgreSQL does not link SQLite. No SQLite database, WAL file, changeset or SQL text is ever opened or parsed by SQLite, so the defective code never runs."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-119374"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libsqlite3-0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Debian security tracker, https://security-tracker.debian.org/tracker/CVE-2026-119374: SQLite before 3.54.0 has a heap buffer overflow in fts5DoSecureDelete() in builds with FTS5, reached by deleting with secure-delete enabled from a database file with a corrupted FTS5 index (trixie 3.46.1-7+deb13u2: unfixed). In this image SQLite is linked only by liblastlog2, and liblastlog2 only by lslogins (readelf over every executable and shared object of the rc8 image). Nothing in the image runs lslogins, login, su or lastlog2: the entrypoint starts PostgreSQL through gosu, and PostgreSQL does not link SQLite. No SQLite database, WAL file, changeset or SQL text is ever opened or parsed by SQLite, so the defective code never runs."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-119375"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libsqlite3-0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Debian security tracker, https://security-tracker.debian.org/tracker/CVE-2026-119375: SQLite before 3.54.0 has a read of uninitialized page-cache memory through a crafted database and WAL file with an undersized page size (trixie 3.46.1-7+deb13u2: unfixed). In this image SQLite is linked only by liblastlog2, and liblastlog2 only by lslogins (readelf over every executable and shared object of the rc8 image). Nothing in the image runs lslogins, login, su or lastlog2: the entrypoint starts PostgreSQL through gosu, and PostgreSQL does not link SQLite. No SQLite database, WAL file, changeset or SQL text is ever opened or parsed by SQLite, so the defective code never runs."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-119376"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libsqlite3-0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Debian security tracker, https://security-tracker.debian.org/tracker/CVE-2026-119376: SQLite before 3.54.0 has a stack exhaustion through roughly 175,000 chained COLLATE operators, which bypass SQLITE_LIMIT_EXPR_DEPTH, in SQL or an untrusted database view (trixie 3.46.1-7+deb13u2: unfixed). In this image SQLite is linked only by liblastlog2, and liblastlog2 only by lslogins (readelf over every executable and shared object of the rc8 image). Nothing in the image runs lslogins, login, su or lastlog2: the entrypoint starts PostgreSQL through gosu, and PostgreSQL does not link SQLite. No SQLite database, WAL file, changeset or SQL text is ever opened or parsed by SQLite, so the defective code never runs."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-119377"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libsqlite3-0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Debian security tracker, https://security-tracker.debian.org/tracker/CVE-2026-119377: SQLite before 3.54.0 has an authorizer bypass in lookupName(): a RIGHT or FULL JOIN on a shared USING column reads columns that sqlite3_set_authorizer() denies, for an attacker able to submit SQL (trixie 3.46.1-7+deb13u2: unfixed). In this image SQLite is linked only by liblastlog2, and liblastlog2 only by lslogins (readelf over every executable and shared object of the rc8 image). Nothing in the image runs lslogins, login, su or lastlog2: the entrypoint starts PostgreSQL through gosu, and PostgreSQL does not link SQLite. No SQLite database, WAL file, changeset or SQL text is ever opened or parsed by SQLite, so the defective code never runs."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-119378"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libsqlite3-0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Debian security tracker, https://security-tracker.debian.org/tracker/CVE-2026-119378: SQLite before 3.54.0 has a use-after-free in the R-Tree extension through a database whose %_node shadow table is declared WITHOUT ROWID or carries a RAISE(IGNORE) trigger (trixie 3.46.1-7+deb13u2: unfixed). In this image SQLite is linked only by liblastlog2, and liblastlog2 only by lslogins (readelf over every executable and shared object of the rc8 image). Nothing in the image runs lslogins, login, su or lastlog2: the entrypoint starts PostgreSQL through gosu, and PostgreSQL does not link SQLite. No SQLite database, WAL file, changeset or SQL text is ever opened or parsed by SQLite, so the defective code never runs."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-119379"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libsqlite3-0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Debian security tracker, https://security-tracker.debian.org/tracker/CVE-2026-119379: SQLite before 3.54.0 has a heap buffer overflow in sqlite3changeset_apply() in builds with the session extension, reached by a crafted changeset (trixie 3.46.1-7+deb13u2: unfixed). In this image SQLite is linked only by liblastlog2, and liblastlog2 only by lslogins (readelf over every executable and shared object of the rc8 image). Nothing in the image runs lslogins, login, su or lastlog2: the entrypoint starts PostgreSQL through gosu, and PostgreSQL does not link SQLite. No SQLite database, WAL file, changeset or SQL text is ever opened or parsed by SQLite, so the defective code never runs."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-119591"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libsqlite3-0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Debian security tracker, https://security-tracker.debian.org/tracker/CVE-2026-119591: SQLite before 3.54.0 has a stack exhaustion in countOfViewOptimization() through count(*) over a large multi-row VALUES clause, in SQL or a crafted view (trixie 3.46.1-7+deb13u2: unfixed). In this image SQLite is linked only by liblastlog2, and liblastlog2 only by lslogins (readelf over every executable and shared object of the rc8 image). Nothing in the image runs lslogins, login, su or lastlog2: the entrypoint starts PostgreSQL through gosu, and PostgreSQL does not link SQLite. No SQLite database, WAL file, changeset or SQL text is ever opened or parsed by SQLite, so the defective code never runs."
     }
   ]
 }

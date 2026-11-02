@@ -306,7 +306,7 @@ reader can check rather than trust:
 |---|---|---|
 | Trusted, minimal base images | `gcr.io/distroless/cc-debian13:nonroot`, **digest-pinned**; build stages pinned by digest too | `grep FROM docker/Dockerfile` |
 | Vulnerability scanning in CI | Trivy over every published image, HIGH/CRITICAL with a fix available | the `image vulnerability scan` job log |
-| Scanning after release | a weekly scan of the published tags | `.github/workflows/image-scan.yml` |
+| Scanning after release | a daily scan of the published tags | `.github/workflows/image-scan.yml` |
 | Dockerfile linting | hadolint, with adjudicated exceptions in `.hadolint.yaml` | the `Dockerfile lint` job |
 | Secret + misconfiguration scanning | Trivy's `secret` and `misconfig` scanners over the tree | the `tree-scan` job |
 | Dependency advisories | `cargo deny` on every change, plus a scheduled latest-dependencies lane | `cargo deny check` |

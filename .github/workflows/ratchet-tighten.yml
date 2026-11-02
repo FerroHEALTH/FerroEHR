@@ -194,9 +194,14 @@ jobs:
             fi
           } >pr-body.md
 
-          url=$(gh pr create --repo "$REPO" --base main --head "$branch" \
-                  --title "chore(checks): lower the ratchet counts" \
-                  --body-file pr-body.md)
+          # The workflow token may not open a pull request where the repository
+          # forbids it; the branch is then the hand-off and a maintainer opens it.
+          if ! url=$(gh pr create --repo "$REPO" --base main --head "$branch" \
+                       --title "chore(checks): lower the ratchet counts" \
+                       --body-file pr-body.md); then
+            echo "::notice::Pushed ${branch}; open its pull request by hand (Actions may not create one here)."
+            exit 0
+          fi
           echo "::notice::Opened $url"
           echo "$url" >>"$GITHUB_STEP_SUMMARY"
           gh pr merge "$url" --repo "$REPO" --auto --squash

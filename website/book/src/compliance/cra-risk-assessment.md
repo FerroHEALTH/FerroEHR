@@ -107,7 +107,7 @@ on three levels (high, medium, low).
 | C6 | A national identifier or identifying content leaks into the clinical record, telemetry or a report | high | low | the identifier scanner in `strict` mode; log sanitising; reports with no identifiers | (e), (g) |
 | C7 | A malformed or hostile payload crashes or corrupts the server | medium | low | memory-safe Rust with `unsafe` forbidden; overflow checks in release; fuzzed parsers; caught panics | (j), (k) |
 | C8 | The service is made unavailable | high (clinical availability) | medium: an authorised caller holding resources is not defended against | admission limit with `503` shedding; rate limits; body, header and statement limits; replicas and a disruption budget | (h) |
-| C9 | A vulnerable component ships in a release | high | medium | `cargo deny` advisories gate; image scan before tagging; weekly re-scan; Dependabot; VEX for argued findings | (a) |
+| C9 | A vulnerable component ships in a release | high | medium | `cargo deny` advisories gate; image scan before tagging; daily re-scan; Dependabot; VEX for argued findings | (a) |
 | C10 | A tampered artefact reaches a deployment | high | low | SLSA Build L3 provenance; SBOM attestations; signed tags; immutable releases; a signed chart | (f) |
 | C11 | Data stays recoverable after the organisation removes it | medium | medium: the erase removes every schema and blob, and backups, WAL, replicas and the media stay the organisation's to remove | physical delete of EHRs; `ferroehr db erase` for all data and settings; the decommissioning page | (m) |
 | C12 | An outbound integration sends more than its purpose needs, or to the wrong place | medium | low: every integration is off by default | the flows table below | (g), (i) |
@@ -139,7 +139,7 @@ evidence only) and the open work.
   crates, with each accepted advisory dated and reasoned in `deny.toml`. Each
   of the three images is scanned by Trivy by its pushed digest, on both
   platforms, before it is tagged, so only a passing digest gets a tag, and the
-  published images are re-scanned weekly. Every shipped binary, in the release
+  published images are re-scanned every day. Every shipped binary, in the release
   tarballs and in the images, is built with `cargo auditable`, so it carries
   its Rust dependency list and an image scan sees the crate graph. Every
   release also scans each image and server binary with no severity floor and
