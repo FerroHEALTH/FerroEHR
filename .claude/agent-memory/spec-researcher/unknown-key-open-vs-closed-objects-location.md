@@ -71,7 +71,7 @@ The ITS-JSON 1.1.0 schema and the generated model disagree BOTH ways:
 
 ## Two live TRANSLATION_DETAILS spellings (both correct)
 `RM/docs/UML/classes/org.openehr.rm.common.translation_details.adoc:24` =
-**`accreditaton`** (typo preserved; RM's AOM-1.4-only copy, see
+**`accreditation`** since `09e481e9` (2026-11-02; `accreditaton` before, and still in the RM 1.1.0 BMM; RM's AOM-1.4-only copy, see
 `RM/docs/common/master08-resource_package.adoc:3`) vs
 `BASE/docs/UML/classes/org.openehr.base.resource.translation_details.adoc:24` =
 **`accreditation`** (corrected by SPECPUB-6,

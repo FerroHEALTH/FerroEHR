@@ -15,7 +15,12 @@
 
 use serde_json::{Value, json};
 
+use ferroehr::ids::VoId;
+use ferroehr::service::demographic::precondition::Precondition;
 use ferroehr::service::version_update::{WriteRequest, change_type_coded, lifecycle_state_coded};
+use ferroehr::versioning::object_version_id::{
+    TreeId, UidAddress, parse_uid_based_id, parse_version_uid,
+};
 use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData, UpdateVersion};
 use openehr_rm::prelude::PartyProxy;
 
@@ -176,6 +181,39 @@ pub(crate) fn vo_of(ovid: &str) -> &str {
     ovid.split("::").next().expect("vo uuid")
 }
 
+/// The address a wire `uid_based_id` names: a versioned object, or one of
+/// its versions.
+pub(crate) fn at(raw: impl AsRef<str>) -> UidAddress {
+    parse_uid_based_id(raw.as_ref()).expect("a well-formed uid_based_id")
+}
+
+/// The versioned object a bare id or an `OBJECT_VERSION_ID` names.
+pub(crate) fn object(raw: impl AsRef<str>) -> VoId {
+    VoId(
+        vo_of(raw.as_ref())
+            .parse()
+            .expect("a versioned-object uuid"),
+    )
+}
+
+/// The version tree position an `OBJECT_VERSION_ID` names.
+pub(crate) fn tree(raw: impl AsRef<str>) -> TreeId {
+    parse_version_uid(raw.as_ref())
+        .expect("an OBJECT_VERSION_ID")
+        .1
+}
+
+/// The precondition of a mandatory `If-Match` naming `raw`.
+pub(crate) fn if_match(raw: impl AsRef<str>) -> Precondition {
+    Precondition::parse(Some(raw.as_ref()), None).expect("a well-formed If-Match")
+}
+
+/// The precondition of a delete addressed by the version uid `raw`, with an
+/// optional `If-Match`.
+pub(crate) fn delete_precondition(raw: impl AsRef<str>, if_match: Option<&str>) -> Precondition {
+    Precondition::parse(if_match, at(raw).tree()).expect("a well-formed If-Match")
+}
+
 /// A minimal valid root FOLDER (RM ehr master04 §Folders).
 pub(crate) fn folder(name: &str) -> Value {
     json!({
@@ -315,15 +353,13 @@ pub(crate) async fn ehr_exists(
 
 /// The versioned object a write response names, read off its
 /// `OBJECT_VERSION_ID`.
-pub(crate) fn written_vo(
-    response: &ferroehr::service::response::ServiceResponse,
-) -> ferroehr::ids::VoId {
+pub(crate) fn written_vo(response: &ferroehr::service::response::ServiceResponse) -> VoId {
     let uid = &response
         .meta
         .as_ref()
         .expect("a write answers its version")
         .uid;
-    ferroehr::ids::VoId(vo_of(uid).parse().expect("a uuid versioned object id"))
+    VoId(vo_of(uid).parse().expect("a uuid versioned object id"))
 }
 
 /// Creates the PARTY an `UPDATE_VERSION` envelope carries through the
@@ -332,7 +368,7 @@ pub(crate) fn written_vo(
 pub(crate) async fn create_party(
     svc: &ferroehr::service::FerroEhrService,
     version: WriteRequest<openehr_rm::prelude::Party>,
-) -> Result<ferroehr::ids::VoId, ferroehr::service::error::ServiceError> {
+) -> Result<VoId, ferroehr::service::error::ServiceError> {
     use ferroehr::service::demographic::types::PartyKind;
     use openehr_rm::prelude::Party;
     let kind = match &version.data {
@@ -352,7 +388,7 @@ pub(crate) async fn create_party(
 pub(crate) async fn create_relationship(
     svc: &ferroehr::service::FerroEhrService,
     version: WriteRequest<openehr_rm::prelude::PartyRelationship>,
-) -> Result<ferroehr::ids::VoId, ferroehr::service::error::ServiceError> {
+) -> Result<VoId, ferroehr::service::error::ServiceError> {
     let created = svc.party_relationship_create(version).await?;
     Ok(written_vo(&created))
 }
@@ -412,7 +448,7 @@ pub(crate) async fn create_ehr_subject(
 /// party `party` (its versioned-object id, as a `PERSON`).
 pub(crate) async fn create_ehr_for_party(
     svc: &ferroehr::service::FerroEhrService,
-    party: ferroehr::ids::VoId,
+    party: VoId,
 ) -> ferroehr::ids::EhrId {
     create_ehr_subject(
         svc,

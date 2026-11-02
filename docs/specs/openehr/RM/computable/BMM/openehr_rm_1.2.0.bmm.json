@@ -3,7 +3,7 @@
     "rm_publisher": "openehr",
     "schema_name": "rm",
     "rm_release": "1.2.0",
-    "schema_revision": "1.2.0.2",
+    "schema_revision": "1.2.0.3",
     "schema_lifecycle_state": "stable",
     "schema_description": "openEHR Reference Model",
     "schema_author": "Thomas Beale <thomas.beale@openehr.org>, code-generator",
@@ -1835,9 +1835,9 @@
                         ]
                     }
                 },
-                "accreditaton": {
+                "accreditation": {
                     "_type": "P_BMM_SINGLE_PROPERTY",
-                    "name": "accreditaton",
+                    "name": "accreditation",
                     "documentation": "Accreditation of translator, usually a national translator's registration or association membership id.",
                     "type": "String"
                 },

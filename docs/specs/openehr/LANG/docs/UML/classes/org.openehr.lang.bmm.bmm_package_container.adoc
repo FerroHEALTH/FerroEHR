@@ -32,7 +32,7 @@ a|Package at the path `a_path'.
 h|*1..1*
 |*do_recursive_packages* ( +
 action: `link:/releases/BASE/{base_release}/foundation_types.html#_procedure_class[PROCEDURE^][1]` +
-): ``
+)
 a|Recursively execute `action', which is a procedure taking a BMM_PACKAGE argument, on all members of packages.
 
 h|*1..1*

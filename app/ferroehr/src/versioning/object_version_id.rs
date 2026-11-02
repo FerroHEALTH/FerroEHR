@@ -263,7 +263,11 @@ pub(crate) fn parse_tree_id(raw: &str) -> Result<TreeId, VersionIdError> {
 
 /// Parse a full `OBJECT_VERSION_ID` (`{object_id}::{creating_system_id}::{version_tree_id}`)
 /// into the storage key pair (`vo_id`, [`TreeId`]).
-pub(crate) fn parse_version_uid(raw: &str) -> Result<(VoId, TreeId), VersionIdError> {
+///
+/// # Errors
+/// [`VersionIdError`] when `raw` is no `OBJECT_VERSION_ID`, or its `object_id`
+/// is no UUID.
+pub fn parse_version_uid(raw: &str) -> Result<(VoId, TreeId), VersionIdError> {
     let (vo_id, _, tree) = parse_object_version_id(raw)?;
     Ok((VoId(vo_id), tree))
 }
@@ -341,7 +345,8 @@ pub struct UidAddress {
 impl UidAddress {
     /// The addressed version's storage position in the version tree, or `None`
     /// when the wire value addressed the versioned object as a whole.
-    pub(crate) const fn tree(&self) -> Option<TreeId> {
+    #[must_use]
+    pub const fn tree(&self) -> Option<TreeId> {
         self.tree
     }
 }

@@ -532,13 +532,13 @@ async fn physical_party_delete_collects_its_blobs_but_keeps_shared_ones() {
     .expect("ehr sharing the blob");
 
     let solo_key = party_blob_key(
-        &svc.party_get(PartyKind::Person, solo.clone(), None)
+        &svc.party_get(PartyKind::Person, crate::fixtures::at(solo.clone()), None)
             .await
             .expect("read solo")
             .body,
     );
     let shared_key = party_blob_key(
-        &svc.party_get(PartyKind::Person, sharer.clone(), None)
+        &svc.party_get(PartyKind::Person, crate::fixtures::at(sharer.clone()), None)
             .await
             .expect("read sharer")
             .body,

@@ -28,8 +28,9 @@
 //! `docs/foundation_types/master00-amendment_record.adoc` records SPECAM-82
 //! adding a legacy `CODE_PHRASE` for the same reason.
 //!
-//! The RM twin's `TRANSLATION_DETAILS.accreditaton` spelling is an upstream
-//! defect the emitter reproduces: SPECPUB-6 corrected the BASE copy alone.
+//! The RM twin's `TRANSLATION_DETAILS.accreditaton` spelling survives in the
+//! released RM 1.1.0 BMM, so `v1_1` reproduces it; the RM 1.2.0 BMM carries
+//! the SPECPUB-6 spelling `accreditation` that BASE already had.
 
 use crate::analyze::{External, Model, emittable_specs};
 use crate::load::bmm::BmmSchema;

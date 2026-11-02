@@ -28,6 +28,8 @@ use openehr_rm::prelude::EhrStatus;
 use ferroehr::service::error::ServiceError;
 use ferroehr::service::response::ServiceResponse;
 
+use ferroehr::versioning::object_version_id::parse_uid_based_id;
+
 use crate::api::RequestParts;
 use crate::api::item_tags;
 use crate::negotiate;
@@ -179,7 +181,7 @@ pub(super) async fn run(
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let tags = state
                 .backend()
-                .target_tags_get(ehr_id, p.uid_based_id, "EHR_STATUS")
+                .target_tags_get(ehr_id, parse_uid_based_id(&p.uid_based_id)?, "EHR_STATUS")
                 .await?;
             Ok(negotiate::body::respond(
                 h,
@@ -196,7 +198,12 @@ pub(super) async fn run(
             let body = item_tags::write_body(h, &parts.body)?;
             let tags = state
                 .backend()
-                .target_tags_replace(ehr_id, p.uid_based_id, "EHR_STATUS", body)
+                .target_tags_replace(
+                    ehr_id,
+                    parse_uid_based_id(&p.uid_based_id)?,
+                    "EHR_STATUS",
+                    body,
+                )
                 .await?;
             // ehr_status_tags_update.yaml: 200 on `Prefer: return=representation`,
             // 204 when `Prefer` is missing or `return=minimal` (overview §Prefer).
@@ -215,7 +222,12 @@ pub(super) async fn run(
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             state
                 .backend()
-                .target_tag_delete(ehr_id, p.uid_based_id, "EHR_STATUS", p.key)
+                .target_tag_delete(
+                    ehr_id,
+                    parse_uid_based_id(&p.uid_based_id)?,
+                    "EHR_STATUS",
+                    p.key,
+                )
                 .await?;
             Ok(negotiate::body::empty(no_content))
         }

@@ -16,7 +16,7 @@ h|*Attributes*
 ^h|*Meaning*
 
 h|*0..1*
-|*p_schema*: `<<_p_bmm_schema_class,P_BMM_SCHEMA>>`
+|*p_schema*: `link:/releases/LANG/{lang_release}/bmm_persistence.html#_p_bmm_schema_class[P_BMM_SCHEMA^]`
 a|Persistent form of model.
 
 h|*0..1*
@@ -29,7 +29,7 @@ a|Schema id, formed from meta_data model_publisher '_' schema_name '_' model_rel
 
 h|*1..1*
 |*meta_data*: `link:/releases/BASE/{base_release}/foundation_types.html#_hash_class[Hash^]<link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^],link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^]>`
-a|Table of \{key, value} pairs of schema meta-data (bmm_version, model_publisher, schema_name, model_release, schema_revision, schema_lifecycle_state, schema_description, schema_path).
+a|Table of {key, value} pairs of schema meta-data (bmm_version, model_publisher, schema_name, model_release, schema_revision, schema_lifecycle_state, schema_description, schema_path).
 
 h|*0..1*
 |*includes*: `link:/releases/BASE/{base_release}/foundation_types.html#_list_class[List^]<link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^]>`
