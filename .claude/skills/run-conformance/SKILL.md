@@ -93,8 +93,16 @@ spec"; it is the most common real culprit.** Two reflexes are FORBIDDEN:
    (`docs/conformance/ferroehr/results.json` and its `summary.md`): the only
    permitted delta is newly green rows, **zero drift**. Report passed,
    failed, warning, errored and skipped per part (BASE, OPTIONS), every
-   skip by its reason (`not-claimed`, `option-not-selected`, `not-declared`,
-   `cited-text-absent`), and any drift row by row.
+   skip by its reason, and any drift row by row. The reasons are the closed
+   set of the pinned results schema: `not-claimed`, `option-not-selected`,
+   `version-out-of-range`, `format-not-claimed`, `extension-not-offered`,
+   `not-declared`, `cited-text-absent`, `development-only` (a case resting
+   on development text alone, skipped by every released run and counted by
+   no released tally) and `contested-in-development` (a case whose cited
+   text the development snapshot contradicts, skipped by every development
+   run and naming the upstream report). The released and the development
+   run differ by design on these last three; triage a row that differs
+   between them only when its reason is none of them.
 5. **On any red row, ATTRIBUTE before you touch anything**
    (`.claude/rules/cnf-triage.md`; **delegate a red run to the `cnf-triage`
    agent**). Per row: read what was sent and received (the row in
