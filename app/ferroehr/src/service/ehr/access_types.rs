@@ -32,6 +32,9 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::ids::VoId;
+use crate::service::error::{ServiceError, Violation};
+
 /// The `_type` discriminator of this scheme's `ACCESS_CONTROL_SETTINGS`
 /// subtype on the wire (canonical JSON). `EHR_ACCESS.scheme()` derives from
 /// it.
@@ -104,23 +107,18 @@ pub struct Privacy {
     #[serde(default)]
     pub default_level: i64,
     /// Per-versioned-object privacy-level pins.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "held_overrides")]
     pub composition_overrides: Vec<CompositionOverride>,
 }
 
 impl Privacy {
-    /// The effective privacy level of the versioned Composition addressed by
-    /// `target_vo_id` (a bare versioned-object uid): its override if pinned,
-    /// else [`default_level`](Self::default_level). `target_vo_id` is compared
-    /// against each override `uid` on its versioned-object head (the part
-    /// before any `::` of an `OBJECT_VERSION_ID` — BASE
-    /// `object_version_id.adoc`, `object_id '::' … '::' version_tree_id`).
+    /// The effective privacy level of the versioned Composition `target`: its
+    /// override if pinned, else [`default_level`](Self::default_level).
     #[must_use]
-    pub fn level_for(&self, target_vo_id: &str) -> i64 {
-        let head = vo_head(target_vo_id);
+    pub fn level_for(&self, target: VoId) -> i64 {
         self.composition_overrides
             .iter()
-            .find(|o| vo_head(&o.uid) == head)
+            .find(|o| o.uid == target)
             .map_or(self.default_level, |o| o.level)
     }
 }
@@ -131,9 +129,81 @@ impl Privacy {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CompositionOverride {
     /// The `VERSIONED_COMPOSITION` uid (versioned-object head).
-    pub uid: String,
+    pub uid: VoId,
     /// The pinned privacy level.
     pub level: i64,
+}
+
+/// One stored override as written, before its uid is read as a [`VoId`].
+#[derive(Deserialize)]
+struct StoredOverride {
+    uid: String,
+    level: i64,
+}
+
+/// The stored overrides whose uid names a versioned object, each by its
+/// [`VoId`] head.
+fn held_overrides<'de, D>(deserializer: D) -> Result<Vec<CompositionOverride>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let stored = Vec::<StoredOverride>::deserialize(deserializer)?;
+    // NOTE: our own design; a uid that is no UUID head matches no composition, since
+    // every composition id is a UUID, so skipping it protects no composition less.
+    Ok(stored
+        .into_iter()
+        .filter_map(|o| {
+            VoId::from_uid_head(&o.uid)
+                .ok()
+                .map(|uid| CompositionOverride {
+                    uid,
+                    level: o.level,
+                })
+        })
+        .collect())
+}
+
+/// Check a written, present `EHR_ACCESS.settings` before it is committed.
+///
+/// Any scheme must carry a non-empty concrete `_type`, which `scheme()` names
+/// (`Scheme_valid`, RM `org.openehr.rm.ehr.ehr_access.adoc`); the RM demands
+/// nothing else of the abstract slot. Settings of this scheme must also name a
+/// versioned object in every privacy override, so the operator sees the
+/// mistake at write time.
+///
+/// # Errors
+/// [`ServiceError::content_invalid`] (422) for settings without a `_type`, and
+/// [`ServiceError::bad_request`] (400) naming the first override whose `uid`
+/// is neither a UUID nor an `OBJECT_VERSION_ID` whose `object_id` is one.
+pub fn check_written_settings(settings: &Value) -> Result<(), ServiceError> {
+    let scheme = settings.get("_type").and_then(Value::as_str);
+    if scheme.is_none_or(str::is_empty) {
+        return Err(ServiceError::content_invalid(Violation::new(
+            "EHR_ACCESS.settings must be a concrete ACCESS_CONTROL_SETTINGS subtype \
+             carrying its _type — the scheme name (EHR_ACCESS.Scheme_valid)",
+        )));
+    }
+    if scheme != Some(EHR_ACCESS_CONTROL_V1_TYPE) {
+        return Ok(());
+    }
+    let overrides = settings
+        .pointer("/privacy/composition_overrides")
+        .and_then(Value::as_array)
+        .map_or(&[][..], Vec::as_slice);
+    for (index, entry) in overrides.iter().enumerate() {
+        let uid = entry.get("uid").and_then(Value::as_str).unwrap_or_default();
+        if let Err(error) = VoId::from_uid_head(uid) {
+            return Err(ServiceError::bad_request(
+                format!(
+                    "EHR_ACCESS.settings.privacy.composition_overrides[{index}].uid {uid:?} \
+                     names no versioned object: it must be a VERSIONED_COMPOSITION uid or an \
+                     OBJECT_VERSION_ID whose object_id is one"
+                ),
+                error,
+            ));
+        }
+    }
+    Ok(())
 }
 
 /// The EHRs whose `EHR_ACCESS` carries settings this server understands, with
@@ -212,14 +282,6 @@ pub fn principal_matches(principal: &str, subject: Option<&str>, roles: &[String
     false
 }
 
-/// The versioned-object head of a uid — the part before the first `::` of an
-/// `OBJECT_VERSION_ID`
-/// (`object_id '::' creating_system_id '::' version_tree_id` — BASE
-/// `object_version_id.adoc`), or the whole string for a bare uid.
-fn vo_head(uid: &str) -> &str {
-    uid.split("::").next().unwrap_or(uid)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -255,11 +317,61 @@ mod tests {
         assert_eq!(s.access_list[1].max_level, Some(2));
         // Override matches on the versioned-object head, even given an OVID.
         assert_eq!(
-            s.privacy
-                .level_for("8849182c-82ad-4088-a07f-48ead4180515::sys::2"),
+            s.privacy.level_for(
+                VoId::from_uid_head("8849182c-82ad-4088-a07f-48ead4180515::sys::2")
+                    .expect("an OBJECT_VERSION_ID")
+            ),
             3
         );
-        assert_eq!(s.privacy.level_for("other-vo"), 0);
+        assert_eq!(s.privacy.level_for(VoId(uuid::Uuid::from_u128(7))), 0);
+    }
+
+    /// A stored override whose uid names no versioned object is skipped, and
+    /// the settings around it still hold.
+    #[test]
+    fn a_stored_override_naming_no_object_is_skipped() {
+        let held = "8849182c-82ad-4088-a07f-48ead4180515";
+        let access = json!({
+            "_type": "EHR_ACCESS",
+            "settings": {
+                "_type": EHR_ACCESS_CONTROL_V1_TYPE,
+                "default_access": "restricted",
+                "privacy": {
+                    "default_level": 1,
+                    "composition_overrides": [
+                        { "uid": "not-a-uuid", "level": 9 },
+                        { "uid": held, "level": 3 }
+                    ]
+                }
+            }
+        });
+        let s = EhrAccessSettings::from_ehr_access(&access).expect("our scheme");
+        assert_eq!(s.default_access, DefaultAccess::Restricted);
+        assert_eq!(s.privacy.composition_overrides.len(), 1);
+        assert_eq!(s.privacy.level_for(held.parse().expect("a uuid")), 3);
+    }
+
+    /// Written settings whose override names no versioned object are refused
+    /// with a `400`; a uid or an `OBJECT_VERSION_ID` is accepted.
+    #[test]
+    fn a_written_override_naming_no_object_is_refused() {
+        let settings = |uid: &str| {
+            json!({
+                "_type": EHR_ACCESS_CONTROL_V1_TYPE,
+                "privacy": { "composition_overrides": [ { "uid": uid, "level": 3 } ] }
+            })
+        };
+        check_written_settings(&settings("8849182c-82ad-4088-a07f-48ead4180515"))
+            .expect("a VERSIONED_COMPOSITION uid");
+        check_written_settings(&settings("8849182c-82ad-4088-a07f-48ead4180515::sys::2"))
+            .expect("an OBJECT_VERSION_ID");
+        let refused = check_written_settings(&settings("high-vo"));
+        assert!(
+            matches!(refused, Err(ServiceError::BadRequest(_))),
+            "an override naming no object is a 400: {refused:?}"
+        );
+        check_written_settings(&json!({ "_type": "SOME_OTHER_SCHEME", "privacy": 1 }))
+            .expect("another scheme is not this scheme's to judge");
     }
 
     #[test]

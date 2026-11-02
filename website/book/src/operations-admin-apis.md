@@ -622,9 +622,9 @@ demographic container in the response array and restores none of it when:
 
 | Status | When |
 |---|---|
-| **400** | a missing or blank `file_sys_loc`; a format value outside the lists above; a non-positive `segment_split_size`; an `encoding` field (the openEHR service model declares that enumeration with no members, so no value a client could send names one); on load, an archive carrying externalized multimedia this server has no store for |
+| **400** | a missing or blank `file_sys_loc`; a format value outside the lists above; a non-positive `segment_split_size`; an `encoding` field (the openEHR service model declares that enumeration with no members, so no value a client could send names one); on load, an archive carrying externalized multimedia this server has no store for, and a malformed archive (a mangled or truncated container, manifest, segment or blob entry, or a manifest naming no known format), the [`archive-invalid`](using-the-api/problems.md#archive-invalid) problem, which names the entry. Nothing is loaded |
 | **415** | the request `Content-Type` is not `application/json` |
-| **500** | a location that holds **no** archive, and one holding an archive that is corrupt (a mangled or truncated container, manifest, or segment) are the same fact and answer the same way: the service model's single `file_not_writable` error for these operations. Nothing is loaded either way. On dump, the same status covers a location, segment, payload entry or manifest that could not be created or written |
+| **500** | a location that holds **no** archive, or one the server's filesystem refuses to read: the service model's `file_not_writable` error for these operations. Nothing is loaded. On dump, the same status covers a location, segment, payload entry or manifest that could not be created or written |
 
 A single unreadable `versions/*.xml` entry is *not* in that family: it belongs
 to one EHR, so that EHR is reported in the response array and skipped whole

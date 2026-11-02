@@ -288,6 +288,9 @@ server default**, in both directions:
   entry's `max_level`; a caller with **no access-list entry** gets
   `default_level + 1`, so the default level stays readable and only raised
   levels are withheld. This gate applies to Composition **read** routes.
+  An override's `uid` is the `VERSIONED_COMPOSITION` uid, or a version uid
+  whose first part is one; a CONTRIBUTION that writes any other `uid` is
+  refused with `400`.
 - **Gate-keeper:** once set, only that principal may commit a new
   `EHR_ACCESS` version (via a CONTRIBUTION; there is no dedicated
   `EHR_ACCESS` endpoint in the openEHR REST API). Changes are versioned and

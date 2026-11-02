@@ -224,3 +224,43 @@ async fn a_stable_profile_xml_read_of_a_target_still_serves() {
     .await;
     assert_eq!(status, StatusCode::OK, "{text}");
 }
+
+/// Reads a PERSON in canonical XML.
+async fn read_xml(app: &Router, vo: &str) -> String {
+    let (status, text) = send_body(
+        app,
+        common::req("GET", format!("{BASE}/demographic/person/{vo}"))
+            .header(header::ACCEPT, "application/xml")
+            .build(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{text}");
+    text
+}
+
+#[tokio::test]
+async fn a_stable_profile_xml_read_lists_the_relationship_at_its_target() {
+    let db = common::test_db().await;
+    let app = common::router_for_profile(SpecProfile::Stable, &db.pool()).await;
+    let (source, target) = related_pair(&app).await;
+
+    let xml = read_xml(&app, &target).await;
+    let reverse = xml
+        .split("<reverse_relationships")
+        .nth(1)
+        .and_then(|rest| rest.split("</reverse_relationships>").next())
+        .unwrap_or_else(|| panic!("no reverse_relationships element: {xml}"));
+    assert!(reverse.contains(&vo_of(&source)), "{xml}");
+    assert!(reverse.contains("PARTY_RELATIONSHIP"), "{xml}");
+    assert_eq!(xml.matches("<reverse_relationships").count(), 1, "{xml}");
+}
+
+#[tokio::test]
+async fn a_development_profile_xml_read_serves_no_reverse_relationships() {
+    let db = common::test_db().await;
+    let app = common::router_for_profile(SpecProfile::Development, &db.pool()).await;
+    let (_source, target) = related_pair(&app).await;
+
+    let xml = read_xml(&app, &target).await;
+    assert!(!xml.contains("reverse_relationships"), "{xml}");
+}

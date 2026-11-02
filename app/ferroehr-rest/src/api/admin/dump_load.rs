@@ -166,9 +166,17 @@ pub(crate) async fn admin_dump(
                             "entity_id": "7d44b88c-4199-4bad-97dc-d78268e01398",
                             "dump_status": false,
                             "error": "an EHR with this id already exists" }])),
-        (status = 400, description = "`file_sys_loc` is absent or blank, or the \
+        (status = 400, description = "`file_sys_loc` is absent or blank, the \
                                       archive carries externalized multimedia \
-                                      this server has no store for.",
+                                      this server has no store for, or the \
+                                      archive is malformed (`archive-invalid`): \
+                                      the container, the manifest, a segment or \
+                                      a blob entry is absent, truncated or does \
+                                      not parse as an export archive, or the \
+                                      manifest names no known logical format. \
+                                      With `Prefer: return=representation` the \
+                                      `archive` member names the entry or the \
+                                      declared format.",
          body = serde_json::Value),
         (status = 401, description = "Unauthenticated. Our own authorization \
                                       design.",
@@ -178,18 +186,12 @@ pub(crate) async fn admin_dump(
          body = serde_json::Value),
         AdminDisabled,
         JsonBodyRequired,
-        (status = 500, description = "The location \
-                                      holds no archive container, an entry \
-                                      could not be read, the manifest / a \
-                                      segment is CORRUPT (mangled or truncated, \
-                                      so it does not parse as part of this \
-                                      archive format), or the manifest names no \
-                                      known `logical_format`. All are the same \
-                                      fact — `file_sys_loc` does not hold a \
-                                      readable archive — and answer the same \
-                                      `500`. A corrupt per-version payload entry is \
-                                      NOT here: it belongs to exactly one EHR, \
-                                      so it is a per-entity `200` report.",
+        (status = 500, description = "The location holds no archive \
+                                      container, or the server's filesystem \
+                                      refused a read of it. A corrupt \
+                                      per-version payload entry is NOT here: it \
+                                      belongs to exactly one EHR, so it is a \
+                                      per-entity `200` report.",
          body = serde_json::Value)
     )
 )]

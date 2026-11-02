@@ -119,9 +119,11 @@ async fn ehr_access_settings_round_trip_through_contribution() {
     assert_eq!(settings.default_access, DefaultAccess::Restricted);
     assert_eq!(settings.access_list.len(), 2);
     assert_eq!(
-        settings
-            .privacy
-            .level_for("8849182c-82ad-4088-a07f-48ead4180515"),
+        settings.privacy.level_for(
+            "8849182c-82ad-4088-a07f-48ead4180515"
+                .parse()
+                .expect("a uuid")
+        ),
         3
     );
 }

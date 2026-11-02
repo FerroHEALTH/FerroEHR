@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Admin dump/load (`export_ehrs` / `load_ehrs`): every EHR to a file-system
-//! archive and back, a filesystem fault answering `file_not_writable`.
+//! archive and back, a filesystem fault answering `file_not_writable` and a
+//! malformed archive a `400` naming the entry ([`ArchiveDefect`]).
 //!
 //! No openEHR spec defines an on-disk archive format, a
 //! container set, or a container-detection rule; the layout below is our own
@@ -82,7 +83,7 @@ use crate::service::admin::types::{
 };
 use crate::service::demographic::identifier::store::StoreError;
 use crate::service::error::ServiceError;
-use crate::service::refusal::{Clash, Refusal};
+use crate::service::refusal::{ArchiveDefect, Clash, Malformed, Refusal};
 use crate::storage::codec::decompose;
 use crate::storage::dump_repo::write::StoredAudit;
 use crate::storage::dump_repo::{
@@ -255,36 +256,59 @@ fn file_not_writable(path: &Path, err: &std::io::Error) -> ServiceError {
     ServiceError::fault(LOCATION_MESSAGE)
 }
 
-/// Build a `file_not_writable` [`ServiceError`] for an archive entry that was read
-/// but is not parseable as part of this archive format (a mangled manifest, a
-/// truncated or hand-edited segment).
-///
-/// NOTE: no specification governs dump/load: our own design; a corrupt entry
-/// says the same thing an unreadable one does, that `file_sys_loc` holds no
-/// readable archive, so both are `file_not_writable`.
-///
-/// The body names a fixed entry, the caller-actionable fact about the caller's
-/// own archive, and carries neither the server path nor the serde diagnostic;
-/// both, and a data segment's name, are traced.
-fn unreadable_archive_entry(path: &Path, entry: &str, err: &serde_json::Error) -> ServiceError {
+/// The `400` refusing the caller's archive because `entry` cannot be read,
+/// with `cause` as its source and the server-side `path` traced beside it.
+fn archive_refusal(
+    path: &Path,
+    entry: &str,
+    cause: impl std::error::Error + Send + Sync + 'static,
+) -> ServiceError {
     tracing::warn!(
         path = %path.display(),
         entry,
-        error = %err,
-        "dump/load: archive entry is not parseable → file_not_writable"
+        error = %cause,
+        "dump/load: an archive entry is malformed → bad request"
     );
-    ServiceError::fault(match entry {
-        MANIFEST_ENTRY => {
-            "archive entry manifest.json is not readable as part of this export archive"
-        }
-        DEMOGRAPHIC_COMMONS_ENTRY => {
-            "archive entry demographic-commons.json is not readable as part of this export archive"
-        }
-        _ => {
-            "an archive data segment the manifest lists is not readable as part of this export \
-              archive"
-        }
-    })
+    ServiceError::BadRequest(
+        Refusal::new(
+            Malformed::Archive(ArchiveDefect::Entry(entry.to_owned())),
+            format!("archive entry {entry} is not readable as part of this export archive"),
+        )
+        .with_source(cause),
+    )
+}
+
+/// The `400` refusing a manifest whose `format` member names no export format.
+fn unknown_format(path: &Path, declared: &str) -> ServiceError {
+    tracing::warn!(path = %path.display(), declared, "dump/load: unknown archive format → bad request");
+    ServiceError::BadRequest(Refusal::new(
+        Malformed::Archive(ArchiveDefect::Format(declared.to_owned())),
+        format!(
+            "the archive manifest declares the logical format {declared:?}, which names no \
+             export format this server reads"
+        ),
+    ))
+}
+
+/// Whether an I/O failure reading an entry is the archive's defect (absent,
+/// truncated or undecodable bytes) rather than the server's filesystem.
+fn io_is_archive_defect(err: &std::io::Error) -> bool {
+    matches!(
+        err.kind(),
+        std::io::ErrorKind::NotFound
+            | std::io::ErrorKind::InvalidData
+            | std::io::ErrorKind::UnexpectedEof
+    )
+}
+
+/// An I/O failure reading `entry` at `path`: the archive's `400` when the
+/// entry is absent or undecodable, else the location's `file_not_writable`.
+fn entry_io_fault(path: &Path, entry: &str, err: std::io::Error) -> ServiceError {
+    if io_is_archive_defect(&err) {
+        archive_refusal(path, entry, err)
+    } else {
+        file_not_writable(path, &err)
+    }
 }
 
 /// The archive manifest entry name (both containers).
@@ -431,7 +455,8 @@ impl ArchiveReader {
         let path = dir.join(ZIP_ENTRY_FILE);
         if path.is_file() {
             let file = std::fs::File::open(&path).map_err(|e| file_not_writable(&path, &e))?;
-            let zip = zip::ZipArchive::new(file).map_err(|e| zip_fault(&path, "open", &e))?;
+            let zip =
+                zip::ZipArchive::new(file).map_err(|e| zip_read_fault(&path, ZIP_ENTRY_FILE, e))?;
             return Ok(Self::Zip {
                 path,
                 zip: Box::new(zip),
@@ -440,7 +465,7 @@ impl ArchiveReader {
         let path = dir.join(SEVENZ_ENTRY_FILE);
         if path.is_file() {
             let reader = sevenz_rust2::ArchiveReader::open(&path, sevenz_rust2::Password::empty())
-                .map_err(|e| sevenz_fault(&path, "open", &e))?;
+                .map_err(|e| sevenz_read_fault(&path, SEVENZ_ENTRY_FILE, e))?;
             return Ok(Self::SevenZip {
                 path,
                 reader: Box::new(reader),
@@ -465,21 +490,21 @@ impl ArchiveReader {
         match self {
             Self::Directory { dir } => {
                 let path = dir.join(name);
-                std::fs::read(&path).map_err(|e| file_not_writable(&path, &e))
+                std::fs::read(&path).map_err(|e| entry_io_fault(&path, name, e))
             }
             Self::Zip { path, zip } => {
                 let mut entry = zip
                     .by_name(name)
-                    .map_err(|e| zip_fault(path, &format!("read entry {name}"), &e))?;
+                    .map_err(|e| zip_read_fault(path, name, e))?;
                 let mut bytes = Vec::new();
                 entry
                     .read_to_end(&mut bytes)
-                    .map_err(|e| file_not_writable(path, &e))?;
+                    .map_err(|e| entry_io_fault(path, name, e))?;
                 Ok(bytes)
             }
             Self::SevenZip { path, reader } => reader
                 .read_file(name)
-                .map_err(|e| sevenz_fault(path, &format!("read entry {name}"), &e)),
+                .map_err(|e| sevenz_read_fault(path, name, e)),
         }
     }
 }
@@ -506,6 +531,28 @@ fn zip_fault(path: &Path, what: &str, err: &zip::result::ZipError) -> ServiceErr
         "dump/load: zip container fault → file_not_writable"
     );
     ServiceError::fault(LOCATION_MESSAGE)
+}
+
+/// A ZIP read of `entry` that failed: the archive's `400` unless the
+/// container's own I/O failed for a server reason.
+fn zip_read_fault(path: &Path, entry: &str, err: zip::result::ZipError) -> ServiceError {
+    match err {
+        zip::result::ZipError::Io(io) => entry_io_fault(path, entry, io),
+        other => archive_refusal(path, entry, other),
+    }
+}
+
+/// A 7z read of `entry` that failed: the archive's `400` unless the
+/// container's own I/O failed for a server reason.
+fn sevenz_read_fault(path: &Path, entry: &str, err: sevenz_rust2::Error) -> ServiceError {
+    match err {
+        sevenz_rust2::Error::Io(io, _) | sevenz_rust2::Error::FileOpen(io, _)
+            if !io_is_archive_defect(&io) =>
+        {
+            file_not_writable(path, &io)
+        }
+        other => archive_refusal(path, entry, other),
+    }
 }
 
 // ── the openehr_canonical_xml payload form ───────────────────────────────────
@@ -1041,12 +1088,13 @@ impl FerroEhrService {
     /// come from the archive itself.
     ///
     /// # Errors
-    /// - `file_not_writable` — `file_sys_loc` holds no archive container,
-    ///   the manifest / a segment entry / a blob entry cannot be read, the
-    ///   manifest or a segment is not parseable as part of this archive format
-    ///   (a mangled or truncated archive is the same fact as an unreadable
-    ///   one — see `unreadable_archive_entry`), or the manifest declares a
-    ///   logical format that names no `EXPORT_FORMAT` member.
+    /// - `file_not_writable` — `file_sys_loc` holds no archive container, or
+    ///   the server's filesystem refuses a read of it.
+    /// - [`ServiceError::BadRequest`] of [`Malformed::Archive`] (`400`) —
+    ///   the caller's archive is malformed: the container, the manifest, a
+    ///   segment or a blob entry is absent, truncated or does not parse as this
+    ///   archive format, or the manifest declares a logical format that names
+    ///   no `EXPORT_FORMAT` member.
     /// - `precondition_violation` (`400`) — the archive predates the storage
     ///   rewrite (an `archive_version` below the floor this server reads), or
     ///   it carries externalized multimedia blobs but this server has no
@@ -1066,7 +1114,7 @@ impl FerroEhrService {
         let mut archive = ArchiveReader::open(dir)?;
         let manifest_bytes = archive.read(MANIFEST_ENTRY)?;
         let manifest: Manifest = serde_json::from_slice(&manifest_bytes)
-            .map_err(|e| unreadable_archive_entry(dir, MANIFEST_ENTRY, &e))?;
+            .map_err(|e| archive_refusal(dir, MANIFEST_ENTRY, e))?;
         if manifest.archive_version < ARCHIVE_VERSION_FLOOR {
             return Err(ServiceError::precondition(format!(
                 "archive declares archive_version {}, which predates the storage rewrite (this \
@@ -1079,12 +1127,10 @@ impl FerroEhrService {
         }
 
         // The manifest's format member says which payload form the segments carry.
-        let format: ExportFormat = manifest.format.parse().map_err(|()| {
-            tracing::warn!(format = %manifest.format, "dump/load: unknown archive format");
-            ServiceError::fault(
-                "the archive manifest declares a logical format this server does not support",
-            )
-        })?;
+        let format: ExportFormat = manifest
+            .format
+            .parse()
+            .map_err(|()| unknown_format(dir, &manifest.format))?;
 
         // Our own extension: re-populate the object store from the archive's
         // `blobs/` entries before loading versions that reference them.
@@ -1103,8 +1149,8 @@ impl FerroEhrService {
         let mut reports = Vec::new();
         for segment in &manifest.segments {
             let bytes = archive.read(segment)?;
-            let records: Vec<EhrRecord> = serde_json::from_slice(&bytes)
-                .map_err(|e| unreadable_archive_entry(dir, segment, &e))?;
+            let records: Vec<EhrRecord> =
+                serde_json::from_slice(&bytes).map_err(|e| archive_refusal(dir, segment, e))?;
             for record in records {
                 if let Some(report) = self.load_ehr_record(&mut archive, record, format).await? {
                     reports.push(report);
@@ -1119,13 +1165,13 @@ impl FerroEhrService {
         if let Some(commons_entry) = &manifest.demographic_commons {
             let bytes = archive.read(commons_entry)?;
             let commons: DemographicCommons = serde_json::from_slice(&bytes)
-                .map_err(|e| unreadable_archive_entry(dir, commons_entry, &e))?;
+                .map_err(|e| archive_refusal(dir, commons_entry, e))?;
             self.load_demographic_commons(&commons).await?;
         }
         for segment in &manifest.demographic_segments {
             let bytes = archive.read(segment)?;
-            let records: Vec<DemographicRecord> = serde_json::from_slice(&bytes)
-                .map_err(|e| unreadable_archive_entry(dir, segment, &e))?;
+            let records: Vec<DemographicRecord> =
+                serde_json::from_slice(&bytes).map_err(|e| archive_refusal(dir, segment, e))?;
             for record in records {
                 if let Some(report) = self
                     .load_demographic_record(&mut archive, record, format)

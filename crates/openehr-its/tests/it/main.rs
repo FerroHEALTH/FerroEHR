@@ -56,6 +56,7 @@ mod xml_hash;
 mod xml_hostile_input;
 mod xml_locatable_attr;
 mod xml_namespace;
+mod xml_released_rm;
 mod xml_roundtrip;
 mod xml_smoke;
 mod xml_string_dictionary_id;
