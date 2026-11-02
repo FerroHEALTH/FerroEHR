@@ -791,7 +791,7 @@ async fn ehr_read_with_its_counts() {
             "SELECT COUNT(*) FROM EHR e CONTAINS COMPOSITION c",
             None,
             &ferroehr::service::query::request::AqlQueryRequest {
-                ehr_ids: vec![ehr_id.clone()],
+                ehr_ids: vec![crate::fixtures::ehr(&ehr_id)],
                 ..ferroehr::service::query::request::AqlQueryRequest::default()
             },
         )

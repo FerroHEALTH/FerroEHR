@@ -44,7 +44,7 @@ where
 
 fn scope(ehr_id: &str) -> AqlQueryRequest {
     AqlQueryRequest {
-        ehr_ids: vec![ehr_id.to_owned()],
+        ehr_ids: vec![crate::fixtures::ehr(ehr_id)],
         ..AqlQueryRequest::default()
     }
 }

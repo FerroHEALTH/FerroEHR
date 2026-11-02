@@ -413,7 +413,7 @@ async fn unserved_demographic_constructs_are_refused() {
         &svc,
         "SELECT p/uid/value FROM PERSON p",
         AqlQueryRequest {
-            ehr_ids: vec![ehr_id],
+            ehr_ids: vec![crate::fixtures::ehr(&ehr_id)],
             ..AqlQueryRequest::default()
         },
     )

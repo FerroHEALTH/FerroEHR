@@ -132,6 +132,23 @@ language
 
 Archetypes must always be translated completely, or not at all, to be valid. This means that when a new translation is made, every language dependent section of the `description` and `ontology` sections has to be translated into the new language, and an appropriate addition made to the `translations` list in the language section.
 
+Where a translation is made by more than one person, `author` holds the primary translator, and the other translators are recorded in `other_details` under the key `"other_contributors"`, one translator per line, as shown below. This convention corresponds to the `TRANSLATION_DETAILS._other_contributors_` attribute of the {openehr_resource}[openEHR Resource Model^], used in ADL 2; ADL 1.4 to ADL 2 converters should map each line to one entry of that list.
+
+[source, adl]
+--------
+        ["nb"] = <
+            language = <[iso_639-1::nb]>
+            author = <
+                ["name"] = <"Translator 1">
+                ["organisation"] = <"Organisation 1">
+            >
+            other_details = <
+                ["other_contributors"] = <"Translator 2, Organisation 2, Norway
+Translator 3, Organisation 3, Norway">
+            >
+        >
+--------
+
 NOTE: some non-conforming ADL tools in the past created archetypes without a `language` section, relying on the `ontology` section to provide the `original_language` (there called `primary_language`) and list of languages (`languages_available`). In the interests of backward compatibility, tool builders should consider accepting archetypes of the old form and upgrading them when parsing to the correct form, which should then be used for serialising/saving.
 
 === Description Section

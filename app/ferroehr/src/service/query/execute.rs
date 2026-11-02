@@ -150,13 +150,12 @@ impl FerroEhrService {
         }
         let (limit, offset) = compose_paging(ir.limit, ir.offset, ir.limit_is_top, request)?;
         let limit = apply_result_ceiling(limit, self.query_result_ceiling)?;
-        // Multi-EHR scoping (`ehr_ids: List<UUID>`): a malformed id is a
-        // client precondition (`400`); a well-formed but absent id raises
+        // Multi-EHR scoping (`ehr_ids: List<UUID>`): an absent id raises
         // `ehr_id_does_not_exist`.
-        let ehr_ids = self.resolve_ehr_ids(&request.ehr_ids).await?;
+        self.check_ehr_ids(&request.ehr_ids).await?;
         let ctx = SqlCtx {
             system_id: self.effective_system_id(),
-            ehr_ids,
+            ehr_ids: request.ehr_ids.clone(),
             ehr_scope_kind: request.ehr_scope_kind,
             subject_scope: request.subject_scope.clone().map(|id| {
                 aql::sql::subject::SubjectScope {
@@ -284,34 +283,17 @@ impl FerroEhrService {
         Ok(Planned::Single(ir))
     }
 
-    /// Resolve the request's `ehr_ids` (string form) into the scoped `Uuid`
-    /// set: a malformed
-    /// id is a client precondition (`400`); a well-formed but non-existent id
-    /// raises `ehr_id_does_not_exist`. An empty list scopes nothing (the
-    /// population gate over `is_queryable` EHRs applies).
+    /// Check that every EHR the request scopes exists. An empty list scopes
+    /// nothing (the population gate over `is_queryable` EHRs applies).
     ///
     /// # Errors
     ///
-    /// [`Failure`] (all labelled `analysis_error`) on: an unparseable UUID
-    /// (precondition), a database fault during the existence check
-    /// (exception), or a listed EHR that does not exist
+    /// [`Failure`] (all labelled `analysis_error`) on a database fault during
+    /// the existence check (exception), or a listed EHR that does not exist
     /// (`ehr_id_does_not_exist`).
-    async fn resolve_ehr_ids(&self, ehr_ids: &[String]) -> Result<Vec<EhrId>, Failure> {
-        if ehr_ids.is_empty() {
-            return Ok(Vec::new());
-        }
-        let mut ids = Vec::with_capacity(ehr_ids.len());
-        for id in ehr_ids {
-            #[expect(
-                clippy::map_err_ignore,
-                reason = "the mapped error already echoes the rejected token; the \
-                          discarded `uuid::Error` adds only its own wording, which \
-                          is not part of the wire contract"
-            )]
-            let uuid = Uuid::parse_str(id).map_err(|_| {
-                Failure::analysis(ServiceError::precondition(format!("invalid ehr_id `{id}`")))
-            })?;
-            ids.push(EhrId(uuid));
+    async fn check_ehr_ids(&self, ids: &[EhrId]) -> Result<(), Failure> {
+        if ids.is_empty() {
+            return Ok(());
         }
         // Verify existence in one round-trip and report the first absent id, as
         // a set: a cohort names 100 000 EHRs and a probe per id is quadratic (#3159).
@@ -322,7 +304,7 @@ impl FerroEhrService {
                 "SELECT id FROM ehr WHERE id = ANY($1) \
                  AND (NOT $2 OR access_restricted_at IS NULL) AND (NOT $3 OR opted_out_at IS NULL)",
             )
-            .bind(&ids)
+            .bind(ids)
             .bind(crate::system_log::access_context::access_restriction_enforced())
             .bind(crate::system_log::access_context::access_opt_out_enforced())
                 .fetch_all(
@@ -343,7 +325,7 @@ impl FerroEhrService {
                 format!("no EHR with id {missing}"),
             )));
         }
-        Ok(ids)
+        Ok(())
     }
 }
 

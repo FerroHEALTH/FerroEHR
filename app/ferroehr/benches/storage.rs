@@ -1199,7 +1199,7 @@ fn bench_query(
     const GROUP: &str = "storage_query";
     let aql = population_aql(corpus);
     let one_ehr = AqlQueryRequest {
-        ehr_ids: vec![corpus.ehrs.first().expect("an EHR").to_string()],
+        ehr_ids: vec![*corpus.ehrs.first().expect("an EHR")],
         ..AqlQueryRequest::default()
     };
     let mut group = c.benchmark_group(GROUP);
@@ -1728,7 +1728,7 @@ fn bench_aql(
     // The second EHR: the write benches commit into the first, so its size
     // depends on how many iterations they ran.
     let one_ehr = AqlQueryRequest {
-        ehr_ids: vec![corpus.ehrs.get(1).expect("a second EHR").to_string()],
+        ehr_ids: vec![*corpus.ehrs.get(1).expect("a second EHR")],
         ..AqlQueryRequest::default()
     };
     let mut group = c.benchmark_group(GROUP);
