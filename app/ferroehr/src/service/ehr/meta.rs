@@ -45,20 +45,11 @@ impl FerroEhrService {
     ///
     /// The `version` current-row read is a storage seam
     /// ([`crate::storage::version_repo::meta::current_vo`]; no openEHR spec governs
-    /// the SQL — our own design). The [`crate::versioning::CommitEnv`]
-    /// `current_vo` hook adapts this `(Uuid, TreeId)` to its `(Uuid, i32)`
-    /// (trunk) shape.
+    /// the SQL — our own design).
     ///
     /// # Errors
     /// [`ServiceError::Database`] if the current-row read fails.
-    #[expect(
-        clippy::same_name_method,
-        reason = "the `CommitEnv` seam (service/commit_env.rs) deliberately \
-                  mirrors these chapter method names so the versioning layer \
-                  calls them by their own vocabulary; that impl disambiguates \
-                  explicitly with `FerroEhrService::<name>(self, …)`"
-    )]
-    pub(in crate::service) async fn current_vo(
+    pub(crate) async fn current_vo(
         &self,
         ehr_id: EhrId,
         kind: Kind,

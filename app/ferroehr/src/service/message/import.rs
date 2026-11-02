@@ -218,7 +218,9 @@ impl FerroEhrService {
         an_ehr_id: EhrId,
         an_extract: Extract,
     ) -> Result<(), ServiceError> {
-        if !self.import_ehr_exists(an_ehr_id).await? {
+        if !crate::storage::ehr_repo::ehr_exists(&mut *acquire(&self.pool).await?, an_ehr_id)
+            .await?
+        {
             return Err(ServiceError::not_found(
                 Missing::Ehr,
                 format!("no EHR with id {an_ehr_id}"),
@@ -364,17 +366,6 @@ impl FerroEhrService {
         commit_demographic_import(&mut tx, signing, &self.privacy, audit, parties).await?;
         tx.commit().await?;
         Ok(())
-    }
-
-    /// Whether an EHR with `ehr_id` exists (the EHR-existence precondition of
-    /// `import_ehr_extract`).
-    async fn import_ehr_exists(&self, ehr_id: EhrId) -> Result<bool, ServiceError> {
-        Ok(
-            sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM ehr WHERE id = $1)")
-                .bind(ehr_id)
-                .fetch_one(&mut *acquire(&self.pool).await?)
-                .await?,
-        )
     }
 }
 

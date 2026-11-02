@@ -34,6 +34,7 @@ use crate::service::error::ServiceError;
 use crate::service::refusal::Missing;
 use crate::service::response::{ResourceMeta, ServiceResponse};
 use crate::storage::version_repo;
+use crate::versioning::Kind;
 use crate::versioning::audit::AuditInput;
 use crate::versioning::change::Committed;
 use crate::versioning::object_version_id::{
@@ -41,7 +42,6 @@ use crate::versioning::object_version_id::{
 };
 use crate::versioning::read::{VersionRead, read_current, read_version, version_at};
 use crate::versioning::wire::version_envelope;
-use crate::versioning::{CommitEnv, Kind};
 use openehr_its::rest::generated::common::UpdateAudit;
 
 /// The versioned-object [`Kind`] for a REST [`PartyKind`].
@@ -228,7 +228,7 @@ impl FerroEhrService {
     /// operation); otherwise the server defaults apply — the effective
     /// `system_id`, the numeric `audit_change_type` group code, and the
     /// request's default committer (the authenticated principal's
-    /// `PARTY_PROXY`, from [`CommitEnv::default_committer`]).
+    /// `PARTY_PROXY`, from [`crate::service::committer::request_committer`]).
     ///
     /// # Errors
     /// [`ServiceError::Unprocessable`] / [`ServiceError::BadRequest`] — the
@@ -248,7 +248,7 @@ impl FerroEhrService {
                 system_id: self.effective_system_id(),
                 change_type: change_type.to_owned(),
                 description: Some(crate::versioning::audit::dv_text(description)),
-                committer: CommitEnv::default_committer(self),
+                committer: crate::service::committer::request_committer(),
                 attestation: None,
             }),
         }
@@ -373,7 +373,7 @@ impl FerroEhrService {
                 format!("{label} {vo_id} v{version}"),
             )
         })?;
-        let signer = CommitEnv::signing_ctx(self).signer;
+        let signer = self.signing_ctx().signer;
         version_envelope(&read, signer)
     }
 
@@ -405,7 +405,7 @@ impl FerroEhrService {
             object_version_id(vo_id, &read.creating_system_id, read.tree),
         )
         .with_last_modified(read.time_committed);
-        let signer = CommitEnv::signing_ctx(self).signer;
+        let signer = self.signing_ctx().signer;
         let ov = version_envelope(&read, signer)?;
         Ok(ServiceResponse::new(ov, meta))
     }

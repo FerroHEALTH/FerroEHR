@@ -483,7 +483,7 @@ impl FerroEhrService {
         ehr_id: EhrId,
         vo_id: Option<VoId>,
     ) -> Result<(), ServiceError> {
-        if !crate::storage::version_repo::meta::ehr_exists(&self.pool, ehr_id).await? {
+        if !crate::storage::ehr_repo::ehr_exists(&mut *acquire(&self.pool).await?, ehr_id).await? {
             return Err(ServiceError::not_found(
                 Missing::Ehr,
                 format!("no EHR with id {ehr_id}"),

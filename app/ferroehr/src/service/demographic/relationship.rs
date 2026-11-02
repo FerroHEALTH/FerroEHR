@@ -37,12 +37,12 @@ use crate::service::error::ServiceError;
 use crate::service::refusal::Missing;
 use crate::service::response::{ResourceMeta, ServiceResponse};
 use crate::service::version_update::Committal;
+use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
 use crate::versioning::change::WriteEnvelope;
 use crate::versioning::change::{create, delete, update};
 use crate::versioning::object_version_id::{TreeId, object_version_id};
 use crate::versioning::read::{VersionRead, demographic_current, object_kind};
-use crate::versioning::{CommitEnv, Kind};
 use openehr_its::rest::generated::common::UpdateAudit;
 
 /// The current version of a `PARTY_RELATIONSHIP`, resolved in ONE lean
@@ -190,7 +190,7 @@ impl FerroEhrService {
             change_type::CREATION,
             "PARTY_RELATIONSHIP creation",
         )?;
-        let ctx = CommitEnv::signing_ctx(self);
+        let ctx = self.signing_ctx();
         let canonical = (!support::commit_rewrites_body(self)).then(|| body.clone());
         let mut conn = acquire(&self.demographic_pool).await?;
         let mut tx = conn.begin().await?;
@@ -263,7 +263,7 @@ impl FerroEhrService {
             change_type::MODIFICATION,
             "PARTY_RELATIONSHIP update",
         )?;
-        let ctx = CommitEnv::signing_ctx(self);
+        let ctx = self.signing_ctx();
         let canonical = (!support::commit_rewrites_body(self)).then(|| body.clone());
         let mut conn = acquire(&self.demographic_pool).await?;
         let mut tx = conn.begin().await?;
@@ -334,7 +334,7 @@ impl FerroEhrService {
             change_type::DELETED,
             "PARTY_RELATIONSHIP delete",
         )?;
-        let ctx = CommitEnv::signing_ctx(self);
+        let ctx = self.signing_ctx();
         let mut conn = acquire(&self.demographic_pool).await?;
         let mut tx = conn.begin().await?;
         let committed = delete(

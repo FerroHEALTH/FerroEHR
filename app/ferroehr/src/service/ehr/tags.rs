@@ -49,7 +49,7 @@ impl FerroEhrService {
         // The released 404 trigger ("when an EHR with `ehr_id` does not
         // exist", 404_unknown_ehr_id) — an unknown EHR is 404, never an
         // empty 200 list; an EXISTING EHR with no matching tags is [].
-        self.ensure_ehr_exists(ehr_id).await?;
+        crate::storage::ehr_repo::require_ehr(&mut *acquire(&self.pool).await?, ehr_id).await?;
         let rows = crate::storage::tag_repo::list_tags(
             &self.pool,
             Some(ehr_id),
@@ -118,7 +118,7 @@ impl FerroEhrService {
         target_type: &str,
         tags: &[UpdateItemTag],
     ) -> Result<Vec<ItemTag>, ServiceError> {
-        self.ensure_ehr_exists(ehr_id).await?;
+        crate::storage::ehr_repo::require_ehr(&mut *acquire(&self.pool).await?, ehr_id).await?;
         self.ensure_tag_target(ehr_id, target_vo_id, target_version, target_type)
             .await?;
         // The storage replace dedupes the posted set on the ITEM_TAG identity —

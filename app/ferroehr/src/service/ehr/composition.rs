@@ -739,40 +739,10 @@ impl FerroEhrService {
         Ok(committed)
     }
 
-    /// The EHR-existence precheck (`ehr_id_does_not_exist` → `NotFound`); also
-    /// the [`crate::versioning::CommitEnv`] `ensure_ehr_exists` hook.
-    /// The existence read is a storage seam
-    /// ([`crate::storage::version_repo::meta::ehr_exists`]; no openEHR spec governs
-    /// the SQL — our own design).
-    ///
-    /// # Errors
-    /// [`ServiceError::NotFound`] when the EHR does not exist;
-    /// [`ServiceError::Database`] if the existence read fails.
-    #[expect(
-        clippy::same_name_method,
-        reason = "the `CommitEnv` seam (service/commit_env.rs) deliberately \
-                  mirrors these chapter method names so the versioning layer \
-                  calls them by their own vocabulary; that impl disambiguates \
-                  explicitly with `FerroEhrService::<name>(self, …)`"
-    )]
-    pub(in crate::service) async fn ensure_ehr_exists(
-        &self,
-        ehr_id: EhrId,
-    ) -> Result<(), ServiceError> {
-        if crate::storage::version_repo::meta::ehr_exists(&self.pool, ehr_id).await? {
-            Ok(())
-        } else {
-            Err(ServiceError::not_found(
-                Missing::Ehr,
-                format!("EHR {ehr_id}"),
-            ))
-        }
-    }
-
     /// The combined EHR-existence and content-writability gate in one round
     /// trip.
     ///
-    /// Equivalent to [`Self::ensure_ehr_exists`] followed by
+    /// Equivalent to [`crate::storage::ehr_repo::require_ehr`] followed by
     /// [`Self::ensure_content_writable`], a missing EHR still answering 404
     /// before the non-modifiable 409, over a single
     /// [`crate::storage::ehr_repo::ehr_writability`] read. Returns the database

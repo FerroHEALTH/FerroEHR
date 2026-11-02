@@ -60,11 +60,6 @@
               verification"
 )]
 
-use serde_json::Value;
-use sqlx::PgPool;
-
-use crate::ids::{EhrId, VoId};
-use crate::service::error::ServiceError;
 use crate::versioning::signature::signer::Signer;
 
 pub(crate) mod access_delay;
@@ -226,106 +221,4 @@ pub(crate) struct SigningCtx<'a> {
     /// (`version.origins`): the committing client's registered origin, or
     /// [`Self::system_id`] (EHDS Annex II 3.4, [`crate::origins`]).
     pub(crate) direct_origin: String,
-}
-
-/// The cross-area hooks the CONTRIBUTION commit orchestration
-/// ([`contribution::commit_version_set`]) needs from the service layer. Each
-/// hook is owned by another register: content validation (validation register),
-/// EHR existence + `current_vo` (EHR register), `EHR_ACCESS` cache
-/// invalidation (EHR register), committer default (EHR register).
-/// `crate::service::FerroEhrService` implements it; versioning owns only the
-/// change-set decision logic. `default_committer` is the EHR worker's
-/// `committer()`; `ensure_ehr_exists` closes the EHR-existence check. The
-/// `is_modifiable` content-write guard is NOT a hook: it runs inside the
-/// commit transaction ([`change::ensure_content_writable_tx`]).
-///
-/// The two in-transaction hooks ([`Self::pre_composition_modify`] and
-/// [`Self::post_status_commit`]) are the cross-version invariant / promoted-
-/// subject-column glue the direct write paths run inline; they are wired here so
-/// the CONTRIBUTION path runs them too, in the same commit transaction.
-#[async_trait::async_trait]
-pub(crate) trait CommitEnv {
-    /// The connection pool for the commit transaction — the clinical domain.
-    fn pool(&self) -> &PgPool;
-    /// The connection pool serving the demographic pseudonymisation domain.
-    ///
-    /// A CONTRIBUTION is committed entirely in one domain: an EHR-scoped set
-    /// through [`Self::pool`], a party-only set through this one. No openEHR
-    /// spec governs storage layout — our own design/extension.
-    fn demographic_pool(&self) -> &PgPool;
-    /// The effective openEHR `system_id` for this request.
-    fn effective_system_id(&self) -> String;
-    /// The default committer `PARTY_PROXY` (the authenticated principal).
-    fn default_committer(&self) -> openehr_rm::prelude::PartyProxy;
-    /// The write-time signing context.
-    fn signing_ctx(&self) -> SigningCtx<'_>;
-    /// Validate a version's content for commit (relaxed when `incomplete`).
-    async fn validate_for_commit(
-        &self,
-        kind: Kind,
-        data: &Value,
-        incomplete: bool,
-    ) -> Result<(), ServiceError>;
-    /// Check every FOLDER `items` reference that claims this system resolves
-    /// in `ehr_id` — run AFTER the change set's inserts, inside the commit
-    /// transaction, so the verdict never depends on member order within the
-    /// set (RM ehr master04 §Folders groups contemporaneous folder and
-    /// content commits in one CONTRIBUTION; version identity is
-    /// repository-allocated here, so a same-set reference is only expressible
-    /// once an identity-echo mechanism exists — this placement is already
-    /// correct for it).
-    async fn check_folder_item_refs(
-        &self,
-        tx: &mut sqlx::PgConnection,
-        ehr_id: EhrId,
-        folder: &Value,
-    ) -> Result<(), ServiceError>;
-    /// the target EHR must exist before a CONTRIBUTION is committed to it.
-    async fn ensure_ehr_exists(&self, ehr_id: EhrId) -> Result<(), ServiceError>;
-    /// The current versioned object of `kind` in `ehr_id`, if any (for the
-    /// EHR-singleton create guard).
-    async fn current_vo(
-        &self,
-        ehr_id: EhrId,
-        kind: Kind,
-    ) -> Result<Option<(VoId, i32)>, ServiceError>;
-    /// Drop the cached `EHR_ACCESS` settings after an `EHR_ACCESS` commit.
-    async fn invalidate_ehr_access(&self, ehr_id: EhrId);
-    /// Whether the EHR already holds a LIVE folder hierarchy whose root
-    /// carries the `(archetype_node_id, name)` LOCATABLE identity pair — the
-    /// CONTRIBUTION-route duplicate-directory rejection (CNF schedule master08
-    /// §`commit_contribution` E.2: creating the root FOLDER again is negative; a
-    /// DISTINCT hierarchy is a new `EHR.folders` member — RM ehr master04
-    /// §Folders; same-archetype siblings are distinguished by name, RM common
-    /// paths semantics).
-    async fn folder_root_exists(
-        &self,
-        ehr_id: EhrId,
-        archetype_node_id: &str,
-        name: &str,
-    ) -> Result<bool, ServiceError>;
-    /// Enforce the `VERSIONED_COMPOSITION` cross-version invariants
-    /// (`Archetype_node_id_valid` / `Persistent_validity`, RM ehr
-    /// `versioned_composition.adoc`) of a COMPOSITION *modify* against the
-    /// stored first version, **before** the new version is written. Runs inside
-    /// the commit transaction (`tx`) so the check and the write are atomic — the
-    /// same hook the direct update path runs inline.
-    async fn pre_composition_modify(
-        &self,
-        tx: &mut sqlx::PgConnection,
-        vo_id: VoId,
-        canonical: &Value,
-    ) -> Result<(), ServiceError>;
-    /// Keep the EHR's promoted subject columns (`ehr.subject_id` /
-    /// `subject_namespace`, spec-silent index plumbing — our own design) in sync
-    /// with a committed `EHR_STATUS` (`subject.external_ref`, RM ehr master04
-    /// §EHR Status). Runs inside the commit transaction (`tx`) so a subject
-    /// uniqueness conflict rolls the whole CONTRIBUTION back — the same hook the
-    /// direct EHR-create / EHR_STATUS-update paths run inline.
-    async fn post_status_commit(
-        &self,
-        tx: &mut sqlx::PgConnection,
-        ehr_id: EhrId,
-        status: &Value,
-    ) -> Result<(), ServiceError>;
 }

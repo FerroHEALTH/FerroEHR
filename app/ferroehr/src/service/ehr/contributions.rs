@@ -10,8 +10,8 @@
 //! [`crate::versioning`] (`commit_version_set` / `get_contribution` /
 //! `count_contributions`); this file keeps only the
 //! CONTRIBUTION surface and the wire glue. The EHR-existence guard
-//! is enforced inside `commit_version_set` via the
-//! [`crate::versioning::CommitEnv`] `ensure_ehr_exists` hook.
+//! is enforced inside `commit_version_set`, which calls
+//! `storage::ehr_repo::require_ehr`.
 
 #![expect(
     clippy::disallowed_types,

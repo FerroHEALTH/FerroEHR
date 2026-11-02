@@ -59,8 +59,6 @@ use crate::service::query::config::QueryConfig;
 use crate::service::query::plan_cache::PlanCache;
 use crate::service::terminology::fhir::FhirTerminologyProvider;
 
-mod commit_env;
-
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -539,13 +537,6 @@ impl FerroEhrService {
     /// §System Identity: the `system_id` names the system "legally responsible"
     /// for the data, and it "becomes embedded in the version identifiers of
     /// committed -- and possibly signed -- content".
-    #[expect(
-        clippy::same_name_method,
-        reason = "the `CommitEnv` seam (service/commit_env.rs) deliberately \
-                  mirrors these chapter method names so the versioning layer \
-                  calls them by their own vocabulary; that impl disambiguates \
-                  explicitly with `FerroEhrService::<name>(self, …)`"
-    )]
     pub(crate) fn effective_system_id(&self) -> String {
         self.system_id.clone()
     }
@@ -557,13 +548,6 @@ impl FerroEhrService {
 
     /// The write-time signing context (RM common master06 §Digital Signature)
     /// threaded into every versioned-object commit.
-    #[expect(
-        clippy::same_name_method,
-        reason = "the `CommitEnv` seam (service/commit_env.rs) deliberately \
-                  mirrors these chapter method names so the versioning layer \
-                  calls them by their own vocabulary; that impl disambiguates \
-                  explicitly with `FerroEhrService::<name>(self, …)`"
-    )]
     pub(crate) fn signing_ctx(&self) -> SigningCtx<'_> {
         SigningCtx {
             system_id: self.effective_system_id(),

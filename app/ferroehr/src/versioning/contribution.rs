@@ -28,6 +28,7 @@ use uuid::Uuid;
 
 use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
+use crate::service::FerroEhrService;
 use crate::service::error::{ServiceError, Violation};
 use crate::service::refusal::Missing;
 use crate::versioning::attestation::{AttestationInput, AttestationParts, PendingAttest};
@@ -42,7 +43,7 @@ use crate::versioning::lifecycle::{
 use crate::versioning::object_version_id::{self, TreeId};
 use crate::versioning::signature::signer::Signer;
 use crate::versioning::wire::version_envelope;
-use crate::versioning::{CommitEnv, Kind, change, read};
+use crate::versioning::{Kind, change, read};
 
 /// An optional `(lower, upper)` inclusive commit-time window (either side open
 /// when its bound is `None`; the whole `Option` `None` = unbounded).
@@ -381,11 +382,11 @@ fn read_undeclared_members(
 /// transaction and the atomicity RM common master06 §Contributions requires is
 /// preserved. No openEHR spec governs storage layout — our own
 /// design/extension.
-fn domain_pool(cx: &impl CommitEnv, party_only: bool) -> &sqlx::PgPool {
+fn domain_pool(cx: &FerroEhrService, party_only: bool) -> &sqlx::PgPool {
     if party_only {
-        cx.demographic_pool()
+        &cx.demographic_pool
     } else {
-        cx.pool()
+        &cx.pool
     }
 }
 
@@ -449,7 +450,7 @@ pub(crate) fn decode_new_contribution<T: serde::de::DeserializeOwned>(
 /// scope); [`ServiceError::Conflict`] for a duplicate EHR singleton/directory;
 /// plus the commit-engine placement/storage/signing errors.
 pub(crate) async fn commit_version_set(
-    cx: &impl CommitEnv,
+    cx: &FerroEhrService,
     ehr_id: Option<EhrId>,
     uid: Option<&HierObjectId>,
     versions: Vec<UpdateVersion<Value>>,
@@ -458,7 +459,7 @@ pub(crate) async fn commit_version_set(
 ) -> Result<CommittedContribution, ServiceError> {
     // the EHR-existence check — the CONTRIBUTION's target EHR must exist.
     if let Some(ehr_id) = ehr_id {
-        cx.ensure_ehr_exists(ehr_id).await?;
+        crate::storage::ehr_repo::require_ehr(&mut *acquire(&cx.pool).await?, ehr_id).await?;
     }
 
     // NOTE: `schemas/ehr/NewContribution.yaml` gives `versions` no `minItems`, so
@@ -523,8 +524,8 @@ pub(crate) async fn commit_version_set(
         })
         .collect();
     // The FOLDER bodies this set commits, for the post-insert item-reference
-    // check (the hook doc on `CommitEnv::check_folder_item_refs` carries the
-    // ordering rationale — a folder may reference a sibling of its own set).
+    // check, run after the inserts because a folder may reference a sibling of
+    // its own set (RM ehr master04 §Folders).
     let folder_commits: Vec<Value> = changes
         .iter()
         .filter_map(|(_, c)| match c {
@@ -606,7 +607,7 @@ struct ContributionWrite<'a> {
 /// violation rolls the whole set back), and the commit-engine
 /// placement/storage/signing errors.
 async fn write_contribution(
-    cx: &impl CommitEnv,
+    cx: &FerroEhrService,
     ehr_id: Option<EhrId>,
     party_only: bool,
     write: ContributionWrite<'_>,
@@ -632,9 +633,11 @@ async fn write_contribution(
             ..
         } = change
         {
-            cx.pre_composition_modify(&mut tx, *vo_id, canonical)
-                .await
-                .map_err(body_target_not_found_is_bad_request)?;
+            crate::service::ehr::validation::check_versioned_composition_invariants(
+                &mut tx, *vo_id, canonical,
+            )
+            .await
+            .map_err(body_target_not_found_is_bad_request)?;
         }
     }
     let outcome = change::commit_contribution(
@@ -650,13 +653,19 @@ async fn write_contribution(
     .map_err(body_target_not_found_is_bad_request)?;
     if let Some(ehr_id) = ehr_id {
         for folder in &write.folder_commits {
-            cx.check_folder_item_refs(&mut tx, ehr_id, folder).await?;
+            crate::service::ehr::validation::check_folder_item_refs(
+                &mut *tx,
+                ehr_id,
+                &cx.effective_system_id(),
+                folder,
+            )
+            .await?;
         }
         // Keep the EHR's promoted subject columns in sync after each committed
         // EHR_STATUS version (one EHR per subject — RM ehr master04 §EHR
         // Status).
         for status in &write.status_commits {
-            cx.post_status_commit(&mut tx, ehr_id, status).await?;
+            cx.sync_ehr_subject(&mut tx, ehr_id, status).await?;
         }
     }
     tx.commit().await?;
@@ -706,7 +715,7 @@ fn parse_supplied_uid(uid: Option<&HierObjectId>) -> Result<Option<Uuid>, Servic
 /// not a code of the openEHR `audit_change_type` group or the audit fails its
 /// RM invariants.
 fn parse_contribution_audit(
-    cx: &impl CommitEnv,
+    cx: &FerroEhrService,
     audit: &UpdateAudit,
 ) -> Result<AuditInput, ServiceError> {
     let audit = plain_audit(audit, "CONTRIBUTION.audit")?;
@@ -826,7 +835,7 @@ fn plan_version(
 /// # Errors
 /// Storage errors from the batched read.
 async fn read_target_kinds(
-    cx: &impl CommitEnv,
+    cx: &FerroEhrService,
     plan: &[PlannedVersion],
     party_only: bool,
 ) -> Result<std::collections::HashMap<VoId, Kind>, ServiceError> {
@@ -928,7 +937,7 @@ fn plan_attestation(
 /// The per-member rejections of the create/modify/delete shapes — see
 /// [`create_change`], [`modify_change`] and [`delete_change`].
 async fn build_change(
-    cx: &impl CommitEnv,
+    cx: &FerroEhrService,
     kinds: &std::collections::HashMap<VoId, Kind>,
     v: PlannedVersion,
     ehr_id: Option<EhrId>,
@@ -966,7 +975,7 @@ async fn build_change(
 /// [`ServiceError::Unprocessable`] for a scope-mismatched kind or content that
 /// fails the typed decode or the commit validation.
 async fn accept_content(
-    cx: &impl CommitEnv,
+    cx: &FerroEhrService,
     kind: Kind,
     data: &Value,
     incomplete: bool,
@@ -992,7 +1001,7 @@ async fn accept_content(
 /// RM ehr, EHR class; FOLDER hierarchies follow the CNF
 /// master08-func_tc_ehr_contribution E.2 criterion).
 async fn create_change(
-    cx: &impl CommitEnv,
+    cx: &FerroEhrService,
     v: &PlannedVersion,
     ehr_id: Option<EhrId>,
     party_only: bool,
@@ -1025,7 +1034,7 @@ async fn create_change(
 /// [`ServiceError::Unprocessable`] for missing `data` or failed validation;
 /// [`ServiceError::precondition`] when the target does not exist.
 async fn modify_change(
-    cx: &impl CommitEnv,
+    cx: &FerroEhrService,
     kinds: &std::collections::HashMap<VoId, Kind>,
     v: &PlannedVersion,
     party_only: bool,
@@ -1104,7 +1113,7 @@ fn delete_change(
 /// [`ServiceError::Conflict`] when the EHR exists and is not modifiable; the
 /// storage error of the writability read.
 async fn refuse_content_into_inactive_ehr(
-    cx: &impl CommitEnv,
+    cx: &FerroEhrService,
     ehr_id: Option<EhrId>,
     plan: &[PlannedVersion],
 ) -> Result<(), ServiceError> {
@@ -1115,7 +1124,7 @@ async fn refuse_content_into_inactive_ehr(
         return Ok(());
     }
     let (exists, modifiable, _) =
-        crate::storage::ehr_repo::ehr_writability(&mut *acquire(cx.pool()).await?, ehr_id).await?;
+        crate::storage::ehr_repo::ehr_writability(&mut *acquire(&cx.pool).await?, ehr_id).await?;
     if exists && modifiable == Some(false) {
         return Err(change::not_modifiable_error(ehr_id));
     }
@@ -1189,9 +1198,9 @@ fn needs_content_write_permission(changes: &[(AuditInput, Change)]) -> bool {
 ///
 /// # Errors
 /// [`ServiceError::Conflict`] on a duplicate `EHR_STATUS`/`EHR_ACCESS` or an
-/// already-live same-identity folder hierarchy; the `CommitEnv` lookup errors.
+/// already-live same-identity folder hierarchy; the lookup errors.
 async fn reject_duplicate_singleton(
-    cx: &impl CommitEnv,
+    cx: &FerroEhrService,
     ehr_id: EhrId,
     kind: Kind,
     data: &Value,
@@ -1214,7 +1223,9 @@ async fn reject_duplicate_singleton(
                 .pointer("/name/value")
                 .and_then(Value::as_str)
                 .unwrap_or_default();
-            if cx.folder_root_exists(ehr_id, root, name).await? {
+            if crate::storage::ehr_repo::live_folder_root_exists(&cx.pool, ehr_id, root, name)
+                .await?
+            {
                 return Err(ServiceError::conflict(format!(
                     "EHR {ehr_id} already has a folder hierarchy rooted at \
                      {root:?} named {name:?}; re-creating an existing directory \
@@ -1504,28 +1515,12 @@ pub(crate) async fn count_contributions(
     ehr_id: EhrId,
     time_range: TimeRange,
 ) -> Result<i64, ServiceError> {
-    ensure_ehr_exists(pool, ehr_id).await?;
+    crate::storage::ehr_repo::require_ehr(&mut *acquire(pool).await?, ehr_id).await?;
     let (lower, upper) = time_range.unwrap_or((None, None));
     Ok(
         crate::storage::version_repo::contribution::count_contributions(pool, ehr_id, lower, upper)
             .await?,
     )
-}
-
-/// The EHR-existence precheck for the read paths above (`ehr_id_does_not_exist`
-/// → `NotFound`).
-///
-/// Storage exposes the read (`version_repo::meta::ehr_exists`) so versioning stays
-/// self-contained.
-async fn ensure_ehr_exists(pool: &sqlx::PgPool, ehr_id: EhrId) -> Result<(), ServiceError> {
-    if crate::storage::version_repo::meta::ehr_exists(pool, ehr_id).await? {
-        Ok(())
-    } else {
-        Err(ServiceError::not_found(
-            Missing::Ehr,
-            format!("EHR {ehr_id}"),
-        ))
-    }
 }
 
 /// Inside a CONTRIBUTION commit the modification/deletion target is

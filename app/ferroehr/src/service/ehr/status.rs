@@ -347,8 +347,8 @@ impl FerroEhrService {
     ///
     /// This is the EHR-owned commit hook (RM common master06 §Committal
     /// and Audits), called inside the commit transaction of the EHR-create and
-    /// `EHR_STATUS`-update paths and, for the CONTRIBUTION path, through the
-    /// [`crate::versioning::CommitEnv::post_status_commit`] hook. The `UPDATE`
+    /// `EHR_STATUS`-update paths and, for the CONTRIBUTION path, from
+    /// [`crate::versioning::contribution`]. The `UPDATE`
     /// stays inline here because it maps the subject-uniqueness constraint
     /// violation to a service-level [`ServiceError::Conflict`]; the
     /// `ehr.subject_*` columns are spec-silent index plumbing (our own design).
@@ -356,7 +356,7 @@ impl FerroEhrService {
     /// # Errors
     /// [`ServiceError::Conflict`] when the subject already owns another EHR
     /// (`uq_ehr_subject`); [`ServiceError::Database`] on any other SQL failure.
-    pub(in crate::service) async fn sync_ehr_subject(
+    pub(crate) async fn sync_ehr_subject(
         &self,
         tx: &mut PgConnection,
         ehr_id: EhrId,

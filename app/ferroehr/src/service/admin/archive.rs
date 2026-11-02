@@ -217,16 +217,7 @@ async fn require_ehrs_exist(
     ehr_ids: &[EhrId],
 ) -> Result<(), ServiceError> {
     for &ehr_id in ehr_ids {
-        let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM ehr WHERE id = $1)")
-            .bind(ehr_id)
-            .fetch_one(&mut *tx)
-            .await?;
-        if !exists {
-            return Err(ServiceError::not_found(
-                Missing::Ehr,
-                format!("EHR {ehr_id}"),
-            ));
-        }
+        crate::storage::ehr_repo::require_ehr(&mut *tx, ehr_id).await?;
     }
     Ok(())
 }
