@@ -174,8 +174,13 @@ pub async fn release_template_ref(
     Ok(())
 }
 
-/// How many committed versions name `template_id`, over both storage tiers
-/// (`version` is one relation partitioned by tier).
+/// How many committed versions name exactly `template_id`, the stored
+/// case-preserved address, over both storage tiers (`version` is one relation
+/// partitioned by tier).
+///
+/// A version names its template through the `template_ref` foreign key, so it
+/// carries the address exactly as the store registered it, and the exact
+/// comparison reads the `template_id` index.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
@@ -184,9 +189,38 @@ pub async fn template_use_count(
     template_id: &str,
 ) -> Result<i64, StorageError> {
     Ok(
-        sqlx::query_scalar("SELECT count(*) FROM version WHERE lower(template_id) = lower($1)")
+        sqlx::query_scalar("SELECT count(*) FROM version WHERE template_id = $1")
             .bind(template_id)
             .fetch_one(tx)
             .await?,
     )
+}
+
+/// The stored, case-preserved `template_id` of the OPT 1.4 template whose id
+/// equals `template_id` case-insensitively, or `None`.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn stored_template_id(
+    tx: &mut PgConnection,
+    template_id: &str,
+) -> Result<Option<String>, StorageError> {
+    Ok(sqlx::query_scalar(
+        "SELECT template_id FROM template_store WHERE lower(template_id) = lower($1)",
+    )
+    .bind(template_id)
+    .fetch_optional(tx)
+    .await?)
+}
+
+/// Delete the OPT 1.4 template stored under exactly `template_id`.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn delete_template(tx: &mut PgConnection, template_id: &str) -> Result<(), StorageError> {
+    sqlx::query("DELETE FROM template_store WHERE template_id = $1")
+        .bind(template_id)
+        .execute(tx)
+        .await?;
+    Ok(())
 }

@@ -23,7 +23,6 @@
 //! restored.
 
 use sqlx::Connection as _;
-use uuid::Uuid;
 
 use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
@@ -79,7 +78,7 @@ impl FerroEhrService {
         let mut tx = conn.begin().await?;
         let mut live: Vec<VoId> = Vec::new();
         for &party_id in party_ids {
-            let kind = party_kind_any_tier(&mut tx, party_id.0).await?;
+            let kind = tier::demographic_kind(&mut tx, party_id).await?;
             if !kind.as_deref().is_some_and(super::is_party_kind) {
                 return Err(ServiceError::not_found(
                     Missing::Party,
@@ -136,7 +135,7 @@ impl FerroEhrService {
         let mut tx = conn.begin().await?;
         let mut ids: Vec<VoId> = Vec::new();
         for &party_id in party_ids {
-            let kind = party_kind_any_tier(&mut tx, party_id.0).await?;
+            let kind = tier::demographic_kind(&mut tx, party_id).await?;
             if !kind.as_deref().is_some_and(super::is_party_kind) {
                 return Err(ServiceError::not_found(
                     Missing::Party,
@@ -149,21 +148,6 @@ impl FerroEhrService {
         tx.commit().await?;
         Ok(())
     }
-}
-
-/// The `version.kind` of a demographic (ehr-less) versioned object in EITHER
-/// storage tier — the guard both the archive and the restore call must answer
-/// the same way whichever tier the party currently lives in.
-async fn party_kind_any_tier(
-    tx: &mut sqlx::PgConnection,
-    party_id: Uuid,
-) -> Result<Option<String>, ServiceError> {
-    Ok(
-        sqlx::query_scalar("SELECT kind FROM version WHERE vo_id = $1 AND ehr_id IS NULL LIMIT 1")
-            .bind(party_id)
-            .fetch_optional(&mut *tx)
-            .await?,
-    )
 }
 
 /// Refuse the whole operation unless every named EHR exists.

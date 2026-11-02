@@ -54,6 +54,8 @@
 //! - [`stored_query_repo`] — the registered queries of `stored_query`.
 //! - [`dump_repo`] — the rows the admin dump writes to an archive and the load
 //!   writes back.
+//! - [`erasure`] — the physical erasure of an EHR or a party: what the cascade
+//!   leaves behind, what it reads first, and the erasure tombstone.
 //!
 //! The seam with the versioning layer is a value contract rather than shared
 //! SQL: versioning owns the semantics (classify, tree placement, lifecycle,
@@ -68,6 +70,7 @@ pub mod codec;
 pub mod ddl_template;
 pub mod dump_repo;
 pub mod ehr_repo;
+pub mod erasure;
 pub mod error;
 pub mod header;
 pub mod marks;
