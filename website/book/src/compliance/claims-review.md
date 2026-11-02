@@ -1053,12 +1053,12 @@ versions (#4565); the response texts without the Service Model vocabulary
 
 ## The review of 2026-11-02, for 5.6.0-rc8
 
-Read on the tree after commit `e7422c4b9`, for the FerroEHR release candidate
+Read on the tree after commit `97265816d`, for the FerroEHR release candidate
 5.6.0-rc8. The facts added since 5.6.0-rc7 and checked in every text in scope:
-the published Veredictum 0.3.3 record with no failed and no errored row under
-the released profile, the Veredictum 0.1.6 documents removed, and the
-released-profile verdict required in the merge queue and the release (#4451,
-#4455); `conformance_profile` derived from that record (#4672); the read-only
+the published Veredictum 0.4.0 record of a released-profile run against
+FerroEHR on `spec_profile = "stable"` with no failed and no errored row, the
+Veredictum 0.1.6 documents removed, and the released-profile verdict required
+in the merge queue and the release (#4451, #4455, #4771); `conformance_profile` derived from that record (#4672); the read-only
 ADL 1.4 to ADL 2 conversion routes (#4655); a template upload that answers
 `400` for every invalid template and never refuses a stored one (#4643,
 #4647); the ITS-JSON `minItems` of `folders`, `events` and `languages`
@@ -1070,7 +1070,9 @@ the empty linkage domain removed (#4675, #4684, #4697); the
 (#4657); the identifier scan reading a `DV_IDENTIFIER`'s declared type
 (#4702); the validation refusal's `Prefer` advice (#4597); the inline
 primitive's node id (#4739); the viewer's session gate on every unsafe method
-and `LEPTOS_SITE_ADDR` no longer read (#4724, #4725); chart 21.0.0-rc8 with
+and `LEPTOS_SITE_ADDR` no longer read (#4724, #4725); every item-tag
+operation checked by ABAC in its target's mode (#4768); `reverse_relationships`
+in a stable-profile canonical-JSON party read (#4775); chart 21.0.0-rc8 with
 `appVersion` 5.6.0-rc8.
 
 ### Changed on 2026-11-02, for 5.6.0-rc8
@@ -1087,11 +1089,15 @@ and `LEPTOS_SITE_ADDR` no longer read (#4724, #4725); chart 21.0.0-rc8 with
 - **[Records of processing](../security/records-of-processing.md)**: the audit
   schema was said to sit outside "all three" pseudonymisation domains; since
   #4684 there are two, the clinical and the demographic.
+- **[Conformance](../conformance.md)**: the page said the instrument judges
+  FerroEHR on its default `development` profile. Since #4775 the released run
+  judges it on `spec_profile = "stable"`, as the workflow sets; the page now
+  names the profile of each run.
 
 ### Read and kept on 2026-11-02, for 5.6.0-rc8
 
 - **The conformance pages**: [conformance](../conformance.md), the landing
-  page and the README show the Veredictum 0.3.3 badges and the record's counts
+  page and the README show the Veredictum 0.4.0 badges and the record's counts
   per part from the committed record, and state that the released run decides
   the job. No text types a number the record does not carry.
 - **The API pages**: [using the API](../using-the-api/index.md) derives
@@ -1102,6 +1108,11 @@ and `LEPTOS_SITE_ADDR` no longer read (#4724, #4725); chart 21.0.0-rc8 with
   FerroEHR's own design with their `404` and `422`;
   [content negotiation](../using-the-api/content-negotiation.md) names the
   root elements no ITS-XML schema publishes.
+- **The security and demographics pages**: [security](../security.md) states
+  that an item-tag operation takes its target's ABAC mode (#4768), and
+  [demographics](../beyond-core/demographics.md) states that a stable-profile
+  canonical-JSON party read carries `reverse_relationships` and the
+  canonical-XML read does not yet.
 - **The storage and configuration pages**: the
   [server configuration](../installation/config-server.md) refuses
   `[storage.linkage]` as an unknown key, [operations](../operations.md) carries
@@ -1110,7 +1121,8 @@ and `LEPTOS_SITE_ADDR` no longer read (#4724, #4725); chart 21.0.0-rc8 with
   writes.
 - **The hazard log and the technical documentation**: the logging component
   changed since 5.6.0-rc7 (the operation table, the conversion routes' access
-  records, the service error type, the batch insert, audit migration 0021), so
+  records, the service error type, the batch insert, audit migration 0021, the
+  tag read's object and the records of the parties a party read discloses), so
   the hazard log gains review 16 and the technical documentation its 5.6.0-rc8
   row; no control changed and every named test exists.
 - **The installation pins**: the [Kubernetes installation](../installation/kubernetes.md),
@@ -1123,6 +1135,11 @@ and `LEPTOS_SITE_ADDR` no longer read (#4724, #4725); chart 21.0.0-rc8 with
 
 ### Left open on 2026-11-02, for 5.6.0-rc8
 
+- The development-profile run, shown beside the record and never counted
+  toward it, fails the rows tracked on #4776 and #4777; its badges show the run
+  as it stands, and no text claims it green.
+- A stable-profile canonical-XML party read does not carry
+  `reverse_relationships` yet (#4778); the demographics page says so.
 - The public sandbox runs 5.5.0 and is not redeployed for a pre-release, so it
   serves the old paths and the old error body until 5.6.0 ships.
 - The [performance](../performance.md) page keeps the figures the
