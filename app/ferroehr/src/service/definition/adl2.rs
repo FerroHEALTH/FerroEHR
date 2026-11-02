@@ -42,14 +42,15 @@ use crate::db::acquire::acquire;
 use openehr_sdt::flat::webtemplate::model::WebTemplate;
 use serde_json::Value;
 use sqlx::Connection as _;
-use sqlx::{PgConnection, Row};
+use sqlx::PgConnection;
 
 use crate::service::FerroEhrService;
 use crate::service::error::{ErrorChain, ServiceError, Violation};
 use crate::service::list::Page;
 use crate::service::refusal::Missing;
+use crate::storage::adl2_repo::{self, ARCHETYPE_KIND, NewArtefact, is_template_kind};
+use crate::storage::template_repo;
 
-use super::adl2_dependents::adl2_write_lock;
 use super::adl2_engine::{missing_constituents, not_compiled, on_engine_stack};
 use super::adl2_resolution::{parse_stored, repository_of, resolve_stored, wire_reference};
 use super::page_bounds;
@@ -80,10 +81,7 @@ impl FerroEhrService {
         &self,
         conn: &mut PgConnection,
     ) -> Result<ArchetypeRepository, ServiceError> {
-        let sources: Vec<String> =
-            sqlx::query_scalar("SELECT adl FROM adl2_artefact ORDER BY hrid")
-                .fetch_all(conn)
-                .await?;
+        let sources = adl2_repo::sources(conn).await?;
         on_engine_stack(move || {
             repository_of(sources.iter().map(String::as_str).filter_map(parse_stored))
         })
@@ -94,7 +92,7 @@ impl FerroEhrService {
     /// it (`adl2_persist`), returning its `ARCHETYPE_HRID`.
     ///
     /// The repository read, the validation and the write share one transaction
-    /// under `adl2_write_lock`, which the delete takes too, so of an upload
+    /// under `adl2_repo::write_lock`, which the delete takes too, so of an upload
     /// and a delete that race, the second gets the refusal it gets alone.
     ///
     /// Invalidity splits on the syntax/semantics line: an unparseable source
@@ -137,7 +135,7 @@ impl FerroEhrService {
         };
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
-        adl2_write_lock(&mut tx).await?;
+        adl2_repo::write_lock(&mut tx).await?;
         let repo = self.adl2_repository(&mut tx).await?;
         let owned = source.to_owned();
         let mut issues = on_engine_stack(move || match resolver {
@@ -191,38 +189,28 @@ impl FerroEhrService {
         source: &str,
     ) -> Result<(), ServiceError> {
         let kind = store_kind(summary.kind);
-        let stored: bool = sqlx::query_scalar(
-            "SELECT EXISTS(SELECT 1 FROM adl2_artefact WHERE lower(hrid) = lower($1))",
+        let inserted = adl2_repo::insert(
+            &mut *tx,
+            NewArtefact {
+                hrid: &summary.archetype_id,
+                kind,
+                adl: source,
+                parent_hrid: summary.parent_archetype_id.as_deref(),
+            },
         )
-        .bind(&summary.archetype_id)
-        .fetch_one(&mut *tx)
         .await?;
-        if stored {
+        if !inserted {
             return Err(ServiceError::conflict(format!(
                 "an ADL2 template with id '{}' already exists",
                 summary.archetype_id
             )));
         }
-        sqlx::query(
-            "INSERT INTO adl2_artefact (hrid, kind, adl, parent_hrid) VALUES ($1, $2, $3, $4)",
-        )
-        .bind(&summary.archetype_id)
-        .bind(kind)
-        .bind(source)
-        .bind(summary.parent_archetype_id.as_deref())
-        .execute(&mut *tx)
-        .await?;
         // Maintain the `template_ref` registry (the version.template_id FK
         // target) in the same transaction: a template-kind HRID is a commit
         // addressable wire identity (`clinical/0006_definitions.sql`
         // §template_ref).
-        if matches!(kind, "template" | "operational_template") {
-            sqlx::query(
-                "INSERT INTO template_ref (template_id) VALUES ($1) ON CONFLICT DO NOTHING",
-            )
-            .bind(&summary.archetype_id)
-            .execute(&mut *tx)
-            .await?;
+        if is_template_kind(kind) {
+            template_repo::register_template_ref(tx, &summary.archetype_id).await?;
         }
         Ok(())
     }
@@ -249,20 +237,14 @@ impl FerroEhrService {
         version.map(check_version_selector).transpose()?;
         // Fast path: an exact HRID (no explicit version filter).
         if version.is_none()
-            && let Some(hrid) = sqlx::query_scalar::<_, String>(
-                "SELECT hrid FROM adl2_artefact WHERE lower(hrid) = lower($1)",
-            )
-            .bind(template_id)
-            .fetch_optional(&mut *acquire(&self.pool).await?)
-            .await?
+            && let Some(stored) =
+                adl2_repo::find(&mut *acquire(&self.pool).await?, template_id).await?
         {
-            return Ok(hrid);
+            return Ok(stored.hrid);
         }
         // Every other read resolves by the engine's rule over the (small)
         // registry.
-        let hrids: Vec<String> = sqlx::query_scalar("SELECT hrid FROM adl2_artefact ORDER BY hrid")
-            .fetch_all(&mut *acquire(&self.pool).await?)
-            .await?;
+        let hrids = adl2_repo::hrids(&self.pool).await?;
         resolve_stored(&wire_reference(template_id, version), hrids).ok_or_else(|| {
             ServiceError::not_found(
                 Missing::Template,
@@ -330,7 +312,7 @@ impl FerroEhrService {
         kind: ExampleType,
     ) -> Result<Value, ServiceError> {
         let wt = self.web_template_adl2(template_id).await?;
-        let mut composition = crate::templates::runtime::example_or_refusal(&wt, level)?;
+        let mut composition = super::opt14::example_or_refusal(&wt, level)?;
         if kind == ExampleType::Output {
             apply_output_uid(&mut composition, &wt.template_id);
         }
@@ -495,17 +477,12 @@ impl FerroEhrService {
         })
         .await?
     }
-
     /// The ADL2 source of the artefact with `ARCHETYPE_HRID` `an_id`; absent
     /// → `artefact_does_not_exist` (`404`).
     pub(super) async fn adl2_get(&self, an_id: &str) -> Result<String, ServiceError> {
-        sqlx::query_scalar::<_, String>(
-            "SELECT adl FROM adl2_artefact WHERE lower(hrid) = lower($1)",
-        )
-        .bind(an_id)
-        .fetch_optional(&mut *acquire(&self.pool).await?)
-        .await?
-        .ok_or_else(|| ServiceError::not_found(Missing::Artefact, format!("ADL2 artefact {an_id}")))
+        adl2_repo::adl(&self.pool, an_id).await?.ok_or_else(|| {
+            ServiceError::not_found(Missing::Artefact, format!("ADL2 artefact {an_id}"))
+        })
     }
 
     /// The `ARCHETYPE_HRID`s of all stored ADL2 artefacts, paged in SQL.
@@ -515,13 +492,7 @@ impl FerroEhrService {
     /// A database failure (`500`).
     pub async fn list_artefacts(&self, page: Page) -> Result<Vec<String>, ServiceError> {
         let (offset, limit) = page_bounds(page);
-        Ok(sqlx::query_scalar::<_, String>(
-            "SELECT hrid FROM adl2_artefact ORDER BY hrid OFFSET $1 LIMIT $2",
-        )
-        .bind(offset)
-        .bind(limit)
-        .fetch_all(&mut *acquire(&self.pool).await?)
-        .await?)
+        Ok(adl2_repo::list_hrids(&self.pool, None, offset, limit).await?)
     }
 
     /// The `ARCHETYPE_HRID`s of the stored ADL2 archetypes, paged in SQL.
@@ -531,14 +502,7 @@ impl FerroEhrService {
     /// A database failure (`500`).
     pub async fn list_archetypes_adl2(&self, page: Page) -> Result<Vec<String>, ServiceError> {
         let (offset, limit) = page_bounds(page);
-        Ok(sqlx::query_scalar::<_, String>(
-            "SELECT hrid FROM adl2_artefact WHERE kind = 'archetype' \
-             ORDER BY hrid OFFSET $1 LIMIT $2",
-        )
-        .bind(offset)
-        .bind(limit)
-        .fetch_all(&mut *acquire(&self.pool).await?)
-        .await?)
+        Ok(adl2_repo::list_hrids(&self.pool, Some(ARCHETYPE_KIND), offset, limit).await?)
     }
 
     /// Delete the ADL2 artefact `an_id` (case-insensitive).
@@ -557,30 +521,21 @@ impl FerroEhrService {
         // remains the race-free backstop under a concurrent commit.
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
-        adl2_write_lock(&mut tx).await?;
-        let stored: Option<(String, String)> =
-            sqlx::query_as("SELECT hrid, kind FROM adl2_artefact WHERE lower(hrid) = lower($1)")
-                .bind(an_id)
-                .fetch_optional(&mut *tx)
-                .await?;
-        let Some((hrid, kind)) = stored else {
+        adl2_repo::write_lock(&mut tx).await?;
+        let Some(stored) = adl2_repo::find(&mut tx, an_id).await? else {
             return Err(ServiceError::not_found(
                 Missing::Artefact,
                 format!("ADL2 artefact {an_id}"),
             ));
         };
-        let is_template = matches!(kind.as_str(), "template" | "operational_template");
+        let hrid = stored.hrid;
+        let is_template = is_template_kind(&stored.kind);
         if is_template {
             // Counted over BOTH storage tiers (see the ADL 1.4 twin): an
             // archived composition's template reference is invisible to the
             // `template_ref` foreign key, and deleting under it would make that
             // object unrestorable.
-            let refs: i64 = sqlx::query_scalar(
-                "SELECT count(*) FROM version WHERE lower(template_id) = lower($1)",
-            )
-            .bind(&hrid)
-            .fetch_one(&mut *tx)
-            .await?;
+            let refs = template_repo::template_use_count(&mut tx, &hrid).await?;
             if refs > 0 {
                 return Err(ServiceError::conflict(format!(
                     "template '{hrid}' is still referenced by {refs} committed version(s); \
@@ -589,20 +544,11 @@ impl FerroEhrService {
             }
         }
         self.adl2_refuse_in_use(&mut tx, &hrid).await?;
-        sqlx::query("DELETE FROM adl2_artefact WHERE hrid = $1")
-            .bind(&hrid)
-            .execute(&mut *tx)
-            .await?;
+        adl2_repo::delete(&mut tx, &hrid).await?;
         if is_template {
             // Deregister the wire address unless the OPT 1.4 store also claims
             // it (`template_ref` is the union of both dialects' addresses).
-            sqlx::query(
-                "DELETE FROM template_ref WHERE template_id = $1 AND NOT EXISTS \
-                 (SELECT 1 FROM template_store WHERE lower(template_id) = lower($1))",
-            )
-            .bind(&hrid)
-            .execute(&mut *tx)
-            .await?;
+            template_repo::release_template_ref(&mut tx, &hrid).await?;
         }
         tx.commit().await?;
         if is_template {
@@ -626,11 +572,7 @@ impl FerroEhrService {
     ///
     /// A database failure (`500`).
     pub async fn artefacts_count(&self) -> Result<i64, ServiceError> {
-        Ok(
-            sqlx::query_scalar::<_, i64>("SELECT count(*) FROM adl2_artefact")
-                .fetch_one(&mut *acquire(&self.pool).await?)
-                .await?,
-        )
+        Ok(adl2_repo::count(&self.pool, None).await?)
     }
 
     /// Total stored ADL2 artefacts of kind `archetype`.
@@ -639,11 +581,7 @@ impl FerroEhrService {
     ///
     /// A database failure (`500`).
     pub async fn archetypes_count_adl2(&self) -> Result<i64, ServiceError> {
-        Ok(sqlx::query_scalar::<_, i64>(
-            "SELECT count(*) FROM adl2_artefact WHERE kind = 'archetype'",
-        )
-        .fetch_one(&mut *acquire(&self.pool).await?)
-        .await?)
+        Ok(adl2_repo::count(&self.pool, Some(ARCHETYPE_KIND)).await?)
     }
 
     /// The wire list for `GET /definition/template/adl2`: the ADL2 templates and
@@ -657,34 +595,18 @@ impl FerroEhrService {
     /// `/definition/template/adl2`), not source archetypes.
     pub(super) async fn adl2_template_list(&self, page: Page) -> Result<Vec<Value>, ServiceError> {
         let (offset, limit) = page_bounds(page);
-        let rows = sqlx::query(
-            "SELECT hrid, created_at FROM adl2_artefact \
-             WHERE kind IN ('template', 'operational_template') \
-             ORDER BY hrid OFFSET $1 LIMIT $2",
-        )
-        .bind(offset)
-        .bind(limit)
-        .fetch_all(&mut *acquire(&self.pool).await?)
-        .await?;
-        // NOT NULL columns decode infallibly on a healthy row; a decode fault
-        // is a real storage error and surfaces instead of blanking the field.
-        rows.iter()
-            .map(|row| {
-                let hrid: String = row.try_get("hrid")?;
-                let created = row
-                    .try_get::<jiff_sqlx::Timestamp, _>("created_at")?
-                    .to_jiff()
-                    .to_string();
-                let concept = raw_id_concept(&hrid);
-                Ok(serde_json::json!({
+        Ok(adl2_repo::templates(&self.pool, offset, limit)
+            .await?
+            .into_iter()
+            .map(|(hrid, created)| {
+                serde_json::json!({
                     "template_id": hrid,
-                    "concept": concept,
+                    "concept": raw_id_concept(&hrid),
                     "archetype_id": hrid,
-                    "created_timestamp": created,
-                }))
+                    "created_timestamp": created.to_string(),
+                })
             })
-            .collect::<Result<Vec<_>, sqlx::Error>>()
-            .map_err(ServiceError::from)
+            .collect())
     }
 }
 

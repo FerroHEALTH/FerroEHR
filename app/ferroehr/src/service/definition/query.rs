@@ -18,19 +18,16 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use serde_json::{Value, json};
-use sqlx::Connection as _;
-use sqlx::Row;
-use sqlx::postgres::PgRow;
 
 use crate::aql::error::AqlError;
 use crate::aql::ir::{ParamValue, Params};
 use crate::aql::lineage::ArchetypeLineage;
 use crate::aql::sql::{EhrAccessScope, SqlCtx};
 use crate::aql::terminology::TerminologyExpander;
-use crate::db::acquire::acquire;
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
 use crate::service::refusal::Missing;
+use crate::storage::stored_query_repo::{self, QueryName, StoredQueryRow, VersionMatch};
 
 use super::version_selector::{check_version_selector, is_partial_semver};
 
@@ -107,19 +104,8 @@ impl FerroEhrService {
         version: &str,
     ) -> Result<(), ServiceError> {
         let qualified = parse_qualified_name(qualified_name).qualified();
-        let (rdn, semantic) = split_qualified(&qualified);
-        let deleted = sqlx::query(
-            "DELETE FROM stored_query \
-             WHERE lower(reverse_domain_name) = lower($1) \
-               AND lower(semantic_id) = lower($2) AND semver = $3",
-        )
-        .bind(rdn)
-        .bind(semantic)
-        .bind(version)
-        .execute(&mut *acquire(&self.pool).await?)
-        .await?
-        .rows_affected();
-        if deleted == 0 {
+        let name = split_qualified(&qualified);
+        if !stored_query_repo::delete(&self.pool, name, version).await? {
             return Err(ServiceError::not_found(
                 Missing::Artefact,
                 format!("stored query {qualified_name} at version {version}"),
@@ -184,33 +170,11 @@ impl FerroEhrService {
         // namespace), so the same identifier never resolves on one surface and
         // 404s on another.
         let qualified = parse_qualified_name(qualified_name).qualified();
-        let (rdn, semantic) = split_qualified(&qualified);
+        let name = split_qualified(&qualified);
         let Some(v) = version else {
             // No-version store: case-insensitive upsert at the default version.
-            let mut conn = acquire(&self.pool).await?;
-            let mut tx = conn.begin().await?;
-            sqlx::query(
-                "DELETE FROM stored_query \
-                 WHERE lower(reverse_domain_name) = lower($1) \
-                 AND lower(semantic_id) = lower($2) AND semver = $3",
-            )
-            .bind(rdn)
-            .bind(semantic)
-            .bind(DEFAULT_QUERY_VERSION)
-            .execute(&mut *tx)
-            .await?;
-            sqlx::query(
-                "INSERT INTO stored_query \
-                 (reverse_domain_name, semantic_id, semver, query_type, query_text) \
-                 VALUES ($1, $2, $3, 'AQL', $4)",
-            )
-            .bind(rdn)
-            .bind(semantic)
-            .bind(DEFAULT_QUERY_VERSION)
-            .bind(query_text)
-            .execute(&mut *tx)
-            .await?;
-            tx.commit().await?;
+            stored_query_repo::replace(&self.pool, name, DEFAULT_QUERY_VERSION, &query_text)
+                .await?;
             return Ok(DEFAULT_QUERY_VERSION.to_owned());
         };
 
@@ -231,38 +195,8 @@ impl FerroEhrService {
 
         // Versioned store: insert-only, immutable pair. A case-insensitive match
         // at this version is a 409 (BASE master05 §Composite Identifiers and
-        // Case). The exact-case insert stays race-safe via `ON CONFLICT (rdn,
-        // semantic, semver) DO NOTHING` — 0 affected rows also means the pair
-        // already exists → 409.
-        let exists = sqlx::query_scalar::<_, bool>(
-            "SELECT EXISTS(SELECT 1 FROM stored_query \
-             WHERE lower(reverse_domain_name) = lower($1) \
-             AND lower(semantic_id) = lower($2) AND semver = $3)",
-        )
-        .bind(rdn)
-        .bind(semantic)
-        .bind(v)
-        .fetch_one(&mut *acquire(&self.pool).await?)
-        .await?;
-        if exists {
-            return Err(ServiceError::conflict(format!(
-                "a stored query '{qualified_name}' at version '{v}' already exists"
-            )));
-        }
-        let inserted = sqlx::query(
-            "INSERT INTO stored_query \
-             (reverse_domain_name, semantic_id, semver, query_type, query_text) \
-             VALUES ($1, $2, $3, 'AQL', $4) \
-             ON CONFLICT (reverse_domain_name, semantic_id, semver) DO NOTHING",
-        )
-        .bind(rdn)
-        .bind(semantic)
-        .bind(v)
-        .bind(query_text)
-        .execute(&mut *acquire(&self.pool).await?)
-        .await?
-        .rows_affected();
-        if inserted == 0 {
+        // Case).
+        if !stored_query_repo::insert(&self.pool, name, v, &query_text).await? {
             return Err(ServiceError::conflict(format!(
                 "a stored query '{qualified_name}' at version '{v}' already exists"
             )));
@@ -347,106 +281,56 @@ impl FerroEhrService {
         version.map(check_version_selector).transpose()?;
         // The same canonical key as the store path (the `misc` default).
         let qualified = parse_qualified_name(qualified_name).qualified();
-        let (rdn, semantic) = split_qualified(&qualified);
-        let row = match version {
-            Some(v) if is_partial_semver(v) => sqlx::query(
-                // Prefix match on a dot boundary (`1` → `1.x.y`, `1.0` →
-                // `1.0.x`), highest version first. `left(...)` (not LIKE) avoids
-                // pattern-metacharacter escaping.
-                "SELECT reverse_domain_name, semantic_id, semver, query_type, query_text, \
-                 created_at FROM stored_query \
-                 WHERE lower(reverse_domain_name) = lower($1) AND lower(semantic_id) = lower($2) \
-                 AND (semver = $3 OR left(semver, length($3) + 1) = $3 || '.') \
-                 ORDER BY string_to_array(semver, '.')::int[] DESC LIMIT 1",
-            )
-            .bind(rdn)
-            .bind(semantic)
-            .bind(v),
-            Some(v) => sqlx::query(
-                "SELECT reverse_domain_name, semantic_id, semver, query_type, query_text, \
-                 created_at FROM stored_query \
-                 WHERE lower(reverse_domain_name) = lower($1) AND lower(semantic_id) = lower($2) \
-                 AND semver = $3",
-            )
-            .bind(rdn)
-            .bind(semantic)
-            .bind(v),
-            None => sqlx::query(
-                "SELECT reverse_domain_name, semantic_id, semver, query_type, query_text, \
-                 created_at FROM stored_query \
-                 WHERE lower(reverse_domain_name) = lower($1) AND lower(semantic_id) = lower($2) \
-                 ORDER BY string_to_array(semver, '.')::int[] DESC LIMIT 1",
-            )
-            .bind(rdn)
-            .bind(semantic),
-        }
-        .fetch_optional(&mut *acquire(&self.pool).await?)
-        .await?
-        .ok_or_else(|| {
-            ServiceError::not_found(Missing::Artefact, format!("stored query {qualified_name}"))
-        })?;
-
-        stored_query_json(&row)
+        let name = split_qualified(&qualified);
+        let selected = match version {
+            Some(v) if is_partial_semver(v) => VersionMatch::Prefix(v),
+            Some(v) => VersionMatch::Exact(v),
+            None => VersionMatch::Latest,
+        };
+        let row = stored_query_repo::find(&self.pool, name, selected)
+            .await?
+            .ok_or_else(|| {
+                ServiceError::not_found(Missing::Artefact, format!("stored query {qualified_name}"))
+            })?;
+        Ok(stored_query_json(&row))
     }
 
     /// List stored queries whose qualified name starts with `name_pattern`
     /// (`definition_query_list.yaml`: the name is a **prefix** — a bare
     /// `org.openehr` prefix "will list all versions of all queries with names
     /// starting with `org.openehr`"; empty ⇒ wildcard). All stored versions of
-    /// every matching name are returned. The prefix match is case-insensitive.
+    /// every matching name are returned. The prefix match is case-insensitive,
+    /// and a namespace-less pattern also matches under the `misc` namespace,
+    /// the canonical key every surface stores under.
     ///
     /// # Errors
     ///
     /// A row-decode failure (a server fault) or a database failure (`500`).
     pub async fn query_list(&self, name_pattern: &str) -> Result<Vec<Value>, ServiceError> {
-        // A namespace-less pattern also matches its `misc::`-assumed
-        // composition — the canonical key
-        // every surface stores under.
-        let rows = sqlx::query(
-            "SELECT reverse_domain_name, semantic_id, semver, query_type, query_text, created_at \
-             FROM stored_query \
-             WHERE left(lower(CASE WHEN reverse_domain_name = '' THEN semantic_id \
-                             ELSE reverse_domain_name || '::' || semantic_id END), \
-                        length($1)) = lower($1) \
-                OR ($1 NOT LIKE '%::%' AND \
-                    left(lower(reverse_domain_name || '::' || semantic_id), \
-                         length('misc::' || $1)) = lower('misc::' || $1)) \
-             ORDER BY reverse_domain_name, semantic_id, string_to_array(semver, '.')::int[]",
-        )
-        .bind(name_pattern)
-        .fetch_all(&mut *acquire(&self.pool).await?)
-        .await?;
-        rows.iter().map(stored_query_json).collect()
+        Ok(stored_query_repo::list(&self.pool, name_pattern)
+            .await?
+            .iter()
+            .map(stored_query_json)
+            .collect())
     }
 }
 
 // ── row mapping ───────────────────────────────────────────────────────────────
 
 /// The openEHR stored-query descriptor for one row (the ITS-REST wire shape).
-///
-/// Every projected column is `NOT NULL` (`clinical/0006_definitions.sql`
-/// §`stored_query`), so a decode failure is a genuine server fault, not an
-/// empty field:
-/// surface it (`?` → `500`) rather than silently blanking the value.
-fn stored_query_json(row: &PgRow) -> Result<Value, ServiceError> {
-    let rdn = row.try_get::<String, _>("reverse_domain_name")?;
-    let semantic = row.try_get::<String, _>("semantic_id")?;
-    let name = if rdn.is_empty() {
-        semantic
+fn stored_query_json(row: &StoredQueryRow) -> Value {
+    let name = if row.reverse_domain_name.is_empty() {
+        row.semantic_id.clone()
     } else {
-        format!("{rdn}::{semantic}")
+        format!("{}::{}", row.reverse_domain_name, row.semantic_id)
     };
-    let saved = row
-        .try_get::<jiff_sqlx::Timestamp, _>("created_at")?
-        .to_jiff()
-        .to_string();
-    Ok(json!({
+    json!({
         "name": name,
-        "type": row.try_get::<String, _>("query_type")?,
-        "version": row.try_get::<String, _>("semver")?,
-        "saved": saved,
-        "q": row.try_get::<String, _>("query_text")?,
-    }))
+        "type": row.query_type,
+        "version": row.semver,
+        "saved": row.created_at.to_string(),
+        "q": row.query_text,
+    })
 }
 
 // ── qualified names ──────────────────────────────────────────────────────────
@@ -507,14 +391,19 @@ fn qualify(name: &str) -> String {
     }
 }
 
-/// Split an already two-part-canonical query name into `(reverse_domain_name,
-/// semantic_id)` on the first `::`, so the native and wire paths key `stored_query`
-/// rows identically. Callers pass the [`QualifiedName::qualified`] form, which
-/// is always two-part, so the formalism is never captured in `semantic_id`.
-fn split_qualified(qualified_name: &str) -> (&str, &str) {
-    qualified_name
+/// Split an already two-part-canonical query name into its
+/// `reverse_domain_name` and `semantic_id` on the first `::`, so the native and
+/// wire paths key `stored_query` rows identically. Callers pass the
+/// [`QualifiedName::qualified`] form, which is always two-part, so the
+/// formalism is never captured in `semantic_id`.
+fn split_qualified(qualified_name: &str) -> QueryName<'_> {
+    let (reverse_domain_name, semantic_id) = qualified_name
         .split_once("::")
-        .unwrap_or(("", qualified_name))
+        .unwrap_or(("", qualified_name));
+    QueryName {
+        reverse_domain_name,
+        semantic_id,
+    }
 }
 
 // ── formalism ────────────────────────────────────────────────────────────────

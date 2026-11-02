@@ -24,7 +24,9 @@ use crate::service::FerroEhrService;
 use crate::service::definition::types::{Adl2Template, TemplateListFilter};
 use crate::service::error::ServiceError;
 use crate::service::list::Page;
+use crate::storage::template_repo;
 
+use super::opt14::template_descriptor;
 use super::{paginate, query::is_aql_v1};
 
 impl FerroEhrService {
@@ -74,7 +76,11 @@ impl FerroEhrService {
         page: Page,
     ) -> Result<Vec<Value>, ServiceError> {
         Ok(filter_templates(
-            self.template_summaries().await?,
+            template_repo::list_templates(&self.pool)
+                .await?
+                .iter()
+                .map(template_descriptor)
+                .collect(),
             &filter,
             page,
         ))
