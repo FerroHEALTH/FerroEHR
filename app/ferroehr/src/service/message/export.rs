@@ -34,7 +34,6 @@
 )]
 
 use serde_json::{Value, json};
-use sqlx::Row;
 use uuid::Uuid;
 
 use crate::db::acquire::acquire;
@@ -42,6 +41,8 @@ use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
 use crate::service::refusal::Missing;
+use crate::storage::ehr_repo;
+use crate::storage::extract_repo::{self, Enforced};
 use crate::storage::version_repo::read::VersionAt;
 use crate::system_log::categories::{AccessedContent, ContentIds, ResourceKind};
 use crate::system_log::event::EventActionCode;
@@ -269,8 +270,7 @@ impl FerroEhrService {
     /// Whether an EHR with `ehr_id` exists and the request may read it (the
     /// EHR-existence precondition of both export calls).
     async fn extract_ehr_exists(&self, ehr_id: EhrId) -> Result<bool, ServiceError> {
-        let exists =
-            crate::storage::ehr_repo::ehr_exists(&mut *acquire(&self.pool).await?, ehr_id).await?;
+        let exists = ehr_repo::ehr_exists(&mut *acquire(&self.pool).await?, ehr_id).await?;
         Ok(exists && !self.ehr_hidden_from_request(ehr_id).await?)
     }
 
@@ -465,23 +465,7 @@ impl FerroEhrService {
         &self,
         ehr_id: EhrId,
     ) -> Result<Vec<(VoId, String)>, ServiceError> {
-        let rows = sqlx::query(
-            "SELECT version.vo_id, version.kind FROM version \
-             JOIN vo_head h ON h.vo_id = version.vo_id AND h.trunk_head_sys_version = version.sys_version \
-             WHERE version.ehr_id = $1 AND h.restricted_at IS NULL \
-             AND (NOT $2 OR h.access_restricted_at IS NULL) \
-             AND (NOT $3 OR (h.person_withheld_until > now()) IS NOT TRUE) ORDER BY version.vo_id",
-        )
-        .bind(ehr_id)
-        .bind(crate::system_log::access_context::access_restriction_enforced())
-        .bind(crate::system_log::access_context::access_delay_enforced())
-        .fetch_all(&mut *acquire(&self.pool).await?)
-        .await?;
-        let mut out = Vec::with_capacity(rows.len());
-        for r in rows {
-            out.push((r.try_get("vo_id")?, r.try_get("kind")?));
-        }
-        Ok(out)
+        Ok(extract_repo::ehr_objects(&self.pool, ehr_id, enforced()).await?)
     }
 
     /// The kind of a version container of `ehr_id` (an `EXTRACT_ENTITY_MANIFEST.item_list` entry).
@@ -490,38 +474,7 @@ impl FerroEhrService {
         ehr_id: EhrId,
         vo_id: VoId,
     ) -> Result<Option<String>, ServiceError> {
-        Ok(sqlx::query_scalar(
-            "SELECT version.kind FROM version \
-             JOIN vo_head h ON h.vo_id = version.vo_id AND h.trunk_head_sys_version = version.sys_version \
-             WHERE version.vo_id = $1 AND version.ehr_id = $2 AND h.restricted_at IS NULL \
-             AND (NOT $3 OR h.access_restricted_at IS NULL) \
-             AND (NOT $4 OR (h.person_withheld_until > now()) IS NOT TRUE)",
-        )
-        .bind(vo_id)
-        .bind(ehr_id)
-        .bind(crate::system_log::access_context::access_restriction_enforced())
-        .bind(crate::system_log::access_context::access_delay_enforced())
-        .fetch_optional(&mut *acquire(&self.pool).await?)
-        .await?)
-    }
-
-    /// The `sys_version`s of a version container, in order, each flagged with
-    /// whether it is the current trunk version (`vo_head.trunk_head_sys_version`).
-    async fn vo_version_numbers(&self, vo_id: VoId) -> Result<Vec<(i32, bool)>, ServiceError> {
-        let rows = sqlx::query(
-            "SELECT sys_version, EXISTS(SELECT 1 FROM vo_head h \
-                 WHERE h.vo_id = version.vo_id \
-                   AND h.trunk_head_sys_version = version.sys_version) AS is_current \
-             FROM version WHERE vo_id = $1 ORDER BY sys_version",
-        )
-        .bind(vo_id)
-        .fetch_all(&mut *acquire(&self.pool).await?)
-        .await?;
-        let mut out = Vec::with_capacity(rows.len());
-        for r in rows {
-            out.push((r.try_get("sys_version")?, r.try_get("is_current")?));
-        }
-        Ok(out)
+        Ok(extract_repo::ehr_object_kind(&self.pool, ehr_id, vo_id, enforced()).await?)
     }
 
     /// The stored-version counts of a set of parties, in ONE statement — the
@@ -531,21 +484,10 @@ impl FerroEhrService {
         &self,
         vo_ids: &[VoId],
     ) -> Result<std::collections::HashMap<VoId, i64>, ServiceError> {
-        if vo_ids.is_empty() {
-            return Ok(std::collections::HashMap::new());
-        }
-        let ids: Vec<Uuid> = vo_ids.iter().map(|v| v.0).collect();
-        let rows = sqlx::query(
-            "SELECT vo_id, count(*) AS n FROM version WHERE vo_id = ANY($1) GROUP BY vo_id",
-        )
-        .bind(&ids)
-        .fetch_all(&mut *acquire(&self.demographic_pool).await?)
-        .await?;
-        let mut out = std::collections::HashMap::with_capacity(rows.len());
-        for r in rows {
-            out.insert(r.try_get::<VoId, _>("vo_id")?, r.try_get::<i64, _>("n")?);
-        }
-        Ok(out)
+        Ok(extract_repo::version_counts(&self.demographic_pool, vo_ids)
+            .await?
+            .into_iter()
+            .collect())
     }
 
     /// Build one `OPENEHR_CONTENT_ITEM` wrapping the `X_VERSIONED_<kind>` for a
@@ -562,7 +504,7 @@ impl FerroEhrService {
         is_primary: bool,
         served: &mut Vec<ContentIds>,
     ) -> Result<Value, ServiceError> {
-        let all = self.vo_version_numbers(vo_id).await?;
+        let all = extract_repo::version_numbers(&self.pool, vo_id).await?;
         let total = i32::try_from(all.len()).unwrap_or(i32::MAX);
 
         // Which versions to serialise: none if data is excluded, else all or the
@@ -1066,11 +1008,7 @@ async fn resolve_entity_ehr(
         ));
     }
     if let Some(subject) = subject_id {
-        let id: Option<EhrId> = sqlx::query_scalar("SELECT id FROM ehr WHERE subject_id = $1")
-            .bind(subject)
-            .fetch_optional(&mut *acquire(&svc.pool).await?)
-            .await
-            .map_err(ServiceError::from)?;
+        let id = ehr_repo::ehr_id_by_subject_id(&svc.pool, subject).await?;
         if let Some(id) = id
             && svc.extract_ehr_exists(id).await?
         {
@@ -1084,4 +1022,13 @@ async fn resolve_entity_ehr(
     Err(ServiceError::precondition(
         "EXTRACT_ENTITY_MANIFEST identifies no entity (neither ehr_id nor subject_id)",
     ))
+}
+
+/// The access marks the current request enforces, which every extract read
+/// honours.
+fn enforced() -> Enforced {
+    Enforced {
+        access_restriction: crate::system_log::access_context::access_restriction_enforced(),
+        access_delay: crate::system_log::access_context::access_delay_enforced(),
+    }
 }

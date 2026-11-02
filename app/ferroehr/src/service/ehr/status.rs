@@ -29,6 +29,8 @@ use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
 use crate::service::version_update::WriteRequest;
 use crate::service::write::{Mode, Resolved};
+use crate::storage::ehr_repo::{self, PromotedColumns};
+use crate::storage::error::StorageError;
 use crate::storage::version_repo::read::VersionAt;
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
@@ -240,14 +242,12 @@ impl FerroEhrService {
     /// modifiable so the guard never spuriously blocks.
     ///
     /// The column read is a storage seam
-    /// ([`crate::storage::ehr_repo::ehr_is_modifiable`]; no openEHR spec
+    /// ([`ehr_repo::ehr_is_modifiable`]; no openEHR spec
     /// governs the promoted column — our own storage design).
     async fn ehr_is_modifiable(&self, ehr_id: EhrId) -> Result<bool, ServiceError> {
-        Ok(
-            crate::storage::ehr_repo::ehr_is_modifiable(&self.pool, ehr_id)
-                .await?
-                .unwrap_or(true),
-        )
+        Ok(ehr_repo::ehr_is_modifiable(&self.pool, ehr_id)
+            .await?
+            .unwrap_or(true))
     }
 
     /// Refuses a write to EHR contents when the EHR is deactivated
@@ -311,35 +311,25 @@ impl FerroEhrService {
         // The is_modifiable sync (the content-write guard, RM ehr master04
         // §EHR Active Status) rides this same UPDATE — zero extra statements.
         let (subject_id, namespace, is_queryable, is_modifiable) = ehr_promoted_columns(canonical);
-        sqlx::query(
-            "UPDATE ehr SET subject_id = $2, subject_namespace = $3, is_queryable = $4, \
-             is_modifiable = $5 WHERE id = $1",
-        )
-        .bind(ehr_id)
-        .bind(subject_id)
-        .bind(namespace)
-        .bind(is_queryable)
-        .bind(is_modifiable)
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| {
-            if let sqlx::Error::Database(db) = &e
-                && db.constraint() == Some("uq_ehr_subject")
-            {
+        let columns = PromotedColumns {
+            subject_id,
+            subject_namespace: namespace,
+            is_queryable,
+            is_modifiable,
+        };
+        ehr_repo::update_promoted_columns(tx, ehr_id, columns)
+            .await
+            .map_err(|e| match e {
                 // NOTE: ITS-REST EHR API `409_EHR` refuses a second EHR for one subject
                 // id and namespace pair; the status token is our own.
-                return ServiceError::Conflict(Refusal::new(
-                    Clash::EhrForSubject,
-                    format!(
-                        "an EHR already exists for subject {}@{}",
-                        subject_id.unwrap_or("?"),
-                        namespace.unwrap_or("?"),
-                    ),
-                ));
-            }
-            ServiceError::Database(e)
-        })?;
-        Ok(())
+                StorageError::SubjectInUse(subject, namespace) => {
+                    ServiceError::Conflict(Refusal::new(
+                        Clash::EhrForSubject,
+                        format!("an EHR already exists for subject {subject}@{namespace}"),
+                    ))
+                }
+                other => ServiceError::Storage(other),
+            })
     }
 
     /// Re-promotes the `ehr` columns from the stored current `EHR_STATUS`, the
@@ -347,7 +337,7 @@ impl FerroEhrService {
     /// write hook: the EHR Extract import and the admin archive load.
     ///
     /// The current status root fragment is read on the caller's transaction
-    /// ([`crate::storage::ehr_repo::current_status_root`]) and handed to
+    /// ([`ehr_repo::current_status_root`]) and handed to
     /// [`Self::sync_ehr_subject`], so an imported or loaded EHR is visible to
     /// the subject lookup (`get_ehrs_for_subject`) and bound by
     /// the one-EHR-per-subject rule (RM ehr master04 §EHR Status) like any
@@ -367,13 +357,13 @@ impl FerroEhrService {
         tx: &mut PgConnection,
         ehr_id: EhrId,
     ) -> Result<(), ServiceError> {
-        let Some(status) = crate::storage::ehr_repo::current_status_root(tx, ehr_id).await? else {
+        let Some(status) = ehr_repo::current_status_root(tx, ehr_id).await? else {
             return Ok(());
         };
         let (subject_id, namespace, _, _) = ehr_promoted_columns(&status);
         if let (Some(subject_id), Some(namespace)) = (subject_id, namespace)
             && let Some(owner) =
-                crate::storage::ehr_repo::ehr_id_by_subject(&mut *tx, subject_id, namespace).await?
+                ehr_repo::ehr_id_by_subject(&mut *tx, subject_id, namespace).await?
             && owner != ehr_id
         {
             // NOTE: ITS-REST EHR API `409_EHR` refuses a second EHR for one subject

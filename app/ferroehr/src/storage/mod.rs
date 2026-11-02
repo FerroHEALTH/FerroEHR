@@ -39,6 +39,7 @@
 //!   and event-outbox writes, the [`version_repo::read::StoredVersion`] read
 //!   shape), itself one file per concern.
 //! - [`ehr_repo`] — `ehr`-table and `ehr_folder`-membership reads and writes.
+//! - [`extract_repo`] — the reads behind an EHR Extract.
 //! - [`tag_repo`] — the `item_tag` store (EHR-scoped and demographic).
 //! - [`marks`] — the restriction register, the research objection and the
 //!   retention register, and the marks on `ehr` / `vo_head` they drive.
@@ -74,6 +75,7 @@ pub mod dump_repo;
 pub mod ehr_repo;
 pub mod erasure;
 pub mod error;
+pub mod extract_repo;
 pub mod header;
 pub mod integrity;
 pub mod marks;

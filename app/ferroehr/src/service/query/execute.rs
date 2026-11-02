@@ -30,11 +30,12 @@ use crate::aql;
 use crate::aql::error::{AqlError, ExecError};
 use crate::aql::ir::{Params, QueryDomain, QueryIr};
 use crate::aql::sql::SqlCtx;
-use crate::db::acquire::acquire;
 use crate::service::FerroEhrService;
 use crate::service::error::{ErrorChain, ServiceError};
 use crate::service::query::request::{AqlQueryRequest, QueryOutcome};
 use crate::service::refusal::{Missing, Refusal};
+use crate::storage::ehr_repo;
+use crate::storage::error::StorageError;
 use crate::system_log::categories::{AccessedContent, ContentIds};
 
 use super::result_set::{build_params, result_set_json, substitute_params};
@@ -297,28 +298,22 @@ impl FerroEhrService {
         }
         // Verify existence in one round-trip and report the first absent id, as
         // a set: a cohort names 100 000 EHRs and a probe per id is quadratic (#3159).
-        let present: std::collections::HashSet<Uuid> =
-            // NOTE: EHDS Art. 8 and Art. 10 (`docs/law/eu/ehds/text.html`), an EHR under a
-            // whole-EHR access restriction or an opt-out reads as absent while enforced.
-            sqlx::query_scalar::<_, EhrId>(
-                "SELECT id FROM ehr WHERE id = ANY($1) \
-                 AND (NOT $2 OR access_restricted_at IS NULL) AND (NOT $3 OR opted_out_at IS NULL)",
-            )
-            .bind(ids)
-            .bind(crate::system_log::access_context::access_restriction_enforced())
-            .bind(crate::system_log::access_context::access_opt_out_enforced())
-                .fetch_all(
-                    &mut *acquire(&self.pool)
-                        .await
-                        .map_err(|e| Failure::analysis(ServiceError::Acquire(e)))?,
-                )
-                .await
-                .map_err(|e| {
-                    Failure::analysis(ServiceError::internal("resolve the requested ehr_ids", e))
-                })?
-                .into_iter()
-                .map(|id| id.0)
-                .collect();
+        let present: std::collections::HashSet<Uuid> = ehr_repo::visible_ehr_ids(
+            &self.pool,
+            ids,
+            crate::system_log::access_context::access_restriction_enforced(),
+            crate::system_log::access_context::access_opt_out_enforced(),
+        )
+        .await
+        .map_err(|e| {
+            Failure::analysis(match e {
+                StorageError::Acquire(acquire) => ServiceError::Acquire(acquire),
+                other => ServiceError::internal("resolve the requested ehr_ids", other),
+            })
+        })?
+        .into_iter()
+        .map(|id| id.0)
+        .collect();
         if let Some(missing) = ids.iter().find(|id| !present.contains(&id.0)) {
             return Err(Failure::analysis(ServiceError::not_found(
                 Missing::Ehr,
@@ -609,10 +604,9 @@ fn map_exec_error(e: AqlError) -> ServiceError {
         }
         // No connection could be obtained: no statement ran, so the request can
         // be repeated (`503` plus `Retry-After`).
-        AqlError::Exec(
-            ExecError::Acquire(e)
-            | ExecError::Assembly(crate::storage::error::StorageError::Acquire(e)),
-        ) => crate::storage::error::classify_acquire(e),
+        AqlError::Exec(ExecError::Acquire(e) | ExecError::Assembly(StorageError::Acquire(e))) => {
+            crate::storage::error::classify_acquire(e)
+        }
         AqlError::Exec(ExecError::Database(db)) => crate::storage::error::classify_sqlx(db),
         AqlError::Exec(ExecError::Assembly(a)) => {
             ServiceError::internal("assemble the RESULT_SET", a)
