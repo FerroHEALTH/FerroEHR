@@ -30,11 +30,12 @@ strip_patterns=(
   'Anthropic[[:space:]]+Claude'
 )
 
-# The one co-author line a `[bot]` pattern above would delete that is not AI
-# attribution: GitHub's squash merge of a Dependabot pull request writes it,
-# naming the dependency updater. The `no attribution in commits` CI job
-# excludes the same line, so the hook and the guard agree about it.
-keep_pattern='^[[:space:]]*Co-authored-by: dependabot\[bot\] <[0-9]+\+dependabot\[bot\]@users\.noreply\.github\.com>[[:space:]]*$'
+# The co-author lines a `[bot]` pattern above would delete that are not AI
+# attribution: GitHub's squash merge writes them for a commit made by
+# Dependabot or by a workflow (github-actions), naming GitHub's own automation
+# (owner ruling 2026-11-02). The `no attribution in commits` CI job excludes
+# the same lines, so the hook and the guard agree about them.
+keep_pattern='^[[:space:]]*Co-authored-by: (dependabot|github-actions)\[bot\] <[0-9]+\+(dependabot|github-actions)\[bot\]@users\.noreply\.github\.com>[[:space:]]*$'
 
 tmp="$(mktemp)"
 
