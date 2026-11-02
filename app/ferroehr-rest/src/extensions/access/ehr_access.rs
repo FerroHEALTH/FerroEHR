@@ -372,7 +372,9 @@ mod tests {
 
     fn settings(scheme: &serde_json::Value) -> EhrAccessSettings {
         let access = json!({ "_type": "EHR_ACCESS", "settings": scheme });
-        EhrAccessSettings::from_ehr_access(&access).expect("our scheme")
+        EhrAccessSettings::from_ehr_access(&access)
+            .expect("the settings parse")
+            .expect("our scheme")
     }
 
     #[test]
