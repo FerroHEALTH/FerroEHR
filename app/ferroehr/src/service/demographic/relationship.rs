@@ -36,7 +36,6 @@ use crate::service::demographic::validate::relationship_check;
 use crate::service::error::ServiceError;
 use crate::service::refusal::Missing;
 use crate::service::response::{ResourceMeta, ServiceResponse};
-use crate::service::status::ServiceStatus;
 use crate::service::version_update::Committal;
 use crate::versioning::audit::change_type;
 use crate::versioning::change::WriteEnvelope;
@@ -87,11 +86,11 @@ impl FerroEhrService {
         // `object_version_does_not_exist`, a current read the generic
         // `versioned_object_does_not_exist`, as for a party.
         let miss = || {
-            ServiceError::new(
+            ServiceError::not_found(
                 if version.is_some() || at.is_some() {
-                    ServiceStatus::ObjectVersionDoesNotExist
+                    Missing::ObjectVersion
                 } else {
-                    ServiceStatus::VersionedObjectDoesNotExist
+                    Missing::VersionedObject
                 },
                 format!("PARTY_RELATIONSHIP {vo_id}"),
             )
@@ -119,11 +118,11 @@ impl FerroEhrService {
     async fn ensure_any_relationship(
         &self,
         vo_id: VoId,
-        miss: ServiceStatus,
+        miss: Missing,
     ) -> Result<(), ServiceError> {
         match object_kind(&self.demographic_pool, vo_id).await? {
             Some(Kind::PartyRelationship) => Ok(()),
-            _ => Err(ServiceError::new(
+            _ => Err(ServiceError::not_found(
                 miss,
                 format!("versioned party relationship {vo_id}"),
             )),
@@ -367,7 +366,7 @@ impl FerroEhrService {
     /// analogy with the EHR group (assembly + owner NOTE in
     /// `support::versioned_wrapper`).
     pub(super) async fn versioned_relationship(&self, vo_id: VoId) -> Result<Value, ServiceError> {
-        self.ensure_any_relationship(vo_id, ServiceStatus::VersionedObjectDoesNotExist)
+        self.ensure_any_relationship(vo_id, Missing::VersionedObject)
             .await?;
         self.versioned_wrapper(vo_id, "VERSIONED_OBJECT", "versioned party relationship")
             .await
@@ -380,7 +379,7 @@ impl FerroEhrService {
         &self,
         vo_id: VoId,
     ) -> Result<Value, ServiceError> {
-        self.ensure_any_relationship(vo_id, ServiceStatus::VersionedObjectDoesNotExist)
+        self.ensure_any_relationship(vo_id, Missing::VersionedObject)
             .await?;
         self.demographic_revision_history(vo_id).await
     }
@@ -394,7 +393,7 @@ impl FerroEhrService {
     ) -> Result<Value, ServiceError> {
         // Version-addressed: `object_version_does_not_exist` is the
         // does-not-exist code, as for a party.
-        self.ensure_any_relationship(vo_id, ServiceStatus::ObjectVersionDoesNotExist)
+        self.ensure_any_relationship(vo_id, Missing::ObjectVersion)
             .await?;
         self.demographic_version_envelope(vo_id, version, "party relationship")
             .await
@@ -407,7 +406,7 @@ impl FerroEhrService {
         vo_id: VoId,
         at: Option<jiff::Timestamp>,
     ) -> Result<ServiceResponse, ServiceError> {
-        self.ensure_any_relationship(vo_id, ServiceStatus::VersionedObjectDoesNotExist)
+        self.ensure_any_relationship(vo_id, Missing::VersionedObject)
             .await?;
         self.demographic_version_envelope_at(vo_id, at, "party relationship")
             .await

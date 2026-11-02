@@ -25,7 +25,7 @@
 //!
 //! The service methods live on [`crate::service::FerroEhrService`], defined
 //! across `store` (`store_template`, `get_template_xml`, `template_summaries`)
-//! and `runtime` (`web_template_for`, `template_example`). The UUID-keyed
+//! and `runtime` (`web_template`, `template_example`). The UUID-keyed
 //! native OPT operations belong to the definition register (`service/definition/adl14.rs`), which reads the same
 //! `template_store` table directly; this module does not duplicate them.
 

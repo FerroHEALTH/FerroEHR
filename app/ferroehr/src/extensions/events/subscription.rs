@@ -26,7 +26,7 @@ use uuid::Uuid;
 use crate::db::acquire::acquire;
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
-use crate::service::status::ServiceStatus;
+use crate::service::refusal::Missing;
 
 /// A stored event-subscription record (the subscription admin API's response
 /// row).
@@ -159,10 +159,7 @@ impl FerroEhrService {
         .fetch_optional(&mut *acquire(&self.pool).await?)
         .await?
         .ok_or_else(|| {
-            ServiceError::new(
-                ServiceStatus::VersionedObjectDoesNotExist,
-                format!("event subscription {id}"),
-            )
+            ServiceError::not_found(Missing::VersionedObject, format!("event subscription {id}"))
         })?;
         Self::subscription_row(&row)
     }
@@ -229,10 +226,7 @@ impl FerroEhrService {
         .fetch_optional(&mut *acquire(&self.pool).await?)
         .await?
         .ok_or_else(|| {
-            ServiceError::new(
-                ServiceStatus::VersionedObjectDoesNotExist,
-                format!("event subscription {id}"),
-            )
+            ServiceError::not_found(Missing::VersionedObject, format!("event subscription {id}"))
         })?;
         Self::subscription_row(&row)
     }
@@ -253,8 +247,8 @@ impl FerroEhrService {
             .await?
             .rows_affected();
         if deleted == 0 {
-            return Err(ServiceError::new(
-                ServiceStatus::VersionedObjectDoesNotExist,
+            return Err(ServiceError::not_found(
+                Missing::VersionedObject,
                 format!("event subscription {id}"),
             ));
         }

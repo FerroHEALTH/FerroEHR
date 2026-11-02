@@ -27,7 +27,6 @@ use crate::service::demographic::validate::party_invariants;
 use crate::service::error::ServiceError;
 use crate::service::refusal::Missing;
 use crate::service::response::{ResourceMeta, ServiceResponse};
-use crate::service::status::ServiceStatus;
 use crate::service::version_update::Committal;
 use crate::versioning::CommitEnv;
 use crate::versioning::audit::change_type;
@@ -82,11 +81,11 @@ impl FerroEhrService {
         // `object_version_does_not_exist`, a current read is the generic
         // `versioned_object_does_not_exist`.
         let miss = || {
-            ServiceError::new(
+            ServiceError::not_found(
                 if version.is_some() || at.is_some() {
-                    ServiceStatus::ObjectVersionDoesNotExist
+                    Missing::ObjectVersion
                 } else {
-                    ServiceStatus::VersionedObjectDoesNotExist
+                    Missing::VersionedObject
                 },
                 format!("{} {vo_id}", kind.rm_type()),
             )
@@ -115,11 +114,14 @@ impl FerroEhrService {
     pub(super) async fn ensure_any_party(
         &self,
         vo_id: VoId,
-        miss: ServiceStatus,
+        miss: Missing,
     ) -> Result<(), ServiceError> {
         match object_kind(&self.demographic_pool, vo_id).await? {
             Some(k) if k.is_party() => Ok(()),
-            _ => Err(ServiceError::new(miss, format!("versioned party {vo_id}"))),
+            _ => Err(ServiceError::not_found(
+                miss,
+                format!("versioned party {vo_id}"),
+            )),
         }
     }
 

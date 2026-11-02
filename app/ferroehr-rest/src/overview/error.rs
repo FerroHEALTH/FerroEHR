@@ -362,7 +362,7 @@ const VALIDATION_HINT: &str =
 
 /// The detail of `error`: its message without the status word the
 /// [`ApiError`] display leads with, which the problem's title already says.
-fn detail_of(error: &ApiError) -> String {
+pub(crate) fn detail_of(error: &ApiError) -> String {
     match error {
         ApiError::BadRequest(message)
         | ApiError::Unauthorized(message)

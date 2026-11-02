@@ -8,7 +8,7 @@
 //! §Archetypes and Templates at Runtime gives a template two runtime functions,
 //! validating data at capture and import against the RM and archetypes and
 //! serving as the design basis for AQL paths; the validation and commit path
-//! consumes [`FerroEhrService::web_template_for`]. §Deploying Archetypes and
+//! consumes [`FerroEhrService::web_template`]. §Deploying Archetypes and
 //! Templates blesses a compiled near-runtime form "compiled into a near-runtime
 //! form from the sharable openEHR form", which here is the [`WebTemplate`],
 //! memoised in a `moka` cache.
@@ -54,10 +54,7 @@ impl FerroEhrService {
     /// - [`ServiceError::Unprocessable`] when the stored XML fails to build
     ///   into a [`WebTemplate`].
     /// - [`ServiceError::Database`] — the store read failed.
-    pub(crate) async fn web_template_for(
-        &self,
-        template_id: &str,
-    ) -> Result<Arc<WebTemplate>, ServiceError> {
+    pub async fn web_template(&self, template_id: &str) -> Result<Arc<WebTemplate>, ServiceError> {
         // Key the cache on the identity-canonical form so a case variant resolves
         // to the single entry for the same template.
         let key = identity::canonical_key(template_id);
@@ -107,7 +104,7 @@ impl FerroEhrService {
     /// - [`ServiceError::NotFound`] (→ ITS-REST `404`,
     ///   `responses/404_unknown_template_id.yaml`) — unknown `template_id`,
     ///   matching the `adl1.4/{template_id}` GET surface rather than the `422`
-    ///   [`web_template_for`](Self::web_template_for) maps for an unknown
+    ///   [`web_template`](Self::web_template) maps for an unknown
     ///   template on a *commit* path.
     /// - [`ServiceError::Unprocessable`] (→ `422`) — the template is stored but
     ///   cannot be built into a [`WebTemplate`].

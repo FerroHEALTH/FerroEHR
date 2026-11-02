@@ -631,8 +631,8 @@ fn map_exec_error(e: AqlError) -> ServiceError {
         AqlError::Exec(
             ExecError::Acquire(e)
             | ExecError::Assembly(crate::storage::error::StorageError::Acquire(e)),
-        ) => ServiceError::Acquire(e),
-        AqlError::Exec(ExecError::Database(db)) => ServiceError::Database(db),
+        ) => crate::storage::error::classify_acquire(e),
+        AqlError::Exec(ExecError::Database(db)) => crate::storage::error::classify_sqlx(db),
         AqlError::Exec(ExecError::Assembly(a)) => {
             ServiceError::internal("assemble the RESULT_SET", a)
         }
@@ -653,12 +653,12 @@ fn map_exec_error(e: AqlError) -> ServiceError {
     }
 }
 
-impl From<AqlError> for crate::service::status::StatusError {
-    /// An AQL-engine failure as a query execution reports it, on the status
-    /// bridge the access resolvers still read: a connection that cannot be
-    /// obtained is `service_overloaded` (`503` plus `Retry-After`).
+impl From<AqlError> for ServiceError {
+    /// An AQL-engine failure as a query execution reports it, classified: a
+    /// connection that cannot be obtained is the `503` of
+    /// [`ServiceError::Overloaded`], with `Retry-After`.
     fn from(e: AqlError) -> Self {
-        Self::from(map_exec_error(e))
+        map_exec_error(e)
     }
 }
 
@@ -686,7 +686,7 @@ mod tests {
             sqlx::Error::PoolTimedOut,
         )));
         assert!(
-            matches!(&shed, ServiceError::Database(_)) && sheds(shed),
+            matches!(&shed, ServiceError::Overloaded(_)) && sheds(shed),
             "a pool-acquire timeout on the query path sheds"
         );
 
@@ -809,6 +809,6 @@ mod tests {
         let err = map_exec_error(AqlError::Exec(ExecError::Assembly(
             crate::storage::error::StorageError::Acquire(failure),
         )));
-        assert!(matches!(&err, ServiceError::Acquire(_)) && sheds(err));
+        assert!(matches!(&err, ServiceError::Overloaded(_)) && sheds(err));
     }
 }

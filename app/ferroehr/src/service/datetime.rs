@@ -37,7 +37,7 @@
 //! the spec's MUST is the extended format, while jiff's `Timestamp` grammar is
 //! Temporal's and tolerates the basic date form.
 
-use crate::service::status::StatusError;
+use crate::service::error::ServiceError;
 
 /// Whether the value starts with an extended-format ISO 8601 DATE —
 /// `YYYY-MM-DD…` (hyphen-separated, the `-`s at byte offsets 4 and 7).
@@ -84,10 +84,11 @@ fn resolve(raw: &str) -> Option<jiff::Timestamp> {
 /// read addresses.
 ///
 /// # Errors
-/// [`StatusError`] `precondition_violation` (an argument-validity failure → `400`)
+/// [`ServiceError::BadRequest`] (an argument-validity failure → `400`)
 /// when the value is not an extended-ISO-8601 datetime.
-pub(in crate::service) fn parse_at_time(raw: &str) -> Result<jiff::Timestamp, StatusError> {
-    resolve(raw).ok_or_else(|| StatusError::precondition(format!("invalid version_at_time: {raw}")))
+pub(in crate::service) fn parse_at_time(raw: &str) -> Result<jiff::Timestamp, ServiceError> {
+    resolve(raw)
+        .ok_or_else(|| ServiceError::precondition(format!("invalid version_at_time: {raw}")))
 }
 
 #[cfg(test)]

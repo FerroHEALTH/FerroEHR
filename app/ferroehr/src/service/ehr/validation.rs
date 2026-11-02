@@ -175,7 +175,7 @@ impl FerroEhrService {
     /// both the template-driven and RM-driven layers. Every other check stays at
     /// full strictness ("data may be missing, but it may not be wrong").
     ///
-    /// The template lookup goes through `web_template_for`, the
+    /// The template lookup goes through `web_template`, the
     /// template-independent passes through
     /// `openehr_sdt::rm_instance::validate_rm_and_terminology` and the
     /// archetype-conformance pass through
@@ -213,7 +213,7 @@ impl FerroEhrService {
             .pointer("/archetype_details/template_id/value")
             .and_then(Value::as_str)
         {
-            let wt = self.web_template_for(template_id).await?;
+            let wt = self.web_template(template_id).await?;
             messages.extend(run_validation_pass(hand_off, || {
                 if incomplete {
                     openehr_sdt::flat::validation::validate_archetype_conformance_incomplete(

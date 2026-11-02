@@ -1264,7 +1264,7 @@ async fn adl2_template_upload_accepts_node_ids_reused_by_an_included_archetype()
 
 // ── ADL2/OPT2 FLAT parity: commit-path resolver fallback (#269) ───────────────
 
-/// The runtime `WebTemplate` resolver (`web_template`/`web_template_for`) falls
+/// The runtime `WebTemplate` resolver (`web_template`) falls
 /// back to the ADL2/OPT2 store when a template id is not an ADL 1.4 template, so a
 /// FLAT/STRUCTURED composition **commit** keyed to an ADL2-registered template
 /// resolves and is validated — the ADL2 twin of the OPT 1.4 commit path. Before
