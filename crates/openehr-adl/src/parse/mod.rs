@@ -42,6 +42,7 @@ use openehr_am::v2_4::aom2::constraint_model::c_primitive_object::CPrimitiveObje
 use openehr_am::v2_4::aom2::constraint_model::primitive::c_string::CString;
 
 use crate::aom::build::{PrimitiveNode, cobject_to_primitive};
+use crate::codes::NodeCoding;
 use crate::error::{SyntaxError, SyntaxErrorCode};
 use crate::odin::regex_inner;
 use crate::parse::primitives::split_contained_regexp;
@@ -115,6 +116,7 @@ pub fn parse_definition_body(
         errors: Vec::new(),
         dialect,
         nesting: Nesting::ROOT,
+        node_coding: root_coding(&toks),
     };
     let root = parser.parse_root();
     match root {
@@ -145,6 +147,20 @@ pub fn parse_definition_body(
     }
 }
 
+/// The coding of the archetype whose definition `toks` lexes, read off its
+/// first node id, the root's. A body with no node id fails to parse whatever
+/// its coding, so it reads as at-coded.
+fn root_coding(toks: &[Spanned]) -> NodeCoding {
+    toks.iter()
+        .find_map(|t| match &t.token {
+            Token::RootIdCode(c) | Token::IdCode(c) | Token::AtCode(c) => {
+                Some(NodeCoding::of_root(c))
+            }
+            _ => None,
+        })
+        .unwrap_or(NodeCoding::At)
+}
+
 /// The recursive-descent cADL parser over a token slice.
 pub(crate) struct Parser<'a> {
     pub(crate) src: &'a str,
@@ -153,6 +169,11 @@ pub(crate) struct Parser<'a> {
     pub(crate) errors: Vec<SyntaxError>,
     pub(crate) dialect: Dialect,
     pub(crate) nesting: Nesting,
+    /// The coding of the archetype being parsed. Text parsed with no archetype
+    /// around it (a rule operand, a slot assertion) is at-coded, the openEHR
+    /// primary code system (`org.openehr.am.aom2.adl_code_definitions`
+    /// §Description).
+    pub(crate) node_coding: NodeCoding,
 }
 
 // ── cursor + error helpers ────────────────────────────────────────────────
@@ -368,6 +389,7 @@ pub(crate) fn parse_inline_primitive_text(raw: &str) -> Result<CPrimitiveObject,
         errors: Vec::new(),
         dialect: Dialect::Adl2,
         nesting: Nesting::ROOT,
+        node_coding: NodeCoding::At,
     };
     let parsed: PResult<CObject> = (|| {
         parser.expect(
@@ -375,7 +397,7 @@ pub(crate) fn parse_inline_primitive_text(raw: &str) -> Result<CPrimitiveObject,
             SyntaxErrorCode::Sccog,
             "expecting '{' opening a constraint",
         )?;
-        let obj = parser.parse_c_inline_primitive("Primitive_node_id".to_owned())?;
+        let obj = parser.parse_c_inline_primitive(parser.node_coding.primitive_node_id())?;
         parser.expect(
             |t| matches!(t, Token::RCurly),
             SyntaxErrorCode::Sccog,
@@ -437,7 +459,8 @@ pub(crate) fn parse_contained_regexp_text(raw: &str) -> Result<CString, Vec<Synt
             raw,
         )]);
     }
-    Ok(PrimitiveNode::inline("String").c_string(vec![regex_part.to_owned()], assumed))
+    Ok(PrimitiveNode::inline("String", NodeCoding::At)
+        .c_string(vec![regex_part.to_owned()], assumed))
 }
 
 #[cfg(test)]

@@ -54,6 +54,65 @@ impl CodePrefix {
     }
 }
 
+/// The code system an archetype identifies its nodes in: at-codes, the openEHR
+/// primary system and that of ADL 1.4, or the id-codes ADL2 was first released
+/// with (`org.openehr.am.aom2.adl_code_definitions` §Description, NOTE).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum NodeCoding {
+    /// Nodes carry at-codes (`At_code_leader`).
+    At,
+    /// Nodes carry id-codes (`Id_code_leader`).
+    Id,
+}
+
+impl NodeCoding {
+    /// The coding of the archetype whose root node carries `root_node_id`:
+    /// id-coded roots start `id1`, at-coded ones `at0000` (`Root_code_regex_pattern`).
+    pub(crate) fn of_root(root_node_id: &str) -> Self {
+        if AdlCodeDefinitionsData::is_id_code(root_node_id) {
+            Self::Id
+        } else {
+            Self::At
+        }
+    }
+
+    /// The node id a `C_PRIMITIVE_OBJECT` in ADL short form takes
+    /// (`AOM2/master04.2` §Primitive Types): `Primitive_node_id`, `"at9999"`,
+    /// which "For id-coded archetypes … is `"id9999"`"
+    /// (`org.openehr.am.aom2.adl_code_definitions` §Constants).
+    pub(crate) fn primitive_node_id(self) -> String {
+        let at_coded = AdlCodeDefinitionsData::PRIMITIVE_NODE_ID;
+        match self {
+            Self::At => at_coded.to_owned(),
+            Self::Id => at_coded.replacen(
+                AdlCodeDefinitionsData::AT_CODE_LEADER,
+                AdlCodeDefinitionsData::ID_CODE_LEADER,
+                1,
+            ),
+        }
+    }
+
+    /// Replaces the short-form primitive node id of the other coding with this
+    /// coding's, for an archetype recoded between the two; a regular node id
+    /// stays.
+    pub(crate) fn recode_primitive_node_id(self, node_id: &mut String) {
+        let other = match self {
+            Self::At => Self::Id,
+            Self::Id => Self::At,
+        };
+        if *node_id == other.primitive_node_id() {
+            *node_id = self.primitive_node_id();
+        }
+    }
+
+    /// True if `node_id` is the short-form primitive node id of either coding.
+    pub(crate) fn is_primitive_node_id(node_id: &str) -> bool {
+        [Self::At, Self::Id]
+            .into_iter()
+            .any(|coding| coding.primitive_node_id() == node_id)
+    }
+}
+
 /// A parsed ADL local code.
 ///
 /// Carries its [`CodePrefix`] and the ordered `.`-separated numeric segments
@@ -203,6 +262,23 @@ pub fn is_new_at_level(code: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn primitive_node_id_follows_the_coding() {
+        assert_eq!(NodeCoding::At.primitive_node_id(), "at9999");
+        assert_eq!(NodeCoding::Id.primitive_node_id(), "id9999");
+        assert_eq!(NodeCoding::of_root("at0000"), NodeCoding::At);
+        assert_eq!(NodeCoding::of_root("id1"), NodeCoding::Id);
+        assert!(NodeCoding::is_primitive_node_id("at9999"));
+        assert!(NodeCoding::is_primitive_node_id("id9999"));
+        assert!(!NodeCoding::is_primitive_node_id("at0004"));
+        let mut short = "at9999".to_owned();
+        NodeCoding::Id.recode_primitive_node_id(&mut short);
+        assert_eq!(short, "id9999");
+        let mut regular = "at0004".to_owned();
+        NodeCoding::Id.recode_primitive_node_id(&mut regular);
+        assert_eq!(regular, "at0004");
+    }
 
     #[test]
     fn prefixes_and_validity() {

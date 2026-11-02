@@ -33,6 +33,7 @@ use crate::aom::build::{
     PrimitiveNode, cattr_empty, cobject_to_primitive, complex_object, point_int, point_real,
 };
 use crate::aom::interval::{point_value_f64, point_value_i32};
+use crate::codes::NodeCoding;
 use crate::error::SyntaxErrorCode;
 use crate::parse::{PResult, Parser};
 use openehr_lang::v1_1::lexer::Token;
@@ -294,17 +295,19 @@ impl Parser<'_> {
                 Some(Token::Real(_))
             );
             let value = if is_real {
-                CPrimitiveObject::CReal(PrimitiveNode::inline("Real").c_real(
+                CPrimitiveObject::CReal(PrimitiveNode::inline("Real", NodeCoding::At).c_real(
                     vec![point_real(self.parse_signed_real(SyntaxErrorCode::Scrav)?)],
                     None,
                 ))
             } else {
-                CPrimitiveObject::CInteger(PrimitiveNode::inline("Integer").c_integer(
-                    vec![point_int(i64::from(
-                        self.parse_signed_int(SyntaxErrorCode::Sciav)?,
-                    ))],
-                    None,
-                ))
+                CPrimitiveObject::CInteger(
+                    PrimitiveNode::inline("Integer", NodeCoding::At).c_integer(
+                        vec![point_int(i64::from(
+                            self.parse_signed_int(SyntaxErrorCode::Sciav)?,
+                        ))],
+                        None,
+                    ),
+                )
             };
             self.expect(
                 |t| matches!(t, Token::SymIvlDelim),
@@ -350,7 +353,7 @@ impl Parser<'_> {
         } else if matches!(self.peek(), Some(Token::LBracket))
             && matches!(self.peek_at(1), Some(Token::AtCode(_) | Token::AcCode(_)))
         {
-            self.parse_c_terminology_code("Primitive_node_id".to_owned(), None)?
+            self.parse_c_terminology_code(self.node_coding.primitive_node_id(), None)?
         } else {
             return self.err(
                 SyntaxErrorCode::Stccp,
@@ -608,7 +611,8 @@ fn ordinal_point_value(member: &CPrimitiveObject) -> Option<f64> {
 /// `terminology::code[,code]*[;assumed]` spelling for `crate::adl14::convert`.
 fn adl14_terminology_code(constraint: String) -> CObject {
     CObject::CTerminologyCode(
-        PrimitiveNode::inline("Terminology_code").c_terminology_code(constraint, None, None),
+        PrimitiveNode::inline("Terminology_code", NodeCoding::At)
+            .c_terminology_code(constraint, None, None),
     )
 }
 

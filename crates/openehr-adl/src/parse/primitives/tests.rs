@@ -392,3 +392,25 @@ fn character_lists_land_on_c_string() {
         other => panic!("expected CString, got {other:?}"),
     }
 }
+
+/// The node id of the first child of the `index`-th attribute.
+fn child_node_id(d: &CComplexObjectData, index: usize) -> String {
+    let child = &d.attributes.as_deref().unwrap_or_default()[index]
+        .children
+        .as_deref()
+        .unwrap_or_default()[0];
+    crate::aom::access::object_node_id(child).to_owned()
+}
+
+/// An inline primitive takes `ADL_CODE_DEFINITIONS.Primitive_node_id`,
+/// `"at9999"` in an at-coded archetype and `"id9999"` in an id-coded one
+/// (`org.openehr.am.aom2.adl_code_definitions` §Constants).
+#[test]
+fn inline_primitives_take_the_primitive_node_id_of_the_coding() {
+    let at_coded = parse("ELEMENT[at0000] matches {\n a matches {55}\n b matches {\"x\"}\n }");
+    assert_eq!(child_node_id(data(&at_coded), 0), "at9999");
+    assert_eq!(child_node_id(data(&at_coded), 1), "at9999");
+    let id_coded = parse("ELEMENT[id1] matches {\n a matches {55}\n b matches {/x+/}\n }");
+    assert_eq!(child_node_id(data(&id_coded), 0), "id9999");
+    assert_eq!(child_node_id(data(&id_coded), 1), "id9999");
+}

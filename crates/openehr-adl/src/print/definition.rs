@@ -26,6 +26,7 @@ use openehr_base::prelude::{
 };
 
 use crate::aom::build::cobject_to_primitive;
+use crate::codes::NodeCoding;
 use crate::odin::regex_of;
 use crate::print::odin::quoted;
 use crate::print::rules::assertion_str;
@@ -103,7 +104,7 @@ impl Printer {
             return;
         };
         let (ty, node_id) = prim_type_and_node(obj);
-        if node_id == "Primitive_node_id" {
+        if NodeCoding::is_primitive_node_id(&node_id) {
             self.line(depth, &format!("{head}{}", primitive_inline(&prim)));
             return;
         }
@@ -149,7 +150,7 @@ impl Printer {
         // A single inline primitive child prints inline; regular objects nest.
         if let [child] = a.children.as_deref().unwrap_or_default()
             && let Some(prim) = cobject_to_primitive(child)
-            && prim_type_and_node(child).1 == "Primitive_node_id"
+            && NodeCoding::is_primitive_node_id(&prim_type_and_node(child).1)
         {
             self.line(
                 depth,

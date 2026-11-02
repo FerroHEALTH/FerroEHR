@@ -566,7 +566,7 @@ impl Parser<'_> {
             return Err(());
         }
         let regex = format!("/{}/", escape_regex_delimiter(inner));
-        Ok(PrimitiveNode::inline("String").c_string(vec![regex], assumed))
+        Ok(PrimitiveNode::inline("String", self.node_coding).c_string(vec![regex], assumed))
     }
 
     /// A body-less type-headed primitive object (`String[id2]`): recognise the

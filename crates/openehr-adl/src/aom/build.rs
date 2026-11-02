@@ -47,6 +47,8 @@ use openehr_base::prelude::{
 };
 use openehr_base::v1_3::base_types::definitions::definitions_impl::LOCAL_TERMINOLOGY_ID;
 
+use crate::codes::NodeCoding;
+
 /// Build a [`MultiplicityInterval`].
 pub(crate) fn mult(
     lower: Option<i32>,
@@ -225,7 +227,7 @@ pub(crate) fn cattr_empty(name: &str) -> CAttribute {
 pub(crate) struct PrimitiveNode {
     /// The constrained RM type name.
     pub(crate) rm_type_name: String,
-    /// The node id, `Primitive_node_id` for the inline form.
+    /// The node id, the `Primitive_node_id` of its coding for the inline form.
     pub(crate) node_id: String,
     /// The occurrences, set only where the source states them.
     pub(crate) occurrences: Option<MultiplicityInterval>,
@@ -254,12 +256,13 @@ macro_rules! primitive {
 }
 
 impl PrimitiveNode {
-    /// An inline primitive of `rm_type_name`, whose node id is the special
-    /// value `Primitive_node_id` (`AOM2/master04.5` §`C_OBJECT`, `node_id`).
-    pub(crate) fn inline(rm_type_name: &str) -> Self {
+    /// An inline primitive of `rm_type_name` in an archetype of `coding`, whose
+    /// node id is that coding's `Primitive_node_id` (`AOM2/master04.2`
+    /// §Primitive Types).
+    pub(crate) fn inline(rm_type_name: &str, coding: NodeCoding) -> Self {
         Self {
             rm_type_name: rm_type_name.to_owned(),
-            node_id: "Primitive_node_id".to_owned(),
+            node_id: coding.primitive_node_id(),
             occurrences: None,
         }
     }
