@@ -28,7 +28,6 @@ use http::{HeaderValue, StatusCode, header};
 
 use ferroehr::aql::error::AqlError;
 use ferroehr::service::error::{ErrorChain, ServiceError};
-use ferroehr::service::status::{QUERY_TIMEOUT_TAG, ServiceStatus, StatusError};
 use ferroehr::versioning::object_version_id::VersionIdError;
 use openehr_its::rest::runtime::ApiError;
 use openehr_query::lexer::LexError;
@@ -218,88 +217,28 @@ impl From<VersionIdError> for RestError {
     }
 }
 
-/// Maps a [`StatusError`]'s [`ServiceStatus`] onto its ITS-REST 1.1.0 status code.
-///
-/// The wire oracle decides each row. A free function rather than
-/// `impl From<StatusError> for ApiError`, because both types are foreign to this
-/// crate and the orphan rule forbids that impl.
-#[must_use]
-pub(crate) fn status_api_error(e: StatusError) -> ApiError {
-    use ServiceStatus as S;
-    let message = e.message;
-    match e.status {
-        // Two different refusals, one status. AuthFailure is the access
-        // layer's; ProcessingRestricted is the legal mark's, our own
-        // extension — no ITS-REST operation defines restriction of
-        // processing, and GDPR Art. 18(2) leaves storage as the only
-        // processing it admits (`docs/law/eu/gdpr/text.html`). RFC 9110
-        // §15.5.4 is the HTTP authority for both; the body says which.
-        S::AuthFailure | S::ProcessingRestricted => ApiError::Forbidden(message),
-        S::PreconditionViolation | S::InvalidIdPattern => ApiError::BadRequest(message),
-        S::ObjectVersionDoesNotExist
-        | S::VersionedObjectDoesNotExist
-        | S::EhrIdDoesNotExist
-        | S::PartyIdDoesNotExist
-        | S::CompositionDoesNotExist
-        | S::ContributionDoesNotExist
-        | S::ArtefactDoesNotExist
-        | S::TemplateDoesNotExist
-        | S::VersionDoesNotExist
-        | S::SubjectIdDoesNotExist
-        | S::VersionedCompositionDoesNotExist => ApiError::NotFound(message),
-        S::VersionMismatch => ApiError::PreconditionFailed(message),
-        S::EhrCreateFailDuplicateId
-        | S::CompositionAlreadyExists
-        | S::EhrForSubjectAlreadyExists
-        | S::Conflict => ApiError::Conflict(message),
-        S::CompositionArchetypeInvalid
-        | S::InvalidArchetype
-        | S::InvalidTemplate
-        | S::InvalidArtefact
-        | S::InvalidQuery
-        | S::DefinitionUnknown
-        | S::ContentInvalid => ApiError::Unprocessable(message),
-        S::NotImplemented => ApiError::NotImplemented,
-        // NOTE: no openEHR spec governs backend resource exhaustion — our own
-        // overload contract, on RFC 9110 §15.6.4 as the HTTP authority.
-        S::ServiceOverloaded => ApiError::ServiceUnavailable(message),
-        // `success` is not an error; mapping it is defensively a 500.
-        S::Success | S::FileNotWritable | S::Exception => ApiError::Internal(message),
-    }
-}
-
-impl From<StatusError> for RestError {
-    fn from(e: StatusError) -> Self {
-        let restricted = e.status == ServiceStatus::ProcessingRestricted;
-        let cause = e.clone();
-        let refused = Self::from(status_api_error(e)).with_aql_cause(&cause);
-        if restricted {
-            refused.of_kind(Kind::ProcessingRestricted)
-        } else {
-            refused
-        }
-    }
-}
-
 impl From<ServiceError> for RestError {
-    /// Maps a service failure straight onto the wire error, preserving the
-    /// per-path violations of [`ServiceError::ValidationFailed`] that the
-    /// `StatusError` bridge collapses into a flat message.
+    /// Maps a service failure onto the wire error
+    /// (`crate::overview::service_error::api_error`), with the problem type a
+    /// restriction, a query timeout and an AQL refusal carry.
     fn from(e: ServiceError) -> Self {
-        let restricted = matches!(&e, ServiceError::Restricted(_));
+        let kind = match &e {
+            ServiceError::Restricted(_) => Some(Kind::ProcessingRestricted),
+            ServiceError::Timeout(_) => Some(Kind::QueryTimeout),
+            _ => None,
+        };
         let aql = match &e {
             ServiceError::BadRequest(err) => Some(err.clone()),
             _ => None,
         };
-        let refused = Self::from(ApiError::from(e));
+        let refused = Self::from(crate::overview::service_error::api_error(e));
         let refused = match aql {
             Some(cause) => refused.with_aql_cause(&cause),
             None => refused,
         };
-        if restricted {
-            refused.of_kind(Kind::ProcessingRestricted)
-        } else {
-            refused
+        match kind {
+            Some(kind) => refused.of_kind(kind),
+            None => refused,
         }
     }
 }
@@ -404,14 +343,10 @@ fn kind_of(error: &ApiError) -> Option<Kind> {
 
 impl IntoResponse for RestError {
     fn into_response(self) -> Response {
-        // A query-execution timeout arrives as an `exception` `StatusError` whose
-        // message carries [`QUERY_TIMEOUT_TAG`], and is rendered as the `408` of
-        // `Requests_and_responses.md` §HTTP status codes with the sentinel
-        // stripped.
-        if let ApiError::Internal(raw) = &self.error
-            && let Some(detail) = raw.strip_prefix(QUERY_TIMEOUT_TAG)
-        {
-            return Refused::of(Kind::QueryTimeout, detail).into_response();
+        // A query-execution timeout is the `408` of `Requests_and_responses.md`
+        // §HTTP status codes, a status no `ApiError` row carries.
+        if self.kind == Some(Kind::QueryTimeout) {
+            return Refused::of(Kind::QueryTimeout, detail_of(&self.error)).into_response();
         }
         let status = self.error.status();
         let detail = detail_of(&self.error);
@@ -642,30 +577,6 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn query_timeout_tag_renders_408_with_clean_detail() {
-        // Requests_and_responses.md §HTTP status codes, row 408: a query-execution
-        // timeout is tagged on an `exception` message and rendered as 408 with the
-        // sentinel stripped from the client-visible detail.
-        let tagged = format!("{}query aborted after 5000ms", super::QUERY_TIMEOUT_TAG);
-        let (status, body) = body_json(ApiError::Internal(tagged)).await;
-        assert_eq!(status, StatusCode::REQUEST_TIMEOUT);
-        assert_eq!(body["type"], format!("{BASE}query-timeout"));
-        assert_eq!(body["detail"], "query aborted after 5000ms");
-    }
-
-    #[test]
-    fn an_aql_parse_refusal_is_aql_invalid_with_its_position() {
-        let err = openehr_query::parser::parse_str("SELECT e FROM EHR e WHERE").unwrap_err();
-        let err =
-            ferroehr::service::status::StatusError::precondition("invalid AQL").with_source(err);
-        let full = full_problem_of(RestError::from(err));
-        assert_eq!(full["type"], format!("{BASE}aql-invalid"));
-        assert_eq!(full["status"], 400);
-        assert!(full["position"]["start"].is_u64(), "{full}");
-        assert!(full["position"]["end"].is_u64(), "{full}");
-    }
-
     /// The query path raises a timeout as `ServiceError::Timeout`, and the
     /// wire still answers the `408` of `responses/408_Query.yaml`.
     #[test]
@@ -688,12 +599,12 @@ mod tests {
         assert_eq!(full["type"], format!("{BASE}aql-invalid"));
         assert_eq!(full["status"], 400);
         assert!(full["position"]["start"].is_u64(), "{full}");
+        assert!(full["position"]["end"].is_u64(), "{full}");
     }
 
     #[test]
     fn a_processing_restriction_is_its_own_type() {
-        use ferroehr::service::status::{ServiceStatus, StatusError};
-        let err = StatusError::new(ServiceStatus::ProcessingRestricted, "restricted");
+        let err = ferroehr::service::error::ServiceError::restricted("EHR e1");
         let full = full_problem_of(RestError::from(err));
         assert_eq!(full["type"], format!("{BASE}processing-restricted"));
         assert_eq!(full["status"], 403);
@@ -710,7 +621,7 @@ mod tests {
 
     #[tokio::test]
     async fn untagged_internal_stays_500() {
-        // A genuine server fault (no timeout tag) still maps to 500.
+        // A genuine server fault, with no timeout kind, maps to 500.
         let (status, _body) = body_json(ApiError::Internal("boom".to_owned())).await;
         assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
     }
@@ -720,8 +631,10 @@ mod tests {
         // A storage-classified pool exhaustion (`ServiceOverloaded`)
         // surfaces as 503 + Retry-After (our overload contract; RFC 9110
         // §15.6.4).
-        use ferroehr::service::status::{ServiceStatus, StatusError};
-        let err = StatusError::new(ServiceStatus::ServiceOverloaded, "overloaded");
+        let err = ferroehr::service::error::ServiceError::overloaded(
+            "overloaded",
+            std::io::Error::other("the pool timed out"),
+        );
         let resp = RestError::from(err).into_response();
         assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
         assert_eq!(
@@ -736,8 +649,7 @@ mod tests {
     async fn storage_conflict_maps_to_409() {
         // A storage-classified integrity/serialization conflict
         // (`Conflict`) surfaces as 409 (ITS-REST overview §HTTP status codes).
-        use ferroehr::service::status::{ServiceStatus, StatusError};
-        let err = StatusError::new(ServiceStatus::Conflict, "duplicate key");
+        let err = ferroehr::service::error::ServiceError::conflict("duplicate key");
         let resp = RestError::from(err).into_response();
         assert_eq!(resp.status(), StatusCode::CONFLICT);
     }

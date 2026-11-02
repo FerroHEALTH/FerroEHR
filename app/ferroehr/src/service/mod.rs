@@ -17,17 +17,16 @@
 //! and the clinical domain, and the access record each one owes.
 //!
 //! The root modules beside the chapters carry the cross-chapter service
-//! vocabulary: the call-status model ([`status`]), the service error and
-//! its status-mapping tables ([`error`]), the version-commit envelope
+//! vocabulary: the service error ([`error`]) and its refusal kinds
+//! ([`refusal`]), the version-commit envelope
 //! ([`version_update`]), the list cursor ([`list`]), the
 //! platform-service enumeration ([`platform_service`]), the
 //! protocol-adapter response envelope ([`response`]), the
 //! authenticated-committer context ([`committer`]), and the crate-internal
 //! ITS-REST datetime-request-parameter decoder (`datetime`).
 //!
-//! NOTE: no openEHR spec governs the internal layering: our own design; each
-//! one-expression `Ok(self.inner(...).await?)` method is where a `ServiceError`
-//! becomes the `StatusError` callers consume.
+//! NOTE: no openEHR spec governs the internal layering: our own design; every
+//! service call returns [`error::ServiceError`], which the protocol adapter maps onto the wire.
 
 #![expect(
     clippy::disallowed_types,
@@ -52,7 +51,6 @@ pub mod list;
 pub mod platform_service;
 pub mod refusal;
 pub mod response;
-pub mod status;
 pub mod version_update;
 
 use crate::service::definition::lineage::{ArchetypeLineageCache, archetype_lineage_cache};

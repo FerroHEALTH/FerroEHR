@@ -1611,9 +1611,11 @@ impl FerroEhrService {
         keys.sort_unstable();
         keys.dedup();
         for hex in &keys {
-            let bytes = engine.store().get(hex).await.map_err(|e| {
-                crate::service::error::internal_fault_caused("export a multimedia blob", &e)
-            })?;
+            let bytes = engine
+                .store()
+                .get(hex)
+                .await
+                .map_err(|e| ServiceError::internal("export a multimedia blob", e))?;
             archive.write(&format!("{BLOB_PREFIX}{hex}"), &bytes)?;
         }
         Ok(keys)
@@ -1674,9 +1676,7 @@ impl FerroEhrService {
                 .store()
                 .put_if_absent(hex, bytes)
                 .await
-                .map_err(|e| {
-                    crate::service::error::internal_fault_caused("import a multimedia blob", &e)
-                })?;
+                .map_err(|e| ServiceError::internal("import a multimedia blob", e))?;
         }
         Ok(())
     }

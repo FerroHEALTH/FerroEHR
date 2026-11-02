@@ -111,8 +111,8 @@
 //!   is answered `405` for the reason [`crate::router::router`] gives, and a
 //!   known-but-not-allowed one SHOULD be `405`) + the optional error body
 //!   ("if `Prefer: return=representation`")
-//!   + the single status → HTTP mapping table (`ServiceStatus` meets the
-//!     wire here and only here).
+//! - `service_error` — the single service-error → HTTP mapping table
+//!   (`ServiceError` meets the wire here and only here).
 //! - [`version_id`] — resource identification (`Resources.md` §Resource
 //!   identification: `versioned_object_uid` `HIER_OBJECT_ID` vs `version_uid`
 //!   `OBJECT_VERSION_ID` `object_id::creating_system_id::version_tree_id`,
@@ -141,5 +141,6 @@ pub mod error;
 pub mod negotiate;
 pub mod params;
 pub mod problem;
+pub(crate) mod service_error;
 pub mod status;
 pub mod version_id;

@@ -51,21 +51,13 @@ cd "$(dirname "$0")/../.."
 #     exposed string the server emits. Two indicators used to interpolate the
 #     raw `sqlx::Error` there, whose Display can name the DSN host, the
 #     database, the role or SQL text (found and fixed under issue #2022).
-#   - `StatusError::exception` and `StatusError::new(ServiceStatus::Exception, …)` —
-#     the SECOND route to a 500 body (issue #2125). A service chapter method
-#     returns `Result<_, StatusError>`, and `status_api_error`
-#     (app/ferroehr-rest/src/overview/error.rs) renders the `exception`,
-#     `success` and `file_not_writable` statuses as `ApiError::Internal(message)`
-#     — so that `message` IS a 500 body, with no curation in between. The
-#     multi-line spelling is caught by matching the status token on its own
-#     line, which is where `StatusError::new(` wraps.
 #
-# NOT guarded, deliberately: `ServiceError::exception` /
-# `ServiceError::Internal`. Both `From<ServiceError>` bridges
-# (app/ferroehr/src/service/error.rs) discard that message and substitute
-# `INTERNAL_MESSAGE`, tracing the detail instead — the message is a log detail
-# by construction and never reaches a client.
-CONSTRUCTORS='ApiError::(Internal|ServiceUnavailable)\(|Health::(down|degraded)\(|StatusError::exception\(|StatusError::new\([[:space:]]*ServiceStatus::Exception|^[[:space:]]*ServiceStatus::Exception[,[:space:]]*$'
+# NOT guarded, deliberately: the service's own 500s. `ServiceError::exception`
+# and `ServiceError::Internal` carry a log detail the wire table
+# (app/ferroehr-rest/src/overview/service_error.rs) replaces with
+# `INTERNAL_MESSAGE`, and the message of `ServiceError::Fault` and
+# `ServiceError::Overloaded` is a `&'static str`, so no error value can reach it.
+CONSTRUCTORS='ApiError::(Internal|ServiceUnavailable)\(|Health::(down|degraded)\('
 # The shapes that put an error's Display into a string: a `{e}`-style
 # interpolation of a conventionally-named error binding, or an explicit
 # `.to_string()` on one.
@@ -90,7 +82,7 @@ that can carry SQL, a DSN, a filesystem path, an internal URL or a whole
 thiserror chain to a client (and the health family is unauthenticated).
 Substitute a fixed message and put the detail on the trace record instead (see
 `classify_sqlx` in app/ferroehr/src/storage/error.rs for the pattern), or carry
-the failure as a source (`StatusError::with_source`) so the operator can walk the
+the failure as a source (`ServiceError::fault_caused`) so the operator can walk the
 chain while the client sees none of it. A 4xx may keep its specific,
 client-facing detail; only 5xx is guarded.
 MSG

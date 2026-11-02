@@ -134,7 +134,10 @@ pub(super) async fn run(
                         .await
                         .ok()
                         .flatten();
-                    Ok(super::error_with_meta(ApiError::from(e), meta.as_ref()))
+                    Ok(super::error_with_meta(
+                        crate::overview::service_error::api_error(e),
+                        meta.as_ref(),
+                    ))
                 }
                 Err(e) => Err(RestError::from(e)),
             }

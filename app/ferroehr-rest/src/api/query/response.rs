@@ -539,8 +539,8 @@ mod tests {
 
 // ── Query error-status mapping (the QUERY responses enumerate 400/404/408) ─────
 //
-// The status codes are assembled platform-side as typed `StatusError`s and turned
-// into the ITS-REST status by `crate::overview::error::status_api_error`; this
+// The status codes are assembled platform-side as typed `ServiceError`s and turned
+// into the ITS-REST status by `crate::overview::service_error::api_error`; this
 // renderer emits the success `RESULT_SET` (and its `meta`, including the
 // parameter-substituted `_executed_aql`) verbatim. `ehr_id_does_not_exist` →
 // `404` for a well-formed-but-absent EHR id, while a malformed UUID stays a

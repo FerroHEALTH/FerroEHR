@@ -249,9 +249,9 @@ impl FerroEhrService {
             for key in [row.vo_id.to_string(), format!("{REGISTER}:{}", row.vo_id)] {
                 holds.hold(key.as_str(), row.withheld_until);
                 if let Some(released) = row.released_at {
-                    holds.release(&key, released).map_err(|e| {
-                        crate::service::error::internal_fault_caused("replay the access delays", &e)
-                    })?;
+                    holds
+                        .release(&key, released)
+                        .map_err(|e| ServiceError::internal("replay the access delays", e))?;
                 }
             }
         }

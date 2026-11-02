@@ -47,22 +47,6 @@ impl<K> Refusal<K> {
         self.source = Some(Arc::new(source));
         self
     }
-
-    /// The same refusal with an already shared cause.
-    #[must_use]
-    pub(crate) fn with_shared_source(
-        mut self,
-        source: Option<Arc<dyn std::error::Error + Send + Sync>>,
-    ) -> Self {
-        self.source = source;
-        self
-    }
-
-    /// The shared cause, for a conversion that keeps it.
-    #[must_use]
-    pub(crate) fn shared_source(&self) -> Option<Arc<dyn std::error::Error + Send + Sync>> {
-        self.source.clone()
-    }
 }
 
 impl<K> std::fmt::Display for Refusal<K> {
@@ -94,13 +78,6 @@ pub struct Curated {
     pub message: &'static str,
     /// The failure this fault was raised for.
     source: Option<Arc<dyn std::error::Error + Send + Sync>>,
-}
-
-impl Curated {
-    /// The cause, for a conversion that keeps it.
-    pub(crate) fn shared_source(&self) -> Option<Arc<dyn std::error::Error + Send + Sync>> {
-        self.source.clone()
-    }
 }
 
 impl std::fmt::Display for Curated {
@@ -140,10 +117,6 @@ pub enum Missing {
     Template,
     /// A VERSION.
     Version,
-    /// A subject in the EHR index.
-    Subject,
-    /// A `VERSIONED_COMPOSITION`.
-    VersionedComposition,
 }
 
 /// Which malformed request a `400` refuses.
@@ -151,8 +124,6 @@ pub enum Missing {
 pub enum Malformed {
     /// An argument-validity precondition failed.
     Precondition,
-    /// An archetype identifier pattern is not a valid regex.
-    IdPattern,
 }
 
 /// Which state a `409` clashes with.
@@ -177,14 +148,6 @@ pub enum Invalid {
     Archetype,
     /// A template.
     Template,
-    /// A definition artefact.
-    Artefact,
-    /// A query.
-    Query,
-    /// Archetype or template identifiers the definitions store does not know.
-    DefinitionUnknown,
-    /// A COMPOSITION fails archetype or template conformance.
-    CompositionArchetype,
 }
 
 impl super::error::ServiceError {
@@ -226,8 +189,9 @@ impl super::error::ServiceError {
     }
 
     /// The client-visible text of this error: a refusal's message, the
-    /// rendered violation of a `422`, the joined validation violations, and the
-    /// `Display` text of every other variant.
+    /// rendered violation of a `422`, the joined validation violations, the
+    /// curated internal message of a server fault, and the `Display` text of a
+    /// malformed read or a timeout.
     #[must_use]
     pub fn message(&self) -> String {
         use super::error::ServiceError as E;
@@ -235,12 +199,19 @@ impl super::error::ServiceError {
             E::NotFound(r) => r.message.clone(),
             E::BadRequest(r) => r.message.clone(),
             E::Conflict(r) => r.message.clone(),
-            E::VersionConflict(r)
-            | E::Internal(r)
-            | E::Unrecorded(r)
-            | E::Restricted(r)
-            | E::Forbidden(r) => r.message.clone(),
+            E::VersionConflict(r) | E::Unrecorded(r) | E::Restricted(r) | E::Forbidden(r) => {
+                r.message.clone()
+            }
             E::Fault(f) | E::Overloaded(f) => f.message.to_owned(),
+            // A server fault's detail is a log record, never client text.
+            E::Internal(_)
+            | E::JsonWrite(_)
+            | E::Signing(_)
+            | E::SigningFailed(_)
+            | E::SigningCanonical(_)
+            | E::Database(_)
+            | E::Acquire(_) => super::error::INTERNAL_MESSAGE.to_owned(),
+            E::Storage(e) => storage_message(e),
             E::Unprocessable { violation, .. } => violation.to_string(),
             E::ValidationFailed(v) => v
                 .iter()
@@ -249,5 +220,23 @@ impl super::error::ServiceError {
                 .join("; "),
             other => other.to_string(),
         }
+    }
+}
+
+/// The client-visible text of a storage failure, as `classify_storage` words
+/// it: a typed conflict names itself, a codec fault and a driver failure read
+/// as curated text.
+fn storage_message(e: &crate::storage::error::StorageError) -> String {
+    use crate::storage::error::{CODEC_MESSAGE, INTERNAL_MESSAGE, StorageError as S};
+    match e {
+        S::ContributionUidInUse(_) | S::TrunkPositionInUse { .. } | S::SubjectInUse(_, _) => {
+            e.to_string()
+        }
+        S::NotAStructureRoot(_)
+        | S::MixedArray { .. }
+        | S::InvalidRows(_)
+        | S::TrunklessContainer { .. }
+        | S::BodyDecode(_) => CODEC_MESSAGE.to_owned(),
+        S::Database(_) | S::Acquire(_) => INTERNAL_MESSAGE.to_owned(),
     }
 }

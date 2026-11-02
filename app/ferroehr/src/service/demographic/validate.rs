@@ -354,15 +354,13 @@ mod tests {
         for bad in [person(&json!([])), json!({ "_type": "PERSON" })] {
             let err = party_check("PERSON", &bad, false)
                 .expect_err("an unconstructible body must be refused");
-            let api = openehr_its::rest::runtime::ApiError::from(err);
-            assert_eq!(
-                api.status(),
-                http::StatusCode::BAD_REQUEST,
-                "an unconstructible body must be 400, got {api:?}"
+            assert!(
+                matches!(&err, ServiceError::BadRequest(_)),
+                "an unconstructible body must be 400, got {err:?}"
             );
             assert!(
-                api.to_string().contains("invalid canonical JSON body"),
-                "the decode is the enforcement point, got {api}"
+                err.message().contains("invalid canonical JSON body"),
+                "the decode is the enforcement point, got {err:?}"
             );
         }
         party_check("PERSON", &person(&json!([identity()])), false)

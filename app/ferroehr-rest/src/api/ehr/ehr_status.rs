@@ -166,7 +166,7 @@ pub(super) async fn run(
                         .ok()
                         .flatten();
                     Ok(negotiate::error_with_meta(
-                        ApiError::from(e),
+                        crate::overview::service_error::api_error(e),
                         &base,
                         Some("ehr_status"),
                         meta.as_ref(),

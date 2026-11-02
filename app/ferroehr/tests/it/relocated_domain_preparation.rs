@@ -137,7 +137,7 @@ async fn a_party_domain_in_its_own_database_is_prepared_and_verified() {
         .fetch_one(&pools.party)
         .await
         .expect("the party pool reads its own domain in the second database");
-    assert_eq!(applied, 20, "the party set is applied whole");
+    assert_eq!(applied, 21, "the party set is applied whole");
     pools.close().await;
 
     let inventory = ferroehr::db::erase_inventory(&applying, &storage)
