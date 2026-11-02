@@ -5,14 +5,6 @@
 //! produce the expected golden decisions, and the Cedar engine is
 //! **behaviourally identical** to the remote PDP over a corpus of requests
 //! (the differential test — same `AuthzRequest`, same decision).
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 

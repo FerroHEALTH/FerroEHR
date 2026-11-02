@@ -12,14 +12,6 @@
 //! that returns a head immediately is not. Each test therefore wraps the
 //! assembled router in a `TimeoutLayer` whose budget is deliberately far too
 //! short, which is the same layer production applies at 30 s.
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; a panicking assertion is the \
-              intended shape here (the Rust Book ch11)"
-)]
-
 use ferroehr::service::version_update::WriteRequest;
 use std::time::Duration;
 

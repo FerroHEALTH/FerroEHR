@@ -15,15 +15,6 @@
 //! resources through the wire and read the server-assigned ids back from the
 //! `ETag`/body. The wire assertions (weak `ETag`, `Location` presence/absence,
 //! `Prefer` body policy, status codes) are unchanged.
-#![expect(
-    clippy::expect_used,
-    clippy::indexing_slicing,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-
 use axum::Router;
 use axum::body::Body;
 use http::{Request, StatusCode, header};

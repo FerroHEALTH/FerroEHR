@@ -1,13 +1,6 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
 //! End-to-end tests of the RESTful-ATNA **ITI-81 Retrieve ATNA Audit Event**
 //! surface (`GET /fhir/r4/AuditEvent`) over the real axum app + real
 //! `FerroEhrService` + real `PostgreSQL` 18: the searchset Bundle over the

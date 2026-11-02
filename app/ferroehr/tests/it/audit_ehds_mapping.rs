@@ -20,14 +20,6 @@
 //! design/extension. openEHR specifies the write-side `AUDIT_DETAILS` only
 //! (`docs/specs/openehr/RM/docs/common/` §`AUDIT_DETAILS` Class).
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this module's \
-              fixture helpers; a panicking fixture is the intended shape (the \
-              Rust Book ch11), as in `multimedia_s3`"
-)]
-
 use jiff::Timestamp;
 
 use ferroehr::system_log::categories::{AccessedContent, Classifier, ContentIds};

@@ -33,15 +33,6 @@
 //!    subject lookup (`operations/ehr_get_by_subject.yaml`) and bound by the
 //!    one-EHR-per-subject rule (RM ehr master04 §EHR Status) like any other EHR.
 
-#![expect(
-    clippy::expect_used,
-    clippy::indexing_slicing,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-
 use ferroehr::service::version_update::WriteRequest;
 use std::sync::Arc;
 

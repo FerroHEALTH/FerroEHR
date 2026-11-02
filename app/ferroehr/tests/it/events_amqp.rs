@@ -11,14 +11,6 @@
 //! while the broker is unreachable the outbox rows stay pending, and once a
 //! publisher can reach the broker every row is delivered.
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-
 use crate::fixtures::pending_count;
 use std::time::Duration;
 

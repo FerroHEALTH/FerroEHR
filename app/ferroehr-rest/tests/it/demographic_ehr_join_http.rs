@@ -12,15 +12,6 @@
 //! spec's (QUERY master03 §FROM gives semantics to the clinical repository
 //! only): our own design. The six requests are the ones the report made.
 
-#![expect(
-    clippy::expect_used,
-    clippy::indexing_slicing,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's async bodies; panicking assertions and direct JSON indexing \
-              are the intended shape here"
-)]
-
 use std::sync::Arc;
 
 use axum::Router;

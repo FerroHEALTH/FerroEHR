@@ -20,16 +20,6 @@
 //! * POST flat without a template id → 400, and a `|raw` without `_type` → 400;
 //! * a full flat → RM → flat round-trip through the two endpoints is stable
 //!   (modulo the server-assigned version `_uid`s the Mock never produced).
-#![expect(
-    clippy::unwrap_used,
-    clippy::expect_used,
-    clippy::missing_assert_message,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 

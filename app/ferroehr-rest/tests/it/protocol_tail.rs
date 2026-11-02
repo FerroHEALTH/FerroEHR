@@ -14,15 +14,6 @@
 //! `Mock` hook that captured the `UpdateVersion` in-process). The signed-version
 //! XML asserts the real server-side digest signature (the default `FerroEhrService`
 //! signer is enabled), not the Mock's injected fixture.
-#![expect(
-    clippy::expect_used,
-    clippy::missing_assert_message,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-
 use axum::Router;
 use axum::body::Body;
 use http::{Request, StatusCode, header};

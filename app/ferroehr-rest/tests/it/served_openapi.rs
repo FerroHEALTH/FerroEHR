@@ -11,16 +11,6 @@
 //! never omitted). A new endpoint that ships with a skeleton declaration
 //! fails here — the completeness ratchet.
 
-#![expect(
-    clippy::expect_used,
-    clippy::string_slice,
-    clippy::missing_assert_message,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-
 use serde_json::Value;
 
 use crate::common;

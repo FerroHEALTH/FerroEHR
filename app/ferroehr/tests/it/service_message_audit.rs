@@ -14,14 +14,6 @@
 //! `extract`-class event, in the direction the operation ran, naming the EHR —
 //! and that the emission is gated on the audit configuration.
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions are the \
-              intended shape here (the Rust Book ch11)"
-)]
-
 use std::time::Duration;
 
 use sqlx::{PgPool, Row};

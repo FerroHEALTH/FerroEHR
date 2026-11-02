@@ -18,15 +18,6 @@
 //!   `application/json` and `application/openehr.wt+json` both serve the Web
 //!   Template document, each under its own type; `application/xml` serves the
 //!   canonical OPT.
-#![expect(
-    clippy::unwrap_used,
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions are the \
-              intended shape here (the Rust Book ch11)"
-)]
-
 use axum::Router;
 use axum::body::Body;
 use http::{Request, StatusCode, header};

@@ -1,13 +1,6 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
 //! `[server.tls]` — native TLS + the client-certificate gate (the IHE ATNA
 //! ITI-19 node-authentication posture) on a real listener served by the family
 //! listener (`ferrohealth_server::serve::run`) as FerroEHR runs it: an HTTPS client
