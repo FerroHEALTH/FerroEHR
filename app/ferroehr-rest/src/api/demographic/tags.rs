@@ -29,7 +29,6 @@ use openehr_its::rest::runtime::ApiError;
 use ferroehr::versioning::object_version_id::parse_uid_based_id;
 
 use crate::api::RequestParts;
-use crate::api::item_tags;
 use crate::negotiate;
 use crate::overview::error::RestError;
 use crate::state::AppState;
@@ -82,7 +81,7 @@ pub(super) async fn run(
                 PartyKind::Person => uid_based_id!(PersonTagsUpdateParams),
                 PartyKind::Role => uid_based_id!(RoleTagsUpdateParams),
             };
-            let body = item_tags::write_body(h, &parts.body)?;
+            let body = negotiate::decode::typed_json(h, &parts.body, "JSON array body")?;
             let tags = state
                 .backend()
                 .party_tags_update(kind, parse_uid_based_id(&uid_based_id)?, body)

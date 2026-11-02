@@ -45,7 +45,7 @@
 //!
 //! `item_tags` is not a group: it is the one `ITEM_TAG` write-wrapper
 //! implementation (`item_tags::pending` / `item_tags::persist` /
-//! `item_tags::echo` / `item_tags::write_body`) the EHR and demographic
+//! `item_tags::echo`) the EHR and demographic
 //! dispatchers share, so the two cannot drift.
 //!
 //! Every group — the standardised ITS-REST groups above and the own-design

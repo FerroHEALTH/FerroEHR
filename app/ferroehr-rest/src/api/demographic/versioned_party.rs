@@ -28,6 +28,7 @@ use ferroehr::versioning::object_version_id::parse_version_uid;
 use crate::api::RequestParts;
 use crate::negotiate;
 use crate::overview::error::RestError;
+use crate::overview::negotiate::resource::Tree;
 use crate::state::AppState;
 
 /// The `versioned_party_*` reads.
@@ -56,7 +57,9 @@ pub(super) async fn run(
             // scraped from the container body, which exposes no commit
             // audit — the EHR-side container reads' pattern).
             let mut out = negotiate::body::respond(h, ok, &resp.body);
-            super::set_versioning_headers(&mut out, resp.meta.as_ref());
+            if let Some(meta) = resp.meta.as_ref() {
+                negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Demographic);
+            }
             Ok(out)
         }
         "versioned_party_revision_history" => {
@@ -88,7 +91,9 @@ pub(super) async fn run(
                 )
                 .await?;
             let mut out = negotiate::body::respond(h, ok, &resp.body);
-            super::set_versioning_headers(&mut out, resp.meta.as_ref());
+            if let Some(meta) = resp.meta.as_ref() {
+                negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Demographic);
+            }
             Ok(out)
         }
         "versioned_party_version_get_by_id" => {

@@ -22,6 +22,7 @@ use crate::api::RequestParts;
 use crate::negotiate::WireFormat;
 use crate::negotiate::prefer::AppliedPreference;
 use crate::overview::error::RestError;
+use crate::overview::negotiate::resource::Tree;
 use crate::overview::version_id::{parse_ehr_id, parse_uuid};
 use crate::state::AppState;
 use crate::{negotiate, params};
@@ -107,6 +108,7 @@ pub(super) async fn run(
                         negotiate::resource::set_resource_headers(
                             &mut out,
                             &base,
+                            Tree::Ehr,
                             Some("contribution"),
                             meta,
                         );
@@ -180,7 +182,7 @@ pub(super) async fn run(
                     }
                     _ => negotiate::body::respond(h, ok, &body),
                 };
-            negotiate::resource::set_versioning_headers(&mut out, &meta);
+            negotiate::resource::set_versioning_headers(&mut out, &meta, Tree::Ehr);
             Ok(out)
         }
         "contribution_list" => {
