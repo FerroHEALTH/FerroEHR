@@ -559,6 +559,16 @@ impl FerroEhrService {
         .execute(&mut *tx)
         .await?;
 
+        // The reverse-relationship index rows that name the erased objects,
+        // at either end: an erased party is neither a source nor a target.
+        sqlx::query(
+            "DELETE FROM party_relationship_target \
+             WHERE source_vo_id = ANY($1) OR target_party_id = ANY($1)",
+        )
+        .bind(&vo_ids)
+        .execute(&mut *tx)
+        .await?;
+
         // The head rows of the deleted objects, which carry the archive
         // marker among the rest of their state.
         sqlx::query("DELETE FROM vo_head WHERE vo_id = ANY($1)")
