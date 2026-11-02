@@ -69,6 +69,7 @@ use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
 use crate::service::refusal::{Clash, Missing, Refusal};
+use crate::storage::ehr_repo;
 use crate::system_log::categories::AccessedContent;
 use crate::system_log::event::EventActionCode;
 use crate::versioning::Kind;
@@ -146,14 +147,7 @@ impl FerroEhrService {
         // NOTE: no openEHR spec governs the storage SQL — our own design: the
         // clone-target EHR row is inserted here (master06 §Copying Case-1)
         // rather than through the EHR create, which would mint a fresh EHR_STATUS.
-        let inserted =
-            sqlx::query("INSERT INTO ehr (id, system_id) VALUES ($1, $2) ON CONFLICT DO NOTHING")
-                .bind(ehr_id)
-                .bind(self.effective_system_id())
-                .execute(&mut *tx)
-                .await
-                .map_err(ServiceError::from)?;
-        if inserted.rows_affected() == 0 {
+        if !ehr_repo::insert_bare_ehr(&mut tx, ehr_id, &self.effective_system_id()).await? {
             return Err(ServiceError::Conflict(Refusal::new(
                 Clash::DuplicateEhrId,
                 format!("EHR {ehr_id} already exists; import_ehr requires an empty target"),
@@ -218,9 +212,7 @@ impl FerroEhrService {
         an_ehr_id: EhrId,
         an_extract: Extract,
     ) -> Result<(), ServiceError> {
-        if !crate::storage::ehr_repo::ehr_exists(&mut *acquire(&self.pool).await?, an_ehr_id)
-            .await?
-        {
+        if !ehr_repo::ehr_exists(&mut *acquire(&self.pool).await?, an_ehr_id).await? {
             return Err(ServiceError::not_found(
                 Missing::Ehr,
                 format!("no EHR with id {an_ehr_id}"),
@@ -233,7 +225,7 @@ impl FerroEhrService {
         let mut tx = conn.begin().await.map_err(ServiceError::from)?;
         // Exclusive, because the import re-derives the promoted `ehr` columns
         // before it commits; the flag the read returns is not an import gate.
-        let locked = crate::storage::ehr_repo::ehr_is_modifiable_locked(&mut tx, an_ehr_id, true)
+        let locked = ehr_repo::ehr_is_modifiable_locked(&mut tx, an_ehr_id, true)
             .await
             .map_err(ServiceError::from)?;
         if locked.is_none() {

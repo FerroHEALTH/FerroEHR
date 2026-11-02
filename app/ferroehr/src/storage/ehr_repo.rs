@@ -612,3 +612,112 @@ pub async fn require_ehr<'e>(
         ))
     }
 }
+
+/// The EHR whose promoted subject id is `subject_id`, in any namespace, or
+/// `None`.
+///
+/// # Errors
+/// Returns [`StorageError::Database`] on a driver failure.
+pub async fn ehr_id_by_subject_id(
+    pool: &PgPool,
+    subject_id: &str,
+) -> Result<Option<EhrId>, StorageError> {
+    Ok(
+        sqlx::query_scalar("SELECT id FROM ehr WHERE subject_id = $1")
+            .bind(subject_id)
+            .fetch_optional(&mut *acquire(pool).await?)
+            .await?,
+    )
+}
+
+/// The promoted `ehr` columns an `EHR_STATUS` determines.
+#[derive(Debug, Clone, Copy)]
+pub struct PromotedColumns<'a> {
+    /// The subject's `external_ref.id.value`.
+    pub subject_id: Option<&'a str>,
+    /// The subject's `external_ref.namespace`.
+    pub subject_namespace: Option<&'a str>,
+    /// `EHR_STATUS.is_queryable`.
+    pub is_queryable: bool,
+    /// `EHR_STATUS.is_modifiable`.
+    pub is_modifiable: bool,
+}
+
+/// Write the promoted `ehr` columns of `ehr_id` on the status commit's
+/// transaction.
+///
+/// # Errors
+/// [`StorageError::SubjectInUse`] when another EHR already holds the subject
+/// (`uq_ehr_subject`); [`StorageError::Database`] on any other failure.
+pub async fn update_promoted_columns(
+    tx: &mut PgConnection,
+    ehr_id: EhrId,
+    columns: PromotedColumns<'_>,
+) -> Result<(), StorageError> {
+    sqlx::query(
+        "UPDATE ehr SET subject_id = $2, subject_namespace = $3, is_queryable = $4, \
+         is_modifiable = $5 WHERE id = $1",
+    )
+    .bind(ehr_id)
+    .bind(columns.subject_id)
+    .bind(columns.subject_namespace)
+    .bind(columns.is_queryable)
+    .bind(columns.is_modifiable)
+    .execute(tx)
+    .await
+    .map_err(|e| match &e {
+        sqlx::Error::Database(db) if db.constraint() == Some("uq_ehr_subject") => {
+            StorageError::SubjectInUse(
+                columns.subject_id.unwrap_or("?").to_owned(),
+                columns.subject_namespace.unwrap_or("?").to_owned(),
+            )
+        }
+        _ => StorageError::Database(e),
+    })?;
+    Ok(())
+}
+
+/// Insert the bare `ehr` row of an imported EHR, with no `EHR_STATUS`;
+/// `false`, with nothing written, when the id is already taken.
+///
+/// # Errors
+/// Returns [`StorageError::Database`] on a driver failure.
+pub async fn insert_bare_ehr(
+    tx: &mut PgConnection,
+    ehr_id: EhrId,
+    system_id: &str,
+) -> Result<bool, StorageError> {
+    let inserted =
+        sqlx::query("INSERT INTO ehr (id, system_id) VALUES ($1, $2) ON CONFLICT DO NOTHING")
+            .bind(ehr_id)
+            .bind(system_id)
+            .execute(tx)
+            .await?
+            .rows_affected();
+    Ok(inserted > 0)
+}
+
+/// The ids of `ids` that name an EHR this request may see.
+///
+/// An EHR under a whole-EHR access restriction (EHDS Art. 8) or an opt-out
+/// (Art. 10) reads as absent while the request enforces it
+/// (`docs/law/eu/ehds/text.html`).
+///
+/// # Errors
+/// Returns [`StorageError::Database`] on a driver failure.
+pub async fn visible_ehr_ids(
+    pool: &PgPool,
+    ids: &[EhrId],
+    restriction_enforced: bool,
+    opt_out_enforced: bool,
+) -> Result<Vec<EhrId>, StorageError> {
+    Ok(sqlx::query_scalar(
+        "SELECT id FROM ehr WHERE id = ANY($1) \
+         AND (NOT $2 OR access_restricted_at IS NULL) AND (NOT $3 OR opted_out_at IS NULL)",
+    )
+    .bind(ids)
+    .bind(restriction_enforced)
+    .bind(opt_out_enforced)
+    .fetch_all(&mut *acquire(pool).await?)
+    .await?)
+}
