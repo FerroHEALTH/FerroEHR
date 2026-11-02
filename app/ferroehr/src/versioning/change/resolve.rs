@@ -113,6 +113,13 @@ struct Prepared {
 /// `DV_MULTIMEDIA` externalized first, so the stored, served and signed form is
 /// the offloaded one, and the deleted state refused, because deleting the data
 /// and setting the state are one act (master06 §Logical Deletion).
+#[cfg_attr(
+    not(feature = "multimedia"),
+    expect(
+        clippy::unused_async,
+        reason = "the offload it awaits is the `multimedia` feature's; a slim build has none"
+    )
+)]
 async fn content_lifecycle(
     ctx: &SigningCtx<'_>,
     canonical: &mut Value,
