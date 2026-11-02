@@ -54,6 +54,8 @@
 //! - [`adl2_repo`] — the ADL2 `adl2_artefact` store and its specialisation
 //!   edges.
 //! - [`stored_query_repo`] — the registered queries of `stored_query`.
+//! - [`dump_repo`] — the rows the admin dump writes to an archive and the load
+//!   writes back.
 //! - [`erasure`] — the physical erasure of an EHR or a party: what the cascade
 //!   leaves behind, what it reads first, and the erasure tombstone.
 //!
@@ -68,6 +70,7 @@ pub mod archetype_repo;
 pub mod blob_ref;
 pub mod codec;
 pub mod ddl_template;
+pub mod dump_repo;
 pub mod ehr_repo;
 pub mod erasure;
 pub mod error;

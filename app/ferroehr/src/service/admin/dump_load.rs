@@ -61,7 +61,7 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::Connection as _;
-use sqlx::{PgConnection, Row};
+use sqlx::{PgConnection, PgPool};
 use uuid::Uuid;
 
 use openehr_its::xml::runtime::{FromXml, Namespace, ToXml};
@@ -84,6 +84,12 @@ use crate::service::demographic::identifier::store::{IdentifierStore, SealedRow,
 use crate::service::error::ServiceError;
 use crate::service::refusal::{Clash, Refusal};
 use crate::storage::codec::decompose;
+use crate::storage::dump_repo::write::StoredAudit;
+use crate::storage::dump_repo::{
+    self, ArchiveRow, AttestationRow, AuditRow, ContributionRow, EhrRow, FolderRankRow, ItemTagRow,
+    Scope, VersionRecord,
+};
+use crate::storage::error::StorageError;
 use crate::storage::{node_repo, version_repo};
 use crate::versioning::audit::AuditInput;
 use crate::versioning::object_version_id::{TreeId, object_version_id};
@@ -180,161 +186,6 @@ struct DemographicRecord {
     identifiers: Vec<SealedRow>,
 }
 
-/// Insert a record's commit-audit rows in ONE `unnest` statement.
-///
-/// `identity_preserving` adds `ON CONFLICT (id) DO NOTHING` — the demographic
-/// wave's audits may already exist on a partial load; the EHR wave inserts
-/// plainly so a corrupt duplicate id fails instead of being skipped.
-async fn insert_audit_rows(
-    tx: &mut PgConnection,
-    audits: &[AuditRow],
-    identity_preserving: bool,
-) -> Result<(), ServiceError> {
-    const INSERT: &str = "INSERT INTO commit_audit (id, time_committed, system_id, change_type, \
-         description, committer, attestation) \
-         SELECT t.id, t.time_committed::timestamptz, t.system_id, t.change_type, \
-         t.description, t.committer, t.attestation \
-         FROM unnest($1::uuid[], $2::text[], $3::text[], $4::text[], $5::jsonb[], \
-         $6::jsonb[], $7::jsonb[]) \
-         AS t(id, time_committed, system_id, change_type, description, committer, attestation)";
-    const INSERT_IDENTITY_PRESERVING: &str = "INSERT INTO commit_audit (id, time_committed, system_id, \
-         change_type, description, committer, attestation) \
-         SELECT t.id, t.time_committed::timestamptz, t.system_id, t.change_type, \
-         t.description, t.committer, t.attestation \
-         FROM unnest($1::uuid[], $2::text[], $3::text[], $4::text[], $5::jsonb[], \
-         $6::jsonb[], $7::jsonb[]) \
-         AS t(id, time_committed, system_id, change_type, description, committer, attestation) \
-         ON CONFLICT (id) DO NOTHING";
-    if audits.is_empty() {
-        return Ok(());
-    }
-    let sql = if identity_preserving {
-        INSERT_IDENTITY_PRESERVING
-    } else {
-        INSERT
-    };
-    let ids: Vec<Uuid> = audits.iter().map(|a| a.id).collect();
-    let times: Vec<&str> = audits.iter().map(|a| a.time_committed.as_str()).collect();
-    let systems: Vec<&str> = audits.iter().map(|a| a.system_id.as_str()).collect();
-    let changes: Vec<&str> = audits.iter().map(|a| a.change_type.as_str()).collect();
-    let descriptions: Vec<Option<&Value>> = audits.iter().map(|a| a.description.as_ref()).collect();
-    let committers: Vec<&Value> = audits.iter().map(|a| &a.committer).collect();
-    let attestations: Vec<Option<&Value>> = audits.iter().map(|a| a.attestation.as_ref()).collect();
-    sqlx::query(sql)
-        .bind(ids)
-        .bind(times)
-        .bind(systems)
-        .bind(changes)
-        .bind(descriptions)
-        .bind(committers)
-        .bind(attestations)
-        .execute(&mut *tx)
-        .await?;
-    Ok(())
-}
-
-/// Re-persist a record's `item_tag` rows verbatim in ONE `unnest` statement
-/// (`ehr_id = None` for the demographic wave's ehr-less tags).
-async fn insert_item_tag_rows(
-    tx: &mut PgConnection,
-    ehr_id: Option<EhrId>,
-    tags: &[ItemTagRow],
-) -> Result<(), ServiceError> {
-    if tags.is_empty() {
-        return Ok(());
-    }
-    let ids: Vec<Uuid> = tags.iter().map(|t| t.id).collect();
-    let targets: Vec<Uuid> = tags.iter().map(|t| t.target_vo_id.0).collect();
-    let target_types: Vec<&str> = tags.iter().map(|t| t.target_type.as_str()).collect();
-    let keys: Vec<&str> = tags.iter().map(|t| t.key.as_str()).collect();
-    let values: Vec<Option<&str>> = tags.iter().map(|t| t.value.as_deref()).collect();
-    let paths: Vec<Option<&str>> = tags.iter().map(|t| t.target_path.as_deref()).collect();
-    let created: Vec<&str> = tags.iter().map(|t| t.created_at.as_str()).collect();
-    sqlx::query(
-        "INSERT INTO item_tag (id, ehr_id, target_vo_id, target_type, key, value, \
-         target_path, created_at) \
-         SELECT t.id, $2, t.target_vo_id, t.target_type, t.key, t.value, t.target_path, \
-         t.created_at::timestamptz \
-         FROM unnest($1::uuid[], $3::uuid[], $4::text[], $5::text[], $6::text[], $7::text[], \
-         $8::text[]) \
-         AS t(id, target_vo_id, target_type, key, value, target_path, created_at)",
-    )
-    .bind(ids)
-    .bind(ehr_id)
-    .bind(targets)
-    .bind(target_types)
-    .bind(keys)
-    .bind(values)
-    .bind(paths)
-    .bind(created)
-    .execute(&mut *tx)
-    .await?;
-    Ok(())
-}
-
-/// Restore an archived object's PLACEMENT and its MARKER: the rows move to the
-/// cold tier, then the dumped `archived_at`/`archive_reason` are re-stamped.
-///
-/// The order matters. `tier::freeze` stamps `archived_at = now()`, which is the
-/// instant of the load rather than the instant the object was archived, so the
-/// marker is restored after the move and not before it. Doing only one half
-/// leaves a loaded archive that either reads as live content or carries an
-/// archive marker with its rows still in the hot tier. No openEHR spec governs
-/// archival placement — our own design/extension.
-async fn restore_archive_placement(
-    tx: &mut PgConnection,
-    archives: &[ArchiveRow],
-) -> Result<(), ServiceError> {
-    for archive in archives {
-        version_repo::tier::freeze(&mut *tx, &[archive.vo_id], archive.reason.as_deref()).await?;
-    }
-    insert_archive_rows(tx, archives).await
-}
-
-/// Re-stamp a record's archive markers on the head rows in ONE `unnest`
-/// statement.
-///
-/// The marker is two columns of `vo_head` rather than a table of its own, so
-/// re-stamping it is an update of the row the head sync has already written.
-async fn insert_archive_rows(
-    tx: &mut PgConnection,
-    archives: &[ArchiveRow],
-) -> Result<(), ServiceError> {
-    if archives.is_empty() {
-        return Ok(());
-    }
-    let vo_ids: Vec<Uuid> = archives.iter().map(|a| a.vo_id.0).collect();
-    let times: Vec<&str> = archives.iter().map(|a| a.archived_at.as_str()).collect();
-    let reasons: Vec<Option<&str>> = archives.iter().map(|a| a.reason.as_deref()).collect();
-    sqlx::query(
-        "UPDATE vo_head h SET archived_at = t.archived_at::timestamptz, archive_reason = t.reason \
-         FROM unnest($1::uuid[], $2::text[], $3::text[]) AS t(vo_id, archived_at, reason) \
-         WHERE h.vo_id = t.vo_id",
-    )
-    .bind(vo_ids)
-    .bind(times)
-    .bind(reasons)
-    .execute(&mut *tx)
-    .await?;
-    Ok(())
-}
-
-/// One `audit` row into an [`AuditRow`].
-fn audit_row_of(r: &sqlx::postgres::PgRow) -> Result<AuditRow, ServiceError> {
-    Ok(AuditRow {
-        id: r.try_get("id")?,
-        time_committed: r
-            .try_get::<jiff_sqlx::Timestamp, _>("time_committed")?
-            .to_jiff()
-            .to_string(),
-        system_id: r.try_get("system_id")?,
-        change_type: r.try_get("change_type")?,
-        description: r.try_get("description")?,
-        committer: r.try_get("committer")?,
-        attestation: r.try_get("attestation")?,
-    })
-}
-
 /// One EHR's full exported content bundle.
 #[derive(Debug, Serialize, Deserialize)]
 struct EhrRecord {
@@ -354,170 +205,6 @@ struct EhrRecord {
     /// dumped before attestations were carried.
     #[serde(default)]
     attestations: Vec<AttestationRow>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct AttestationRow {
-    id: Uuid,
-    vo_id: VoId,
-    sys_version: i32,
-    contribution_id: Uuid,
-    /// `ATTESTATION.time_committed` as an RFC 3339 instant (the same lossless
-    /// `jiff` rendering [`AuditRow::time_committed`] uses).
-    time_committed: String,
-    /// Whether the ATTESTATION was on the VERSION at committal and is
-    /// therefore inside its signed canonical form (RM common master06
-    /// §Attestation / §Digital Signature).
-    at_committal: bool,
-    /// The canonical `ATTESTATION` fragment, verbatim.
-    data: Value,
-}
-
-impl AttestationRow {
-    /// One exported attestation from its `vo_attestation` row — the one
-    /// mapping every export path shares.
-    fn from_row(r: &sqlx::postgres::PgRow) -> Result<Self, ServiceError> {
-        Ok(Self {
-            id: r.try_get("id")?,
-            vo_id: r.try_get("vo_id")?,
-            sys_version: r.try_get("sys_version")?,
-            contribution_id: r.try_get("contribution_id")?,
-            time_committed: r
-                .try_get::<jiff_sqlx::Timestamp, _>("time_committed")?
-                .to_jiff()
-                .to_string(),
-            at_committal: r.try_get("at_committal")?,
-            data: r.try_get("data")?,
-        })
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct FolderRankRow {
-    rank: i32,
-    vo_id: VoId,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct EhrRow {
-    id: EhrId,
-    system_id: String,
-    time_created: String,
-    subject_id: Option<String>,
-    subject_namespace: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct AuditRow {
-    id: Uuid,
-    /// `AUDIT_DETAILS.time_committed` as an RFC 3339 instant — `jiff`'s own
-    /// rendering of the stored `timestamptz`, so the export can parse it back
-    /// losslessly when it reassembles the version's `commit_audit`
-    /// (RM common master04 §Audit Details). `PostgreSQL`'s `timestamptz` input
-    /// accepts this form and the older `::text` rendering alike
-    /// (<https://www.postgresql.org/docs/18/datatype-datetime.html>
-    /// §Date/Time Input), so archives written before this projection still
-    /// load.
-    time_committed: String,
-    system_id: String,
-    change_type: String,
-    /// The canonical `DV_TEXT` fragment of `AUDIT_DETAILS.description` (0..1).
-    description: Option<Value>,
-    committer: Value,
-    /// The `ATTESTATION`-declared attributes when the audit is an `ATTESTATION`
-    /// (RM common master06 §Attestation), else absent — so an archive
-    /// round-trips the concrete audit class.
-    #[serde(default)]
-    attestation: Option<Value>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct ContributionRow {
-    id: Uuid,
-    commit_audit_id: Uuid,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct VersionRecord {
-    vo_id: VoId,
-    kind: String,
-    sys_version: i32,
-    /// `VERSION_TREE_ID` columns (0/0 = trunk row).
-    trunk_version: i32,
-    branch_number: i32,
-    branch_version: i32,
-    /// Stored `ORIGINAL_VERSION.preceding_version_uid` (`None` for a first
-    /// version) and merge provenance (`None` when not a merge).
-    preceding_version_uid: Option<String>,
-    other_input_version_uids: Option<Value>,
-    /// The stored commit instant; validity is derived from it, so no upper
-    /// bound is dumped.
-    committed_at: Option<String>,
-    lifecycle_state: String,
-    contribution_id: Uuid,
-    commit_audit_id: Uuid,
-    template_id: Option<String>,
-    signature: Option<String>,
-    /// Whether `signature` was client-supplied (foreign — never re-verified at
-    /// read; master06 §Digital Signature). `#[serde(default)]` so archives dumped
-    /// before this field existed load as server-generated.
-    #[serde(default)]
-    signature_client_supplied: bool,
-    creating_system_id: String,
-    /// The wrapped `ORIGINAL_VERSION`'s own `{contribution, commit_audit,
-    /// signature?}` on an `IMPORTED_VERSION` row (RM common master06 §Committal
-    /// and Audits), `None` on a locally created version. `#[serde(default)]` so
-    /// archives dumped before this member existed load as local originals.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    wrapped_original: Option<Value>,
-    /// The reassembled canonical openEHR JSON, INLINE — the
-    /// `openehr_canonical_json` payload form. `Value::Null` (serialized as an
-    /// absent key) for a logically-deleted version, which stores no node rows,
-    /// and for every version of an `openehr_canonical_xml` archive, whose
-    /// payload lives in [`VersionRecord::body_entry`] instead.
-    #[serde(default, skip_serializing_if = "Value::is_null")]
-    body: Value,
-    /// The `versions/<version_uid>.xml` entry holding this version's complete
-    /// `ORIGINAL_VERSION` document — the `openehr_canonical_xml` payload form.
-    /// `None` for an inline-JSON archive and for a logically-deleted version
-    /// (no content ⇒ no document). `#[serde(default)]` so archives written
-    /// before the XML member existed load unchanged.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    body_entry: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct ItemTagRow {
-    id: Uuid,
-    target_vo_id: VoId,
-    target_type: String,
-    key: String,
-    value: Option<String>,
-    target_path: Option<String>,
-    created_at: String,
-}
-
-impl ItemTagRow {
-    /// One exported tag from its `item_tag` row — the one mapping every
-    /// export path shares.
-    fn from_row(r: &sqlx::postgres::PgRow) -> Result<Self, ServiceError> {
-        Ok(Self {
-            id: r.try_get("id")?,
-            target_vo_id: r.try_get("target_vo_id")?,
-            target_type: r.try_get("target_type")?,
-            key: r.try_get("key")?,
-            value: r.try_get("value")?,
-            target_path: r.try_get("target_path")?,
-            created_at: r.try_get("created_at")?,
-        })
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct ArchiveRow {
-    vo_id: VoId,
-    archived_at: String,
-    reason: Option<String>,
 }
 
 /// Plan the segmenting of records with the given serialized byte `sizes` into
@@ -1533,7 +1220,9 @@ impl FerroEhrService {
         mut record: DemographicRecord,
         format: ExportFormat,
     ) -> Result<Option<DumpLoadFailReport>, ServiceError> {
-        if self.demographic_container_exists(record.vo_id).await? {
+        if dump_repo::read::demographic_container_exists(&self.demographic_pool, record.vo_id)
+            .await?
+        {
             return Ok(Some(DumpLoadFailReport {
                 entity_type: record.kind.clone(),
                 entity_id: record.vo_id.to_string(),
@@ -1632,7 +1321,7 @@ impl FerroEhrService {
     #[cfg(feature = "multimedia")]
     async fn blob_uris_of_versions<'a>(
         &self,
-        pool: &sqlx::PgPool,
+        pool: &PgPool,
         versions: impl Iterator<Item = &'a VersionRecord>,
     ) -> Result<Vec<String>, ServiceError> {
         let (vo_ids, sys_versions): (Vec<VoId>, Vec<i32>) =
@@ -1640,15 +1329,7 @@ impl FerroEhrService {
         if vo_ids.is_empty() {
             return Ok(Vec::new());
         }
-        Ok(sqlx::query_scalar(
-            "SELECT DISTINCT b.uri FROM blob_ref b \
-             JOIN unnest($1::uuid[], $2::int[]) AS t(vo_id, sys_version) \
-               ON t.vo_id = b.vo_id AND t.sys_version = b.sys_version",
-        )
-        .bind(&vo_ids)
-        .bind(&sys_versions)
-        .fetch_all(&mut *acquire(pool).await?)
-        .await?)
+        Ok(dump_repo::read::version_blob_uris(pool, &vo_ids, &sys_versions).await?)
     }
 
     /// Re-put each archived blob (`blobs/<hex>`) into the object store on load
@@ -1681,16 +1362,6 @@ impl FerroEhrService {
         Ok(())
     }
 
-    /// Whether an ehr-less demographic container with `vo_id` already exists.
-    async fn demographic_container_exists(&self, vo_id: VoId) -> Result<bool, ServiceError> {
-        Ok(sqlx::query_scalar(
-            "SELECT EXISTS(SELECT 1 FROM version WHERE vo_id = $1 AND ehr_id IS NULL)",
-        )
-        .bind(vo_id)
-        .fetch_one(&mut *acquire(&self.demographic_pool).await?)
-        .await?)
-    }
-
     /// Load the demographic wave's shared rows. Audits and contributions may
     /// already exist on a partial load into a non-empty repository (one
     /// demographic contribution can commit several containers), so both
@@ -1701,24 +1372,8 @@ impl FerroEhrService {
     ) -> Result<(), ServiceError> {
         let mut conn = acquire(&self.demographic_pool).await?;
         let mut tx = conn.begin().await?;
-        insert_audit_rows(&mut tx, &commons.audits, true).await?;
-        if !commons.contributions.is_empty() {
-            let ids: Vec<Uuid> = commons.contributions.iter().map(|c| c.id).collect();
-            let commit_audit_ids: Vec<Uuid> = commons
-                .contributions
-                .iter()
-                .map(|c| c.commit_audit_id)
-                .collect();
-            sqlx::query(
-                "INSERT INTO contribution (id, ehr_id, commit_audit_id) \
-                 SELECT t.id, NULL, t.commit_audit_id FROM unnest($1::uuid[], $2::uuid[]) \
-                 AS t(id, commit_audit_id) ON CONFLICT (id) DO NOTHING",
-            )
-            .bind(ids)
-            .bind(commit_audit_ids)
-            .execute(&mut *tx)
-            .await?;
-        }
+        dump_repo::write::insert_audits(&mut tx, &commons.audits, StoredAudit::Keep).await?;
+        dump_repo::write::insert_demographic_contributions(&mut tx, &commons.contributions).await?;
         tx.commit().await?;
         Ok(())
     }
@@ -1744,7 +1399,7 @@ impl FerroEhrService {
     ) -> Result<Option<String>, ServiceError> {
         let mut conn = acquire(&self.demographic_pool).await?;
         let mut tx = conn.begin().await?;
-        insert_audit_rows(&mut tx, &record.audits, true).await?;
+        dump_repo::write::insert_audits(&mut tx, &record.audits, StoredAudit::Keep).await?;
         if let Err(refusal) = IdentifierStore::restore_sealed(&mut tx, &record.identifiers).await {
             return restore_refusal(refusal);
         }
@@ -1759,9 +1414,9 @@ impl FerroEhrService {
             }
         }
         load_versions(&mut tx, &self.privacy, None, record.versions).await?;
-        load_attestations(&mut tx, &record.attestations).await?;
-        insert_item_tag_rows(&mut tx, None, &record.item_tags).await?;
-        restore_archive_placement(&mut tx, &record.archives).await?;
+        dump_repo::write::insert_attestations(&mut tx, &record.attestations).await?;
+        dump_repo::write::insert_item_tags(&mut tx, None, &record.item_tags).await?;
+        dump_repo::write::restore_archives(&mut tx, &record.archives).await?;
         // The archive carries no index row: the target side is rebuilt from
         // the loaded current version, as every commit rebuilds it.
         crate::storage::party_reverse::reindex(&mut tx, record.vo_id).await?;
@@ -1772,9 +1427,7 @@ impl FerroEhrService {
     /// Read every EHR's content into export records (ordered by EHR id for a
     /// deterministic archive).
     async fn collect_ehr_records(&self) -> Result<Vec<EhrRecord>, ServiceError> {
-        let ehr_ids: Vec<EhrId> = sqlx::query_scalar("SELECT id FROM ehr ORDER BY id")
-            .fetch_all(&mut *acquire(&self.pool).await?)
-            .await?;
+        let ehr_ids = dump_repo::read::ehr_ids(&self.pool).await?;
         let mut records = Vec::with_capacity(ehr_ids.len());
         for ehr_id in ehr_ids {
             records.push(self.collect_one_ehr(ehr_id).await?);
@@ -1791,45 +1444,14 @@ impl FerroEhrService {
     async fn collect_demographic_wave(
         &self,
     ) -> Result<(DemographicCommons, Vec<DemographicRecord>), ServiceError> {
-        let audit_rows = sqlx::query(
-            "SELECT id, time_committed, system_id, change_type, \
-             description, committer, attestation FROM commit_audit \
-             WHERE id IN (SELECT commit_audit_id FROM contribution WHERE ehr_id IS NULL) \
-             ORDER BY id",
-        )
-        .fetch_all(&mut *acquire(&self.demographic_pool).await?)
-        .await?;
-        let mut commons_audits = Vec::with_capacity(audit_rows.len());
-        for r in audit_rows {
-            commons_audits.push(audit_row_of(&r)?);
-        }
-        let contribution_rows = sqlx::query(
-            "SELECT id, commit_audit_id FROM contribution WHERE ehr_id IS NULL ORDER BY id",
-        )
-        .fetch_all(&mut *acquire(&self.demographic_pool).await?)
-        .await?;
-        let mut contributions = Vec::with_capacity(contribution_rows.len());
-        for r in contribution_rows {
-            contributions.push(ContributionRow {
-                id: r.try_get("id")?,
-                commit_audit_id: r.try_get("commit_audit_id")?,
-            });
-        }
+        let pool = &self.demographic_pool;
         let commons = DemographicCommons {
-            audits: commons_audits,
-            contributions,
+            audits: dump_repo::read::demographic_contribution_audits(pool).await?,
+            contributions: dump_repo::read::contributions(pool, None).await?,
         };
-
-        let container_rows = sqlx::query(
-            "SELECT DISTINCT vo_id, kind FROM version WHERE ehr_id IS NULL \
-             ORDER BY vo_id",
-        )
-        .fetch_all(&mut *acquire(&self.demographic_pool).await?)
-        .await?;
-        let mut records = Vec::with_capacity(container_rows.len());
-        for c in container_rows {
-            let vo_id: VoId = c.try_get("vo_id")?;
-            let kind: String = c.try_get("kind")?;
+        let containers = dump_repo::read::demographic_containers(pool).await?;
+        let mut records = Vec::with_capacity(containers.len());
+        for (vo_id, kind) in containers {
             records.push(self.collect_one_demographic(vo_id, kind).await?);
         }
         Ok((commons, records))
@@ -1842,280 +1464,39 @@ impl FerroEhrService {
         vo_id: VoId,
         kind: String,
     ) -> Result<DemographicRecord, ServiceError> {
-        let audit_rows = sqlx::query(
-            "SELECT id, time_committed, system_id, change_type, \
-             description, committer, attestation FROM commit_audit \
-             WHERE id IN (SELECT commit_audit_id FROM version \
-                          WHERE vo_id = $1 AND ehr_id IS NULL) \
-             ORDER BY id",
-        )
-        .bind(vo_id)
-        .fetch_all(&mut *acquire(&self.demographic_pool).await?)
-        .await?;
-        let mut audits = Vec::with_capacity(audit_rows.len());
-        for r in audit_rows {
-            audits.push(audit_row_of(&r)?);
-        }
-
-        let version_rows = sqlx::query(
-            "SELECT vo_id, kind, sys_version, trunk_version, branch_number, branch_version, \
-             preceding_version_uid, other_input_version_uids, committed_at::text AS ca, \
-             lifecycle_state, contribution_id, commit_audit_id, \
-             template_id, signature, signature_client_supplied, creating_system_id, \
-             wrapped_original \
-             FROM version WHERE vo_id = $1 AND ehr_id IS NULL \
-             ORDER BY sys_version",
-        )
-        .bind(vo_id)
-        .fetch_all(&mut *acquire(&self.demographic_pool).await?)
-        .await?;
-        let mut versions = Vec::with_capacity(version_rows.len());
-        for r in version_rows {
-            versions.push(self.version_record_of(&self.demographic_pool, &r).await?);
-        }
-
-        let attestation_rows = sqlx::query(
-            "SELECT id, vo_id, sys_version, contribution_id, time_committed, at_committal, \
-             data FROM vo_attestation WHERE vo_id = $1 \
-             ORDER BY sys_version, time_committed, id",
-        )
-        .bind(vo_id)
-        .fetch_all(&mut *acquire(&self.demographic_pool).await?)
-        .await?;
-        let mut attestations = Vec::with_capacity(attestation_rows.len());
-        for r in attestation_rows {
-            attestations.push(AttestationRow::from_row(&r)?);
-        }
-
-        let tag_rows = sqlx::query(
-            "SELECT id, target_vo_id, target_type, key, value, target_path, \
-             created_at::text AS created_at FROM item_tag \
-             WHERE ehr_id IS NULL AND target_vo_id = $1 ORDER BY id",
-        )
-        .bind(vo_id)
-        .fetch_all(&mut *acquire(&self.demographic_pool).await?)
-        .await?;
-        let mut item_tags = Vec::with_capacity(tag_rows.len());
-        for r in tag_rows {
-            item_tags.push(ItemTagRow::from_row(&r)?);
-        }
-
-        let archive_rows = sqlx::query(
-            "SELECT vo_id, archived_at::text AS archived_at, archive_reason AS reason \
-             FROM vo_head WHERE vo_id = $1 AND archived_at IS NOT NULL ORDER BY vo_id",
-        )
-        .bind(vo_id)
-        .fetch_all(&mut *acquire(&self.demographic_pool).await?)
-        .await?;
-        let mut archives = Vec::with_capacity(archive_rows.len());
-        for r in archive_rows {
-            archives.push(ArchiveRow {
-                vo_id: r.try_get("vo_id")?,
-                archived_at: r.try_get("archived_at")?,
-                reason: r.try_get("reason")?,
-            });
-        }
-
-        let identifiers = IdentifierStore::new(self.demographic_pool.clone())
+        let pool = &self.demographic_pool;
+        let scope = Scope::Container(vo_id);
+        let identifiers = IdentifierStore::new(pool.clone())
             .sealed_rows(vo_id.0)
             .await
             .map_err(|e| ServiceError::internal("read the sealed national identifiers", e))?;
-
         Ok(DemographicRecord {
             vo_id,
             kind,
-            audits,
-            versions,
-            attestations,
-            item_tags,
-            archives,
+            audits: dump_repo::read::audits(pool, scope).await?,
+            versions: with_bodies(pool, dump_repo::read::versions(pool, scope).await?).await?,
+            attestations: dump_repo::read::attestations(pool, scope).await?,
+            item_tags: dump_repo::read::item_tags(pool, scope).await?,
+            archives: dump_repo::read::archives(pool, scope).await?,
             identifiers,
-        })
-    }
-
-    /// One `version` row into a [`VersionRecord`], its body read
-    /// across both storage tiers (deleted versions keep a `null` body).
-    async fn version_record_of(
-        &self,
-        pool: &sqlx::PgPool,
-        r: &sqlx::postgres::PgRow,
-    ) -> Result<VersionRecord, ServiceError> {
-        let vo_id: VoId = r.try_get("vo_id")?;
-        let sys_version: i32 = r.try_get("sys_version")?;
-        let lifecycle_state: String = r.try_get("lifecycle_state")?;
-        let body = if lifecycle_state == DELETED_LIFECYCLE {
-            Value::Null
-        } else {
-            version_repo::read::stored_body_all(pool, vo_id, sys_version).await?
-        };
-        Ok(VersionRecord {
-            vo_id,
-            kind: r.try_get("kind")?,
-            sys_version,
-            trunk_version: r.try_get("trunk_version")?,
-            branch_number: r.try_get("branch_number")?,
-            branch_version: r.try_get("branch_version")?,
-            preceding_version_uid: r.try_get("preceding_version_uid")?,
-            other_input_version_uids: r.try_get("other_input_version_uids")?,
-            committed_at: r.try_get("ca")?,
-            lifecycle_state,
-            contribution_id: r.try_get("contribution_id")?,
-            commit_audit_id: r.try_get("commit_audit_id")?,
-            template_id: r.try_get("template_id")?,
-            signature: r.try_get("signature")?,
-            signature_client_supplied: r.try_get("signature_client_supplied")?,
-            creating_system_id: r.try_get("creating_system_id")?,
-            wrapped_original: r.try_get("wrapped_original")?,
-            body,
-            body_entry: None,
         })
     }
 
     /// Read one EHR's `ehr`/audit/contribution/version/tag/archive content. The
     /// per-version canonical body is reassembled through the storage codec
-    /// ([`node_repo::read_version_canonical`] — the codec's lossless inverse).
-    #[expect(
-        clippy::too_many_lines,
-        reason = "one linear per-EHR collection pass; splitting it would hide \
-                  the segment order"
-    )]
+    /// ([`version_repo::read::stored_body_all`] — the codec's lossless inverse).
     async fn collect_one_ehr(&self, ehr_id: EhrId) -> Result<EhrRecord, ServiceError> {
-        let row = sqlx::query(
-            "SELECT system_id, time_created::text, subject_id, subject_namespace \
-             FROM ehr WHERE id = $1",
-        )
-        .bind(ehr_id)
-        .fetch_one(&mut *acquire(&self.pool).await?)
-        .await?;
-        let ehr = EhrRow {
-            id: ehr_id,
-            system_id: row.try_get("system_id")?,
-            time_created: row.try_get("time_created")?,
-            subject_id: row.try_get("subject_id")?,
-            subject_namespace: row.try_get("subject_namespace")?,
-        };
-
-        // Every audit referenced by this EHR's contributions or versions.
-        let audit_rows = sqlx::query(
-            "SELECT id, time_committed, system_id, change_type, \
-             description, committer, attestation FROM commit_audit \
-             WHERE id IN (SELECT commit_audit_id FROM contribution WHERE ehr_id = $1 \
-                          UNION SELECT commit_audit_id FROM version WHERE ehr_id = $1) \
-             ORDER BY id",
-        )
-        .bind(ehr_id)
-        .fetch_all(&mut *acquire(&self.pool).await?)
-        .await?;
-        let mut audits = Vec::with_capacity(audit_rows.len());
-        for r in audit_rows {
-            audits.push(AuditRow {
-                id: r.try_get("id")?,
-                time_committed: r
-                    .try_get::<jiff_sqlx::Timestamp, _>("time_committed")?
-                    .to_jiff()
-                    .to_string(),
-                system_id: r.try_get("system_id")?,
-                change_type: r.try_get("change_type")?,
-                description: r.try_get("description")?,
-                committer: r.try_get("committer")?,
-                attestation: r.try_get("attestation")?,
-            });
-        }
-
-        let contribution_rows = sqlx::query(
-            "SELECT id, commit_audit_id FROM contribution WHERE ehr_id = $1 ORDER BY id",
-        )
-        .bind(ehr_id)
-        .fetch_all(&mut *acquire(&self.pool).await?)
-        .await?;
-        let mut contributions = Vec::with_capacity(contribution_rows.len());
-        for r in contribution_rows {
-            contributions.push(ContributionRow {
-                id: r.try_get("id")?,
-                commit_audit_id: r.try_get("commit_audit_id")?,
-            });
-        }
-
-        let version_rows = sqlx::query(
-            "SELECT vo_id, kind, sys_version, trunk_version, branch_number, branch_version, \
-             preceding_version_uid, other_input_version_uids, committed_at::text AS ca, \
-             lifecycle_state, contribution_id, commit_audit_id, \
-             template_id, signature, signature_client_supplied, creating_system_id, \
-             wrapped_original \
-             FROM version WHERE ehr_id = $1 ORDER BY vo_id, sys_version",
-        )
-        .bind(ehr_id)
-        .fetch_all(&mut *acquire(&self.pool).await?)
-        .await?;
-        let mut versions = Vec::with_capacity(version_rows.len());
-        for r in version_rows {
-            versions.push(self.version_record_of(&self.pool, &r).await?);
-        }
-
-        let folder_rank_rows =
-            sqlx::query("SELECT rank, vo_id FROM ehr_folder WHERE ehr_id = $1 ORDER BY rank")
-                .bind(ehr_id)
-                .fetch_all(&mut *acquire(&self.pool).await?)
-                .await?;
-        let mut folder_ranks = Vec::with_capacity(folder_rank_rows.len());
-        for r in folder_rank_rows {
-            folder_ranks.push(FolderRankRow {
-                rank: r.try_get("rank")?,
-                vo_id: r.try_get("vo_id")?,
-            });
-        }
-
-        let tag_rows = sqlx::query(
-            "SELECT id, target_vo_id, target_type, key, value, target_path, \
-             created_at::text AS created_at FROM item_tag WHERE ehr_id = $1 ORDER BY id",
-        )
-        .bind(ehr_id)
-        .fetch_all(&mut *acquire(&self.pool).await?)
-        .await?;
-        let mut item_tags = Vec::with_capacity(tag_rows.len());
-        for r in tag_rows {
-            item_tags.push(ItemTagRow::from_row(&r)?);
-        }
-
-        let archive_rows = sqlx::query(
-            "SELECT vo_id, archived_at::text AS archived_at, archive_reason AS reason \
-             FROM vo_head WHERE ehr_id = $1 AND archived_at IS NOT NULL ORDER BY vo_id",
-        )
-        .bind(ehr_id)
-        .fetch_all(&mut *acquire(&self.pool).await?)
-        .await?;
-        let mut archives = Vec::with_capacity(archive_rows.len());
-        for r in archive_rows {
-            archives.push(ArchiveRow {
-                vo_id: r.try_get("vo_id")?,
-                archived_at: r.try_get("archived_at")?,
-                reason: r.try_get("reason")?,
-            });
-        }
-
-        let attestation_rows = sqlx::query(
-            "SELECT id, vo_id, sys_version, contribution_id, time_committed, at_committal, \
-             data FROM vo_attestation \
-             WHERE vo_id IN (SELECT DISTINCT vo_id FROM version WHERE ehr_id = $1) \
-             ORDER BY vo_id, sys_version, time_committed, id",
-        )
-        .bind(ehr_id)
-        .fetch_all(&mut *acquire(&self.pool).await?)
-        .await?;
-        let mut attestations = Vec::with_capacity(attestation_rows.len());
-        for r in attestation_rows {
-            attestations.push(AttestationRow::from_row(&r)?);
-        }
-
+        let pool = &self.pool;
+        let scope = Scope::Ehr(ehr_id);
         Ok(EhrRecord {
-            ehr,
-            audits,
-            contributions,
-            versions,
-            folder_ranks,
-            item_tags,
-            archives,
-            attestations,
+            ehr: dump_repo::read::ehr_row(pool, ehr_id).await?,
+            audits: dump_repo::read::audits(pool, scope).await?,
+            contributions: dump_repo::read::contributions(pool, Some(ehr_id)).await?,
+            versions: with_bodies(pool, dump_repo::read::versions(pool, scope).await?).await?,
+            folder_ranks: dump_repo::read::folder_ranks(pool, ehr_id).await?,
+            item_tags: dump_repo::read::item_tags(pool, scope).await?,
+            archives: dump_repo::read::archives(pool, scope).await?,
+            attestations: dump_repo::read::attestations(pool, scope).await?,
         })
     }
 
@@ -2124,37 +1505,50 @@ impl FerroEhrService {
     /// rows through the storage codec), its item tags, and any archive markers —
     /// preserved ids, provenance and commit times (a lossless migration; RM
     /// common master06 §Copying "the `ORIGINAL_VERSION` is never modified").
+    ///
+    /// # Errors
+    /// [`ServiceError::Conflict`] when the record's subject is already held by
+    /// another EHR in this repository — possible only on a PARTIAL load into a
+    /// non-empty repository, since a self-consistent dump cannot clash with
+    /// itself (one EHR per subject — RM ehr master04 §EHR Status). The caller
+    /// reports that per record instead of aborting the load. An archive with two
+    /// versions of one lineage committed at the same instant is
+    /// [`ServiceError::Unprocessable`]; a storage failure is
+    /// [`ServiceError::Storage`].
     async fn load_one_ehr(&self, record: EhrRecord) -> Result<(), ServiceError> {
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
         let ehr_id = record.ehr.id;
 
-        insert_ehr_row(&mut tx, &record.ehr).await?;
-
-        insert_audit_rows(&mut tx, &record.audits, false).await?;
-
-        if !record.contributions.is_empty() {
-            let ids: Vec<Uuid> = record.contributions.iter().map(|c| c.id).collect();
-            let commit_audit_ids: Vec<Uuid> = record
-                .contributions
-                .iter()
-                .map(|c| c.commit_audit_id)
-                .collect();
-            sqlx::query(
-                "INSERT INTO contribution (id, ehr_id, commit_audit_id) \
-                 SELECT t.id, $2, t.commit_audit_id FROM unnest($1::uuid[], $3::uuid[]) \
-                 AS t(id, commit_audit_id)",
-            )
-            .bind(ids)
-            .bind(ehr_id)
-            .bind(commit_audit_ids)
-            .execute(&mut *tx)
-            .await?;
-        }
+        // The archived root row, verbatim: preserved id, immutable `system_id`
+        // and `time_created`, and the archived promoted-column projection,
+        // which `resync_promoted_columns` re-derives below.
+        dump_repo::write::insert_ehr(&mut tx, &record.ehr)
+            .await
+            .map_err(|e| match e {
+                // NOTE: ITS-REST EHR API `409_EHR` refuses a second EHR for one subject
+                // id and namespace pair; the status token is our own.
+                StorageError::SubjectInUse(subject, namespace) => {
+                    ServiceError::Conflict(Refusal::new(
+                        Clash::EhrForSubject,
+                        format!(
+                            "EHR {ehr_id} names subject {subject}@{namespace}, which another EHR \
+                             in this repository already holds (one EHR per subject)"
+                        ),
+                    ))
+                }
+                other => ServiceError::Storage(other),
+            })?;
+        dump_repo::write::insert_audits(&mut tx, &record.audits, StoredAudit::Refuse).await?;
+        dump_repo::write::insert_ehr_contributions(&mut tx, ehr_id, &record.contributions).await?;
 
         load_versions(&mut tx, &self.privacy, Some(ehr_id), record.versions).await?;
 
-        load_attestations(&mut tx, &record.attestations).await?;
+        // Once the version and contribution rows they reference exist: an
+        // at-committal attestation is inside the version's signed canonical
+        // form (RM common master06 §Digital Signature), so a restore without
+        // them would break `verify_on_read` on the restored version.
+        dump_repo::write::insert_attestations(&mut tx, &record.attestations).await?;
 
         // The EHR_STATUS content is the truth and the promoted `ehr` columns
         // only its cached projection, so they are re-derived from the loaded
@@ -2165,46 +1559,14 @@ impl FerroEhrService {
 
         // EHR.folders membership rows, verbatim (rank fidelity — RM ehr §EHR
         // Class Directory_in_folders: folders.item(1) = directory).
-        if !record.folder_ranks.is_empty() {
-            let ranks: Vec<i32> = record.folder_ranks.iter().map(|f| f.rank).collect();
-            let vo_ids: Vec<Uuid> = record.folder_ranks.iter().map(|f| f.vo_id.0).collect();
-            sqlx::query(
-                "INSERT INTO ehr_folder (ehr_id, rank, vo_id) \
-                 SELECT $1, t.rank, t.vo_id FROM unnest($2::int[], $3::uuid[]) AS t(rank, vo_id)",
-            )
-            .bind(ehr_id)
-            .bind(ranks)
-            .bind(vo_ids)
-            .execute(&mut *tx)
-            .await?;
-        }
+        dump_repo::write::insert_folder_ranks(&mut tx, ehr_id, &record.folder_ranks).await?;
 
-        insert_item_tag_rows(&mut tx, Some(ehr_id), &record.item_tags).await?;
+        dump_repo::write::insert_item_tags(&mut tx, Some(ehr_id), &record.item_tags).await?;
 
         // The archive is the ONLY path writing explicit historical commit
         // instants, so it checks what the regular write path holds by
-        // construction: one version of a lineage per instant (RM common
-        // master06 — one valid version per lineage at any instant). Validity is
-        // derived from `committed_at`, so two rows of one lineage sharing an
-        // instant make "the version in force then" unanswerable. Trunk rows are
-        // one lineage per vo_id; branch rows per {vo, creating system, fork
-        // point, branch number}.
-        let ambiguous: bool = sqlx::query_scalar(
-            "SELECT EXISTS ( \
-                 SELECT 1 FROM version a \
-                 JOIN version b ON a.vo_id = b.vo_id \
-                     AND a.branch_number = b.branch_number \
-                     AND (a.branch_number = 0 \
-                          OR (a.creating_system_id = b.creating_system_id \
-                              AND a.trunk_version = b.trunk_version)) \
-                     AND a.sys_version < b.sys_version \
-                     AND a.committed_at = b.committed_at \
-                 WHERE a.ehr_id = $1)",
-        )
-        .bind(ehr_id)
-        .fetch_one(&mut *tx)
-        .await?;
-        if ambiguous {
+        // construction: one version of a lineage per instant.
+        if dump_repo::write::ambiguous_commit_instant(&mut tx, ehr_id).await? {
             return Err(ServiceError::content_invalid(
                 crate::service::error::Violation::new(format!(
                     "archive for EHR {ehr_id} carries two versions of one lineage committed at \
@@ -2216,104 +1578,30 @@ impl FerroEhrService {
         // Every loaded row went into the hot tier; the ones the record marks
         // archived belong in the cold one, so a loaded EHR carries the same
         // tier placement AND the same marker a locally archived one does.
-        restore_archive_placement(&mut tx, &record.archives).await?;
+        dump_repo::write::restore_archives(&mut tx, &record.archives).await?;
 
         tx.commit().await?;
         Ok(())
     }
 }
 
-/// Re-persist the archived `ehr` root row verbatim (preserved id, immutable
-/// `system_id` and `time_created`, plus the archived promoted-column
-/// projection, which [`FerroEhrService::resync_promoted_columns`] then re-derives
-/// from the loaded `EHR_STATUS`).
+/// Fill each version's body across both storage tiers; a logically-deleted
+/// version keeps a `null` body, since it stores no content.
 ///
 /// # Errors
-/// [`ServiceError::Conflict`] when the record's subject is already held by
-/// another EHR in this repository — possible only on a PARTIAL load into a
-/// non-empty repository, since a self-consistent dump cannot clash with itself
-/// (one EHR per subject — RM ehr master04 §EHR Status). The caller reports that
-/// per record instead of aborting the load with an opaque constraint fault.
-/// [`ServiceError::Database`] on any other insert failure (a duplicate EHR id
-/// is pre-checked by the caller).
-async fn insert_ehr_row(tx: &mut PgConnection, ehr: &EhrRow) -> Result<(), ServiceError> {
-    sqlx::query(
-        "INSERT INTO ehr (id, system_id, time_created, subject_id, subject_namespace) \
-         VALUES ($1, $2, $3::timestamptz, $4, $5)",
-    )
-    .bind(ehr.id)
-    .bind(&ehr.system_id)
-    .bind(&ehr.time_created)
-    .bind(&ehr.subject_id)
-    .bind(&ehr.subject_namespace)
-    .execute(&mut *tx)
-    .await
-    .map_err(|e| {
-        if let sqlx::Error::Database(db) = &e
-            && db.constraint() == Some("uq_ehr_subject")
-        {
-            // NOTE: ITS-REST EHR API `409_EHR` refuses a second EHR for one subject
-            // id and namespace pair; the status token is our own.
-            return ServiceError::Conflict(Refusal::new(
-                Clash::EhrForSubject,
-                format!(
-                    "EHR {} names subject {}@{}, which another EHR in this repository \
-                     already holds (one EHR per subject)",
-                    ehr.id,
-                    ehr.subject_id.as_deref().unwrap_or("?"),
-                    ehr.subject_namespace.as_deref().unwrap_or("?"),
-                ),
-            ));
+/// [`ServiceError::Storage`] when a body read fails.
+async fn with_bodies(
+    pool: &PgPool,
+    mut versions: Vec<VersionRecord>,
+) -> Result<Vec<VersionRecord>, ServiceError> {
+    for version in &mut versions {
+        if version.lifecycle_state != DELETED_LIFECYCLE {
+            version.body =
+                version_repo::read::stored_body_all(pool, version.vo_id, version.sys_version)
+                    .await?;
         }
-        ServiceError::Database(e)
-    })?;
-    Ok(())
-}
-
-/// Re-persist the archived `vo_attestation` rows verbatim in ONE `unnest`
-/// statement, once their FK targets (the version and contribution rows)
-/// exist — an at-committal attestation is inside the version's signed
-/// canonical form (RM common master06 §Digital Signature), so a restore
-/// without them would break `verify_on_read` on the restored version.
-///
-/// # Errors
-/// The underlying insert failure as [`ServiceError::Database`].
-async fn load_attestations(
-    tx: &mut PgConnection,
-    attestations: &[AttestationRow],
-) -> Result<(), ServiceError> {
-    if attestations.is_empty() {
-        return Ok(());
     }
-    let ids: Vec<Uuid> = attestations.iter().map(|a| a.id).collect();
-    let vo_ids: Vec<Uuid> = attestations.iter().map(|a| a.vo_id.0).collect();
-    let sys_versions: Vec<i32> = attestations.iter().map(|a| a.sys_version).collect();
-    let contributions: Vec<Uuid> = attestations.iter().map(|a| a.contribution_id).collect();
-    let times: Vec<&str> = attestations
-        .iter()
-        .map(|a| a.time_committed.as_str())
-        .collect();
-    let at_committals: Vec<bool> = attestations.iter().map(|a| a.at_committal).collect();
-    let datas: Vec<&Value> = attestations.iter().map(|a| &a.data).collect();
-    sqlx::query(
-        "INSERT INTO vo_attestation (id, vo_id, sys_version, contribution_id, \
-         time_committed, at_committal, data) \
-         SELECT t.id, t.vo_id, t.sys_version, t.contribution_id, \
-         t.time_committed::timestamptz, t.at_committal, t.data \
-         FROM unnest($1::uuid[], $2::uuid[], $3::int[], $4::uuid[], $5::text[], $6::bool[], \
-         $7::jsonb[]) \
-         AS t(id, vo_id, sys_version, contribution_id, time_committed, at_committal, data)",
-    )
-    .bind(ids)
-    .bind(vo_ids)
-    .bind(sys_versions)
-    .bind(contributions)
-    .bind(times)
-    .bind(at_committals)
-    .bind(datas)
-    .execute(&mut *tx)
-    .await?;
-    Ok(())
+    Ok(versions)
 }
 
 /// The per-container answer to a protected-identifier refusal during a
