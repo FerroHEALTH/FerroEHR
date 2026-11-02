@@ -69,12 +69,10 @@ fn config() -> AppConfig {
 async fn app_with_template() -> (testkit::TestDb, Router) {
     let (pg, service) = common::test_service().await;
     let app = common::router_with(config(), service).await;
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/definition/template/adl1.4"))
+    let req = common::req("POST", format!("{BASE}/definition/template/adl1.4"))
         .header(header::CONTENT_TYPE, "application/xml")
-        .body(Body::from(demo_vitals_opt_xml()))
-        .unwrap();
+        .body(demo_vitals_opt_xml())
+        .build();
     let resp = app.clone().oneshot(req).await.expect("upload OPT");
     assert_eq!(
         resp.status(),

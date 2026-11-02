@@ -165,11 +165,7 @@ async fn get_serves_source_as_text_and_404s_unknown() {
     let (status, _h, _b) = send(&app, upload_req(None)).await;
     assert_eq!(status, StatusCode::CREATED);
 
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!("{BASE}/definition/template/adl2/{HRID}"))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("GET", format!("{BASE}/definition/template/adl2/{HRID}")).build();
     let (status, headers, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::OK);
     assert!(
@@ -182,13 +178,11 @@ async fn get_serves_source_as_text_and_404s_unknown() {
     );
     assert_eq!(body, source());
 
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!(
-            "{BASE}/definition/template/adl2/openEHR-EHR-COMPOSITION.absent.v1.0.0"
-        ))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req(
+        "GET",
+        format!("{BASE}/definition/template/adl2/openEHR-EHR-COMPOSITION.absent.v1.0.0"),
+    )
+    .build();
     let (status, _, _) = send(&app, req).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
@@ -199,14 +193,9 @@ async fn list_returns_template_metadata() {
     let (status, _h, _b) = send(&app, upload_req(None)).await;
     assert_eq!(status, StatusCode::CREATED);
 
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!("{BASE}/definition/template/adl2"))
-        .body(Body::empty())
-        .unwrap();
-    let (status, _, body) = send(&app, req).await;
+    let req = common::req("GET", format!("{BASE}/definition/template/adl2")).build();
+    let (status, v) = common::send_json(&app, req).await;
     assert_eq!(status, StatusCode::OK);
-    let v: Value = serde_json::from_str(&body).unwrap();
     let list = v.as_array().expect("array");
     assert_eq!(list.len(), 1);
     let row = &list[0];
@@ -230,12 +219,9 @@ async fn get_serves_operational_template_v2_json() {
 
     // Accept: application/json → the OperationalTemplateV2 canonical-JSON
     // projection (200_Template_adl2_retrieved.yaml, application/json branch).
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!("{BASE}/definition/template/adl2/{HRID}"))
-        .header(header::ACCEPT, "application/json")
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("GET", format!("{BASE}/definition/template/adl2/{HRID}"))
+        .accept("application/json")
+        .build();
     let (status, headers, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::OK);
     assert!(
@@ -263,12 +249,9 @@ async fn get_406_when_only_xml_acceptable() {
     assert_eq!(status, StatusCode::CREATED);
 
     // application/xml has no declared response body → 406.
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!("{BASE}/definition/template/adl2/{HRID}"))
-        .header(header::ACCEPT, "application/xml")
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("GET", format!("{BASE}/definition/template/adl2/{HRID}"))
+        .accept("application/xml")
+        .build();
     let (status, _, _) = send(&app, req).await;
     assert_eq!(status, StatusCode::NOT_ACCEPTABLE);
 }
@@ -282,13 +265,11 @@ async fn version_get_resolves_and_serves_both_representations() {
     // The deprecated versioned get: template family + a `1` major prefix →
     // the stored v1.0.0 source (text/plain).
     let concept_family = "openEHR-EHR-COMPOSITION.t_clinical_info";
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!(
-            "{BASE}/definition/template/adl2/{concept_family}/1"
-        ))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req(
+        "GET",
+        format!("{BASE}/definition/template/adl2/{concept_family}/1"),
+    )
+    .build();
     let (status, headers, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::OK);
     assert!(
@@ -302,30 +283,25 @@ async fn version_get_resolves_and_serves_both_representations() {
     assert_eq!(body, source());
 
     // application/json → the OperationalTemplateV2 projection at that version.
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!(
-            "{BASE}/definition/template/adl2/{concept_family}/1.0.0"
-        ))
-        .header(header::ACCEPT, "application/json")
-        .body(Body::empty())
-        .unwrap();
-    let (status, _, body) = send(&app, req).await;
+    let req = common::req(
+        "GET",
+        format!("{BASE}/definition/template/adl2/{concept_family}/1.0.0"),
+    )
+    .accept("application/json")
+    .build();
+    let (status, v) = common::send_json(&app, req).await;
     assert_eq!(status, StatusCode::OK);
-    let v: Value = serde_json::from_str(&body).unwrap();
     assert_eq!(
         v.get("_type").and_then(Value::as_str),
         Some("OPERATIONAL_TEMPLATE")
     );
 
     // A version that does not exist → 404.
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!(
-            "{BASE}/definition/template/adl2/{concept_family}/9"
-        ))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req(
+        "GET",
+        format!("{BASE}/definition/template/adl2/{concept_family}/9"),
+    )
+    .build();
     let (status, _, _) = send(&app, req).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
@@ -336,14 +312,12 @@ async fn version_get_refuses_a_malformed_version_before_any_lookup() {
     assert_eq!(send(&app, upload_req(None)).await.0, StatusCode::CREATED);
     let family = "openEHR-EHR-COMPOSITION.t_clinical_info";
     let get = |version: &str| {
-        Request::builder()
-            .method("GET")
-            .uri(format!(
-                "{BASE}/definition/template/adl2/{family}/{version}"
-            ))
-            .header(header::ACCEPT, "application/json")
-            .body(Body::empty())
-            .unwrap()
+        common::req(
+            "GET",
+            format!("{BASE}/definition/template/adl2/{family}/{version}"),
+        )
+        .accept("application/json")
+        .build()
     };
     // "A SEMVER version number … an exact version (e.g. `1.7.1`), or a pattern
     // as partial prefix, in a form of `{major}` or `{major}.{minor}`"
@@ -421,8 +395,7 @@ async fn example_get_honours_type_and_detail_level() {
     ] {
         assert_eq!(send(&app, example_req(None, query)).await.0, StatusCode::OK);
     }
-    let (_s, _h, body) = send(&app, example_req(None, "?type=output")).await;
-    let v: Value = serde_json::from_str(&body).unwrap();
+    let (_s, v) = common::send_json(&app, example_req(None, "?type=output")).await;
     assert!(
         v.pointer("/uid/value").is_some(),
         "output form carries a uid"
@@ -450,13 +423,11 @@ async fn example_get_400_on_bad_enum_404_unknown_406_wrong_accept() {
         StatusCode::NOT_ACCEPTABLE
     );
     // Unknown template_id → 404.
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!(
-            "{BASE}/definition/template/adl2/openEHR-EHR-COMPOSITION.nope.v9.9.9/example"
-        ))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req(
+        "GET",
+        format!("{BASE}/definition/template/adl2/openEHR-EHR-COMPOSITION.nope.v9.9.9/example"),
+    )
+    .build();
     assert_eq!(send(&app, req).await.0, StatusCode::NOT_FOUND);
 }
 
@@ -475,16 +446,13 @@ async fn upload_invalid_source_is_400_with_rule_codes() {
                    definition\n    COMPOSITION[id1] matches { *}\n\n\
                    terminology\n    term_definitions = <\n        [\"en\"] = <\n            \
                    [\"id1\"] = <text = <\"Root\"> description = <\"Root.\">>\n        >\n    >\n";
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/definition/template/adl2"))
+    let req = common::req("POST", format!("{BASE}/definition/template/adl2"))
         .header(header::CONTENT_TYPE, "text/plain")
-        .header("prefer", "return=representation")
-        .body(Body::from(invalid))
-        .unwrap();
-    let (status, _headers, body) = send(&app, req).await;
-    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
-    let v: Value = serde_json::from_str(&body).unwrap();
+        .prefer_representation()
+        .body(invalid)
+        .build();
+    let (status, v) = common::send_json(&app, req).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{v}");
     let errors = v
         .get("errors")
         .and_then(Value::as_array)
@@ -524,11 +492,7 @@ async fn etag_is_the_resolved_hrid_on_upload_and_every_get() {
     );
 
     // text/plain source GET.
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!("{BASE}/definition/template/adl2/{HRID}"))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("GET", format!("{BASE}/definition/template/adl2/{HRID}")).build();
     let (status, headers, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(
@@ -540,12 +504,9 @@ async fn etag_is_the_resolved_hrid_on_upload_and_every_get() {
 
     // application/json OperationalTemplateV2 GET — the ETag "is independent of
     // its resource serialization format" (same section).
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!("{BASE}/definition/template/adl2/{HRID}"))
-        .header(header::ACCEPT, "application/json")
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("GET", format!("{BASE}/definition/template/adl2/{HRID}"))
+        .accept("application/json")
+        .build();
     let (status, headers, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(
@@ -557,13 +518,11 @@ async fn etag_is_the_resolved_hrid_on_upload_and_every_get() {
 
     // The partial-version GET resolves to the concrete artefact; the ETag is
     // the resolved HRID, never the addressed `…/1` prefix.
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!(
-            "{BASE}/definition/template/adl2/openEHR-EHR-COMPOSITION.t_clinical_info/1"
-        ))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req(
+        "GET",
+        format!("{BASE}/definition/template/adl2/openEHR-EHR-COMPOSITION.t_clinical_info/1"),
+    )
+    .build();
     let (status, headers, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(
@@ -588,12 +547,10 @@ async fn adl2_upload_with_xml_content_type_is_415() {
     let (_pg, app) = app().await;
     let (status, _headers, body) = send(
         &app,
-        Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/definition/template/adl2"))
+        common::req("POST", format!("{BASE}/definition/template/adl2"))
             .header(header::CONTENT_TYPE, "application/xml")
-            .body(Body::from(source()))
-            .unwrap(),
+            .body(source())
+            .build(),
     )
     .await;
     assert_eq!(
@@ -608,11 +565,9 @@ async fn adl2_upload_without_content_type_is_created() {
     let (_pg, app) = app().await;
     let (status, _headers, body) = send(
         &app,
-        Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/definition/template/adl2"))
-            .body(Body::from(source()))
-            .unwrap(),
+        common::req("POST", format!("{BASE}/definition/template/adl2"))
+            .body(source())
+            .build(),
     )
     .await;
     assert_eq!(
@@ -628,12 +583,10 @@ async fn adl2_upload_with_charset_parameter_is_created() {
     let (_pg, app) = app().await;
     let (status, _headers, body) = send(
         &app,
-        Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/definition/template/adl2"))
+        common::req("POST", format!("{BASE}/definition/template/adl2"))
             .header(header::CONTENT_TYPE, "text/plain; charset=utf-8")
-            .body(Body::from(source()))
-            .unwrap(),
+            .body(source())
+            .build(),
     )
     .await;
     assert_eq!(
@@ -650,12 +603,10 @@ async fn upload_unparseable_source_is_400() {
     // content* — the released 400 branch declared on the upload
     // (`responses/400.yaml`: "the request could not be parsed or is invalid
     // (e.g. ... syntactically invalid ... content)").
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/definition/template/adl2"))
+    let req = common::req("POST", format!("{BASE}/definition/template/adl2"))
         .header(header::CONTENT_TYPE, "text/plain")
-        .body(Body::from("this is not adl2 at all {{{"))
-        .unwrap();
+        .body("this is not adl2 at all {{{")
+        .build();
     let (status, _headers, body) = send(&app, req).await;
     assert_eq!(
         status,
@@ -667,12 +618,9 @@ async fn upload_unparseable_source_is_400() {
 #[tokio::test]
 async fn upload_empty_source_is_400() {
     let (_pg, app) = app().await;
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/definition/template/adl2"))
+    let req = common::req("POST", format!("{BASE}/definition/template/adl2"))
         .header(header::CONTENT_TYPE, "text/plain")
-        .body(Body::empty())
-        .unwrap();
+        .build();
     let (status, _headers, body) = send(&app, req).await;
     assert_eq!(
         status,
@@ -700,13 +648,11 @@ async fn upload_with_absent_parent_is_400_with_vasid() {
          definition\n    CLUSTER[id1.1] matches { *}\n\n\
          terminology\n    term_definitions = <\n        [\"en\"] = <\n            \
          [\"id1.1\"] = <text = <\"Child\"> description = <\"Child.\">>\n        >\n    >\n";
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/definition/template/adl2"))
+    let req = common::req("POST", format!("{BASE}/definition/template/adl2"))
         .header(header::CONTENT_TYPE, "text/plain")
-        .header("prefer", "return=representation")
-        .body(Body::from(src))
-        .unwrap();
+        .prefer_representation()
+        .body(src)
+        .build();
     let (status, _h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
     assert!(
@@ -740,15 +686,12 @@ async fn upload_nested_past_the_engine_bound_is_a_400_naming_the_bound() {
          terminology\n    term_definitions = <\n        [\"en\"] = <\n            \
          [\"id1\"] = <text = <\"Root\"> description = <\"Root.\">>\n        >\n    >\n"
     );
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/definition/template/adl2"))
+    let req = common::req("POST", format!("{BASE}/definition/template/adl2"))
         .header(header::CONTENT_TYPE, "text/plain")
-        .body(Body::from(body))
-        .unwrap();
-    let (status, _, text) = send(&app, req).await;
-    assert_eq!(status, StatusCode::BAD_REQUEST, "body: {text}");
-    let json: Value = serde_json::from_str(&text).expect("an error document");
+        .body(body)
+        .build();
+    let (status, json) = common::send_json(&app, req).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "body: {json}");
     let message = json["detail"].as_str().expect("detail");
     assert!(
         message.contains("SUNK"),
@@ -795,13 +738,11 @@ fn template_using(hrid: &str, fillers: &[&str]) -> String {
 
 /// POST `source` to the ADL2 upload with `Prefer: return=representation`.
 fn upload_source(source: String) -> Request<Body> {
-    Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/definition/template/adl2"))
+    common::req("POST", format!("{BASE}/definition/template/adl2"))
         .header(header::CONTENT_TYPE, "text/plain")
-        .header("prefer", "return=representation")
-        .body(Body::from(source))
-        .unwrap()
+        .prefer_representation()
+        .body(source)
+        .build()
 }
 
 /// The `detail` of every `errors` entry whose `path` is `VARXR`, sorted.
@@ -851,12 +792,9 @@ async fn upload_with_unheld_constituents_is_400_naming_each_with_varxr() {
             "the 400 names {id} under VARXR: {body}"
         );
     }
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!("{BASE}/definition/template/adl2/{hrid}"))
-        .header(header::ACCEPT, "text/plain")
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("GET", format!("{BASE}/definition/template/adl2/{hrid}"))
+        .accept("text/plain")
+        .build();
     let (status, _h, _b) = send(&app, req).await;
     assert_eq!(
         status,
@@ -888,14 +826,11 @@ async fn a_template_whose_constituent_is_deleted_names_it_on_every_compiled_read
     .await;
     assert_eq!(status, StatusCode::CREATED, "{body}");
 
-    let delete = Request::builder()
-        .method("DELETE")
-        .uri(format!(
-            "{}/definition/artefact/adl2/{constituent}",
-            common::EXT
-        ))
-        .body(Body::empty())
-        .unwrap();
+    let delete = common::req(
+        "DELETE",
+        format!("{}/definition/artefact/adl2/{constituent}", common::EXT),
+    )
+    .build();
     let (status, _h, body) = send(&app, delete).await;
     assert_eq!(status, StatusCode::CONFLICT, "{body}");
     sqlx::query("DELETE FROM adl2_artefact WHERE lower(hrid) = lower($1)")
@@ -908,13 +843,10 @@ async fn a_template_whose_constituent_is_deleted_names_it_on_every_compiled_read
         format!("{BASE}/definition/template/adl2/{hrid}"),
         format!("{BASE}/definition/template/adl2/{hrid}/example"),
     ] {
-        let req = Request::builder()
-            .method("GET")
-            .uri(&path)
-            .header(header::ACCEPT, "application/json")
-            .header("prefer", "return=representation")
-            .body(Body::empty())
-            .unwrap();
+        let req = common::req("GET", &path)
+            .accept("application/json")
+            .prefer_representation()
+            .build();
         let (status, _h, body) = send(&app, req).await;
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{path}: {body}");
         assert_eq!(
@@ -924,12 +856,9 @@ async fn a_template_whose_constituent_is_deleted_names_it_on_every_compiled_read
         );
     }
 
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!("{BASE}/definition/template/adl2/{hrid}"))
-        .header(header::ACCEPT, "text/plain")
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("GET", format!("{BASE}/definition/template/adl2/{hrid}"))
+        .accept("text/plain")
+        .build();
     let (status, _h, _b) = send(&app, req).await;
     assert_eq!(status, StatusCode::OK, "the source stays readable");
 }

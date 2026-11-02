@@ -19,7 +19,6 @@
 //! it on `GET` and `DELETE`; reads, deletes and `4xx` responses identify the
 //! version through the weak `ETag` (+ `Last-Modified` where known).
 #![expect(
-    clippy::unwrap_used,
     clippy::expect_used,
     reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
               reaches `#[test]`-annotated functions, so it misses this integration \
@@ -138,23 +137,15 @@ async fn app() -> (testkit::TestDb, Router) {
 
 /// A canonical-JSON `GET` against the composed router.
 async fn get_json(app: &Router, uri: String) -> (StatusCode, header::HeaderMap, String) {
-    let req = Request::builder()
-        .method("GET")
-        .uri(uri)
-        .header(header::ACCEPT, "application/json")
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("GET", uri).accept("application/json").build();
     send(app, req).await
 }
 
 /// Create a party of `kind` (segment) and return its `version_uid` (`OVID`).
 async fn create(app: &Router, seg: &str, body: &Value) -> String {
-    let req = Request::builder()
-        .method("POST")
-        .uri(common::full(&format!("/demographic/{seg}")))
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(body.to_string()))
-        .unwrap();
+    let req = common::req("POST", common::full(&format!("/demographic/{seg}")))
+        .json(body.to_string())
+        .build();
     let (status, h, _b) = send(app, req).await;
     assert_eq!(status, StatusCode::CREATED, "create {seg}");
     etag_uid(&h)
@@ -168,12 +159,9 @@ fn vo_of(ovid: &str) -> &str {
 #[tokio::test]
 async fn person_create_default_is_minimal_with_headers() {
     let (_pg, app) = app().await;
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/demographic/person"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(person_body().to_string()))
-        .unwrap();
+    let req = common::req("POST", format!("{BASE}/demographic/person"))
+        .json(person_body().to_string())
+        .build();
     let (status, h, body) = send(&app, req).await;
 
     // 201 default (return=minimal): headers only, no body.
@@ -194,13 +182,10 @@ async fn person_create_default_is_minimal_with_headers() {
 #[tokio::test]
 async fn person_create_representation_returns_body() {
     let (_pg, app) = app().await;
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/demographic/person"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .header("Prefer", "return=representation")
-        .body(Body::from(person_body().to_string()))
-        .unwrap();
+    let req = common::req("POST", format!("{BASE}/demographic/person"))
+        .prefer_representation()
+        .json(person_body().to_string())
+        .build();
     let (status, h, body) = send(&app, req).await;
 
     assert_eq!(status, StatusCode::CREATED);
@@ -224,11 +209,7 @@ async fn person_get_sets_etag_and_no_location() {
     let ovid = create(&app, "person", &person_body()).await;
     let vo = vo_of(&ovid);
 
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!("{BASE}/demographic/person/{vo}"))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("GET", format!("{BASE}/demographic/person/{vo}")).build();
     let (status, h, body) = send(&app, req).await;
 
     assert_eq!(status, StatusCode::OK);
@@ -253,20 +234,12 @@ async fn deleted_person_read_is_204() {
     let vo = vo_of(&ovid);
 
     // Delete the party (preceding version in the path).
-    let del = Request::builder()
-        .method("DELETE")
-        .uri(format!("{BASE}/demographic/person/{ovid}"))
-        .body(Body::empty())
-        .unwrap();
+    let del = common::req("DELETE", format!("{BASE}/demographic/person/{ovid}")).build();
     let (status, _h, _b) = send(&app, del).await;
     assert_eq!(status, StatusCode::NO_CONTENT);
 
     // Reading the (now deleted) current version → Null body → 204.
-    let get = Request::builder()
-        .method("GET")
-        .uri(format!("{BASE}/demographic/person/{vo}"))
-        .body(Body::empty())
-        .unwrap();
+    let get = common::req("GET", format!("{BASE}/demographic/person/{vo}")).build();
     let (status, _h, body) = send(&app, get).await;
     assert_eq!(status, StatusCode::NO_CONTENT);
     assert_eq!(body, "");
@@ -281,11 +254,7 @@ async fn person_delete_is_204_with_etag_and_no_location() {
     let (_pg, app) = app().await;
     let ovid = create(&app, "person", &person_body()).await;
 
-    let req = Request::builder()
-        .method("DELETE")
-        .uri(format!("{BASE}/demographic/person/{ovid}"))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("DELETE", format!("{BASE}/demographic/person/{ovid}")).build();
     let (status, h, body) = send(&app, req).await;
 
     assert_eq!(status, StatusCode::NO_CONTENT);
@@ -385,13 +354,10 @@ async fn stale_update_is_412_with_latest_etag_and_no_location() {
     // A syntactically valid but stale OBJECT_VERSION_ID (same VO, wrong version).
     let stale = format!("{vo}::ferroehr.local::9");
 
-    let req = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/demographic/person/{vo}"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .header(header::IF_MATCH, format!("\"{stale}\""))
-        .body(Body::from(person_body().to_string()))
-        .unwrap();
+    let req = common::req("PUT", format!("{BASE}/demographic/person/{vo}"))
+        .if_match(format!("\"{stale}\""))
+        .json(person_body().to_string())
+        .build();
     let (status, h, _body) = send(&app, req).await;
 
     // Precondition failure → 412, echoing the latest version_uid.
@@ -425,13 +391,10 @@ async fn update_accepts_weak_bare_quoted_and_unquoted_if_match() {
             _ => ovid.clone(),
         };
 
-        let req = Request::builder()
-            .method("PUT")
-            .uri(format!("{BASE}/demographic/person/{vo}"))
-            .header(header::CONTENT_TYPE, "application/json")
-            .header(header::IF_MATCH, if_match.as_str())
-            .body(Body::from(person_body().to_string()))
-            .unwrap();
+        let req = common::req("PUT", format!("{BASE}/demographic/person/{vo}"))
+            .if_match(if_match.as_str())
+            .json(person_body().to_string())
+            .build();
         let (status, h, body) = send(&app, req).await;
 
         assert_eq!(
@@ -458,13 +421,10 @@ async fn update_if_match_compares_case_insensitively() {
     let upper = ovid.to_uppercase();
     assert_ne!(upper, ovid, "the fixture uid must have case to flip");
 
-    let req = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/demographic/person/{vo}"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .header(header::IF_MATCH, format!("W/\"{upper}\""))
-        .body(Body::from(person_body().to_string()))
-        .unwrap();
+    let req = common::req("PUT", format!("{BASE}/demographic/person/{vo}"))
+        .if_match(format!("W/\"{upper}\""))
+        .json(person_body().to_string())
+        .build();
     let (status, _h, body) = send(&app, req).await;
 
     assert_eq!(
@@ -486,13 +446,10 @@ async fn malformed_if_match_is_400() {
     let vo = vo_of(&ovid).to_owned();
 
     for bad in ["W/\"not-a-version-id\"", "\"\"", "\"a::b::c::3\""] {
-        let req = Request::builder()
-            .method("PUT")
-            .uri(format!("{BASE}/demographic/person/{vo}"))
-            .header(header::CONTENT_TYPE, "application/json")
-            .header(header::IF_MATCH, bad)
-            .body(Body::from(person_body().to_string()))
-            .unwrap();
+        let req = common::req("PUT", format!("{BASE}/demographic/person/{vo}"))
+            .if_match(bad)
+            .json(person_body().to_string())
+            .build();
         let (status, _h, body) = send(&app, req).await;
         assert_eq!(
             status,
@@ -509,12 +466,9 @@ async fn delete_accepts_the_weak_if_match_form() {
     let (_pg, app) = app().await;
     let ovid = create(&app, "person", &person_body()).await;
 
-    let req = Request::builder()
-        .method("DELETE")
-        .uri(format!("{BASE}/demographic/person/{ovid}"))
-        .header(header::IF_MATCH, format!("W/\"{ovid}\""))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("DELETE", format!("{BASE}/demographic/person/{ovid}"))
+        .if_match(format!("W/\"{ovid}\""))
+        .build();
     let (status, h, body) = send(&app, req).await;
 
     assert_eq!(
@@ -560,17 +514,14 @@ async fn direct_party_write_honours_the_openehr_version_lifecycle_state() {
     let (_pg, app) = app().await;
 
     // CREATE with the header's lifecycle half.
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/demographic/person"))
-        .header(header::CONTENT_TYPE, "application/json")
+    let req = common::req("POST", format!("{BASE}/demographic/person"))
         .header("openehr-version", "lifecycle_state.code_string=\"553\"")
         .header(
             "openehr-audit-details",
             "description.value=\"still drafting\"",
         )
-        .body(Body::from(person_body().to_string()))
-        .unwrap();
+        .json(person_body().to_string())
+        .build();
     let (status, h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::CREATED, "553 create: {body}");
     let ovid = etag_uid(&h);
@@ -595,14 +546,11 @@ async fn direct_party_write_honours_the_openehr_version_lifecycle_state() {
     );
 
     // UPDATE back to `532|complete|` through the same channel.
-    let req = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/demographic/person/{vo}"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .header(header::IF_MATCH, format!("\"{ovid}\""))
+    let req = common::req("PUT", format!("{BASE}/demographic/person/{vo}"))
+        .if_match(format!("\"{ovid}\""))
         .header("openehr-version", "lifecycle_state.code_string=\"532\"")
-        .body(Body::from(person_body().to_string()))
-        .unwrap();
+        .json(person_body().to_string())
+        .build();
     let (status, h, body) = send(&app, req).await;
     // No `Prefer: return=representation` → 204 with the identifying headers.
     assert_eq!(status, StatusCode::NO_CONTENT, "532 update: {body}");
@@ -714,13 +662,10 @@ async fn version_at_time_without_offset_resolves_in_the_local_timezone() {
     let v1 = create(&app, "person", &person_body()).await;
     let vo = vo_of(&v1).to_owned();
 
-    let req = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/demographic/person/{vo}"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .header(header::IF_MATCH, format!("W/\"{v1}\""))
-        .body(Body::from(person_body().to_string()))
-        .unwrap();
+    let req = common::req("PUT", format!("{BASE}/demographic/person/{vo}"))
+        .if_match(format!("W/\"{v1}\""))
+        .json(person_body().to_string())
+        .build();
     let (status, _h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::NO_CONTENT, "second version: {body}");
 
@@ -792,12 +737,7 @@ async fn versioned_party_relationship_reads_emit_versioning_headers() {
             ovid.clone(),
         ),
     ] {
-        let req = Request::builder()
-            .method("GET")
-            .uri(&uri)
-            .header(header::ACCEPT, "application/json")
-            .body(Body::empty())
-            .unwrap();
+        let req = common::req("GET", &uri).accept("application/json").build();
         let (status, h, body) = send(&app, req).await;
         assert_eq!(status, StatusCode::OK, "{uri}: {body}");
         assert_eq!(
@@ -817,12 +757,9 @@ async fn versioned_party_relationship_reads_emit_versioning_headers() {
 async fn role_create_uses_role_segment() {
     // The 5× kind fan-out routes each kind to its own segment.
     let (_pg, app) = app().await;
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/demographic/role"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(role_body().to_string()))
-        .unwrap();
+    let req = common::req("POST", format!("{BASE}/demographic/role"))
+        .json(role_body().to_string())
+        .build();
     let (status, h, _body) = send(&app, req).await;
     assert_eq!(status, StatusCode::CREATED);
     let uid = etag_uid(&h);
@@ -838,13 +775,10 @@ async fn party_relationship_create_is_mounted_with_headers() {
     // reaches the seam (a create returns 201 + ETag/Location on the
     // /demographic/party_relationship segment; an unmounted route would 404).
     let (_pg, app) = app().await;
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{EXT}/demographic/party_relationship"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .header("Prefer", "return=representation")
-        .body(Body::from(relationship_body().to_string()))
-        .unwrap();
+    let req = common::req("POST", format!("{EXT}/demographic/party_relationship"))
+        .prefer_representation()
+        .json(relationship_body().to_string())
+        .build();
     let (status, h, body) = send(&app, req).await;
 
     assert_eq!(status, StatusCode::CREATED);
@@ -867,11 +801,7 @@ async fn party_relationship_get_is_mounted() {
     let ovid = create(&app, "party_relationship", &relationship_body()).await;
     let vo = vo_of(&ovid);
 
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!("{EXT}/demographic/party_relationship/{vo}"))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("GET", format!("{EXT}/demographic/party_relationship/{vo}")).build();
     let (status, h, body) = send(&app, req).await;
 
     assert_eq!(status, StatusCode::OK);
@@ -892,11 +822,11 @@ async fn party_relationship_delete_needs_the_version_uid() {
     let ovid = create(&app, "party_relationship", &relationship_body()).await;
     let vo = vo_of(&ovid).to_owned();
 
-    let req = Request::builder()
-        .method("DELETE")
-        .uri(format!("{EXT}/demographic/party_relationship/{vo}"))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req(
+        "DELETE",
+        format!("{EXT}/demographic/party_relationship/{vo}"),
+    )
+    .build();
     let (status, _h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::BAD_REQUEST, "container id: {body}");
     let (status, h, body) =
@@ -904,11 +834,11 @@ async fn party_relationship_delete_needs_the_version_uid() {
     assert_eq!(status, StatusCode::OK, "still readable: {body}");
     assert_eq!(etag_uid(&h), ovid, "the latest version is unchanged");
 
-    let req = Request::builder()
-        .method("DELETE")
-        .uri(format!("{EXT}/demographic/party_relationship/{ovid}"))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req(
+        "DELETE",
+        format!("{EXT}/demographic/party_relationship/{ovid}"),
+    )
+    .build();
     let (status, _h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::NO_CONTENT, "version id: {body}");
 }
@@ -923,16 +853,13 @@ async fn versioned_party_relationship_is_mounted() {
     let ovid = create(&app, "party_relationship", &relationship_body()).await;
     let vo = vo_of(&ovid);
 
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!(
-            "{EXT}/demographic/versioned_party_relationship/{vo}"
-        ))
-        .body(Body::empty())
-        .unwrap();
-    let (status, _h, body) = send(&app, req).await;
-    assert_eq!(status, StatusCode::OK, "body: {body}");
-    let v: Value = serde_json::from_str(&body).expect("json body");
+    let req = common::req(
+        "GET",
+        format!("{EXT}/demographic/versioned_party_relationship/{vo}"),
+    )
+    .build();
+    let (status, v) = common::send_json(&app, req).await;
+    assert_eq!(status, StatusCode::OK, "v: {v}");
     // The ehr-less relationship version spine serves the base RM
     // `VERSIONED_OBJECT` — no `VERSIONED_PARTY_RELATIONSHIP` class exists in
     // the RM demographic package — and its mandatory `owner_id` names the
@@ -962,37 +889,20 @@ async fn versioned_party_relationship_is_mounted() {
 async fn demographic_committal_headers_merge_into_the_commit() {
     let (_pg, app) = app().await;
 
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/demographic/person"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .header(
-            "openEHR-AUDIT_DETAILS.description",
-            "value=\"Registered at intake\"",
-        )
-        .header(
-            "openEHR-AUDIT_DETAILS.committer",
-            "name=\"John Doe\", external_ref.id=\"BC8132EA-8F4A-11E7-BB31-BE2E44B06B34\", \
-             external_ref.namespace=\"demographic\", external_ref.type=\"PERSON\"",
-        )
-        .body(Body::from(person_body().to_string()))
-        .unwrap();
+    let req = common::req("POST", format!("{BASE}/demographic/person")).header("openEHR-AUDIT_DETAILS.description", "value=\"Registered at intake\"",).header("openEHR-AUDIT_DETAILS.committer", "name=\"John Doe\", external_ref.id=\"BC8132EA-8F4A-11E7-BB31-BE2E44B06B34\", external_ref.namespace=\"demographic\", external_ref.type=\"PERSON\"",).json(person_body().to_string()).build();
     let (status, h, _b) = send(&app, req).await;
     assert_eq!(status, StatusCode::CREATED);
     let v1 = etag_uid(&h);
     let vo = vo_of(&v1).to_owned();
 
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!(
-            "{BASE}/demographic/versioned_party/{vo}/version/{v1}"
-        ))
-        .header(header::ACCEPT, "application/json")
-        .body(Body::empty())
-        .unwrap();
-    let (status, _h, body) = send(&app, req).await;
-    assert_eq!(status, StatusCode::OK, "version read: {body}");
-    let ver: Value = serde_json::from_str(&body).expect("original_version json");
+    let req = common::req(
+        "GET",
+        format!("{BASE}/demographic/versioned_party/{vo}/version/{v1}"),
+    )
+    .accept("application/json")
+    .build();
+    let (status, ver) = common::send_json(&app, req).await;
+    assert_eq!(status, StatusCode::OK, "version read: {ver}");
     assert_eq!(ver["_type"], "ORIGINAL_VERSION");
     let audit = &ver["commit_audit"];
     assert_eq!(
@@ -1027,23 +937,17 @@ fn preference_applied(h: &header::HeaderMap) -> Option<String> {
 async fn demographic_writes_declare_the_applied_preference() {
     let (_pg, app) = app().await;
 
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/demographic/person"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(person_body().to_string()))
-        .unwrap();
+    let req = common::req("POST", format!("{BASE}/demographic/person"))
+        .json(person_body().to_string())
+        .build();
     let (status, h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::CREATED, "person create: {body}");
     assert_eq!(preference_applied(&h).as_deref(), Some("return=minimal"));
 
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/demographic/person"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .header("Prefer", "return=representation")
-        .body(Body::from(person_body().to_string()))
-        .unwrap();
+    let req = common::req("POST", format!("{BASE}/demographic/person"))
+        .prefer_representation()
+        .json(person_body().to_string())
+        .build();
     let (status, h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::CREATED, "person create: {body}");
     assert_eq!(
@@ -1054,14 +958,9 @@ async fn demographic_writes_declare_the_applied_preference() {
     // The party ITEM_TAG collection write declares its outcome too.
     let uid = create(&app, "person", &person_body()).await;
     let vo = vo_of(&uid).to_owned();
-    let req = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/demographic/person/{vo}/tags"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(
-            serde_json::json!([{ "key": "reviewed", "value": "true" }]).to_string(),
-        ))
-        .unwrap();
+    let req = common::req("PUT", format!("{BASE}/demographic/person/{vo}/tags"))
+        .json(serde_json::json!([{ "key": "reviewed", "value": "true" }]).to_string())
+        .build();
     let (status, h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::NO_CONTENT, "person tags update: {body}");
     assert_eq!(preference_applied(&h).as_deref(), Some("return=minimal"));
@@ -1074,13 +973,10 @@ async fn demographic_writes_declare_the_applied_preference() {
 #[tokio::test]
 async fn person_create_identifier_returns_the_uid_body() {
     let (_pg, app) = app().await;
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/demographic/person"))
-        .header(header::CONTENT_TYPE, "application/json")
+    let req = common::req("POST", format!("{BASE}/demographic/person"))
         .header("Prefer", "return=identifier")
-        .body(Body::from(person_body().to_string()))
-        .unwrap();
+        .json(person_body().to_string())
+        .build();
     let (status, h, body) = send(&app, req).await;
 
     assert_eq!(status, StatusCode::CREATED);
@@ -1104,22 +1000,15 @@ async fn stale_delete_conflict_echoes_latest_version_etag() {
     let (_pg, app) = app().await;
     let v1 = create(&app, "person", &person_body()).await;
     // Supersede v1 with an update.
-    let put = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/demographic/person/{}", vo_of(&v1)))
-        .header(header::CONTENT_TYPE, "application/json")
-        .header("If-Match", format!("\"{v1}\""))
-        .body(Body::from(person_body().to_string()))
-        .unwrap();
+    let put = common::req("PUT", format!("{BASE}/demographic/person/{}", vo_of(&v1)))
+        .if_match(format!("\"{v1}\""))
+        .json(person_body().to_string())
+        .build();
     let (status, h, body) = send(&app, put).await;
     assert_eq!(status, StatusCode::NO_CONTENT, "{body}");
     let v2 = etag_uid(&h);
     // Delete at the superseded uid → 409 + the latest version's ETag.
-    let del = Request::builder()
-        .method("DELETE")
-        .uri(format!("{BASE}/demographic/person/{v1}"))
-        .body(Body::empty())
-        .unwrap();
+    let del = common::req("DELETE", format!("{BASE}/demographic/person/{v1}")).build();
     let (status, h, body) = send(&app, del).await;
     assert_eq!(status, StatusCode::CONFLICT, "{body}");
     assert_eq!(
@@ -1174,12 +1063,9 @@ async fn a_contribution_member_of_the_wrong_kind_is_400() {
         "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
         "name": { "_type": "DV_TEXT", "value": "root" }
     });
-    let post = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/demographic/contribution"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(contribution_of(&folder).to_string()))
-        .unwrap();
+    let post = common::req("POST", format!("{BASE}/demographic/contribution"))
+        .json(contribution_of(&folder).to_string())
+        .build();
     let (status, _h, body) = send(&app, post).await;
     assert_eq!(
         status,
@@ -1187,23 +1073,16 @@ async fn a_contribution_member_of_the_wrong_kind_is_400() {
         "FOLDER in a demographic CONTRIBUTION: {body}"
     );
 
-    let post = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/ehr"))
-        .body(Body::empty())
-        .unwrap();
+    let post = common::req("POST", format!("{BASE}/ehr")).build();
     let (status, h, body) = send(&app, post).await;
     assert_eq!(status, StatusCode::CREATED, "{body}");
     let ehr_id = header(&h, header::LOCATION)
         .and_then(|l| l.rsplit('/').next())
         .expect("EHR location")
         .to_owned();
-    let post = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/ehr/{ehr_id}/contribution"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(contribution_of(&person_body()).to_string()))
-        .unwrap();
+    let post = common::req("POST", format!("{BASE}/ehr/{ehr_id}/contribution"))
+        .json(contribution_of(&person_body()).to_string())
+        .build();
     let (status, _h, body) = send(&app, post).await;
     assert_eq!(
         status,
@@ -1251,12 +1130,9 @@ async fn demographic_contribution_get_carries_etag_and_last_modified() {
             "committer": { "_type": "PARTY_IDENTIFIED", "name": "committer" }
         }
     });
-    let post = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/demographic/contribution"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(commit.to_string()))
-        .unwrap();
+    let post = common::req("POST", format!("{BASE}/demographic/contribution"))
+        .json(commit.to_string())
+        .build();
     let (status, h, body) = send(&app, post).await;
     assert_eq!(status, StatusCode::CREATED, "{body}");
     let cid = etag_uid(&h);
@@ -1285,12 +1161,9 @@ async fn an_actor_with_an_empty_languages_array_is_400() {
         let seg = rm_type.to_lowercase();
         let mut body = actor_body(rm_type);
         body["languages"] = json!([]);
-        let req = Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/demographic/{seg}"))
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(Body::from(body.to_string()))
-            .unwrap();
+        let req = common::req("POST", format!("{BASE}/demographic/{seg}"))
+            .json(body.to_string())
+            .build();
         let (status, _h, text) = send(&app, req).await;
         assert_eq!(status, StatusCode::BAD_REQUEST, "{rm_type}: {text}");
         assert!(

@@ -28,6 +28,8 @@ use ferrohealth_server::section::ServerSection;
 use tokio::io::AsyncReadExt as _;
 use tokio::io::AsyncWriteExt as _;
 
+use crate::common;
+
 /// Serve a trivial router on an ephemeral port through the family listener
 /// FerroEHR serves on, with a header-read bound of one second, returning the
 /// bound port.
@@ -143,10 +145,10 @@ async fn a_silent_connection_is_closed_at_the_header_read_bound() {
 /// listener, with the header-read bound of [`serve`], returning the bound port
 /// and the database guard the service reads.
 async fn serve_ferroehr() -> (testkit::TestDb, u16) {
-    let (db, app) = crate::common::test_router().await;
+    let (db, app) = common::test_router().await;
     let section = ServerSection {
         header_read_timeout_ms: std::num::NonZeroU64::new(1_000).expect("non-zero"),
-        ..crate::common::server()
+        ..common::server()
     };
     (db, serve_router(app, section).await)
 }
@@ -210,21 +212,19 @@ async fn read_response(socket: &mut tokio::net::TcpStream) -> String {
 /// answered instead of an end of stream.
 #[tokio::test]
 async fn a_commit_on_a_connection_idle_past_the_head_bound_is_answered() {
-    let (_db, app) = crate::common::test_router().await;
-    let base = crate::common::BASE;
-    let upload = http::Request::builder()
-        .method("POST")
-        .uri(format!("{base}/definition/template/adl1.4"))
+    let (_db, app) = common::test_router().await;
+    let base = common::BASE;
+    let upload = common::req("POST", format!("{base}/definition/template/adl1.4"))
         .header(http::header::CONTENT_TYPE, "application/xml")
-        .body(axum::body::Body::from(crate::common::ips_opt_xml()))
-        .expect("request");
-    let (status, body) = crate::common::send_body(&app, upload).await;
+        .body(axum::body::Body::from(common::ips_opt_xml()))
+        .build();
+    let (status, body) = common::send_body(&app, upload).await;
     assert_eq!(http::StatusCode::CREATED, status, "OPT upload: {body}");
-    let ehr_id = crate::common::create_ehr(&app).await;
+    let ehr_id = common::create_ehr(&app).await;
     let section = ServerSection {
         header_read_timeout_ms: std::num::NonZeroU64::new(1_000).expect("non-zero"),
         idle_timeout_ms: std::num::NonZeroU64::new(30_000).expect("non-zero"),
-        ..crate::common::server()
+        ..common::server()
     };
     let port = serve_router(app, section).await;
 
@@ -246,7 +246,7 @@ async fn a_commit_on_a_connection_idle_past_the_head_bound_is_answered() {
     // Idle past the one-second head bound, well inside the idle limit.
     tokio::time::sleep(Duration::from_millis(1_500)).await;
 
-    let composition = crate::common::ips_canonical_composition().to_string();
+    let composition = common::ips_canonical_composition().to_string();
     let head = format!(
         "POST {base}/ehr/{ehr_id}/composition HTTP/1.1\r\nHost: localhost\r\n\
          Content-Type: application/json\r\nContent-Length: {}\r\n",
@@ -332,7 +332,7 @@ async fn a_connection_after_an_unmatched_large_post_is_reused_or_announced_close
     let head = format!(
         "POST {}/no-such-resource HTTP/1.1\r\nHost: localhost\r\n\
          Content-Type: application/xml\r\nContent-Length: {SIZE}\r\n\r\n",
-        crate::common::BASE
+        common::BASE
     );
     let sent = tokio::spawn(async move {
         writer.write_all(head.as_bytes()).await?;

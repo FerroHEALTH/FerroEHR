@@ -26,8 +26,7 @@
 use std::sync::Arc;
 
 use axum::Router;
-use axum::body::Body;
-use http::{Request, StatusCode, header};
+use http::{StatusCode, header};
 use serde_json::{Value, json};
 
 use ferroehr::config::profile::SpecProfile;
@@ -111,14 +110,11 @@ async fn a_development_only_composition_is_a_conflict_under_the_stable_profile()
 
     let (status, body) = send_body(
         &development,
-        Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/ehr"))
+        common::req("POST", format!("{BASE}/ehr"))
             .header(header::CONTENT_TYPE, "application/json")
-            .header(header::ACCEPT, "application/json")
-            .header("Prefer", "return=representation")
-            .body(Body::empty())
-            .unwrap(),
+            .accept("application/json")
+            .prefer_representation()
+            .build(),
     )
     .await;
     assert_eq!(status, StatusCode::CREATED, "{body}");
@@ -129,14 +125,11 @@ async fn a_development_only_composition_is_a_conflict_under_the_stable_profile()
 
     let (status, body) = send_body(
         &development,
-        Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/ehr/{ehr_id}/composition"))
-            .header(header::CONTENT_TYPE, "application/json")
-            .header(header::ACCEPT, "application/json")
-            .header("Prefer", "return=representation")
-            .body(Body::from(development_only_composition().to_string()))
-            .unwrap(),
+        common::req("POST", format!("{BASE}/ehr/{ehr_id}/composition"))
+            .accept("application/json")
+            .prefer_representation()
+            .json(development_only_composition().to_string())
+            .build(),
     )
     .await;
     assert_eq!(status, StatusCode::CREATED, "{body}");
@@ -154,12 +147,9 @@ async fn a_development_only_composition_is_a_conflict_under_the_stable_profile()
     // The profile that accepted it still serves it.
     let (status, _) = send_body(
         &development,
-        Request::builder()
-            .method("GET")
-            .uri(format!("{BASE}/ehr/{ehr_id}/composition/{vo_id}"))
-            .header(header::ACCEPT, "application/json")
-            .body(Body::empty())
-            .unwrap(),
+        common::req("GET", format!("{BASE}/ehr/{ehr_id}/composition/{vo_id}"))
+            .accept("application/json")
+            .build(),
     )
     .await;
     assert_eq!(status, StatusCode::OK);
@@ -168,12 +158,9 @@ async fn a_development_only_composition_is_a_conflict_under_the_stable_profile()
     let stable = router_for(SpecProfile::Stable, &db.pool()).await;
     let (status, body) = send_body(
         &stable,
-        Request::builder()
-            .method("GET")
-            .uri(format!("{BASE}/ehr/{ehr_id}/composition/{vo_id}"))
-            .header(header::ACCEPT, "application/json")
-            .body(Body::empty())
-            .unwrap(),
+        common::req("GET", format!("{BASE}/ehr/{ehr_id}/composition/{vo_id}"))
+            .accept("application/json")
+            .build(),
     )
     .await;
     assert_eq!(status, StatusCode::CONFLICT, "{body}");
@@ -185,12 +172,9 @@ async fn a_development_only_composition_is_a_conflict_under_the_stable_profile()
     // negotiation (RFC 9110 §15.5.7), which is why it is not a `406`.
     let (status, _) = send_body(
         &stable,
-        Request::builder()
-            .method("GET")
-            .uri(format!("{BASE}/ehr/{ehr_id}/composition/{vo_id}"))
-            .header(header::ACCEPT, "application/xml")
-            .body(Body::empty())
-            .unwrap(),
+        common::req("GET", format!("{BASE}/ehr/{ehr_id}/composition/{vo_id}"))
+            .accept("application/xml")
+            .build(),
     )
     .await;
     assert_eq!(status, StatusCode::CONFLICT);
@@ -207,14 +191,11 @@ async fn an_aql_whole_object_projection_is_a_conflict_under_the_stable_profile()
 
     let (status, body) = send_body(
         &development,
-        Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/ehr"))
+        common::req("POST", format!("{BASE}/ehr"))
             .header(header::CONTENT_TYPE, "application/json")
-            .header(header::ACCEPT, "application/json")
-            .header("Prefer", "return=representation")
-            .body(Body::empty())
-            .unwrap(),
+            .accept("application/json")
+            .prefer_representation()
+            .build(),
     )
     .await;
     assert_eq!(status, StatusCode::CREATED, "{body}");
@@ -225,14 +206,11 @@ async fn an_aql_whole_object_projection_is_a_conflict_under_the_stable_profile()
 
     let (status, body) = send_body(
         &development,
-        Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/ehr/{ehr_id}/composition"))
-            .header(header::CONTENT_TYPE, "application/json")
-            .header(header::ACCEPT, "application/json")
-            .header("Prefer", "return=representation")
-            .body(Body::from(development_only_composition().to_string()))
-            .unwrap(),
+        common::req("POST", format!("{BASE}/ehr/{ehr_id}/composition"))
+            .accept("application/json")
+            .prefer_representation()
+            .json(development_only_composition().to_string())
+            .build(),
     )
     .await;
     assert_eq!(status, StatusCode::CREATED, "{body}");
@@ -255,12 +233,7 @@ async fn an_aql_whole_object_projection_is_a_conflict_under_the_stable_profile()
     for uri in [&whole_object, &leaf] {
         let (status, body) = send_body(
             &development,
-            Request::builder()
-                .method("GET")
-                .uri(uri)
-                .header(header::ACCEPT, "application/json")
-                .body(Body::empty())
-                .unwrap(),
+            common::req("GET", uri).accept("application/json").build(),
         )
         .await;
         assert_eq!(status, StatusCode::OK, "{uri}: {body}");
@@ -269,12 +242,9 @@ async fn an_aql_whole_object_projection_is_a_conflict_under_the_stable_profile()
     let stable = router_for(SpecProfile::Stable, &db.pool()).await;
     let (status, body) = send_body(
         &stable,
-        Request::builder()
-            .method("GET")
-            .uri(&whole_object)
-            .header(header::ACCEPT, "application/json")
-            .body(Body::empty())
-            .unwrap(),
+        common::req("GET", &whole_object)
+            .accept("application/json")
+            .build(),
     )
     .await;
     assert_eq!(status, StatusCode::CONFLICT, "{body}");
@@ -284,12 +254,7 @@ async fn an_aql_whole_object_projection_is_a_conflict_under_the_stable_profile()
 
     let (status, body) = send_body(
         &stable,
-        Request::builder()
-            .method("GET")
-            .uri(&leaf)
-            .header(header::ACCEPT, "application/json")
-            .body(Body::empty())
-            .unwrap(),
+        common::req("GET", &leaf).accept("application/json").build(),
     )
     .await;
     assert_eq!(
@@ -306,11 +271,7 @@ async fn the_served_openapi_declares_the_profile_conflict_on_the_query_operation
     let (_db, app) = common::test_router().await;
     let (status, body) = send_body(
         &app,
-        Request::builder()
-            .method("GET")
-            .uri("/ferroehr/rest/api-docs/openapi.json")
-            .body(Body::empty())
-            .unwrap(),
+        common::req("GET", "/ferroehr/rest/api-docs/openapi.json").build(),
     )
     .await;
     assert_eq!(status, StatusCode::OK);
@@ -349,11 +310,7 @@ async fn the_served_openapi_declares_the_profile_conflict_on_version_reads() {
     let (_db, app) = common::test_router().await;
     let (status, body) = send_body(
         &app,
-        Request::builder()
-            .method("GET")
-            .uri("/ferroehr/rest/api-docs/openapi.json")
-            .body(Body::empty())
-            .unwrap(),
+        common::req("GET", "/ferroehr/rest/api-docs/openapi.json").build(),
     )
     .await;
     assert_eq!(status, StatusCode::OK);

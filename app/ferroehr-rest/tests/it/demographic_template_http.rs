@@ -18,7 +18,6 @@
 //! shared ROLE; `ROLE.performer` is mandatory
 //! (`UML/classes/org.openehr.rm.demographic.role.adoc`, `performer` 1..1).
 #![expect(
-    clippy::unwrap_used,
     clippy::expect_used,
     reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
               reaches `#[test]`-annotated functions, so it misses this integration \
@@ -113,34 +112,24 @@ async fn send(app: &Router, req: Request<Body>) -> Answer {
 }
 
 async fn upload(app: &Router, opt: String) -> (StatusCode, String) {
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/definition/template/adl1.4"))
+    let req = common::req("POST", format!("{BASE}/definition/template/adl1.4"))
         .header(header::CONTENT_TYPE, "application/xml")
-        .body(Body::from(opt))
-        .unwrap();
+        .body(opt)
+        .build();
     let answer = send(app, req).await;
     (answer.status, answer.body)
 }
 
 async fn get(app: &Router, uri: &str, accept: &str) -> Answer {
-    let req = Request::builder()
-        .method("GET")
-        .uri(uri)
-        .header(header::ACCEPT, accept)
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("GET", uri).accept(accept).build();
     send(app, req).await
 }
 
 /// Commits `body` on `demographic/{seg}` and returns its `version_uid`.
 async fn create(app: &Router, seg: &str, body: &Value) -> String {
-    let req = Request::builder()
-        .method("POST")
-        .uri(common::full(&format!("/demographic/{seg}")))
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(body.to_string()))
-        .unwrap();
+    let req = common::req("POST", common::full(&format!("/demographic/{seg}")))
+        .json(body.to_string())
+        .build();
     let answer = send(app, req).await;
     assert_eq!(
         answer.status,
@@ -365,16 +354,11 @@ async fn a_person_holds_the_patient_role_through_its_relationships() {
 
     let person = create(&app, "person", &person_body(None, None)).await;
     let person_id = container_of(&person).to_owned();
-    let update = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/demographic/person/{person_id}"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .header(header::IF_MATCH, format!("\"{person}\""))
-        .header("Prefer", "return=representation")
-        .body(Body::from(
-            person_body(Some(&person_id), Some(&role_id)).to_string(),
-        ))
-        .unwrap();
+    let update = common::req("PUT", format!("{BASE}/demographic/person/{person_id}"))
+        .if_match(format!("\"{person}\""))
+        .prefer_representation()
+        .json(person_body(Some(&person_id), Some(&role_id)).to_string())
+        .build();
     let updated = send(&app, update).await;
     assert_eq!(updated.status, StatusCode::OK, "{}", updated.body);
     let updated: Value = serde_json::from_str(&updated.body).unwrap();

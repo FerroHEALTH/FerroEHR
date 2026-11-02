@@ -12,17 +12,9 @@
 //! detail a `Prefer: return=representation` request receives
 //! (`Requests_and_responses.md` §HTTP status codes), lists the violations. The RM rule under test is `data_structures` §ELEMENT
 //! `Inv_null_flavour_indicated`.
-#![expect(
-    clippy::unwrap_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions are the \
-              intended shape here (the Rust Book ch11)"
-)]
 
 use axum::Router;
-use axum::body::Body;
-use http::{Request, StatusCode, header};
+use http::{StatusCode, header};
 use serde_json::{Value, json};
 
 use crate::common;
@@ -33,26 +25,16 @@ const BASE: &str = "/ferroehr/rest/openehr/v1";
 /// A fresh EHR with the IPS operational template uploaded.
 async fn app_with_template() -> (testkit::TestDb, Router, String) {
     let (pg, app) = common::test_router().await;
-    let (status, h, body) = send(
-        &app,
-        Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/ehr"))
-            .body(Body::empty())
-            .unwrap(),
-    )
-    .await;
+    let (status, h, body) = send(&app, common::req("POST", format!("{BASE}/ehr")).build()).await;
     assert_eq!(status, StatusCode::CREATED, "ehr create: {body}");
     let ehr_id = etag_uid(&h);
 
     let (status, _h, body) = send(
         &app,
-        Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/definition/template/adl1.4"))
+        common::req("POST", format!("{BASE}/definition/template/adl1.4"))
             .header(header::CONTENT_TYPE, "application/xml")
-            .body(Body::from(ips_opt_xml()))
-            .unwrap(),
+            .body(ips_opt_xml())
+            .build(),
     )
     .await;
     assert_eq!(status, StatusCode::CREATED, "OPT upload: {body}");
@@ -103,13 +85,10 @@ async fn composition_with_a_value_less_element_is_422_naming_the_invariant() {
 
     let (status, _h, body) = send(
         &app,
-        Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/ehr/{ehr_id}/composition"))
-            .header(header::CONTENT_TYPE, "application/json")
-            .header("prefer", "return=representation")
-            .body(Body::from(broken.to_string()))
-            .unwrap(),
+        common::req("POST", format!("{BASE}/ehr/{ehr_id}/composition"))
+            .prefer_representation()
+            .json(broken.to_string())
+            .build(),
     )
     .await;
     assert_eq!(
@@ -239,15 +218,7 @@ async fn an_item_of_a_type_the_template_does_not_allow_is_422() {
         }]
     });
     let (_pg, app) = common::test_router().await;
-    let (status, h, body) = send(
-        &app,
-        Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/ehr"))
-            .body(Body::empty())
-            .unwrap(),
-    )
-    .await;
+    let (status, h, body) = send(&app, common::req("POST", format!("{BASE}/ehr")).build()).await;
     assert_eq!(status, StatusCode::CREATED, "ehr create: {body}");
     let ehr_id = etag_uid(&h);
     let cases = [
@@ -269,12 +240,10 @@ async fn an_item_of_a_type_the_template_does_not_allow_is_422() {
     for (template_id, uid, slot, refused, admitted) in cases {
         let (status, _h, body) = send(
             &app,
-            Request::builder()
-                .method("POST")
-                .uri(format!("{BASE}/definition/template/adl1.4"))
+            common::req("POST", format!("{BASE}/definition/template/adl1.4"))
                 .header(header::CONTENT_TYPE, "application/xml")
-                .body(Body::from(item_narrowing_opt(template_id, uid, slot)))
-                .unwrap(),
+                .body(item_narrowing_opt(template_id, uid, slot))
+                .build(),
         )
         .await;
         assert_eq!(
@@ -289,12 +258,9 @@ async fn an_item_of_a_type_the_template_does_not_allow_is_422() {
             let composition = item_narrowing_composition(template_id, item);
             let (status, _h, body) = send(
                 &app,
-                Request::builder()
-                    .method("POST")
-                    .uri(format!("{BASE}/ehr/{ehr_id}/composition"))
-                    .header(header::CONTENT_TYPE, "application/json")
-                    .body(Body::from(composition.to_string()))
-                    .unwrap(),
+                common::req("POST", format!("{BASE}/ehr/{ehr_id}/composition"))
+                    .json(composition.to_string())
+                    .build(),
             )
             .await;
             assert_eq!(
@@ -337,12 +303,9 @@ async fn a_history_with_an_empty_events_array_is_400() {
     );
     let (status, _h, body) = send(
         &app,
-        Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/ehr/{ehr_id}/composition"))
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(Body::from(broken.to_string()))
-            .unwrap(),
+        common::req("POST", format!("{BASE}/ehr/{ehr_id}/composition"))
+            .json(broken.to_string())
+            .build(),
     )
     .await;
     assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
@@ -355,12 +318,9 @@ async fn a_history_with_an_empty_events_array_is_400() {
     });
     let (status, _h, body) = send(
         &app,
-        Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/query/aql"))
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(Body::from(query.to_string()))
-            .unwrap(),
+        common::req("POST", format!("{BASE}/query/aql"))
+            .json(query.to_string())
+            .build(),
     )
     .await;
     assert_eq!(status, StatusCode::OK, "{body}");

@@ -205,14 +205,11 @@ fn bearer_with_roles(roles: &[&str]) -> String {
 }
 
 fn req(method: &str, path: &str, authorization: &str) -> Request<Body> {
-    Request::builder()
-        .method(method)
-        .uri(common::full(path))
-        .header("authorization", authorization)
-        .header("content-type", "application/json")
+    common::req(method, common::full(path))
+        .auth(authorization)
         .header("x-forwarded-for", "203.0.113.9")
-        .body(Body::from("{}"))
-        .expect("request")
+        .json("{}")
+        .build()
 }
 
 async fn status(app: &Router, request: Request<Body>) -> StatusCode {
@@ -352,12 +349,9 @@ async fn oauth2_committer_identifier_names_the_token_issuer() {
     let resp = app
         .clone()
         .oneshot(
-            Request::builder()
-                .method("POST")
-                .uri(format!("{BASE}/ehr"))
-                .header("authorization", bearer_with_roles(&["USER"]))
-                .body(Body::empty())
-                .expect("request"),
+            common::req("POST", format!("{BASE}/ehr"))
+                .auth(bearer_with_roles(&["USER"]))
+                .build(),
         )
         .await
         .expect("oneshot");
@@ -374,15 +368,13 @@ async fn oauth2_committer_identifier_names_the_token_issuer() {
     let resp = app
         .clone()
         .oneshot(
-            Request::builder()
-                .method("GET")
-                .uri(format!(
-                    "{BASE}/ehr/{ehr_id}/versioned_ehr_status/revision_history"
-                ))
-                .header("authorization", bearer_with_roles(&["USER"]))
-                .header("accept", "application/json")
-                .body(Body::empty())
-                .expect("request"),
+            common::req(
+                "GET",
+                format!("{BASE}/ehr/{ehr_id}/versioned_ehr_status/revision_history"),
+            )
+            .auth(bearer_with_roles(&["USER"]))
+            .accept("application/json")
+            .build(),
         )
         .await
         .expect("oneshot");
@@ -547,11 +539,7 @@ async fn rbac_deny_is_audited() {
 
 /// A GET request with no `Authorization` header (the unauthenticated probe).
 fn get_unauth(path: &str) -> Request<Body> {
-    Request::builder()
-        .method("GET")
-        .uri(common::full(path))
-        .body(Body::empty())
-        .expect("request")
+    common::req("GET", common::full(path)).build()
 }
 
 /// Build the app with a populated redacted config snapshot in the observability
@@ -667,12 +655,7 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
         .await
         .expect("build app");
     for uri in [format!("{EXT}/admin/config"), "/management/env".to_owned()] {
-        let request = Request::builder()
-            .method("GET")
-            .uri(&uri)
-            .header("authorization", basic("root"))
-            .body(Body::empty())
-            .expect("request");
+        let request = common::req("GET", &uri).auth(basic("root")).build();
         let resp = app.clone().oneshot(request).await.expect("oneshot");
         assert_eq!(resp.status(), StatusCode::OK, "{uri}");
         let bytes = http_body_util::BodyExt::collect(resp.into_body())

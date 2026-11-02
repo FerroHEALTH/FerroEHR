@@ -11,7 +11,6 @@
 //! shape is the bare `UID_BASED_ID`, and the `owner_id` follows the released
 //! examples' `{namespace: local, type: SYSTEM}` shape.
 #![expect(
-    clippy::unwrap_used,
     clippy::expect_used,
     reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
               reaches `#[test]`-annotated functions, so it misses this integration \
@@ -20,8 +19,7 @@
 )]
 
 use axum::Router;
-use axum::body::Body;
-use http::{Request, StatusCode, header};
+use http::{StatusCode, header};
 use serde_json::{Value, json};
 
 use ferroehr::config::rest::RestConfig;
@@ -89,12 +87,9 @@ async fn app() -> (testkit::TestDb, Router) {
 
 /// Create a person, returning its full `version_uid` (from the create `ETag`).
 async fn create_person(app: &Router) -> String {
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/demographic/person"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(person_body().to_string()))
-        .unwrap();
+    let req = common::req("POST", format!("{BASE}/demographic/person"))
+        .json(person_body().to_string())
+        .build();
     let (status, h, body) = send(app, req).await;
     assert_eq!(status, StatusCode::CREATED, "{body}");
     h.get(header::ETAG)
@@ -110,24 +105,18 @@ fn vo_of(ovid: &str) -> &str {
 }
 
 async fn put_tags(app: &Router, uid: &str, tags: Value) -> (StatusCode, String) {
-    let req = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/demographic/person/{uid}/tags"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .header("Prefer", "return=representation")
-        .body(Body::from(tags.to_string()))
-        .unwrap();
+    let req = common::req("PUT", format!("{BASE}/demographic/person/{uid}/tags"))
+        .prefer_representation()
+        .json(tags.to_string())
+        .build();
     let (status, _h, body) = send(app, req).await;
     (status, body)
 }
 
 async fn get_tags(app: &Router, kind: &str, uid: &str) -> (StatusCode, String) {
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!("{BASE}/demographic/{kind}/{uid}/tags"))
-        .header(header::ACCEPT, "application/json")
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("GET", format!("{BASE}/demographic/{kind}/{uid}/tags"))
+        .accept("application/json")
+        .build();
     let (status, _h, body) = send(app, req).await;
     (status, body)
 }
@@ -176,11 +165,11 @@ async fn container_and_version_tag_collections_are_disjoint() {
     assert_eq!(tags[0]["owner_id"]["type"], "SYSTEM");
 
     // Deleting by key on the VERSION leaves the container collection intact.
-    let req = Request::builder()
-        .method("DELETE")
-        .uri(format!("{BASE}/demographic/person/{ovid}/tags/version-tag"))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req(
+        "DELETE",
+        format!("{BASE}/demographic/person/{ovid}/tags/version-tag"),
+    )
+    .build();
     let (status, _h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::NO_CONTENT, "{body}");
     let (_s, body) = get_tags(&app, "person", &vo).await;
@@ -215,11 +204,7 @@ async fn tags_routes_are_kind_checked() {
     // DELETE through the wrong kind must not reach the tags either.
     let (status, body) = put_tags(&app, &vo, json!([{ "key": "t" }])).await;
     assert_eq!(status, StatusCode::OK, "{body}");
-    let req = Request::builder()
-        .method("DELETE")
-        .uri(format!("{BASE}/demographic/agent/{vo}/tags/t"))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("DELETE", format!("{BASE}/demographic/agent/{vo}/tags/t")).build();
     let (status, _h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
     let (_s, body) = get_tags(&app, "person", &vo).await;
@@ -250,15 +235,12 @@ async fn wrapper_headers_write_distinct_collections_on_update() {
     // The released update declares `openehr-version-item-tag`; its prose says
     // "`openehr-item-tag` or `openehr-version-item-tag`" — both are accepted,
     // each addressing its own target.
-    let put = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/demographic/person/{vo}"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .header("If-Match", format!("\"{v1}\""))
+    let put = common::req("PUT", format!("{BASE}/demographic/person/{vo}"))
+        .if_match(format!("\"{v1}\""))
         .header("openehr-item-tag", "key=\"container-side\"")
         .header("openehr-version-item-tag", "key=\"version-side\"")
-        .body(Body::from(person_body().to_string()))
-        .unwrap();
+        .json(person_body().to_string())
+        .build();
     let (status, h, body) = send(&app, put).await;
     assert_eq!(status, StatusCode::NO_CONTENT, "{body}");
     let v2 = h
@@ -308,12 +290,9 @@ async fn relationship_stale_delete_conflict_echoes_latest_etag() {
         "target": { "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
             "id": { "_type": "HIER_OBJECT_ID", "value": vo_of(&target) } }
     });
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{EXT}/demographic/party_relationship"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(rel.to_string()))
-        .unwrap();
+    let req = common::req("POST", format!("{EXT}/demographic/party_relationship"))
+        .json(rel.to_string())
+        .build();
     let (status, h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::CREATED, "{body}");
     let r1 = h
@@ -324,16 +303,13 @@ async fn relationship_stale_delete_conflict_echoes_latest_etag() {
         .trim_matches('"')
         .to_owned();
     // Supersede r1.
-    let put = Request::builder()
-        .method("PUT")
-        .uri(format!(
-            "{EXT}/demographic/party_relationship/{}",
-            vo_of(&r1)
-        ))
-        .header(header::CONTENT_TYPE, "application/json")
-        .header("If-Match", format!("\"{r1}\""))
-        .body(Body::from(rel.to_string()))
-        .unwrap();
+    let put = common::req(
+        "PUT",
+        format!("{EXT}/demographic/party_relationship/{}", vo_of(&r1)),
+    )
+    .if_match(format!("\"{r1}\""))
+    .json(rel.to_string())
+    .build();
     let (status, h, body) = send(&app, put).await;
     assert_eq!(status, StatusCode::NO_CONTENT, "{body}");
     let r2 = h
@@ -345,11 +321,11 @@ async fn relationship_stale_delete_conflict_echoes_latest_etag() {
         .to_owned();
     // Delete at the superseded uid → 409 + the latest version's ETag,
     // matching the party delete this extension mirrors.
-    let del = Request::builder()
-        .method("DELETE")
-        .uri(format!("{EXT}/demographic/party_relationship/{r1}"))
-        .body(Body::empty())
-        .unwrap();
+    let del = common::req(
+        "DELETE",
+        format!("{EXT}/demographic/party_relationship/{r1}"),
+    )
+    .build();
     let (status, h, body) = send(&app, del).await;
     assert_eq!(status, StatusCode::CONFLICT, "{body}");
     let echoed = h
@@ -444,12 +420,9 @@ fn party_body(kind: &str) -> Value {
 async fn a_party_tag_put_preferring_an_identifier_answers_the_stored_list() {
     let (_pg, app) = app().await;
     for kind in ["agent", "group", "organisation", "person", "role"] {
-        let req = Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/demographic/{kind}"))
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(Body::from(party_body(kind).to_string()))
-            .unwrap();
+        let req = common::req("POST", format!("{BASE}/demographic/{kind}"))
+            .json(party_body(kind).to_string())
+            .build();
         let (status, h, body) = send(&app, req).await;
         assert_eq!(status, StatusCode::CREATED, "{kind}: {body}");
         let ovid = h
@@ -459,13 +432,13 @@ async fn a_party_tag_put_preferring_an_identifier_answers_the_stored_list() {
             .trim_start_matches("W/")
             .trim_matches('"')
             .to_owned();
-        let req = Request::builder()
-            .method("PUT")
-            .uri(format!("{BASE}/demographic/{kind}/{}/tags", vo_of(&ovid)))
-            .header(header::CONTENT_TYPE, "application/json")
-            .header("Prefer", "return=identifier")
-            .body(Body::from(json!([{ "key": "reviewed" }]).to_string()))
-            .unwrap();
+        let req = common::req(
+            "PUT",
+            format!("{BASE}/demographic/{kind}/{}/tags", vo_of(&ovid)),
+        )
+        .header("Prefer", "return=identifier")
+        .json(json!([{ "key": "reviewed" }]).to_string())
+        .build();
         let (status, h, body) = send(&app, req).await;
         assert_eq!(status, StatusCode::OK, "{kind}: {body}");
         assert_eq!(

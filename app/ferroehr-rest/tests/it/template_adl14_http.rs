@@ -277,12 +277,10 @@ async fn upload_body(app: &Router, body: &str) -> (StatusCode, String) {
     let resp = app
         .clone()
         .oneshot(
-            Request::builder()
-                .method("POST")
-                .uri(format!("{BASE}/definition/template/adl1.4"))
+            common::req("POST", format!("{BASE}/definition/template/adl1.4"))
                 .header(header::CONTENT_TYPE, XML_MIME)
-                .body(Body::from(body.to_owned()))
-                .unwrap(),
+                .body(body.to_owned())
+                .build(),
         )
         .await
         .expect("response");
@@ -411,14 +409,12 @@ async fn upload_source_accepting(
     let resp = app
         .clone()
         .oneshot(
-            Request::builder()
-                .method("POST")
-                .uri(format!("{BASE}/definition/template/adl1.4"))
+            common::req("POST", format!("{BASE}/definition/template/adl1.4"))
                 .header(header::CONTENT_TYPE, XML_MIME)
-                .header(header::ACCEPT, accept)
-                .header("Prefer", "return=representation")
-                .body(Body::from(source))
-                .unwrap(),
+                .accept(accept)
+                .prefer_representation()
+                .body(source)
+                .build(),
         )
         .await
         .expect("response");

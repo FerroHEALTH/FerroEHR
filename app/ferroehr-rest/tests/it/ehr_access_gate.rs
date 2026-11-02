@@ -437,9 +437,8 @@ async fn query_app() -> (testkit::TestDb, Router) {
 
 /// The `ehr_id` values of a `RESULT_SET`'s first column, sorted.
 async fn ehr_ids_of(app: &Router, request: Request<Body>) -> Vec<String> {
-    let (code, body) = common::send_body(app, request).await;
-    assert_eq!(code, StatusCode::OK, "{body}");
-    let result: Value = serde_json::from_str(&body).expect("RESULT_SET json");
+    let (code, result) = common::send_json(app, request).await;
+    assert_eq!(code, StatusCode::OK, "{result}");
     let mut ids: Vec<String> = result["rows"]
         .as_array()
         .expect("rows")

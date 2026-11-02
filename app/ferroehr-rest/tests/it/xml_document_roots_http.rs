@@ -21,8 +21,7 @@
 )]
 
 use axum::Router;
-use axum::body::Body;
-use http::{Request, StatusCode, header};
+use http::{StatusCode, header};
 
 use crate::common;
 use crate::common::BASE;
@@ -42,12 +41,7 @@ fn root_start_tag(xml: &str) -> &str {
 
 /// `GET` `uri` as canonical XML and return the root's start tag.
 async fn xml_root(app: &Router, uri: &str) -> String {
-    let req = Request::builder()
-        .method("GET")
-        .uri(uri)
-        .header(header::ACCEPT, "application/xml")
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("GET", uri).accept("application/xml").build();
     let (status, headers, body) = common::send(app, req).await;
     assert_eq!(status, StatusCode::OK, "{uri}: {body}");
     assert_eq!(
@@ -77,21 +71,16 @@ async fn documents_without_a_published_element_keep_their_class_named_roots() {
 
     let ehr_id = common::create_ehr(&app).await;
 
-    let upload = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/definition/template/adl1.4"))
+    let upload = common::req("POST", format!("{BASE}/definition/template/adl1.4"))
         .header(header::CONTENT_TYPE, "application/xml")
-        .body(Body::from(common::ips_opt_xml()))
-        .unwrap();
+        .body(common::ips_opt_xml())
+        .build();
     let (status, _h, body) = common::send(&app, upload).await;
     assert_eq!(status, StatusCode::CREATED, "OPT upload: {body}");
 
-    let commit = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/ehr/{ehr_id}/composition"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(common::ips_canonical_composition().to_string()))
-        .unwrap();
+    let commit = common::req("POST", format!("{BASE}/ehr/{ehr_id}/composition"))
+        .json(common::ips_canonical_composition().to_string())
+        .build();
     let (status, headers, body) = common::send(&app, commit).await;
     assert_eq!(status, StatusCode::CREATED, "composition commit: {body}");
     let version_uid = common::etag_uid(&headers);

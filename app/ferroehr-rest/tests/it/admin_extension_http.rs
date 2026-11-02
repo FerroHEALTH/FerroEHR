@@ -242,12 +242,9 @@ async fn the_archive_routes_refuse_unknown_malformed_and_shapeless_requests() {
 /// `VERSIONED_OBJECT` uid (the `ETag` carries the `OBJECT_VERSION_ID`; its root
 /// is the container).
 async fn create_demographic(app: &Router, segment: &str, body: &serde_json::Value) -> String {
-    let request = Request::builder()
-        .method("POST")
-        .uri(common::full(&format!("/demographic/{segment}")))
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(body.to_string()))
-        .expect("request");
+    let request = common::req("POST", common::full(&format!("/demographic/{segment}")))
+        .json(body.to_string())
+        .build();
     let response = app.clone().oneshot(request).await.expect("response");
     assert_eq!(
         response.status(),
@@ -395,12 +392,9 @@ async fn archiving_a_party_relationship_id_is_refused_like_an_unknown_party() {
 
 /// Execute an ad-hoc AQL query and return how many rows it selected.
 async fn aql_rows(app: &Router, aql: &str) -> usize {
-    let request = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/query/aql"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(serde_json::json!({ "q": aql }).to_string()))
-        .expect("request");
+    let request = common::req("POST", format!("{BASE}/query/aql"))
+        .json(serde_json::json!({ "q": aql }).to_string())
+        .build();
     let (status, body) = send_body(app, request).await;
     assert_eq!(status, StatusCode::OK, "AQL {aql}: {body}");
     let result: serde_json::Value = serde_json::from_str(&body).expect("RESULT_SET json");

@@ -33,7 +33,7 @@ use ferroehr::system_log::store::AuditStore;
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authz::AuthzHandle;
 use ferroehr_rest::extensions::management::Observability;
-use http::{Request, StatusCode, header};
+use http::{StatusCode, header};
 use serde_json::{Value, json};
 use sqlx::PgPool;
 
@@ -112,14 +112,11 @@ async fn call(
     credential: &str,
     body: Option<&Value>,
 ) -> (StatusCode, header::HeaderMap) {
-    let request = Request::builder()
-        .method(method)
-        .uri(uri)
-        .header(header::AUTHORIZATION, credential)
-        .header(header::ACCEPT, "application/json")
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(body.map_or_else(Body::empty, |b| Body::from(b.to_string())))
-        .expect("request");
+    let request = common::req(method, uri)
+        .auth(credential)
+        .accept("application/json")
+        .json(body.map_or_else(Body::empty, |b| Body::from(b.to_string())))
+        .build();
     let (status, headers, _) = common::send(app, request).await;
     (status, headers)
 }

@@ -18,7 +18,6 @@
 //! → `200` vs `404`) proves whether the delete reached the backend and took
 //! effect.
 #![expect(
-    clippy::unwrap_used,
     clippy::expect_used,
     clippy::panic,
     reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
@@ -28,8 +27,7 @@
 )]
 
 use axum::Router;
-use axum::body::Body;
-use http::{Request, StatusCode, header};
+use http::{StatusCode, header};
 
 use crate::common;
 use crate::common::BASE;
@@ -213,12 +211,10 @@ async fn enabled_delete_all_missing_list_deletes_all() {
 // design/extension; the outcome shapes mirror the released admin deletes.
 
 async fn upload_ips_template(app: &Router) {
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/definition/template/adl1.4"))
+    let req = common::req("POST", format!("{BASE}/definition/template/adl1.4"))
         .header(header::CONTENT_TYPE, "application/xml")
-        .body(Body::from(common::ips_opt_xml()))
-        .unwrap();
+        .body(common::ips_opt_xml())
+        .build();
     let (status, body) = common::send_body(app, req).await;
     assert_eq!(status, StatusCode::CREATED, "OPT upload: {body}");
 }
@@ -299,12 +295,13 @@ async fn template_delete_still_referenced_is_409() {
 #[tokio::test]
 async fn query_version_delete_is_204_and_that_version_is_gone() {
     let (_pg, app) = app(true).await;
-    let req = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/definition/query/cnf.admin::probe/1.0.0"))
-        .header(header::CONTENT_TYPE, "text/plain")
-        .body(Body::from("SELECT e/ehr_id/value FROM EHR e"))
-        .unwrap();
+    let req = common::req(
+        "PUT",
+        format!("{BASE}/definition/query/cnf.admin::probe/1.0.0"),
+    )
+    .header(header::CONTENT_TYPE, "text/plain")
+    .body("SELECT e/ehr_id/value FROM EHR e")
+    .build();
     let (status, body) = common::send_body(&app, req).await;
     assert_eq!(status, StatusCode::OK, "query store: {body}");
     let (status, body) = common::send_body(

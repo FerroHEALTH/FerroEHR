@@ -23,8 +23,7 @@
 )]
 
 use axum::Router;
-use axum::body::Body;
-use http::{Request, StatusCode, header};
+use http::{StatusCode, header};
 use http_body_util::BodyExt;
 use sqlx::PgPool;
 use tower::ServiceExt;
@@ -32,13 +31,15 @@ use tower::ServiceExt;
 use ferroehr::service::FerroEhrService;
 use ferroehr_rest::config::AppConfig;
 
+use crate::common;
+
 const BASE: &str = "/ferroehr/rest/openehr/v1";
 const AQL: &str = "SELECT c FROM EHR e CONTAINS COMPOSITION c";
 
 /// The router backed by the DB service, with authentication disabled.
 async fn app(pool: &PgPool) -> Router {
     let mut config = AppConfig {
-        server: crate::common::server(),
+        server: common::server(),
         ..AppConfig::default()
     };
     config.auth.enabled = false;
@@ -53,12 +54,10 @@ async fn app(pool: &PgPool) -> Router {
 }
 
 async fn put(app: Router, uri: &str, body: &str) -> (StatusCode, http::HeaderMap, String) {
-    let req = Request::builder()
-        .method("PUT")
-        .uri(uri)
+    let req = common::req("PUT", uri)
         .header(header::CONTENT_TYPE, "text/plain")
-        .body(Body::from(body.to_owned()))
-        .unwrap();
+        .body(body.to_owned())
+        .build();
     let resp = app.oneshot(req).await.unwrap();
     let status = resp.status();
     let headers = resp.headers().clone();
@@ -71,11 +70,7 @@ async fn put(app: Router, uri: &str, body: &str) -> (StatusCode, http::HeaderMap
 }
 
 async fn get(app: Router, uri: &str) -> (StatusCode, String) {
-    let req = Request::builder()
-        .method("GET")
-        .uri(uri)
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("GET", uri).build();
     let resp = app.oneshot(req).await.unwrap();
     let status = resp.status();
     let bytes = resp.into_body().collect().await.unwrap().to_bytes();
@@ -83,12 +78,7 @@ async fn get(app: Router, uri: &str) -> (StatusCode, String) {
 }
 
 async fn post_json(app: Router, uri: &str, body: &str) -> (StatusCode, String) {
-    let req = Request::builder()
-        .method("POST")
-        .uri(uri)
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(body.to_owned()))
-        .unwrap();
+    let req = common::req("POST", uri).json(body.to_owned()).build();
     let resp = app.oneshot(req).await.unwrap();
     let status = resp.status();
     let bytes = resp.into_body().collect().await.unwrap().to_bytes();

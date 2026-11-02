@@ -78,24 +78,19 @@ fn config() -> AppConfig {
 }
 
 async fn upload_opt(app: &Router) {
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/definition/template/adl1.4"))
+    let req = common::req("POST", format!("{BASE}/definition/template/adl1.4"))
         .header(header::CONTENT_TYPE, "application/xml")
-        .body(Body::from(ips_opt_xml()))
-        .unwrap();
+        .body(ips_opt_xml())
+        .build();
     let (status, body) = send_body(app, req).await;
     assert_eq!(status, StatusCode::CREATED, "OPT upload: {body}");
 }
 
 /// Commit the IPS composition into `ehr_id`; return the version uid.
 async fn commit_composition(app: &Router, ehr_id: &str) -> String {
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/ehr/{ehr_id}/composition"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(ips_canonical_composition().to_string()))
-        .unwrap();
+    let req = common::req("POST", format!("{BASE}/ehr/{ehr_id}/composition"))
+        .json(ips_canonical_composition().to_string())
+        .build();
     let resp = app.clone().oneshot(req).await.expect("response");
     assert_eq!(resp.status(), StatusCode::CREATED, "composition commit");
     etag_uid(resp.headers())
@@ -104,12 +99,10 @@ async fn commit_composition(app: &Router, ehr_id: &str) -> String {
 /// Store [`POPULATION_AQL`] as a named stored query; return its assigned
 /// version (from the `Location` of the store response).
 async fn store_query(app: &Router) -> String {
-    let req = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/definition/query/{STORED_NAME}"))
+    let req = common::req("PUT", format!("{BASE}/definition/query/{STORED_NAME}"))
         .header(header::CONTENT_TYPE, "text/plain")
-        .body(Body::from(POPULATION_AQL))
-        .unwrap();
+        .body(POPULATION_AQL)
+        .build();
     let resp = app.clone().oneshot(req).await.expect("response");
     assert_eq!(resp.status(), StatusCode::OK, "stored-query PUT");
     resp.headers()
@@ -229,12 +222,9 @@ async fn get_adhoc_accepts_the_deprecated_header_spelling() {
     // `openehr-ehr-id` and keeps the deprecated form "available for backward
     // compatibility"; RFC 9110 §5.1 makes field names case-insensitive.
     let w = world().await;
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!("{BASE}/query/aql?q={}", q()))
+    let req = common::req("GET", format!("{BASE}/query/aql?q={}", q()))
         .header("openEHR-EHR-id", &w.ehr_a)
-        .body(Body::empty())
-        .unwrap();
+        .build();
     let (status, body) = send_body(&w.app, req).await;
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(uids(&body), vec![w.uid_a.clone()]);

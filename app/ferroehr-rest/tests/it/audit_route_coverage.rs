@@ -28,7 +28,6 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use axum::Router;
-use axum::body::Body;
 use ferroehr::config::authz::AuthzConfig;
 use ferroehr::config::management::AccessLevel;
 use ferroehr::config::rest::{AdminConfig, RestConfig};
@@ -41,7 +40,6 @@ use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authz::AuthzHandle;
 use ferroehr_rest::extensions::management::Observability;
 use ferrohealth_smart::config::{AuthSection, IssuerKey};
-use http::Request;
 use serde_json::{Value, json};
 use sqlx::PgPool;
 use tower::ServiceExt;
@@ -313,13 +311,10 @@ fn concrete(template: &str) -> String {
 
 /// Drive one route as `subject`.
 async fn drive(app: &Router, subject: &str, method: &str, path: &str) {
-    let request = Request::builder()
-        .method(method)
-        .uri(concrete(path))
-        .header("content-type", "application/json")
-        .header("authorization", admin_bearer(subject))
-        .body(Body::from("{}"))
-        .expect("request");
+    let request = common::req(method, concrete(path))
+        .auth(admin_bearer(subject))
+        .json("{}")
+        .build();
     app.clone().oneshot(request).await.expect("oneshot");
 }
 
@@ -438,12 +433,9 @@ async fn every_route_writes_exactly_one_access_record() {
 async fn the_access_record_carries_the_request_id_the_client_received() {
     let (_db, pool, app) = app().await;
     let subject = "request-id-probe";
-    let request = Request::builder()
-        .method("GET")
-        .uri(concrete(&format!("{}/ehr/{{ehr_id}}", common::BASE)))
-        .header("authorization", admin_bearer(subject))
-        .body(Body::empty())
-        .expect("request");
+    let request = common::req("GET", concrete(&format!("{}/ehr/{{ehr_id}}", common::BASE)))
+        .auth(admin_bearer(subject))
+        .build();
     let response = app.oneshot(request).await.expect("oneshot");
     let sent = response
         .headers()
