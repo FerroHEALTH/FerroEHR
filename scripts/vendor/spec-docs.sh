@@ -49,7 +49,7 @@ INCLUDE_EXT=(adoc md txt csv json yaml yml robot xml opt g4)
 COMPONENTS=(
   "BASE|specifications-BASE|master (BASE 1.3.0)|93abaf9f656b7bc87019458303c9d88f3f688ef8"
   "RM|specifications-RM|master (RM 1.2.0)|654296bb027b03b4b076101e7171f3359f44cebc"
-  "AM|specifications-AM|master (AM 2.4.0 + ADL/AOM/OPT 1.4)|51aa07b2a09ae16172121fc3cf844993a6c98c07"
+  "AM|specifications-AM|master (AM 2.4.0 + ADL/AOM/OPT 1.4)|15d7a3589d52e33aebd5efb97c321b2498407d6b"
   "TERM|specifications-TERM|master (TERM 3.1.0)|b2dd077d268dff881e81899db58c22b1ed015fad"
   "LANG|specifications-LANG|master (LANG 1.1.0)|f80763abda184aa6cc94957152df83f3ef5d8f5e"
   "QUERY|specifications-QUERY|Release-1.1.0|a87bb51fa1c515b863c9610a9444a2d5570dc05a"
