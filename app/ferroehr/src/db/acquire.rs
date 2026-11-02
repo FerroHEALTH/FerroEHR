@@ -27,7 +27,8 @@
 //! down, and while it is down every acquire answers at once, one probe at a
 //! time testing whether it is back. A probe that connects, or is still
 //! connecting when its bound passes (a slow database, not a down one), leaves
-//! the acquire queueing on the pool as a busy pool does.
+//! the acquire queueing on the pool as a busy pool does. A connect of the
+//! pool's own that is refused or reset marks the database down the same way.
 //!
 //! Inside [`request_scope`], a request keeps the connection it checked out
 //! between its statements: a connection [`acquire`] handed out goes back to
@@ -471,6 +472,23 @@ pub async fn acquire(pool: &PgPool) -> Result<Checkout, AcquireError> {
     Ok(Checkout::new(conn, key))
 }
 
+/// The error for a pool that failed: a connect the database refused or reset
+/// ([`is_unreachable`]) records the outage, as a probe would, so the next
+/// acquire answers at once instead of connecting again.
+fn pool_failed(key: &str, error: sqlx::Error) -> AcquireError {
+    if !is_unreachable(&error) {
+        return AcquireError(Cause::Pool(error));
+    }
+    let error = Arc::new(error);
+    tracing::warn!(
+        database = key,
+        %error,
+        "database connect: unreachable; acquires answer at once until a probe connects"
+    );
+    record(key, Err(Arc::clone(&error)));
+    AcquireError(Cause::Outage(error))
+}
+
 /// [`acquire`] without the metric: the outage gate, then the pool, with one
 /// probe once the pool has kept the caller waiting [`PROBE_AFTER`].
 async fn acquire_unmetered(pool: &PgPool) -> Result<PoolConnection<Postgres>, AcquireError> {
@@ -492,7 +510,7 @@ async fn acquire_unmetered(pool: &PgPool) -> Result<PoolConnection<Postgres>, Ac
     // large, and every caller's state machine would otherwise carry it inline.
     let mut waiting = Box::pin(pool.acquire());
     if let Ok(result) = tokio::time::timeout(PROBE_AFTER, &mut waiting).await {
-        return result.map_err(|error| AcquireError(Cause::Pool(error)));
+        return result.map_err(|error| pool_failed(&key, error));
     }
     if claim_probe(&key) {
         let claim = ProbeClaim {
@@ -502,15 +520,13 @@ async fn acquire_unmetered(pool: &PgPool) -> Result<PoolConnection<Postgres>, Ac
         // The pool answering first drops the probe, and its claim with it.
         let probed = tokio::select! {
             result = &mut waiting => {
-                return result.map_err(|error| AcquireError(Cause::Pool(error)));
+                return result.map_err(|error| pool_failed(&key, error));
             }
             probed = probe_and_record(pool, claim) => probed,
         };
         probed.map_err(|error| AcquireError(Cause::Outage(error)))?;
     }
-    waiting
-        .await
-        .map_err(|error| AcquireError(Cause::Pool(error)))
+    waiting.await.map_err(|error| pool_failed(&key, error))
 }
 
 /// A pooled connection that is closed, instead of returned to the pool, when
