@@ -180,6 +180,9 @@ quiet "${AUTH[@]}" -X POST "$V1/ehr/$EHR/directory" \
   "${JSON[@]}" -d "{
     \"_type\": \"FOLDER\", \"name\": {\"_type\": \"DV_TEXT\", \"value\": \"root\"},
     \"archetype_node_id\": \"openEHR-EHR-FOLDER.generic.v1\",
+    \"archetype_details\": {\"_type\": \"ARCHETYPED\",
+      \"archetype_id\": {\"_type\": \"ARCHETYPE_ID\", \"value\": \"openEHR-EHR-FOLDER.generic.v1\"},
+      \"rm_version\": \"1.1.0\"},
     \"folders\": [{\"_type\": \"FOLDER\",
       \"name\": {\"_type\": \"DV_TEXT\", \"value\": \"Episodes\"},
       \"archetype_node_id\": \"at0001\",
