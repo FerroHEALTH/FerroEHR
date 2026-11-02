@@ -1385,14 +1385,17 @@ async fn an_item_tag_of_another_patient_is_refused_as_its_target_is() {
     // Each tag operation beside the target operation whose ABAC mode it takes.
     let pairs = [
         (
+            "composition tag read",
             ("GET", format!("/ehr/{EHR_OTHER}/composition/{uid}")),
             ("GET", format!("/ehr/{EHR_OTHER}/composition/{vo}/tags")),
         ),
         (
+            "composition tag put",
             ("PUT", format!("/ehr/{EHR_OTHER}/composition/{vo}")),
             ("PUT", format!("/ehr/{EHR_OTHER}/composition/{vo}/tags")),
         ),
         (
+            "composition tag delete",
             ("PUT", format!("/ehr/{EHR_OTHER}/composition/{vo}")),
             (
                 "DELETE",
@@ -1400,10 +1403,12 @@ async fn an_item_tag_of_another_patient_is_refused_as_its_target_is() {
             ),
         ),
         (
+            "EHR tag read",
             ("GET", format!("/ehr/{EHR_OTHER}")),
             ("GET", format!("/ehr/{EHR_OTHER}/tags")),
         ),
         (
+            "EHR_STATUS tag read",
             ("GET", format!("/ehr/{EHR_OTHER}/ehr_status")),
             (
                 "GET",
@@ -1411,6 +1416,7 @@ async fn an_item_tag_of_another_patient_is_refused_as_its_target_is() {
             ),
         ),
         (
+            "EHR_STATUS tag put",
             ("PUT", format!("/ehr/{EHR_OTHER}/ehr_status")),
             (
                 "PUT",
@@ -1418,6 +1424,7 @@ async fn an_item_tag_of_another_patient_is_refused_as_its_target_is() {
             ),
         ),
         (
+            "EHR_STATUS tag delete",
             ("PUT", format!("/ehr/{EHR_OTHER}/ehr_status")),
             (
                 "DELETE",
@@ -1425,16 +1432,16 @@ async fn an_item_tag_of_another_patient_is_refused_as_its_target_is() {
             ),
         ),
     ];
-    for ((target_method, target), (tag_method, tag)) in pairs {
+    for (label, (target_method, target), (tag_method, tag)) in pairs {
         assert_eq!(
             tag_probe(&app, target_method, &target, PATIENT_OWN).await,
             StatusCode::FORBIDDEN,
-            "{target_method} {target} is refused for another patient's EHR"
+            "the target of the {label} is refused for another patient's EHR"
         );
         assert_eq!(
             tag_probe(&app, tag_method, &tag, PATIENT_OWN).await,
             StatusCode::FORBIDDEN,
-            "{tag_method} {tag} is refused as {target_method} {target} is"
+            "the {label} is refused as its target is"
         );
     }
 }
@@ -1465,7 +1472,10 @@ async fn an_item_tag_of_the_callers_patient_is_served() {
     ];
     for (method, path) in served {
         let s = tag_probe(&app, method, &path, PATIENT_OWN).await;
-        assert!(s.is_success(), "{method} {path} is served, got {s}");
+        assert!(
+            s.is_success(),
+            "a {method} of an own tag is served, got {s}"
+        );
     }
 }
 
@@ -1498,7 +1508,7 @@ async fn a_template_scoped_rule_binds_on_a_composition_tag_as_on_the_composition
             assert_eq!(
                 s == StatusCode::FORBIDDEN,
                 refused,
-                "{method} {path} follows the target read ({want}), got {s}"
+                "a {method} of a composition tag follows the target read ({want}), got {s}"
             );
         }
     }
