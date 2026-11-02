@@ -29,8 +29,9 @@ use serde_json::{Value, json};
 
 use ferroehr::ids::EhrId;
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::linkage::cohort::config::{CohortConfig, PredicateBinding, PredicateKind};
+use ferroehr::service::linkage::cohort::config::{CohortConfig, PredicateBinding};
 use ferroehr::service::linkage::cohort::{CohortPredicate, CohortQueryRequest};
+use ferroehr::storage::cohort_predicate::PredicateKind;
 
 use crate::fixtures::{composition, uv};
 
@@ -255,7 +256,7 @@ async fn measure(
 
     let predicate_plan = explain(
         &ferroehr::db::domain_pool_from(pool, ferroehr::db::domain::Domain::Party),
-        ferroehr::service::linkage::cohort::predicate::predicate_sql(PredicateKind::Text),
+        ferroehr::storage::cohort_predicate::predicate_sql(PredicateKind::Text),
         &[
             "at0012".to_owned(),
             ADDRESS_ARCHETYPE.to_ascii_lowercase(),
