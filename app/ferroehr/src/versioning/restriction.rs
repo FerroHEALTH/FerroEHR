@@ -9,7 +9,7 @@ use sqlx::PgConnection;
 
 use crate::ids::{EhrId, VoId};
 use crate::service::error::ServiceError;
-use crate::service::status::ServiceStatus;
+use crate::service::refusal::Missing;
 
 /// Refuse a write that would process an object whose processing is restricted.
 ///
@@ -73,16 +73,16 @@ async fn ensure_not_access_restricted_tx(
     if let Some(ehr_id) = ehr_id.filter(|_| restricted || opted_out)
         && crate::storage::opt_out::ehr_hidden(&mut *tx, ehr_id, restricted, opted_out).await?
     {
-        return Err(ServiceError::new(
-            ServiceStatus::EhrIdDoesNotExist,
+        return Err(ServiceError::not_found(
+            Missing::Ehr,
             format!("EHR {ehr_id}"),
         ));
     }
     if let Some(vo_id) = vo_id.filter(|_| restricted)
         && crate::storage::marks::is_access_restricted(&mut *tx, vo_id).await?
     {
-        return Err(ServiceError::new(
-            ServiceStatus::VersionedObjectDoesNotExist,
+        return Err(ServiceError::not_found(
+            Missing::VersionedObject,
             format!("versioned object {vo_id}"),
         ));
     }

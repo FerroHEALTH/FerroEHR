@@ -29,8 +29,7 @@ use uuid::Uuid;
 use crate::ids::{EhrId, VoId};
 use crate::service::demographic::identifier::store::{IdentifierStore, StoreError};
 use crate::service::error::{ServiceError, Violation};
-use crate::service::refusal::{Clash, Refusal};
-use crate::service::status::ServiceStatus;
+use crate::service::refusal::{Clash, Missing, Refusal};
 use crate::storage::codec::{decompose, reassemble};
 use crate::storage::row::NodeRow;
 use crate::versioning::attestation::{self, PendingAttest};
@@ -365,8 +364,8 @@ async fn next_version(
                 "expected version {tree}, which does not exist (current is {})",
                 current.tree
             ))),
-            _ => Err(ServiceError::new(
-                ServiceStatus::VersionedObjectDoesNotExist,
+            _ => Err(ServiceError::not_found(
+                Missing::VersionedObject,
                 format!("{} {vo_id} in EHR {ehr_id:?}", kind.as_str()),
             )),
         };
@@ -374,8 +373,8 @@ async fn next_version(
     // For an EHR-scoped object the stored owner must match; for a demographic
     // party both stored and expected owner are `None`, which compares equal.
     if tip.ehr_id != ehr_id || tip.kind != kind {
-        return Err(ServiceError::new(
-            ServiceStatus::VersionedObjectDoesNotExist,
+        return Err(ServiceError::not_found(
+            Missing::VersionedObject,
             format!("{} {vo_id} in EHR {ehr_id:?}", kind.as_str()),
         ));
     }

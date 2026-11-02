@@ -19,6 +19,7 @@ use openehr_its::rest::runtime::ApiError;
 
 use super::refusal::{Clash, Curated, Invalid, Malformed, Missing, Refusal};
 use super::status::{ServiceStatus, StatusError};
+use crate::storage::error::{classify_acquire, classify_sqlx, classify_storage};
 
 /// One violated spec rule, carried as data rather than as a pre-formatted
 /// sentence.
@@ -286,6 +287,10 @@ pub enum ServiceError {
     /// EHR index provider, a failed identity source); [`ServiceError::fault`].
     #[error(transparent)]
     Fault(Curated),
+    /// A `503` the storage classifier raises when nothing the request needs ran
+    /// or it rolled back; [`ServiceError::overloaded`].
+    #[error(transparent)]
+    Overloaded(Curated),
     /// The access record for a completed read or write could not be taken
     /// and the deployment fails closed (`[audit] fail_mode = "closed"`), so
     /// the result is withheld — the wire's `503`, `Retry-After` set, the same
@@ -761,12 +766,12 @@ impl From<ServiceError> for StatusError {
                 StatusError::new(kind.into(), violation.to_string())
             }
             e @ ServiceError::ValidationFailed(_) => StatusError::from(e.flattened()),
-            ServiceError::Storage(e) => StatusError::from(e),
-            // A raw `sqlx` error carries SQLSTATE/constraint detail: classify it
-            // (integrity/serialization conflict → 409, pool exhaustion → 503)
-            // instead of collapsing every database error to a blanket 500.
-            ServiceError::Database(e) => crate::storage::error::classify_sqlx(&e),
-            ServiceError::Acquire(e) => crate::storage::error::classify_acquire(&e).with_source(e),
+            // A storage or driver failure is classified first (integrity or
+            // serialization conflict → 409, nothing ran → 503, else 500).
+            ServiceError::Storage(e) => StatusError::from(classify_storage(e)),
+            ServiceError::Database(e) => StatusError::from(classify_sqlx(e)),
+            ServiceError::Acquire(e) => StatusError::from(classify_acquire(e)),
+            ServiceError::Overloaded(err) => StatusError::from_overloaded(&err),
             // A malformed payload the server was asked to read names its own
             // defect (`400`); a failure to serialize the server's own data is
             // a server fault whose diagnostic stays in the log (`500`).
@@ -817,15 +822,12 @@ impl From<ServiceError> for ApiError {
                     .collect(),
             ),
             // Storage/DB failures carry SQLSTATE/constraint detail: classify
-            // them (integrity/serialization conflict → 409, pool exhaustion →
-            // 503) rather than blanket-500. A genuine fault stays 500.
-            ServiceError::Storage(e) => sqlx_conflict_api_error(StatusError::from(e)),
-            ServiceError::Database(e) => {
-                sqlx_conflict_api_error(crate::storage::error::classify_sqlx(&e))
-            }
-            ServiceError::Acquire(e) => {
-                sqlx_conflict_api_error(crate::storage::error::classify_acquire(&e))
-            }
+            // them (integrity/serialization conflict → 409, nothing ran → 503)
+            // rather than blanket-500. A genuine fault stays 500.
+            ServiceError::Storage(e) => ApiError::from(classify_storage(e)),
+            ServiceError::Database(e) => ApiError::from(classify_sqlx(e)),
+            ServiceError::Acquire(e) => ApiError::from(classify_acquire(e)),
+            ServiceError::Overloaded(err) => ApiError::ServiceUnavailable(err.message.to_owned()),
             // A malformed payload the server was asked to read is a client
             // defect → `400`, and the body names it (that IS the strict
             // reader's contract). A failure to serialize the server's own data
@@ -860,22 +862,6 @@ impl From<ServiceError> for ApiError {
             }
             ServiceError::Timeout(e) => ApiError::Internal(StatusError::from_timeout(&e).message),
         }
-    }
-}
-
-/// Map a storage-classified [`StatusError`] (from [`crate::storage::error::classify_sqlx`])
-/// to the ITS-REST [`ApiError`] on the direct `ServiceError → ApiError` path.
-/// Only the storage-classified statuses occur here — a database conflict
-/// (`409`), pool exhaustion (`503`), or a genuine fault (`500`) — mirroring the
-/// `status_api_error` rows the status bridge uses (`ferroehr-rest::overview::error`).
-/// The `503` is our own overload contract (no openEHR spec governs overload;
-/// RFC 9110 §15.6.4 is the HTTP authority).
-fn sqlx_conflict_api_error(err: StatusError) -> ApiError {
-    use super::status::ServiceStatus as S;
-    match err.status {
-        S::Conflict | S::EhrForSubjectAlreadyExists => ApiError::Conflict(err.message),
-        S::ServiceOverloaded => ApiError::ServiceUnavailable(err.message),
-        _ => ApiError::Internal(err.message),
     }
 }
 

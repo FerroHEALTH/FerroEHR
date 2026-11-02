@@ -35,6 +35,7 @@ use serde_json::Value;
 use super::identity;
 use crate::service::FerroEhrService;
 use crate::service::error::{ServiceError, Violation};
+use crate::service::refusal::Missing;
 
 impl FerroEhrService {
     /// Resolve the (cached) [`WebTemplate`] for a stored operational template,
@@ -125,8 +126,8 @@ impl FerroEhrService {
         // Resolve existence first so an unknown id is a 404 (not the 422 the
         // WebTemplate cache maps for a commit-time unknown template).
         if !self.template_stored(template_id).await? {
-            return Err(ServiceError::new(
-                crate::service::status::ServiceStatus::TemplateDoesNotExist,
+            return Err(ServiceError::not_found(
+                Missing::Template,
                 format!("template {template_id}"),
             ));
         }

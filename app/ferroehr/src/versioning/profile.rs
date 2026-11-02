@@ -22,7 +22,6 @@ use serde_json::Value;
 
 use crate::config::profile::SpecProfile;
 use crate::service::error::ServiceError;
-use crate::service::status::ServiceStatus;
 use crate::versioning::Kind;
 
 /// Reads `canonical` with the RELEASED (`stable` profile) generation's strict
@@ -102,15 +101,12 @@ fn refuse(
         error = %refusal,
         "refusing to serve a stored version the active spec_profile cannot express"
     );
-    ServiceError::new(
-        ServiceStatus::Conflict,
-        format!(
-            "version {version_uid} ({kind}) was stored using openEHR specification surface the \
+    ServiceError::conflict(format!(
+        "version {version_uid} ({kind}) was stored using openEHR specification surface the \
              active spec_profile `{profile}` does not define, and this server never \
              down-converts stored content; set spec_profile = \"development\" to read it",
-            kind = kind.as_str(),
-        ),
-    )
+        kind = kind.as_str(),
+    ))
 }
 
 /// The read-time profile gate: refuses a stored version body the ACTIVE profile

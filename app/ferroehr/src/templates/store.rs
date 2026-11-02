@@ -40,6 +40,7 @@ use super::ingest;
 use crate::db::acquire::acquire;
 use crate::service::FerroEhrService;
 use crate::service::error::{ServiceError, Violation};
+use crate::service::refusal::Missing;
 
 impl FerroEhrService {
     /// Store an OPT 1.4 operational template from its canonical XML, returning
@@ -202,10 +203,7 @@ impl FerroEhrService {
         .fetch_optional(&mut *acquire(&self.pool).await?)
         .await?
         .ok_or_else(|| {
-            ServiceError::new(
-                crate::service::status::ServiceStatus::TemplateDoesNotExist,
-                format!("template {template_id}"),
-            )
+            ServiceError::not_found(Missing::Template, format!("template {template_id}"))
         })
     }
 

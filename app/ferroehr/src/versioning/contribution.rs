@@ -29,7 +29,7 @@ use uuid::Uuid;
 use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::error::{ServiceError, Violation};
-use crate::service::status::ServiceStatus;
+use crate::service::refusal::Missing;
 use crate::versioning::attestation::{AttestationInput, AttestationParts, PendingAttest};
 use crate::versioning::audit::{
     AuditInput, change_type, change_type_code, decode_description, party_proxy, plain_audit,
@@ -1409,8 +1409,8 @@ pub(crate) async fn get_contribution(
     )
     .await?
     .ok_or_else(|| {
-        ServiceError::new(
-            ServiceStatus::ContributionDoesNotExist,
+        ServiceError::not_found(
+            Missing::Contribution,
             format!("CONTRIBUTION {contribution_id}"),
         )
     })?;
@@ -1444,10 +1444,7 @@ pub(crate) async fn get_contribution(
         let tree = TreeId::from_columns(t, b, v);
         if resolve_refs {
             let loaded = resolved.remove(&(vo_id, tree)).ok_or_else(|| {
-                ServiceError::new(
-                    ServiceStatus::ObjectVersionDoesNotExist,
-                    format!("VERSION {vo_id}::{tree}"),
-                )
+                ServiceError::not_found(Missing::ObjectVersion, format!("VERSION {vo_id}::{tree}"))
             })?;
             // `CONTRIBUTION.versions` lists the affected VERSION objects
             // (master06 §Contributions), so an imported member resolves to its
@@ -1524,8 +1521,8 @@ async fn ensure_ehr_exists(pool: &sqlx::PgPool, ehr_id: EhrId) -> Result<(), Ser
     if crate::storage::version_repo::meta::ehr_exists(pool, ehr_id).await? {
         Ok(())
     } else {
-        Err(ServiceError::new(
-            ServiceStatus::EhrIdDoesNotExist,
+        Err(ServiceError::not_found(
+            Missing::Ehr,
             format!("EHR {ehr_id}"),
         ))
     }

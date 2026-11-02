@@ -204,10 +204,7 @@ impl FerroEhrService {
         filter: &crate::system_log::store::AuditSearchFilter,
     ) -> Result<(i64, Vec<serde_json::Value>), ServiceError> {
         let Some(audit_store) = &self.audit_store else {
-            return self
-                .audit_event_search(filter)
-                .await
-                .map_err(ServiceError::from);
+            return self.audit_event_search(filter).await;
         };
         let fault = |e: crate::system_log::AuditError| {
             ServiceError::internal("search the audit record repository", e)
