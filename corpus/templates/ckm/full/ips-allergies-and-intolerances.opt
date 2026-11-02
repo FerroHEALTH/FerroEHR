@@ -15,9 +15,9 @@
     <other_details id="original_namespace">org.openehr</other_details>
     <other_details id="original_publisher">openEHR Foundation</other_details>
     <other_details id="custodian_namespace">org.openehr</other_details>
-    <other_details id="MD5-CAM-1.0.1">95237740722f9575c47b4ec9cf9c35c6</other_details>
+    <other_details id="MD5-CAM-1.0.1">5ce6fb982973de55849933153e7bc647</other_details>
     <other_details id="PARENT:MD5-CAM-1.0.1">9FC6BA2D63BE451F034CE25153F4E298</other_details>
-    <other_details id="sem_ver">1.0.0-alpha.21</other_details>
+    <other_details id="sem_ver">1.0.0-alpha.23</other_details>
     <other_details id="build_uid"/>
     <other_details id="original_language">ISO_639-1::en</other_details>
     <details>
@@ -560,6 +560,36 @@
                       <upper>1</upper>
                     </occurrences>
                     <node_id/>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>1</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_PRIMITIVE_OBJECT">
+                        <rm_type_name>STRING</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id/>
+                        <item xsi:type="C_STRING">
+                          <list>Not asked</list>
+                          <list>Information withheld</list>
+                          <list>Unavailable</list>
+                          <list>Not started</list>
+                          <list>Closed</list>
+                        </item>
+                      </children>
+                    </attributes>
                   </children>
                 </attributes>
               </children>
