@@ -1,0 +1,1 @@
+- The outbox reader registry is gone: migrations `clinical/0030` and `party/0023` drop `event_outbox_reader`, and the event outbox retention prune deletes every published row past the window without consulting reader cursors. No shipped lane read the outbox through a cursor, so a leftover registry row could only hold the prune back.

@@ -162,7 +162,7 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   `ehr_folder` and `item_tag`, which stand outside change control; the
   definition stores `template_ref`, `template_store`, `archetype_store`,
   `adl2_artefact` and `stored_query`; the change-event `event_outbox` with its
-  `event_outbox_reader` cursors and `event_subscription` filters; and
+  `event_subscription` filters; and
   `blob_ref`, which records that a version references an externalized
   multimedia blob so collection is an index probe rather than a scan of `node`.
   Every write emits contribution + commit audit in the same transaction

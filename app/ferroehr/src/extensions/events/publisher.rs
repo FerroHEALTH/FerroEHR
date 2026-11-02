@@ -15,8 +15,8 @@
 //! unaffected, because a demographic event has no EHR. On a publish failure it stops
 //! the batch — never skipping ahead — so an EHR's events keep their order, and
 //! backs off before retrying (the outbox buffers while the broker is down). A
-//! periodic pass prunes published rows older than the retention window and
-//! behind every active cursor reader (`crate::extensions::outbox`).
+//! periodic pass prunes published rows older than the retention window
+//! (`crate::extensions::outbox`).
 //!
 //! **Subscription topology is declared on connect/change only:** each cycle
 //! reads the enabled subscriptions (a cheap local query) and touches the broker

@@ -546,7 +546,7 @@ async fn admin_statistics_per_service_and_time_range() {
 }
 
 /// A physically deleted party leaves one erasure tombstone on the party
-/// outbox, ahead of every registered reader.
+/// outbox, pending for the publisher.
 ///
 /// The party domain carries its own outbox, so a consumer of the party stream
 /// learns nothing from the clinical tombstone: every party event it received
@@ -575,14 +575,6 @@ async fn physical_party_delete_tombstones_the_party_outbox() {
         .next()
         .expect("versioned-object id")
         .to_owned();
-
-    sqlx::query(
-        "INSERT INTO party.event_outbox_reader (reader, last_seq, active) \
-         VALUES ('omop', 0, true)",
-    )
-    .execute(&pool)
-    .await
-    .expect("register a reader over the party outbox");
 
     svc.physical_party_delete(p1.clone())
         .await
@@ -623,17 +615,13 @@ async fn physical_party_delete_tombstones_the_party_outbox() {
         "every entry announces an erasure: {envelope}"
     );
 
-    let behind: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM party.event_outbox_reader WHERE active AND last_seq < $1",
-    )
-    .bind(seq)
-    .fetch_one(&pool)
-    .await
-    .expect("count the readers still to reach the tombstone");
-    assert_eq!(
-        behind, 1,
-        "every registered reader still receives the tombstone"
-    );
+    let pending: bool =
+        sqlx::query_scalar("SELECT published_at IS NULL FROM party.event_outbox WHERE seq = $1")
+            .bind(seq)
+            .fetch_one(&pool)
+            .await
+            .expect("read the tombstone's publish stamp");
+    assert!(pending, "the publisher still delivers the tombstone");
 
     // A party that still exists is never announced as erased.
     let surviving: i64 = sqlx::query_scalar(
@@ -1130,7 +1118,7 @@ async fn the_archival_tier_is_a_partition_of_the_relation_it_archives() {
 }
 
 /// Physical erasure leaves no row naming the EHR in any domain, and leaves one
-/// tombstone on the outbox for every registered reader.
+/// tombstone on the outbox for the publisher to deliver.
 ///
 /// The relations are named one by one rather than swept, because the point of
 /// the assertion is that a relation ADDED to the schema has to be added here
@@ -1140,8 +1128,8 @@ async fn the_archival_tier_is_a_partition_of_the_relation_it_archives() {
 /// cold partition as well as the hot one.
 ///
 /// The tombstone is the GDPR Art. 19 notification: a consumer holds what it
-/// derived from this EHR, and its cursor has not reached the tombstone yet, so
-/// the row is still ahead of every registered reader.
+/// derived from this EHR, and the publisher announces the erasure to it, so
+/// the row is pending until the broker confirms it.
 #[tokio::test]
 async fn erasure_leaves_no_row_in_any_domain_and_tombstones_the_outbox() {
     let (_db, pool, svc) = repository().await;
@@ -1149,7 +1137,7 @@ async fn erasure_leaves_no_row_in_any_domain_and_tombstones_the_outbox() {
     let erased = seed_full_ehr(&svc).await;
     let kept = seed_full_ehr(&svc).await;
 
-    // The marks, the cross-reference and a reader cursor: every relation the
+    // The marks and the cross-reference: every relation the
     // erasure has to reach, populated before it runs.
     svc.restrict_processing(&erased.to_string(), None, "gdpr-18-1-c", None)
         .await
@@ -1157,12 +1145,6 @@ async fn erasure_leaves_no_row_in_any_domain_and_tombstones_the_outbox() {
     svc.put_retention_anchor(&erased.to_string(), "nl", None, None)
         .await
         .expect("record the retention anchor");
-    sqlx::query(
-        "INSERT INTO event_outbox_reader (reader, last_seq, active) VALUES ('omop', 0, true)",
-    )
-    .execute(&pool)
-    .await
-    .expect("register a reader");
 
     // The versioned objects of the EHR, captured while they exist: the
     // attestation and blob-reference relations are keyed on them, not on the
@@ -1263,7 +1245,7 @@ async fn erasure_leaves_no_row_in_any_domain_and_tombstones_the_outbox() {
         .expect("count the audit rows");
     assert_eq!(audits, 0, "commit_audit still holds the erased EHR's rows");
 
-    // One tombstone, contribution-less, ahead of every registered reader.
+    // One tombstone, contribution-less, pending for the publisher.
     let (seq, envelope): (i64, Value) = sqlx::query_as(
         "SELECT seq, envelope FROM event_outbox \
          WHERE ehr_id = $1 AND contribution_id IS NULL",
@@ -1275,17 +1257,13 @@ async fn erasure_leaves_no_row_in_any_domain_and_tombstones_the_outbox() {
     assert_eq!(envelope["event"], json!("erase"));
     assert_eq!(envelope["ehr_id"], json!(erased.0));
     assert_eq!(envelope["versions"][0]["kind"], json!("EHR"));
-    let behind: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM event_outbox_reader WHERE active AND last_seq < $1",
-    )
-    .bind(seq)
-    .fetch_one(&pool)
-    .await
-    .expect("count the readers still to reach the tombstone");
-    assert_eq!(
-        behind, 1,
-        "every registered reader still receives the tombstone"
-    );
+    let pending: bool =
+        sqlx::query_scalar("SELECT published_at IS NULL FROM event_outbox WHERE seq = $1")
+            .bind(seq)
+            .fetch_one(&pool)
+            .await
+            .expect("read the tombstone's publish stamp");
+    assert!(pending, "the publisher still delivers the tombstone");
 
     // The other EHR keeps everything, tombstone included.
     let kept_rows = ehr_rows(&pool, kept.into()).await;

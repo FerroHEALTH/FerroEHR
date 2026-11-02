@@ -86,8 +86,8 @@ async fn migrations_apply_cleanly_and_idempotently() {
     // One file per concern, numbered per domain with no gaps, so
     // `_sqlx_migrations` reads as the set's table of contents.
     assert_eq!(applied("ext").await, 9);
-    assert_eq!(applied("clinical").await, 29);
-    assert_eq!(applied("party").await, 22);
+    assert_eq!(applied("clinical").await, 30);
+    assert_eq!(applied("party").await, 23);
     assert_eq!(applied("audit").await, 21);
 
     let tables = |schema: &'static str| {
@@ -121,7 +121,6 @@ async fn migrations_apply_cleanly_and_idempotently() {
             "ehr",
             "ehr_folder",
             "event_outbox",
-            "event_outbox_reader",
             "event_subscription",
             "item_tag",
             "node",
@@ -146,7 +145,6 @@ async fn migrations_apply_cleanly_and_idempotently() {
             "commit_audit",
             "contribution",
             "event_outbox",
-            "event_outbox_reader",
             "identifier_scheme",
             "item_tag",
             "national_identifier",
