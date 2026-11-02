@@ -30,6 +30,7 @@
 //!    storage-JSON → RM → canonical XML → RM → storage-JSON is byte-equal at
 //!    the served-version level, in all three containers.
 
+use ferroehr::service::admin::dump_load::{ArchiveRefusal, EntryFault};
 use ferroehr::service::error::ServiceError;
 use ferroehr::service::refusal::Malformed;
 use ferroehr::service::version_update::WriteRequest;
@@ -677,8 +678,8 @@ async fn the_canonical_xml_archive_holds_original_version_documents_under_the_pu
 /// whole — nothing of it committed — while the rest of the archive still
 /// loads. That is the same per-entity shape as a duplicate EHR id, which is
 /// what a payload belonging to
-/// exactly one EHR warrants; a mangled MANIFEST or SEGMENT stays the
-/// whole-operation `file_not_writable`, because neither belongs to one entity.
+/// exactly one EHR warrants; a mangled MANIFEST or SEGMENT stays a
+/// whole-operation refusal, because neither belongs to one entity.
 #[tokio::test]
 async fn a_corrupt_version_document_reports_that_record_and_commits_nothing() {
     let (_src_db, _src_pool, source) = repository().await;
@@ -789,23 +790,55 @@ async fn ehr_row_exists(pool: &PgPool, ehr_id: Uuid) -> bool {
         .expect("ehr probe")
 }
 
-/// A CORRUPT archive is the same fact as an unreadable one: a `manifest.json`
-/// that will not parse as this format leaves `file_sys_loc` holding no readable
-/// archive, so the load is `file_not_writable` — never an
-/// `exception` blaming the server for the caller's archive, and never a
-/// partial load.
-#[tokio::test]
-async fn load_from_an_archive_with_a_mangled_manifest_is_file_not_writable() {
-    let (_src_db, _src_pool, source) = repository().await;
-    let (_dst_db, dst_pool, target) = repository().await;
+/// The [`ArchiveRefusal`] a malformed-archive `400` carries as its cause.
+fn archive_refusal(err: &ServiceError) -> &ArchiveRefusal {
+    let ServiceError::BadRequest(refusal) = err else {
+        panic!("a malformed archive is a 400 refusal, got {err:?}");
+    };
+    std::error::Error::source(refusal)
+        .and_then(|cause| cause.downcast_ref::<ArchiveRefusal>())
+        .unwrap_or_else(|| panic!("the refusal carries its ArchiveRefusal, got {err:?}"))
+}
 
-    let ehr = seed_full_ehr(&source).await;
+/// The entry an [`ArchiveRefusal::Entry`] names.
+fn refused_entry(err: &ServiceError) -> &str {
+    match archive_refusal(err) {
+        ArchiveRefusal::Entry { entry, .. } => entry,
+        other @ ArchiveRefusal::Format { .. } => panic!("an entry refusal, got {other:?}"),
+    }
+}
+
+/// A canonical-JSON export of one EHR under a fresh location, returning the
+/// location and the EHR.
+async fn exported(source: &FerroEhrService) -> (String, EhrId) {
+    let ehr = seed_full_ehr(source).await;
     let dir = archive_dir();
     let reports = source
         .export_ehrs(dir.clone(), ExportSpec::canonical_json(1024))
         .await
         .expect("export");
-    assert_eq!(reports, Vec::<DumpLoadFailReport>::new());
+    assert_eq!(
+        reports,
+        Vec::<DumpLoadFailReport>::new(),
+        "a clean export reports no failures"
+    );
+    (dir, ehr)
+}
+
+/// The manifest of the loose archive under `dir`, as JSON.
+fn manifest_of(dir: &str) -> Value {
+    let bytes = std::fs::read(std::path::Path::new(dir).join("manifest.json")).expect("manifest");
+    serde_json::from_slice(&bytes).expect("manifest json")
+}
+
+/// The archive is the caller's input: a `manifest.json` that will not parse as
+/// this format is a `400` naming the entry, never a `500` blaming the server,
+/// and never a partial load.
+#[tokio::test]
+async fn load_from_an_archive_with_a_mangled_manifest_is_a_bad_request() {
+    let (_src_db, _src_pool, source) = repository().await;
+    let (_dst_db, dst_pool, target) = repository().await;
+    let (dir, ehr) = exported(&source).await;
 
     // Truncate the manifest mid-object: readable bytes, unparseable JSON.
     let manifest = std::path::Path::new(&dir).join("manifest.json");
@@ -815,17 +848,21 @@ async fn load_from_an_archive_with_a_mangled_manifest_is_file_not_writable() {
         .load_ehrs(dir.clone())
         .await
         .expect_err("a mangled manifest is refused");
-    assert!(matches!(&err, ServiceError::Fault(_)));
-    // The caller's-archive defect NAMES THE ENTRY (that is what the caller can
-    // act on) and nothing else: no server path, no serde offsets/field names.
+    assert_eq!(refused_entry(&err), "manifest.json");
     assert!(
-        err.message().contains("manifest.json"),
-        "the refusal names the offending archive entry, got {err:?}"
+        matches!(
+            archive_refusal(&err),
+            ArchiveRefusal::Entry {
+                cause: EntryFault::Json(_),
+                ..
+            }
+        ),
+        "the parse failure rides the chain as its typed cause, got {err:?}"
     );
-    assert!(
-        !err.message().contains(&dir),
-        "the server path must not reach the wire body, got {err:?}"
-    );
+    // The body names the entry and nothing else: no server path, no serde
+    // offsets or field names.
+    assert!(err.message().contains("manifest.json"), "got {err:?}");
+    assert!(!err.message().contains(&dir), "got {err:?}");
     assert!(
         !err.message().contains("column") && !err.message().contains("line "),
         "the serde diagnostic must not reach the wire body, got {err:?}"
@@ -838,10 +875,105 @@ async fn load_from_an_archive_with_a_mangled_manifest_is_file_not_writable() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// The packed half of the same law: a TRUNCATED `archive.zip` cannot be opened
-/// as a container, which is `file_not_writable` with nothing loaded.
+/// A segment the manifest lists but the archive does not hold is the caller's
+/// incomplete archive: a `400` naming that segment.
 #[tokio::test]
-async fn load_from_a_truncated_container_is_file_not_writable() {
+async fn load_from_an_archive_missing_a_listed_segment_is_a_bad_request() {
+    let (_src_db, _src_pool, source) = repository().await;
+    let (_dst_db, dst_pool, target) = repository().await;
+    let (dir, ehr) = exported(&source).await;
+
+    let manifest = manifest_of(&dir);
+    let segment = manifest["segments"][0]
+        .as_str()
+        .expect("a listed segment")
+        .to_owned();
+    std::fs::remove_file(std::path::Path::new(&dir).join(&segment)).expect("drop the segment");
+
+    let err = target
+        .load_ehrs(dir.clone())
+        .await
+        .expect_err("a missing segment is refused");
+    assert_eq!(refused_entry(&err), segment);
+    assert!(!err.message().contains(&dir), "got {err:?}");
+    assert!(
+        !ehr_row_exists(&dst_pool, ehr.into()).await,
+        "a refused load commits nothing"
+    );
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A manifest whose `format` names no `EXPORT_FORMAT` member is a `400`
+/// carrying the declared format.
+#[tokio::test]
+async fn load_from_an_archive_declaring_an_unknown_format_is_a_bad_request() {
+    let (_src_db, _src_pool, source) = repository().await;
+    let (_dst_db, dst_pool, target) = repository().await;
+    let (dir, ehr) = exported(&source).await;
+
+    let mut manifest = manifest_of(&dir);
+    manifest["format"] = json!("openehr_flat_json");
+    std::fs::write(
+        std::path::Path::new(&dir).join("manifest.json"),
+        serde_json::to_vec(&manifest).expect("manifest bytes"),
+    )
+    .expect("rewrite the manifest");
+
+    let err = target
+        .load_ehrs(dir.clone())
+        .await
+        .expect_err("an unknown format is refused");
+    match archive_refusal(&err) {
+        ArchiveRefusal::Format { declared } => assert_eq!(declared, "openehr_flat_json"),
+        other @ ArchiveRefusal::Entry { .. } => panic!("a format refusal, got {other:?}"),
+    }
+    assert!(err.message().contains("openehr_flat_json"), "got {err:?}");
+    assert!(
+        !ehr_row_exists(&dst_pool, ehr.into()).await,
+        "a refused load commits nothing"
+    );
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A segment the server's filesystem refuses to read is the server's fault:
+/// still the `500` `file_not_writable`, with curated text and no path.
+#[cfg(unix)]
+#[tokio::test]
+async fn an_unreadable_segment_file_stays_a_server_fault() {
+    use std::os::unix::fs::PermissionsExt as _;
+    let (_src_db, _src_pool, source) = repository().await;
+    let (_dst_db, _dst_pool, target) = repository().await;
+    let (dir, _ehr) = exported(&source).await;
+
+    let manifest = manifest_of(&dir);
+    let segment = std::path::Path::new(&dir)
+        .join(manifest["segments"][0].as_str().expect("a listed segment"));
+    std::fs::set_permissions(&segment, std::fs::Permissions::from_mode(0o000))
+        .expect("make the segment unreadable");
+    if std::fs::read(&segment).is_ok() {
+        // A superuser reads through the mode bits, so there is no fault to observe.
+        let _ = std::fs::remove_dir_all(&dir);
+        return;
+    }
+
+    let err = target
+        .load_ehrs(dir.clone())
+        .await
+        .expect_err("an unreadable segment is refused");
+    assert!(matches!(&err, ServiceError::Fault(_)), "got {err:?}");
+    assert!(!err.message().contains(&dir), "got {err:?}");
+
+    std::fs::set_permissions(&segment, std::fs::Permissions::from_mode(0o644))
+        .expect("restore the mode");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// The packed half: a TRUNCATED `archive.zip` cannot be opened as a container,
+/// a `400` naming the container entry with nothing loaded.
+#[tokio::test]
+async fn load_from_a_truncated_container_is_a_bad_request() {
     let (_src_db, _src_pool, source) = repository().await;
     let (_dst_db, dst_pool, target) = repository().await;
 
@@ -868,10 +1000,10 @@ async fn load_from_a_truncated_container_is_file_not_writable() {
         .load_ehrs(dir.clone())
         .await
         .expect_err("a truncated container is refused");
-    assert!(matches!(&err, ServiceError::Fault(_)));
+    assert_eq!(refused_entry(&err), "archive.zip");
     assert!(
-        !err.message().contains(&dir) && !err.message().contains("archive.zip"),
-        "the container path must not reach the wire body, got {err:?}"
+        !err.message().contains(&dir),
+        "the server path must not reach the wire body, got {err:?}"
     );
     assert!(
         !ehr_row_exists(&dst_pool, ehr.into()).await,

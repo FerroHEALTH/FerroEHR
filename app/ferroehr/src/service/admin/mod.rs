@@ -39,7 +39,7 @@
 
 mod archive;
 mod delete;
-mod dump_load;
+pub mod dump_load;
 mod statistics;
 
 pub mod access_delay;

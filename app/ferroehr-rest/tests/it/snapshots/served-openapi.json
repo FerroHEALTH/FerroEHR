@@ -1658,7 +1658,7 @@
             }
           },
           "400": {
-            "description": "`file_sys_loc` is absent or blank, or the archive carries externalized multimedia this server has no store for.",
+            "description": "`file_sys_loc` is absent or blank, the archive carries externalized multimedia this server has no store for, or the archive is malformed (`archive-invalid`): the container, the manifest, a segment or a blob entry is absent, truncated or does not parse as an export archive, or the manifest names no known logical format. With `Prefer: return=representation` the `archive` member names the entry or the declared format.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1708,7 +1708,7 @@
             }
           },
           "500": {
-            "description": "The location holds no archive container, an entry could not be read, the manifest / a segment is CORRUPT (mangled or truncated, so it does not parse as part of this archive format), or the manifest names no known `logical_format`. All are the same fact — `file_sys_loc` does not hold a readable archive — and answer the same `500`. A corrupt per-version payload entry is NOT here: it belongs to exactly one EHR, so it is a per-entity `200` report.",
+            "description": "The location holds no archive container, or the server's filesystem refused a read of it. A corrupt per-version payload entry is NOT here: it belongs to exactly one EHR, so it is a per-entity `200` report.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -25427,6 +25427,17 @@
           "status"
         ],
         "properties": {
+          "archive": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ArchiveFault",
+                "description": "`archive-invalid`, with `Prefer: return=representation`: the archive\nentry or the declared format the load refused."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "current_version": {
             "type": [
               "string",
