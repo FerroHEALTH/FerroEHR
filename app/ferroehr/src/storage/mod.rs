@@ -46,6 +46,8 @@
 //!   and its mark on `vo_head`.
 //! - [`opt_out`] — the EHDS Art. 10 opt-out from access through the access
 //!   services and its mark on `ehr`.
+//! - [`statistics`] — the counts and listings behind the admin statistics.
+//! - [`integrity`] — the reads of the storage-integrity sweep and the node rebuild.
 //! - [`template_repo`] — the OPT 1.4 `template_store` and the `template_ref`
 //!   registry of every template address a version may name.
 //! - [`archetype_repo`] — the ADL 1.4 `archetype_store`.
@@ -73,6 +75,7 @@ pub mod ehr_repo;
 pub mod erasure;
 pub mod error;
 pub mod header;
+pub mod integrity;
 pub mod marks;
 pub mod node_repo;
 pub mod opt_out;
@@ -80,6 +83,7 @@ pub mod party_reverse;
 pub mod promoted;
 pub mod row;
 pub mod slim;
+pub mod statistics;
 pub mod stored_query_repo;
 pub mod structure;
 pub mod tag_repo;

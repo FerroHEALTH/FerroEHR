@@ -29,6 +29,7 @@ use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::error::ServiceError;
 use ferroehr::service::platform_service::PlatformService;
 use ferroehr::service::refusal::{Clash, Malformed, Missing, Refusal};
+use ferroehr::storage::statistics::CompositionCount;
 
 /// Row counts scoped to one EHR across every table a physical delete must clear.
 /// `audit` has no `ehr_id`, so it is counted by the audit ids the EHR's
@@ -448,21 +449,29 @@ async fn admin_statistics_per_service_and_time_range() {
     // Composition statistics: 2 versioned compositions, 3 version rows (Ehr);
     // a non-Ehr service sees neither.
     assert_eq!(
-        svc.versioned_composition_count(PlatformService::Ehr, None)
-            .await
-            .expect("versioned comp count"),
+        svc.composition_count(
+            PlatformService::Ehr,
+            None,
+            CompositionCount::VersionedObjects
+        )
+        .await
+        .expect("versioned comp count"),
         2
     );
     assert_eq!(
-        svc.composition_version_count(PlatformService::Ehr, None)
+        svc.composition_count(PlatformService::Ehr, None, CompositionCount::Versions)
             .await
             .expect("comp version count"),
         3
     );
     assert_eq!(
-        svc.versioned_composition_count(PlatformService::Demographic, None)
-            .await
-            .expect("demo versioned comp"),
+        svc.composition_count(
+            PlatformService::Demographic,
+            None,
+            CompositionCount::VersionedObjects
+        )
+        .await
+        .expect("demo versioned comp"),
         0
     );
 

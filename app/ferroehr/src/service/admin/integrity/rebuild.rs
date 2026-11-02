@@ -46,11 +46,10 @@ use uuid::Uuid;
 use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
-use crate::service::admin::integrity::{
-    StorageDomain, StorageParityDefect, StorageParityEvent, StorageParityScope,
-};
+use crate::service::admin::integrity::{StorageDomain, StorageParityDefect, StorageParityEvent};
 use crate::service::error::ServiceError;
 use crate::storage::codec::decompose;
+use crate::storage::integrity::{self, StorageParityScope};
 use crate::storage::node_repo::{delete_version_nodes, read_version_canonical, write_nodes};
 use crate::storage::version_repo::tier;
 
@@ -272,12 +271,7 @@ impl FerroEhrService {
         // object is never split across tiers. The marker is captured before
         // the thaw drops it and re-inserted before the re-freeze, so an
         // archived object comes out of this exactly as archived as it went in.
-        let archive_reason: Option<Option<String>> = sqlx::query_scalar(
-            "SELECT archive_reason FROM vo_head WHERE vo_id = $1 AND tier = 'cold' FOR UPDATE",
-        )
-        .bind(vo_id)
-        .fetch_optional(&mut *tx)
-        .await?;
+        let archive_reason = tier::lock_cold_marker(&mut tx, vo_id).await?;
         if archive_reason.is_some() {
             tier::thaw(&mut tx, &[vo_id]).await?;
         }
@@ -368,18 +362,9 @@ async fn locked_body(
     vo_id: VoId,
     sys_version: i32,
 ) -> Result<Option<VersionBody>, ServiceError> {
-    let row: Option<(Option<Uuid>, Option<String>)> = sqlx::query_as(
-        "SELECT ehr_id, body FROM version \
-         WHERE vo_id = $1 AND sys_version = $2 FOR UPDATE",
-    )
-    .bind(vo_id)
-    .bind(sys_version)
-    .fetch_optional(&mut *tx)
-    .await?;
-    Ok(row.map(|(ehr_id, body)| VersionBody {
-        ehr_id: ehr_id.map(EhrId),
-        body,
-    }))
+    Ok(integrity::locked_body(tx, vo_id, sys_version)
+        .await?
+        .map(|(ehr_id, body)| VersionBody { ehr_id, body }))
 }
 
 #[cfg(test)]

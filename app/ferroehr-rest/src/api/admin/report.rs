@@ -34,6 +34,7 @@ use openehr_its::rest::runtime::ApiError;
 
 use ferroehr::service::admin::types::StatTimeRange;
 use ferroehr::service::platform_service::PlatformService;
+use ferroehr::storage::statistics::CompositionCount;
 
 use super::body::{AdminDisabled, AdminUnauthenticated, NotAdminClass};
 use crate::api::{BoxResponse, RequestParts, guarded_dispatch};
@@ -333,14 +334,14 @@ async fn run(
         "admin_report_versioned_composition_count" => {
             let count = state
                 .backend()
-                .versioned_composition_count(a_service, range)
+                .composition_count(a_service, range, CompositionCount::VersionedObjects)
                 .await?;
             Ok(negotiate::body::respond(h, StatusCode::OK, &count))
         }
         "admin_report_composition_version_count" => {
             let count = state
                 .backend()
-                .composition_version_count(a_service, range)
+                .composition_count(a_service, range, CompositionCount::Versions)
                 .await?;
             Ok(negotiate::body::respond(h, StatusCode::OK, &count))
         }
