@@ -8,9 +8,7 @@ use std::collections::BTreeMap;
 
 use openehr_am::v2_4::aom2::constraint_model::archetype_slot::ArchetypeSlot;
 use openehr_am::v2_4::aom2::constraint_model::c_attribute::CAttribute;
-use openehr_am::v2_4::aom2::constraint_model::c_complex_object::{
-    CComplexObject, CComplexObjectData,
-};
+use openehr_am::v2_4::aom2::constraint_model::c_complex_object::CComplexObject;
 use openehr_am::v2_4::aom2::constraint_model::c_complex_object_proxy::CComplexObjectProxy;
 use openehr_am::v2_4::aom2::constraint_model::c_object::CObject;
 use openehr_am::v2_4::aom2::terminology::archetype_term::ArchetypeTerm;
@@ -25,6 +23,7 @@ use super::tuple::{
 };
 use super::value::{code_constraint, map_cardinality, map_mult, map_term};
 use super::{FillEdge, RawUnit, RootCx};
+use crate::aom::build::ObjectNode;
 
 /// The decomposition state over one operational template.
 pub(super) struct Decomposer<'a> {
@@ -94,20 +93,14 @@ impl Decomposer<'_> {
         // appends, so the units stay in document order.
         let position = self.units.len();
         let attributes = self.map_attributes(&root.attributes, &archetype_id, path, &mut cx);
-        let definition = CComplexObject::CComplexObject(CComplexObjectData {
-            parent: None,
-            soc_parent: None,
+        let node = ObjectNode {
             rm_type_name: root.rm_type_name.clone(),
+            node_id: root.node_id.clone(),
             // A source-archetype root declares no occurrences of its own.
             occurrences: None,
-            node_id: root.node_id.clone(),
-            alternative_ids: openehr_base::containers::present(Vec::new()),
-            is_deprecated: None,
-            sibling_order: None,
-            default_value: None,
-            attributes: openehr_base::containers::present(attributes),
-            attribute_tuples: openehr_base::containers::present(Vec::new()),
-        });
+        };
+        let definition =
+            CComplexObject::CComplexObject(node.c_complex_object(attributes, Vec::new(), None));
         let terminology = self.build_terminology(&archetype_id, root, is_top, &mut cx);
         self.units.insert(
             position,

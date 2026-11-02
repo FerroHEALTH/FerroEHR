@@ -41,7 +41,7 @@ use openehr_am::v2_4::aom2::constraint_model::c_object::CObject;
 use openehr_am::v2_4::aom2::constraint_model::c_primitive_object::CPrimitiveObject;
 use openehr_am::v2_4::aom2::constraint_model::primitive::c_string::CString;
 
-use crate::aom::build::{PrimitiveNode, cobject_to_primitive};
+use crate::aom::build::{ObjectNode, cobject_to_primitive};
 use crate::codes::NodeCoding;
 use crate::error::{SyntaxError, SyntaxErrorCode};
 use crate::odin::regex_inner;
@@ -459,8 +459,7 @@ pub(crate) fn parse_contained_regexp_text(raw: &str) -> Result<CString, Vec<Synt
             raw,
         )]);
     }
-    Ok(PrimitiveNode::inline("String", NodeCoding::At)
-        .c_string(vec![regex_part.to_owned()], assumed))
+    Ok(ObjectNode::inline("String", NodeCoding::At).c_string(vec![regex_part.to_owned()], assumed))
 }
 
 #[cfg(test)]

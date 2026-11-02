@@ -30,7 +30,7 @@ use crate::adl14::domain::{
     DomainLoweringError, adl14_code_phrase_parts, is_adl14_domain_type, lower_adl14_domain,
 };
 use crate::aom::build::{
-    PrimitiveNode, cattr_empty, cobject_to_primitive, complex_object, point_int, point_real,
+    ObjectNode, cattr_empty, cobject_to_primitive, complex_object, point_int, point_real,
 };
 use crate::aom::interval::{point_value_f64, point_value_i32};
 use crate::codes::NodeCoding;
@@ -295,19 +295,17 @@ impl Parser<'_> {
                 Some(Token::Real(_))
             );
             let value = if is_real {
-                CPrimitiveObject::CReal(PrimitiveNode::inline("Real", NodeCoding::At).c_real(
+                CPrimitiveObject::CReal(ObjectNode::inline("Real", NodeCoding::At).c_real(
                     vec![point_real(self.parse_signed_real(SyntaxErrorCode::Scrav)?)],
                     None,
                 ))
             } else {
-                CPrimitiveObject::CInteger(
-                    PrimitiveNode::inline("Integer", NodeCoding::At).c_integer(
-                        vec![point_int(i64::from(
-                            self.parse_signed_int(SyntaxErrorCode::Sciav)?,
-                        ))],
-                        None,
-                    ),
-                )
+                CPrimitiveObject::CInteger(ObjectNode::inline("Integer", NodeCoding::At).c_integer(
+                    vec![point_int(i64::from(
+                        self.parse_signed_int(SyntaxErrorCode::Sciav)?,
+                    ))],
+                    None,
+                ))
             };
             self.expect(
                 |t| matches!(t, Token::SymIvlDelim),
@@ -611,7 +609,7 @@ fn ordinal_point_value(member: &CPrimitiveObject) -> Option<f64> {
 /// `terminology::code[,code]*[;assumed]` spelling for `crate::adl14::convert`.
 fn adl14_terminology_code(constraint: String) -> CObject {
     CObject::CTerminologyCode(
-        PrimitiveNode::inline("Terminology_code", NodeCoding::At)
+        ObjectNode::inline("Terminology_code", NodeCoding::At)
             .c_terminology_code(constraint, None, None),
     )
 }

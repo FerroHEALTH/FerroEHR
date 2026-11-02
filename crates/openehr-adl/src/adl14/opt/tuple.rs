@@ -6,9 +6,7 @@
 
 use openehr_am::v2_4::aom2::constraint_model::c_attribute::CAttribute;
 use openehr_am::v2_4::aom2::constraint_model::c_attribute_tuple::CAttributeTuple;
-use openehr_am::v2_4::aom2::constraint_model::c_complex_object::{
-    CComplexObject, CComplexObjectData,
-};
+use openehr_am::v2_4::aom2::constraint_model::c_complex_object::CComplexObject;
 use openehr_am::v2_4::aom2::constraint_model::c_object::CObject;
 use openehr_am::v2_4::aom2::constraint_model::c_primitive_object::CPrimitiveObject;
 use openehr_am::v2_4::aom2::constraint_model::c_primitive_tuple::CPrimitiveTuple;
@@ -16,13 +14,13 @@ use openehr_base::prelude::Interval;
 use openehr_its::opt14;
 
 use super::RootCx;
-use super::primitive::{c_string, complex, terminology_code};
-use super::value::{code_constraint, int_interval, map_mult, real_interval};
-use crate::aom::build::{PrimitiveNode, point_interval, tuple_member};
+use super::primitive::{c_string, complex, object_node, terminology_code};
+use super::value::{code_constraint, int_interval, real_interval};
+use crate::aom::build::{ObjectNode, point_interval, tuple_member};
 
 /// The node of a tuple-row member: unnamed, its occurrences unstated.
-fn tuple_node(rm_type_name: &str) -> PrimitiveNode {
-    PrimitiveNode {
+fn tuple_node(rm_type_name: &str) -> ObjectNode {
+    ObjectNode {
         rm_type_name: rm_type_name.to_owned(),
         node_id: String::new(),
         occurrences: None,
@@ -144,19 +142,13 @@ pub(super) fn ordinal_tuple(c: &opt14::types::CDvOrdinal, cx: &mut RootCx) -> CO
             tuples: openehr_base::containers::present(tuples),
         }]
     };
-    CObject::CComplexObject(CComplexObject::CComplexObject(CComplexObjectData {
-        parent: None,
-        soc_parent: None,
-        rm_type_name: c.rm_type_name.clone(),
-        occurrences: Some(map_mult(&c.occurrences)),
-        node_id: c.node_id.clone(),
-        alternative_ids: openehr_base::containers::present(Vec::new()),
-        is_deprecated: None,
-        sibling_order: None,
-        default_value: None,
-        attributes: openehr_base::containers::present(Vec::new()),
-        attribute_tuples: openehr_base::containers::present(attribute_tuples),
-    }))
+    CObject::CComplexObject(CComplexObject::CComplexObject(
+        object_node(&c.rm_type_name, &c.node_id, &c.occurrences).c_complex_object(
+            Vec::new(),
+            attribute_tuples,
+            None,
+        ),
+    ))
 }
 
 /// `C_DV_QUANTITY` → a `property` terminology-code attribute plus the
@@ -252,19 +244,13 @@ pub(super) fn quantity_tuple(c: &opt14::types::CDvQuantity, cx: &mut RootCx) -> 
     } else if !c.list.is_empty() {
         attributes.push(widened_units_attribute(c, some_dropped, cx));
     }
-    CObject::CComplexObject(CComplexObject::CComplexObject(CComplexObjectData {
-        parent: None,
-        soc_parent: None,
-        rm_type_name: c.rm_type_name.clone(),
-        occurrences: Some(map_mult(&c.occurrences)),
-        node_id: c.node_id.clone(),
-        alternative_ids: openehr_base::containers::present(Vec::new()),
-        is_deprecated: None,
-        sibling_order: None,
-        default_value: None,
-        attributes: openehr_base::containers::present(attributes),
-        attribute_tuples: openehr_base::containers::present(attribute_tuples),
-    }))
+    CObject::CComplexObject(CComplexObject::CComplexObject(
+        object_node(&c.rm_type_name, &c.node_id, &c.occurrences).c_complex_object(
+            attributes,
+            attribute_tuples,
+            None,
+        ),
+    ))
 }
 
 /// The plain `units` list attribute a magnitude-less (or mixed) quantity

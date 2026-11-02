@@ -138,19 +138,16 @@ pub(crate) fn complex_object(
     attribute_tuples: Vec<CAttributeTuple>,
     default_value: Option<serde_json::Value>,
 ) -> CObject {
-    CObject::CComplexObject(CComplexObject::CComplexObject(CComplexObjectData {
-        parent: None,
-        soc_parent: None,
+    let node = ObjectNode {
         rm_type_name,
-        occurrences: None,
         node_id,
-        alternative_ids: present(Vec::new()),
-        is_deprecated: None,
-        sibling_order: None,
+        occurrences: None,
+    };
+    CObject::CComplexObject(CComplexObject::CComplexObject(node.c_complex_object(
+        attributes,
+        attribute_tuples,
         default_value,
-        attributes: present(attributes),
-        attribute_tuples: present(attribute_tuples),
-    }))
+    )))
 }
 
 /// Convert a parsed complex object into a [`CArchetypeRoot`] carrying
@@ -219,12 +216,12 @@ pub(crate) fn cattr_empty(name: &str) -> CAttribute {
     }
 }
 
-/// The `C_OBJECT` identity of a primitive constraint node: the only inherited
-/// fields a parsed or converted `C_PRIMITIVE_OBJECT` sets
-/// (`AOM2/master04.5` §`C_OBJECT`, §`C_PRIMITIVE_OBJECT`). The builders leave
-/// every other inherited field unset.
+/// The `C_OBJECT` identity of a constraint node: the only inherited fields a
+/// parsed or converted `C_COMPLEX_OBJECT` or `C_PRIMITIVE_OBJECT` sets
+/// (`AOM2/master04.5` §`C_OBJECT`). The builders leave every other inherited
+/// field unset.
 #[derive(Debug)]
-pub(crate) struct PrimitiveNode {
+pub(crate) struct ObjectNode {
     /// The constrained RM type name.
     pub(crate) rm_type_name: String,
     /// The node id, the `Primitive_node_id` of its coding for the inline form.
@@ -238,7 +235,7 @@ pub(crate) struct PrimitiveNode {
 /// descendant's own fields.
 macro_rules! primitive {
     ($ty:ident, $node:expr $(, $field:ident $(: $value:expr)?)* $(,)?) => {{
-        let node: PrimitiveNode = $node;
+        let node: ObjectNode = $node;
         $ty {
             parent: None,
             soc_parent: None,
@@ -255,7 +252,29 @@ macro_rules! primitive {
     }};
 }
 
-impl PrimitiveNode {
+impl ObjectNode {
+    /// A `C_COMPLEX_OBJECT` over this node.
+    pub(crate) fn c_complex_object(
+        self,
+        attributes: Vec<CAttribute>,
+        attribute_tuples: Vec<CAttributeTuple>,
+        default_value: Option<serde_json::Value>,
+    ) -> CComplexObjectData {
+        CComplexObjectData {
+            parent: None,
+            soc_parent: None,
+            rm_type_name: self.rm_type_name,
+            occurrences: self.occurrences,
+            node_id: self.node_id,
+            alternative_ids: None,
+            is_deprecated: None,
+            sibling_order: None,
+            default_value,
+            attributes: present(attributes),
+            attribute_tuples: present(attribute_tuples),
+        }
+    }
+
     /// An inline primitive of `rm_type_name` in an archetype of `coding`, whose
     /// node id is that coding's `Primitive_node_id` (`AOM2/master04.2`
     /// §Primitive Types).
