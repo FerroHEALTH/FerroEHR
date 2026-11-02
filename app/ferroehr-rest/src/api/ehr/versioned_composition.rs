@@ -51,10 +51,7 @@ pub(super) async fn run(
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let vo_id = parse_uuid(&p.versioned_object_uid, "versioned_object_uid")?;
             let vo_id = ferroehr::ids::VoId(vo_id);
-            let mut resp = state
-                .backend()
-                .versioned_composition_response(ehr_id, vo_id)
-                .await?;
+            let mut resp = state.backend().versioned_composition(ehr_id, vo_id).await?;
             // The container carries no content of its own, so the access
             // record is classified by the COMPOSITION it holds (EHDS Annex II
             // 3.2(c)).
@@ -77,7 +74,7 @@ pub(super) async fn run(
             let vo_id = parse_uuid(&p.versioned_object_uid, "versioned_object_uid")?;
             let resp = state
                 .backend()
-                .composition_revision_history_response(ehr_id, ferroehr::ids::VoId(vo_id))
+                .composition_revision_history(ehr_id, ferroehr::ids::VoId(vo_id))
                 .await?;
             Ok(negotiate::read_rm::<RevisionHistory>(
                 h,
@@ -94,14 +91,13 @@ pub(super) async fn run(
             )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let vo_id = parse_uuid(&p.versioned_object_uid, "versioned_object_uid")?;
-            let body = state
+            let mut resp = state
                 .backend()
                 .composition_version_at_time(ehr_id, ferroehr::ids::VoId(vo_id), p.version_at_time)
                 .await?;
             // The VERSION envelope carries the same externalized media the bare
             // resource does, so it re-inlines on the same request.
-            let body = super::expand_multimedia_if_requested(&state, q, body).await?;
-            let resp = super::read_resp(&p.ehr_id, body);
+            resp.body = super::expand_multimedia_if_requested(&state, q, resp.body).await?;
             Ok(negotiate::read_rm::<Version<Composition>>(
                 h,
                 &base,
@@ -128,14 +124,13 @@ pub(super) async fn run(
                     p.version_uid, p.versioned_object_uid
                 ))));
             }
-            let body = state
+            let mut resp = state
                 .backend()
                 .composition_version_envelope(ehr_id, ovid)
                 .await?;
             // The VERSION envelope carries the same externalized media the bare
             // resource does, so it re-inlines on the same request.
-            let body = super::expand_multimedia_if_requested(&state, q, body).await?;
-            let resp = super::read_resp(&p.ehr_id, body);
+            resp.body = super::expand_multimedia_if_requested(&state, q, resp.body).await?;
             Ok(negotiate::read_rm::<Version<Composition>>(
                 h,
                 &base,

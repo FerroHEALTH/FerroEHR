@@ -248,7 +248,7 @@ async fn tagging_does_not_re_version_or_contribute() {
         .expect("contribution count before")["total"]
         .clone();
     let history_before = svc
-        .composition_revision_history_response(ehr, vo)
+        .composition_revision_history(ehr, vo)
         .await
         .map(|r| r.body)
         .expect("revision history before");
@@ -293,7 +293,7 @@ async fn tagging_does_not_re_version_or_contribute() {
 
     // No new VERSION …
     let history_after = svc
-        .composition_revision_history_response(ehr, vo)
+        .composition_revision_history(ehr, vo)
         .await
         .map(|r| r.body)
         .expect("revision history after");

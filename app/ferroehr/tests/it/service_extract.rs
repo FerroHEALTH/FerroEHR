@@ -34,7 +34,7 @@ async fn seed_ehr(svc: &FerroEhrService) -> (ferroehr::ids::EhrId, String) {
     let ehr_uuid = crate::fixtures::create_ehr(svc).await;
 
     let mut status = svc
-        .ehr_status_at_time_response(ehr_uuid, None)
+        .ehr_status(ehr_uuid, None)
         .await
         .map(|r| r.body)
         .expect("status get");
@@ -54,7 +54,7 @@ async fn seed_ehr(svc: &FerroEhrService) -> (ferroehr::ids::EhrId, String) {
     .expect("directory");
 
     status["is_modifiable"] = json!(false);
-    Box::pin(svc.replace_ehr_status_meta(ehr_uuid, uv(&status, "251", Some(&status_ovid))))
+    Box::pin(svc.replace_ehr_status(ehr_uuid, uv(&status, "251", Some(&status_ovid))))
         .await
         .map(|m| m.uid)
         .expect("status update");
@@ -130,7 +130,7 @@ async fn export_ehrs_carries_every_versioned_object_latest_only() {
     // the read surface's current EHR_STATUS — one shape since commit-time uid
     // stamping (#439).
     let current = svc
-        .ehr_status_at_time_response(ehr, None)
+        .ehr_status(ehr, None)
         .await
         .map(|r| r.body)
         .expect("read");

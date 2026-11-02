@@ -71,29 +71,6 @@ impl FerroEhrService {
         Ok(())
     }
 
-    // ── typed party operations ──────────────────────────────────────────────
-
-    /// The `ORIGINAL_VERSION` named by
-    /// a full party `OBJECT_VERSION_ID`.
-    ///
-    /// # Errors
-    /// - [`ServiceError`] `precondition_violation` — the id does not parse as an
-    ///   `OBJECT_VERSION_ID`.
-    /// - [`ServiceError`] `object_version_does_not_exist` — the object is not a
-    ///   party or holds no such version.
-    /// - [`ServiceError`] on a storage/database fault or a signing failure while
-    ///   assembling the `ORIGINAL_VERSION`.
-    pub async fn get_party_at_version(
-        &self,
-        a_party_version_id: String,
-    ) -> Result<Value, ServiceError> {
-        let (vo_id, tree) =
-            parse_version_uid(&a_party_version_id).map_err(VersionIdError::into_argument)?;
-        // The version-addressed read carries `object_version_does_not_exist`
-        // itself (`ServiceError` round-trips the granular status losslessly).
-        self.party_version(vo_id, tree).await
-    }
-
     // ── PARTY CRUD (wire seam) ────────────────────────────────────────────────
 
     /// Create a party of the routed [`PartyKind`], with the party's stored `ITEM_TAG`s surfaced on the

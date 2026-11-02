@@ -67,13 +67,13 @@ impl FerroEhrService {
                  carries no protected identifier to expand",
             ));
         };
-        let (party, _) = parse_version_uid(version_uid).map_err(|error| {
+        let (party, tree) = parse_version_uid(version_uid).map_err(|error| {
             ServiceError::bad_request(
                 format!("`{version_uid}` is not an OBJECT_VERSION_ID"),
                 error,
             )
         })?;
-        let mut version = self.get_party_at_version(version_uid.to_owned()).await?;
+        let mut version = self.party_version(party, tree).await?;
         let schemes = engine.expand(&mut version).await.map_err(|error| {
             if let StoreError::Acquire(acquire) = error {
                 return ServiceError::Acquire(acquire);

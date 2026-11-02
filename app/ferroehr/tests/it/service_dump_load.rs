@@ -103,7 +103,7 @@ async fn counts(pool: &PgPool, ehr_id: Uuid) -> (i64, i64, i64, i64) {
 /// comparison surface.
 async fn canonical_snapshot(svc: &FerroEhrService, ehr_id: EhrId) -> (String, String) {
     let status = svc
-        .ehr_status_at_time_response(ehr_id, None)
+        .ehr_status(ehr_id, None)
         .await
         .map(|r| r.body)
         .expect("status read");
@@ -449,7 +449,7 @@ async fn seed_mixed_kind_ehr(svc: &FerroEhrService) -> (EhrId, Vec<String>) {
     let ehr = crate::fixtures::create_ehr(svc).await;
 
     let mut status = svc
-        .ehr_status_at_time_response(ehr, None)
+        .ehr_status(ehr, None)
         .await
         .map(|r| r.body)
         .expect("status get");
@@ -513,7 +513,7 @@ async fn seed_mixed_kind_ehr(svc: &FerroEhrService) -> (EhrId, Vec<String>) {
     // (`is_modifiable = false`, RM ehr master04 §EHR Active Status), which
     // forbids every content write above.
     status["is_modifiable"] = json!(false);
-    Box::pin(svc.replace_ehr_status_meta(ehr, uv(&status, "251", Some(&status_ovid))))
+    Box::pin(svc.replace_ehr_status(ehr, uv(&status, "251", Some(&status_ovid))))
         .await
         .map(|m| m.uid)
         .expect("status update");
@@ -532,7 +532,8 @@ async fn mixed_snapshot(svc: &FerroEhrService, ehr: EhrId, ovids: &[String]) -> 
         let ov = svc
             .composition_version_envelope(ehr, ovid.parse().expect("ovid"))
             .await
-            .expect("composition ORIGINAL_VERSION");
+            .expect("composition ORIGINAL_VERSION")
+            .body;
         out.push(serde_json::to_string(&ov).expect("version json"));
     }
     out
@@ -913,12 +914,12 @@ async fn an_imported_version_round_trips_through_the_archive() {
     // The loaded copy serves the same IMPORTED_VERSION the middle repository
     // does — wrapper act and wrapped original alike.
     let status_vo = middle
-        .versioned_ehr_status_response(ehr)
+        .versioned_ehr_status(ehr)
         .await
         .expect("VERSIONED_EHR_STATUS");
     let vo_id: ferroehr::ids::VoId = uid(&status_vo.body).parse().expect("container uid");
     let version = middle
-        .ehr_status_revision_history_response(ehr)
+        .ehr_status_revision_history(ehr)
         .await
         .map(|r| r.body)
         .expect("REVISION_HISTORY")["items"][0]["version_id"]["value"]
@@ -932,11 +933,13 @@ async fn an_imported_version_round_trips_through_the_archive() {
     let before = middle
         .ehr_status_version_envelope(ehr, vo_id, &version)
         .await
-        .expect("pre-dump version");
+        .expect("pre-dump version")
+        .body;
     let after = target
         .ehr_status_version_envelope(ehr, vo_id, &version)
         .await
-        .expect("post-load version");
+        .expect("post-load version")
+        .body;
     assert_eq!(before["_type"], json!("IMPORTED_VERSION"));
     assert_eq!(
         after, before,
@@ -1051,7 +1054,8 @@ async fn attestations_round_trip_and_the_restored_signature_verifies() {
     let served_before = source
         .composition_version_envelope(ehr_id, ovid.parse().expect("ovid"))
         .await
-        .expect("source read verifies");
+        .expect("source read verifies")
+        .body;
 
     // Round trip.
     let dir = archive_dir();
@@ -1083,7 +1087,8 @@ async fn attestations_round_trip_and_the_restored_signature_verifies() {
     let served_after = target
         .composition_version_envelope(ehr_id, ovid.parse().expect("ovid"))
         .await
-        .expect("the restored version verifies under strict verify_on_read");
+        .expect("the restored version verifies under strict verify_on_read")
+        .body;
     let atts = served_after["attestations"]
         .as_array()
         .expect("restored attestations");

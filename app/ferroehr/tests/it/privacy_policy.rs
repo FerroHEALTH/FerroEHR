@@ -205,13 +205,17 @@ async fn the_subject_rule_also_binds_the_ehr_status_update_path() {
     .await
     .map(|(id, _)| id)
     .expect("create");
-    let status = svc.get_ehr_status(ehr_id).await.expect("read the status");
+    let status = svc
+        .ehr_status(ehr_id, None)
+        .await
+        .expect("read the status")
+        .body;
     let preceding = status["uid"]["value"]
         .as_str()
         .expect("the stored status carries its version uid")
         .to_owned();
 
-    let error = Box::pin(svc.replace_ehr_status_meta(
+    let error = Box::pin(svc.replace_ehr_status(
         ehr_id,
         uv(
             &status_with_subject(PSEUDONYM_NS, SYNTHETIC_BSN),

@@ -257,7 +257,7 @@ async fn run(
 
     match op {
         "terminology_ids" => {
-            let ids = state.backend().get_terminology_ids()?;
+            let ids = ferroehr::service::terminology::bundle::terminology_ids();
             Ok(negotiate::respond(
                 h,
                 ok,
@@ -267,7 +267,7 @@ async fn run(
         "terminology_description" => {
             let tid = path_get(&parts, "terminology_id")?;
             // An unknown terminology → NotFound (404).
-            let desc = state.backend().get_terminology_description(&tid)?;
+            let desc = ferroehr::service::terminology::bundle::terminology_description(&tid)?;
             Ok(negotiate::respond(h, ok, &desc))
         }
         "terminology_get_term" => {

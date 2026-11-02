@@ -269,7 +269,7 @@ pub(crate) async fn set_not_queryable(
     ehr: ferroehr::ids::EhrId,
 ) {
     let mut body = svc
-        .ehr_status_at_time_response(ehr, None)
+        .ehr_status(ehr, None)
         .await
         .map(|r| r.body)
         .expect("the current EHR_STATUS reads");
@@ -280,7 +280,7 @@ pub(crate) async fn set_not_queryable(
     let status = body.as_object_mut().expect("an EHR_STATUS object");
     status.remove("uid");
     status.insert("is_queryable".to_owned(), json!(false));
-    Box::pin(svc.replace_ehr_status_meta(ehr, uv(&body, "251", Some(&if_match))))
+    Box::pin(svc.replace_ehr_status(ehr, uv(&body, "251", Some(&if_match))))
         .await
         .map(|m| m.uid)
         .expect("the EHR_STATUS update to is_queryable = false commits");

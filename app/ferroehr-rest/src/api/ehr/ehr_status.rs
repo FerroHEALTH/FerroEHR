@@ -68,7 +68,7 @@ pub(super) async fn run(
             // the version metadata rather than the served body.
             let resp = state
                 .backend()
-                .ehr_status_at_version_response(ehr_id, ferroehr::ids::VoId(vo_id), &version)
+                .ehr_status_at_version(ehr_id, ferroehr::ids::VoId(vo_id), &version)
                 .await?;
             // A DV_MULTIMEDIA committed in an EHR_STATUS is externalized by
             // the generic versioning path, so this is where it comes back.
@@ -96,7 +96,7 @@ pub(super) async fn run(
             // carries the `Last-Modified` instant.
             let resp = state
                 .backend()
-                .ehr_status_at_time_response(ehr_id, p.version_at_time)
+                .ehr_status(ehr_id, p.version_at_time)
                 .await?;
             let mut resp = resp;
             resp.body = super::expand_multimedia_if_requested(&state, q, resp.body).await?;
@@ -127,7 +127,7 @@ pub(super) async fn run(
             // re-reads the row it just wrote. Tags are judged before the commit
             // and written after it.
             let pending_tags = item_tags::pending(h)?;
-            match Box::pin(state.backend().replace_ehr_status_meta(ehr_id, uv)).await {
+            match Box::pin(state.backend().replace_ehr_status(ehr_id, uv)).await {
                 Ok(meta) => {
                     let stored_tags = item_tags::persist(
                         &state,
@@ -140,7 +140,7 @@ pub(super) async fn run(
                     )
                     .await?;
                     let repr = if negotiate::prefers_representation(h) {
-                        state.backend().get_ehr_status(ehr_id).await?
+                        state.backend().ehr_status(ehr_id, None).await?.body
                     } else {
                         Value::Null
                     };

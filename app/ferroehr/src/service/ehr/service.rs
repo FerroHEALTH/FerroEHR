@@ -474,16 +474,6 @@ pub(in crate::service) fn archetyped(archetype_id: &str) -> Archetyped {
 // ── The EHR call surface ──────────────────────────────────────────────────────
 
 impl FerroEhrService {
-    /// The canonical RM `EHR` wire object (`GET /ehr/{ehr_id}` — an ITS-REST
-    /// shape, not the summary).
-    ///
-    /// # Errors
-    /// [`ServiceError`] when the EHR or its current `EHR_STATUS` does not exist, or
-    /// a read fails.
-    pub async fn ehr_object(&self, an_ehr_id: EhrId) -> Result<Value, ServiceError> {
-        Ok(self.ehr_read(an_ehr_id).await?.body)
-    }
-
     /// The RM `EHR` wire object for a just-created EHR — the
     /// `Prefer: return=representation` body of `POST /ehr` / `PUT /ehr/{id}`.
     ///
@@ -498,7 +488,7 @@ impl FerroEhrService {
         if let Some(body) = self.created_ehr_repr.remove(&an_ehr_id).await {
             return Ok(body);
         }
-        self.ehr_object(an_ehr_id).await
+        Ok(self.ehr_read(an_ehr_id).await?.body)
     }
 }
 
