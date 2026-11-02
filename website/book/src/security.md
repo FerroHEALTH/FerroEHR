@@ -294,6 +294,9 @@ server default**, in both directions:
 - **Unreadable settings:** settings that carry the scheme's `_type` but do
   not parse hold the EHR closed. A request that names the EHR is refused
   with `500`, no query reaches it, and the server logs an error naming it.
+  A CONTRIBUTION or an EHR Extract import that carries such settings is
+  refused with `400` naming the setting that does not parse, so only
+  settings stored before that check can hold an EHR.
 - **Gate-keeper:** once set, only that principal may commit a new
   `EHR_ACCESS` version (via a CONTRIBUTION; there is no dedicated
   `EHR_ACCESS` endpoint in the openEHR REST API). Changes are versioned and

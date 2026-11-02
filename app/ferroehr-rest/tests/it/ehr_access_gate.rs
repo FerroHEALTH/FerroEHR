@@ -84,11 +84,19 @@ fn coded(code: &str, value: &str) -> Value {
 /// the EHR's default (settings-less, default-open) `EHR_ACCESS`.
 async fn seed_scheme(svc: &FerroEhrService, ehr_id: ferroehr::ids::EhrId, scheme: &Value) {
     let ehr = svc.ehr_read(ehr_id).await.expect("ehr object").body;
+    svc.create_ehr_contribution(ehr_id, access_contribution(&ehr, scheme))
+        .await
+        .expect("EHR_ACCESS scheme contribution must commit");
+}
+
+/// The CONTRIBUTION that commits `scheme` as the second `EHR_ACCESS` version of
+/// the EHR `ehr` (its `EHR` object) names.
+fn access_contribution(ehr: &Value, scheme: &Value) -> Value {
     let access_vo = ehr["ehr_access"]["id"]["value"]
         .as_str()
         .expect("EHR.ehr_access.id.value");
     let preceding = format!("{access_vo}::{DEFAULT_SYSTEM_ID}::1");
-    let contribution = json!({
+    json!({
         "_type": "CONTRIBUTION",
         "versions": [ {
             "_type": "ORIGINAL_VERSION",
@@ -110,10 +118,7 @@ async fn seed_scheme(svc: &FerroEhrService, ehr_id: ferroehr::ids::EhrId, scheme
             }
         } ],
         "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } },  "committer": committer("alice") }
-    });
-    svc.create_ehr_contribution(ehr_id, contribution)
-        .await
-        .expect("EHR_ACCESS scheme contribution must commit");
+    })
 }
 
 /// Build the app over a real service whose EHR (`EHR_ID`) carries `scheme`
@@ -396,17 +401,18 @@ const STORED_NAME: &str = "org.example.test::ehr_access_population";
 /// The router over [`EHR_ID`] (restricted to `user:bob`) and [`OPEN_EHR_ID`]
 /// (default-open), with Basic auth on.
 async fn query_app() -> (testkit::TestDb, Router) {
-    query_app_with(&json!({
+    query_app_with(None).await
+}
+
+/// [`query_app`], with `stored_default_access` written over the committed
+/// `default_access` of [`EHR_ID`] in storage when it is `Some`: settings that
+/// no longer parse, as only a write before the write-time check could store.
+async fn query_app_with(stored_default_access: Option<&str>) -> (testkit::TestDb, Router) {
+    let scheme = json!({
         "_type": "FERROEHR_ACCESS_CONTROL_V1",
         "default_access": "restricted",
         "access_list": [ { "principal": "user:bob", "access": "full" } ]
-    }))
-    .await
-}
-
-/// The router over [`EHR_ID`] (carrying `scheme`) and [`OPEN_EHR_ID`]
-/// (default-open), with Basic auth on.
-async fn query_app_with(scheme: &Value) -> (testkit::TestDb, Router) {
+    });
     let (pg, pool) = common::migrated_pool().await;
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
     let ehr_id: ferroehr::ids::EhrId = EHR_ID.parse().expect("valid ehr uuid");
@@ -417,7 +423,18 @@ async fn query_app_with(scheme: &Value) -> (testkit::TestDb, Router) {
     Box::pin(svc.create_ehr_with_id_meta(open_id, WriteRequest::new(None)))
         .await
         .expect("create open ehr");
-    seed_scheme(&svc, ehr_id, scheme).await;
+    seed_scheme(&svc, ehr_id, &scheme).await;
+    if let Some(stored) = stored_default_access {
+        sqlx::query(
+            "UPDATE version SET body = jsonb_set(body::jsonb, '{settings,default_access}', \
+             to_jsonb($2::text))::text WHERE kind = 'EHR_ACCESS' AND ehr_id = $1",
+        )
+        .bind(ehr_id)
+        .bind(stored)
+        .execute(&pool)
+        .await
+        .expect("store settings that do not parse");
+    }
     let app = ferroehr_rest::build_full(
         rest_config(true),
         Arc::new(svc),
@@ -625,12 +642,7 @@ async fn a_restricted_default_holds_with_rbac_disabled() {
 /// the EHR was served as if it carried no settings.
 #[tokio::test]
 async fn unreadable_settings_hold_the_ehr_closed() {
-    let (_pg, app) = query_app_with(&json!({
-        "_type": "FERROEHR_ACCESS_CONTROL_V1",
-        "default_access": "bogus",
-        "access_list": [ { "principal": "user:bob", "access": "full" } ]
-    }))
-    .await;
+    let (_pg, app) = query_app_with(Some("bogus")).await;
 
     for user in ["bob", "carol"] {
         assert_eq!(
@@ -675,5 +687,66 @@ async fn unreadable_settings_hold_the_ehr_closed() {
         .await,
         StatusCode::OK,
         "the EHR beside it is served as before"
+    );
+}
+
+/// A CONTRIBUTION that writes settings of the scheme which do not parse is
+/// refused with `400` naming the setting, and nothing is committed; the same
+/// write with settings that parse commits. Stored, the first would hold the
+/// EHR closed.
+#[tokio::test]
+async fn a_write_of_settings_that_do_not_parse_is_refused() {
+    let (_pg, app) = app(true, None).await;
+    let (code, ehr) = common::send_json(
+        &app,
+        req("GET", &format!("/ehr/{EHR_ID}"), Some(&basic("alice")), ""),
+    )
+    .await;
+    assert_eq!(code, StatusCode::OK, "{ehr}");
+    let commit = |default_access: &str| {
+        let scheme = json!({
+            "_type": "FERROEHR_ACCESS_CONTROL_V1",
+            "default_access": default_access,
+            "access_list": [ { "principal": "user:alice", "access": "full" } ]
+        });
+        req(
+            "POST",
+            &format!("/ehr/{EHR_ID}/contribution"),
+            Some(&basic("alice")),
+            &access_contribution(&ehr, &scheme).to_string(),
+        )
+    };
+
+    let (code, refusal) = common::send_json(&app, commit("bogus")).await;
+    assert_eq!(code, StatusCode::BAD_REQUEST, "{refusal}");
+    assert!(
+        refusal
+            .to_string()
+            .contains("EHR_ACCESS.settings.default_access"),
+        "the refusal names the setting that does not parse: {refusal}"
+    );
+    assert_eq!(
+        status(
+            &app,
+            req("GET", &format!("/ehr/{EHR_ID}"), Some(&basic("carol")), "")
+        )
+        .await,
+        StatusCode::OK,
+        "nothing was committed: the EHR is still default-open"
+    );
+
+    assert_eq!(
+        status(&app, commit("restricted")).await,
+        StatusCode::CREATED,
+        "settings that parse commit"
+    );
+    assert_eq!(
+        status(
+            &app,
+            req("GET", &format!("/ehr/{EHR_ID}"), Some(&basic("carol")), "")
+        )
+        .await,
+        StatusCode::FORBIDDEN,
+        "and the committed settings now restrict the EHR"
     );
 }
