@@ -38,7 +38,7 @@
 use axum::response::{IntoResponse, Response};
 use ferroehr::aql::sql::EhrAccessScope;
 use ferroehr::config::authz::EhrAccessDefault;
-use ferroehr::ids::EhrId;
+use ferroehr::ids::{EhrId, VoId};
 use ferroehr::service::ehr::access_types::{AccessLevel, principal_matches};
 use ferroehr::service::ehr::access_types::{DefaultAccess, EhrAccessSettings};
 use openehr_its::rest::runtime::ApiError;
@@ -106,11 +106,14 @@ impl EhrAccessGate {
         }
     }
 
-    /// The Composition privacy ceiling: the effective level of the target
-    /// versioned Composition must be strictly below the caller's ceiling
-    /// (`full` → unbounded; `restricted_below` → `max_level`; no access-list
-    /// entry → `default_level + 1`, i.e. the default level stays readable unless
-    /// raised) — `master07` §Access Control privacy levels.
+    /// The Composition privacy ceiling: the effective level of the versioned
+    /// Composition `target` names (a versioned-object uid, a version uid or a
+    /// uid-based id, read by its versioned-object head) must be strictly below
+    /// the caller's ceiling (`full` → unbounded; `restricted_below` →
+    /// `max_level`; no access-list entry → `default_level + 1`, i.e. the default
+    /// level stays readable unless raised) — `master07` §Access Control privacy
+    /// levels. A `target` whose head is no UUID names no stored Composition and
+    /// is judged at the default level.
     ///
     /// # Errors
     /// `Err(reason)` when the target Composition's privacy level is at or above
@@ -119,12 +122,14 @@ impl EhrAccessGate {
         settings: Option<&EhrAccessSettings>,
         subject: Option<&str>,
         roles: &[String],
-        target_vo_id: &str,
+        target: &str,
     ) -> Result<(), String> {
         let Some(settings) = settings else {
             return Ok(());
         };
-        let level = settings.privacy.level_for(target_vo_id);
+        let level = VoId::from_uid_head(target).map_or(settings.privacy.default_level, |vo| {
+            settings.privacy.level_for(vo)
+        });
         let ceiling = match settings.match_principal(subject, roles) {
             Some(entry) => match entry.access {
                 AccessLevel::Full => i64::MAX,
@@ -172,8 +177,8 @@ impl EhrAccessGate {
 }
 
 /// The target versioned Composition uid for a read op, from the path params
-/// (the versioned-object uid, a version uid, or the uid-based id — all
-/// normalised to the versioned-object head by `Privacy::level_for`).
+/// (the versioned-object uid, a version uid, or the uid-based id — each read
+/// by its versioned-object head in `EhrAccessGate::privacy_gate`).
 fn composition_target(parts: &RequestParts) -> Option<&str> {
     ["versioned_object_uid", "version_uid", "uid_based_id"]
         .into_iter()
@@ -360,6 +365,11 @@ mod tests {
     use super::*;
     use serde_json::json;
 
+    /// Versioned-object uids for the privacy fixtures.
+    const HIGH_VO: &str = "8849182c-82ad-4088-a07f-48ead4180515";
+    const ANY_VO: &str = "0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7f80";
+    const TOP_VO: &str = "0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7f81";
+
     fn settings(scheme: &serde_json::Value) -> EhrAccessSettings {
         let access = json!({ "_type": "EHR_ACCESS", "settings": scheme });
         EhrAccessSettings::from_ehr_access(&access).expect("our scheme")
@@ -524,17 +534,17 @@ mod tests {
             "access_list": [ { "principal": "role:nurse", "access": "restricted_below", "max_level": 2 } ],
             "privacy": {
                 "default_level": 0,
-                "composition_overrides": [ { "uid": "high-vo", "level": 3 } ]
+                "composition_overrides": [ { "uid": HIGH_VO, "level": 3 } ]
             }
         }));
         let nurse = ["NURSE".to_owned()];
         // Nurse: ceiling 2 → level 0 (default) ok, level 3 (override) blocked.
-        assert!(EhrAccessGate::privacy_gate(Some(&s), Some("x"), &nurse, "any-vo").is_ok());
-        assert!(EhrAccessGate::privacy_gate(Some(&s), Some("x"), &nurse, "high-vo").is_err());
+        assert!(EhrAccessGate::privacy_gate(Some(&s), Some("x"), &nurse, ANY_VO).is_ok());
+        assert!(EhrAccessGate::privacy_gate(Some(&s), Some("x"), &nurse, HIGH_VO).is_err());
         // No access-list entry under open: ceiling default_level+1 = 1 → level 0
         // ok, the level-3 override blocked.
-        assert!(EhrAccessGate::privacy_gate(Some(&s), Some("y"), &[], "any-vo").is_ok());
-        assert!(EhrAccessGate::privacy_gate(Some(&s), Some("y"), &[], "high-vo").is_err());
+        assert!(EhrAccessGate::privacy_gate(Some(&s), Some("y"), &[], ANY_VO).is_ok());
+        assert!(EhrAccessGate::privacy_gate(Some(&s), Some("y"), &[], HIGH_VO).is_err());
     }
 
     #[test]
@@ -543,9 +553,30 @@ mod tests {
             "_type": "FERROEHR_ACCESS_CONTROL_V1",
             "default_access": "open",
             "access_list": [ { "principal": "user:chief", "access": "full" } ],
-            "privacy": { "default_level": 9, "composition_overrides": [ { "uid": "top", "level": 100 } ] }
+            "privacy": { "default_level": 9, "composition_overrides": [ { "uid": TOP_VO, "level": 100 } ] }
         }));
-        assert!(EhrAccessGate::privacy_gate(Some(&s), Some("chief"), &[], "top").is_ok());
+        assert!(EhrAccessGate::privacy_gate(Some(&s), Some("chief"), &[], TOP_VO).is_ok());
+    }
+
+    /// A target whose head is no UUID names no stored Composition and is
+    /// judged at the default level, as a target no override pins is.
+    #[test]
+    fn an_unparsable_target_is_judged_at_the_default_level() {
+        let s = settings(&json!({
+            "_type": "FERROEHR_ACCESS_CONTROL_V1",
+            "default_access": "open",
+            "access_list": [ { "principal": "role:nurse", "access": "restricted_below", "max_level": 4 } ],
+            "privacy": { "default_level": 4, "composition_overrides": [ { "uid": HIGH_VO, "level": 0 } ] }
+        }));
+        let nurse = ["NURSE".to_owned()];
+        // Nurse: ceiling 4. The pinned target is level 0, so it is readable; a
+        // target that parses to no object is level 4, the default, so it is not.
+        assert!(EhrAccessGate::privacy_gate(Some(&s), Some("x"), &nurse, HIGH_VO).is_ok());
+        assert!(EhrAccessGate::privacy_gate(Some(&s), Some("x"), &nurse, ANY_VO).is_err());
+        assert!(EhrAccessGate::privacy_gate(Some(&s), Some("x"), &nurse, "not-a-uuid").is_err());
+        assert!(
+            EhrAccessGate::privacy_gate(Some(&s), Some("x"), &nurse, "not-a-uuid::sys::1").is_err()
+        );
     }
 
     #[test]

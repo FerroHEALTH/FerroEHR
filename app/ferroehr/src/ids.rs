@@ -68,6 +68,18 @@ impl VoId {
     pub fn minted(stamp: &StampKey) -> Self {
         Self(stamp.mint())
     }
+
+    /// The versioned object `uid` names: the `object_id` before the first `::`
+    /// of an `OBJECT_VERSION_ID` (`object_id '::' creating_system_id '::'
+    /// version_tree_id`, BASE `object_version_id.adoc`), or the whole of a bare
+    /// uid.
+    ///
+    /// # Errors
+    /// [`uuid::Error`] when that `object_id` is not a UUID, so it names no
+    /// versioned object this server holds.
+    pub fn from_uid_head(uid: &str) -> Result<Self, uuid::Error> {
+        uid.split("::").next().unwrap_or(uid).parse()
+    }
 }
 
 impl std::fmt::Display for EhrId {
