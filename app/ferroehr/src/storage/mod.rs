@@ -52,6 +52,8 @@
 //! - [`adl2_repo`] — the ADL2 `adl2_artefact` store and its specialisation
 //!   edges.
 //! - [`stored_query_repo`] — the registered queries of `stored_query`.
+//! - [`dump_repo`] — the rows the admin dump writes to an archive and the load
+//!   writes back.
 //!
 //! The seam with the versioning layer is a value contract rather than shared
 //! SQL: versioning owns the semantics (classify, tree placement, lifecycle,
@@ -64,6 +66,7 @@ pub mod archetype_repo;
 pub mod blob_ref;
 pub mod codec;
 pub mod ddl_template;
+pub mod dump_repo;
 pub mod ehr_repo;
 pub mod error;
 pub mod header;
