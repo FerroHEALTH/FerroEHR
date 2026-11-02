@@ -26,7 +26,7 @@
 //!   `openehr-version: lifecycle_state.code_string="…"` and
 //!   `openehr-audit-details: change_type.code_string="…"` / `description.value`
 //!   / `committer.*` / `system_id` are parsed and merged
-//!   (`committal::merge_committal_headers`), repeated headers included; the
+//!   (`committal::write_request`), repeated headers included; the
 //!   deprecated dotted-*name* forms still work, and the new form wins on
 //!   conflict. A client-supplied `system_id` is carried into
 //!   `UpdateAudit.system_id`; when absent "the server MUST set it to its own
@@ -85,7 +85,7 @@
 //! item-tag dispatch (the shared `crate::api::item_tags` write-wrapper),
 //! the `405` router-fallback mount + the `501` `ApiError` seam, the per-API
 //! identifier bodies, and the `UpdateAudit.system_id` field (set by
-//! `api::ehr::mk_update_version` and merged from the
+//! `committal::write_request` and merged from the
 //! committal request headers).
 //!
 //! ## Module map (file ↦ governing sections)

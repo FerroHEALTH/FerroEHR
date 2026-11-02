@@ -29,6 +29,7 @@
               failing fixture must panic at the fixture (the Rust Book ch11)"
 )]
 
+use ferroehr::service::version_update::WriteRequest;
 use std::sync::Arc;
 
 use serde_json::{Value, json};
@@ -150,13 +151,9 @@ fn assert_refused_service(error: &ServiceError, expected_path: &str) {
 async fn an_opaque_subject_in_a_configured_namespace_is_stored_as_the_promoted_key() {
     let db = testkit::db().await.expect("testkit database");
     let svc = service(&db, &enforcing());
-    let ehr_id = Box::pin(svc.create_ehr_meta(
-        Some(typed_status(&status_with_subject(
-            PSEUDONYM_NS,
-            OPAQUE_SUBJECT,
-        ))),
-        None,
-    ))
+    let ehr_id = Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(typed_status(
+        &status_with_subject(PSEUDONYM_NS, OPAQUE_SUBJECT),
+    )))))
     .await
     .map(|(id, _)| id)
     .expect("an opaque subject in a declared namespace is accepted");
@@ -180,13 +177,9 @@ async fn an_opaque_subject_in_a_configured_namespace_is_stored_as_the_promoted_k
 async fn a_non_uuid_subject_id_is_refused_and_the_value_never_reaches_the_wire() {
     let db = testkit::db().await.expect("testkit database");
     let svc = service(&db, &enforcing());
-    let error = Box::pin(svc.create_ehr_meta(
-        Some(typed_status(&status_with_subject(
-            PSEUDONYM_NS,
-            SYNTHETIC_BSN,
-        ))),
-        None,
-    ))
+    let error = Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(typed_status(
+        &status_with_subject(PSEUDONYM_NS, SYNTHETIC_BSN),
+    )))))
     .await
     .map(|(id, _)| id)
     .expect_err("a national identifier as the subject must be refused");
@@ -202,13 +195,9 @@ async fn a_non_uuid_subject_id_is_refused_and_the_value_never_reaches_the_wire()
 async fn an_unconfigured_namespace_is_refused() {
     let db = testkit::db().await.expect("testkit database");
     let svc = service(&db, &enforcing());
-    let error = Box::pin(svc.create_ehr_meta(
-        Some(typed_status(&status_with_subject(
-            "uk.org.nmc",
-            OPAQUE_SUBJECT,
-        ))),
-        None,
-    ))
+    let error = Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(typed_status(
+        &status_with_subject("uk.org.nmc", OPAQUE_SUBJECT),
+    )))))
     .await
     .map(|(id, _)| id)
     .expect_err("a namespace outside the pseudonymisation domain must be refused");
@@ -219,13 +208,9 @@ async fn an_unconfigured_namespace_is_refused() {
 async fn the_subject_rule_also_binds_the_ehr_status_update_path() {
     let db = testkit::db().await.expect("testkit database");
     let svc = service(&db, &enforcing());
-    let ehr_id = Box::pin(svc.create_ehr_meta(
-        Some(typed_status(&status_with_subject(
-            PSEUDONYM_NS,
-            OPAQUE_SUBJECT,
-        ))),
-        None,
-    ))
+    let ehr_id = Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(typed_status(
+        &status_with_subject(PSEUDONYM_NS, OPAQUE_SUBJECT),
+    )))))
     .await
     .map(|(id, _)| id)
     .expect("create");

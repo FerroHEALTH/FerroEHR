@@ -85,17 +85,23 @@ async fn direct_directory_routes_gate_this_system_refs() {
         .create_directory(ehr_uuid, uv(&foreign, "249", None))
         .await
         .expect("a foreign-namespace reference is accepted unchecked");
-    svc.delete_directory(ehr_uuid, Some(meta.uid.parse().expect("ovid")), None)
-        .await
-        .expect("cleanup foreign-ref directory");
+    svc.delete_directory(
+        ehr_uuid,
+        crate::fixtures::deleting(Some(meta.uid.parse().expect("ovid"))),
+    )
+    .await
+    .expect("cleanup foreign-ref directory");
     let unknown = folder_with_item("unknown", "8f8f0d7e-1111-4e6e-9c3a-000000000004");
     let meta = svc
         .create_directory(ehr_uuid, uv(&unknown, "249", None))
         .await
         .expect("BASE legalizes namespace 'unknown' — accepted unchecked");
-    svc.delete_directory(ehr_uuid, Some(meta.uid.parse().expect("ovid")), None)
-        .await
-        .expect("cleanup unknown-ref directory");
+    svc.delete_directory(
+        ehr_uuid,
+        crate::fixtures::deleting(Some(meta.uid.parse().expect("ovid"))),
+    )
+    .await
+    .expect("cleanup unknown-ref directory");
 
     // A local reference that RESOLVES: commit a composition, reference its
     // versioned object — accepted, in a nested sub-folder too (the walker
@@ -146,6 +152,34 @@ async fn direct_directory_routes_gate_this_system_refs() {
         .await
         .expect_err("a dangling local reference is refused on update too");
     assert_unresolvable(&err, "/folders[0]/items[0]");
+}
+
+/// The `If-Match` precondition is judged before the content checks (RFC 9110
+/// §13.2.2 evaluates preconditions before processing the request content), so
+/// an update naming a superseded version answers the precondition failure even
+/// when its FOLDER would also be refused.
+#[tokio::test]
+async fn a_stale_if_match_wins_over_a_content_refusal() {
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_uuid = crate::fixtures::create_ehr(&svc).await;
+    let first = folder_with_item("unknown", "8f8f0d7e-1111-4e6e-9c3a-000000000006");
+    let v1 = svc
+        .create_directory(ehr_uuid, uv(&first, "249", None))
+        .await
+        .expect("directory_create");
+    svc.update_directory(ehr_uuid, uv(&first, "251", Some(&v1.uid)))
+        .await
+        .expect("directory_update supersedes v1");
+
+    let dangling = folder_with_item("local", "8f8f0d7e-1111-4e6e-9c3a-000000000007");
+    let err = svc
+        .update_directory(ehr_uuid, uv(&dangling, "251", Some(&v1.uid)))
+        .await
+        .expect_err("a stale If-Match is refused");
+    assert!(
+        matches!(err, ServiceError::VersionConflict(_)),
+        "the precondition failure (→ 412) precedes the content refusal, got {err:?}"
+    );
 }
 
 #[tokio::test]

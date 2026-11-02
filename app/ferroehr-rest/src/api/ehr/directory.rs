@@ -107,11 +107,10 @@ async fn update(state: AppState, parts: RequestParts) -> Result<Response, RestEr
     )?;
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
     let body = negotiate::rm_value::<Folder>(h, &parts.body)?;
-    let uv = super::mk_update_version(
+    let uv = crate::overview::committal::write_request(
         h,
+        super::committer_proxy(),
         body,
-        super::CHANGE_MODIFICATION,
-        "DIRECTORY update",
         Some(require_if_match(&p.if_match)?),
     )?;
     // Tags are judged before the commit and written after it (see
@@ -183,7 +182,7 @@ async fn create(state: AppState, parts: RequestParts) -> Result<Response, RestEr
     )?;
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
     let body = negotiate::rm_value::<Folder>(h, &parts.body)?;
-    let uv = super::mk_update_version(h, body, super::CHANGE_CREATION, "DIRECTORY creation", None)?;
+    let uv = crate::overview::committal::write_request(h, super::committer_proxy(), body, None)?;
     let pending_tags = item_tags::pending(h)?;
     let meta = state.backend().create_directory(ehr_id, uv).await?;
     let stored_tags = item_tags::persist(
@@ -234,17 +233,10 @@ async fn delete(state: AppState, parts: RequestParts) -> Result<Response, RestEr
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
     // A DELETE commits a `523|deleted|` version, so the committal headers apply
     // here too (overview §"openehr-version and openehr-audit-details").
-    let update_audit =
-        crate::overview::committal::committal_audit_for_delete(h, super::committer_proxy())?;
-    match state
-        .backend()
-        .delete_directory(
-            ehr_id,
-            Some(require_if_match(&p.if_match)?),
-            update_audit.as_ref(),
-        )
-        .await
-    {
+    let mut request =
+        crate::overview::committal::delete_request(h, super::committer_proxy(), None)?;
+    request.preceding = Some(require_if_match(&p.if_match)?);
+    match state.backend().delete_directory(ehr_id, request).await {
         // The 204 carries the new deleted version's weak `ETag` and
         // `Last-Modified` (RM common master06 §Logical Deletion).
         Ok(resp) => Ok(negotiate::deleted_with_headers(

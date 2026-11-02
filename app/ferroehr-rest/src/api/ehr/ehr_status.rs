@@ -115,11 +115,10 @@ pub(super) async fn run(
             )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let body = negotiate::rm_value::<EhrStatus>(h, &parts.body)?;
-            let uv = super::mk_update_version(
+            let uv = crate::overview::committal::write_request(
                 h,
+                super::committer_proxy(),
                 body,
-                super::CHANGE_MODIFICATION,
-                "EHR_STATUS update",
                 Some(require_if_match(&p.if_match)?),
             )?;
             // 204 on the default minimal preference, 200_EHR_STATUS_updated on

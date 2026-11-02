@@ -30,8 +30,8 @@
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::error::ServiceError;
 use ferroehr::service::refusal::{Clash, Invalid, Malformed, Missing, Refusal};
+use ferroehr::service::version_update::WriteRequest;
 
-use ferroehr::service::version_update::lifecycle_state_coded;
 use serde_json::{Value, json};
 
 use crate::fixtures::first_version_uid;
@@ -1696,8 +1696,8 @@ async fn data_carrying_deleted_lifecycle_is_refused_on_both_routes() {
 
     // (2) The direct route reaches the same refusal through the
     // `openehr-version: lifecycle_state.code_string="523"` header.
-    let mut direct = uv(&composition("deleted but full"), "251", Some(&v1));
-    direct.lifecycle_state = lifecycle_state_coded("523");
+    let mut direct: WriteRequest<_> = uv(&composition("deleted but full"), "251", Some(&v1));
+    direct.lifecycle_state = Some("523".to_owned());
     let err = svc
         .update_composition(ehr_uuid, vo_uuid, direct)
         .await
@@ -1901,7 +1901,7 @@ async fn deleting_an_already_deleted_composition_is_refused_on_both_routes() {
     // The same deletion through the DELETE route: the same refusal.
     let deleted_uid: openehr_base::prelude::ObjectVersionId = v2.parse().expect("ovid");
     let direct = svc
-        .delete_composition(ehr_uuid, &deleted_uid, None, None)
+        .delete_composition(ehr_uuid, &deleted_uid, WriteRequest::new(()))
         .await
         .expect_err("the DELETE route refuses it too");
     assert!(

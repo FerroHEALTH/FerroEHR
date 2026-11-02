@@ -16,24 +16,22 @@
 )]
 
 use serde_json::Value;
-use sqlx::Connection as _;
 
-use crate::db::acquire::acquire;
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
 use crate::service::demographic::support;
+use crate::service::demographic::support::Precondition;
 use crate::service::demographic::types::PartyKind;
 use crate::service::demographic::validate::party_invariants;
 use crate::service::error::ServiceError;
 use crate::service::refusal::Missing;
 use crate::service::response::{ResourceMeta, ServiceResponse};
-use crate::service::version_update::Committal;
+use crate::service::version_update::WriteRequest;
+use crate::service::write::{Mode, Resolved};
 use crate::versioning::audit::change_type;
-use crate::versioning::change::WriteEnvelope;
-use crate::versioning::change::{Change, Write, commit, record_commit};
+use crate::versioning::change::{Change, Write, lock_current};
 use crate::versioning::object_version_id::{TreeId, object_version_id};
 use crate::versioning::read::{VersionRead, demographic_current, object_kind};
-use openehr_its::rest::generated::common::UpdateAudit;
 
 /// The current version of a demographic party, resolved in ONE lean
 /// `version`⋈`audit` read (no node reassembly). Carries the kind-checked
@@ -140,50 +138,31 @@ impl FerroEhrService {
     pub(super) async fn commit_new_party(
         &self,
         kind: PartyKind,
-        body: Value,
-        committal: Option<&Committal>,
+        request: WriteRequest<Value>,
     ) -> Result<ServiceResponse, ServiceError> {
-        party_invariants(kind.rm_type(), &body, false, None)?;
-
-        // The caller's UPDATE_VERSION attributes merge with the server rules —
-        // BOTH halves the committal headers carry: the `UPDATE_AUDIT` attributes
-        // and the VERSION `lifecycle_state` ("whatever is provided it MUST be
-        // merged with the default VERSION and `VERSION.audit_details` attributes
-        // on commit runtime", ITS-REST overview `Requests_and_responses.md`
-        // §"openehr-version and openehr-audit-details" — the sentence names the
-        // VERSION attributes first).
-        let audit = self.demographic_audit(
-            committal.map(|c| &c.audit),
-            change_type::CREATION,
-            "PARTY creation",
-        )?;
-        let ctx = self.signing_ctx();
+        party_invariants(kind.rm_type(), &request.data, false, None)?;
+        // The caller's request merges with the server rules, BOTH halves the
+        // committal headers carry: the `UPDATE_AUDIT` attributes and the
+        // VERSION `lifecycle_state` ("whatever is provided it MUST be merged
+        // with the default VERSION and `VERSION.audit_details` attributes on
+        // commit runtime", ITS-REST overview `Requests_and_responses.md`
+        // §"openehr-version and openehr-audit-details").
+        let Resolved {
+            audit, envelope, ..
+        } = self.resolve_write(&request, change_type::CREATION, "PARTY creation")?;
+        let body = request.data;
         // Keep the served bytes for the in-memory representation, unless the
         // commit rewrites the body (then the fresh read is the stored form).
         let repr_body = (!support::commit_rewrites_body(self)).then(|| body.clone());
-        let mut conn = acquire(&self.demographic_pool).await?;
-        let mut tx = conn.begin().await?;
-        let committed = commit(
-            &mut tx,
-            Write::new(
-                None,
-                Change::create(
-                    support::kind_of(kind),
-                    body,
+        let committed = self
+            .commit_one(&self.demographic_pool, Mode::Transaction, async move |_| {
+                Ok(Write::new(
                     None,
-                    WriteEnvelope {
-                        lifecycle_state: committal.and_then(|c| c.lifecycle_state.clone()),
-                        ..WriteEnvelope::default()
-                    },
-                ),
-                &audit,
-            ),
-            &ctx,
-        )
-        .await?;
-        tx.commit().await?;
-        record_commit(&committed);
-
+                    Change::create(support::kind_of(kind), body, None, envelope),
+                    audit,
+                ))
+            })
+            .await?;
         match repr_body {
             Some(canonical) => Ok(support::committed_response(canonical, &committed)?),
             None => {
@@ -238,57 +217,48 @@ impl FerroEhrService {
     }
 
     /// Commit a new version of an already-resolved party. `current` is the lean
-    /// current-version handle (threaded from the dispatcher's `If-Match`
-    /// resolve); a deleted current is `404`. The write response is built from
-    /// the commit result (see [`Self::commit_new_party`]).
+    /// current-version handle; `precondition` is judged against the tip the
+    /// write locks, before a deleted current (`404`) and the body checks. The
+    /// write response is built from the commit result (see
+    /// [`Self::commit_new_party`]).
     pub(super) async fn commit_party_update(
         &self,
         current: CurrentParty,
-        body: Value,
-        expected: Option<TreeId>,
-        committal: Option<&Committal>,
+        precondition: Precondition,
+        request: WriteRequest<Value>,
     ) -> Result<ServiceResponse, ServiceError> {
         let kind = current.kind;
-        if current.deleted {
-            return Err(ServiceError::not_found(
-                Missing::VersionedObject,
-                format!("{} {} is deleted", kind.rm_type(), current.vo_id),
-            ));
-        }
-        party_invariants(kind.rm_type(), &body, false, Some(current.vo_id))?;
-
-        let audit = self.demographic_audit(
-            committal.map(|c| &c.audit),
-            change_type::MODIFICATION,
-            "PARTY update",
-        )?;
-        let ctx = self.signing_ctx();
+        let vo_id = current.vo_id;
+        let checked = (|| {
+            if current.deleted {
+                return Err(ServiceError::not_found(
+                    Missing::VersionedObject,
+                    format!("{} {vo_id} is deleted", kind.rm_type()),
+                ));
+            }
+            party_invariants(kind.rm_type(), &request.data, false, Some(vo_id))?;
+            self.resolve_write(&request, change_type::MODIFICATION, "PARTY update")
+        })();
+        let body = request.data;
         let repr_body = (!support::commit_rewrites_body(self)).then(|| body.clone());
-        let mut conn = acquire(&self.demographic_pool).await?;
-        let mut tx = conn.begin().await?;
-        let committed = commit(
-            &mut tx,
-            Write::new(
-                None,
-                Change::modify(
-                    current.vo_id,
-                    support::kind_of(kind),
-                    body,
-                    expected,
+        let committed = self
+            .commit_one(&self.demographic_pool, Mode::Transaction, async move |tx| {
+                let placement = lock_current(tx, None, vo_id, support::kind_of(kind)).await?;
+                if let Some(tip) = placement.tip.as_ref() {
+                    precondition.check_full(vo_id, tip)?;
+                    precondition.check_tree(tip)?;
+                }
+                let Resolved {
+                    audit, envelope, ..
+                } = checked?;
+                Ok(Write::new(
                     None,
-                    WriteEnvelope {
-                        lifecycle_state: committal.and_then(|c| c.lifecycle_state.clone()),
-                        ..WriteEnvelope::default()
-                    },
-                ),
-                &audit,
-            ),
-            &ctx,
-        )
-        .await?;
-        tx.commit().await?;
-        record_commit(&committed);
-
+                    Change::modify(vo_id, support::kind_of(kind), body, None, None, envelope),
+                    audit,
+                )
+                .placed(placement))
+            })
+            .await?;
         match repr_body {
             Some(canonical) => Ok(support::committed_response(canonical, &committed)?),
             None => {
@@ -298,60 +268,49 @@ impl FerroEhrService {
         }
     }
 
-    /// Commit the logical delete of an already-resolved party; `expected` is
-    /// the trunk version the caller names, checked against the current one.
-    /// Returns the deleted version's `ETag`/`Location` metadata.
+    /// Commit the logical delete of an already-resolved party; `precondition`
+    /// (the `If-Match`, else the path version) is judged against the tip the
+    /// write locks. Returns the deleted version's `ETag`/`Location` metadata.
     pub(super) async fn commit_party_delete(
         &self,
         current: CurrentParty,
-        expected: Option<TreeId>,
-        update_audit: Option<&UpdateAudit>,
+        precondition: Precondition,
+        request: WriteRequest,
     ) -> Result<ServiceResponse, ServiceError> {
-        if current.deleted {
-            return Err(ServiceError::precondition(format!(
-                "{} {} is already deleted",
-                current.kind.rm_type(),
-                current.vo_id
-            )));
-        }
-        if let Some(expected) = expected
-            && current.tree != expected
-        {
-            // A stale preceding version is a VERSION MISMATCH: the wire arm
-            // answers `409` and echoes the latest `version_uid` in `ETag`
-            // (`responses/409_PERSON_with_uid_based_id.yaml`: "Returns also
-            // latest `version_uid` in the `ETag` header") — the handler's
-            // mismatch arm keys on this variant.
-            return Err(ServiceError::version_conflict(format!(
-                "preceding_version_uid names version {expected}, latest is {}",
-                current.tree
-            )));
-        }
-
-        let audit = self.demographic_audit(update_audit, change_type::DELETED, "PARTY delete")?;
-        let ctx = self.signing_ctx();
-        let mut conn = acquire(&self.demographic_pool).await?;
-        let mut tx = conn.begin().await?;
-        let committed = commit(
-            &mut tx,
-            Write::new(
-                None,
-                Change::delete(
-                    current.vo_id,
-                    support::kind_of(current.kind),
-                    Some(current.tree),
-                ),
-                &audit,
-            ),
-            &ctx,
-        )
-        .await?;
-        tx.commit().await?;
-        record_commit(&committed);
-
+        let kind = current.kind;
+        let vo_id = current.vo_id;
+        let committed = self
+            .commit_one(&self.demographic_pool, Mode::Transaction, async move |tx| {
+                let placement = lock_current(tx, None, vo_id, support::kind_of(kind)).await?;
+                if let Some(tip) = placement.tip.as_ref() {
+                    precondition.check_full(vo_id, tip)?;
+                    if tip.lifecycle_state == crate::versioning::lifecycle::state::DELETED {
+                        return Err(ServiceError::precondition(format!(
+                            "{} {vo_id} is already deleted",
+                            kind.rm_type()
+                        )));
+                    }
+                    // A stale preceding version is a VERSION MISMATCH: the wire
+                    // arm answers `409` and echoes the latest `version_uid` in
+                    // `ETag` (`responses/409_PERSON_with_uid_based_id.yaml`).
+                    precondition.check_tree(tip)?;
+                }
+                let audit = self.commit_audit(
+                    request.audit.as_ref(),
+                    change_type::DELETED,
+                    "PARTY delete",
+                )?;
+                Ok(Write::new(
+                    None,
+                    Change::delete(vo_id, support::kind_of(kind), None),
+                    audit,
+                )
+                .placed(placement))
+            })
+            .await?;
         Ok(ServiceResponse::deleted(ResourceMeta::new(
             String::new(),
-            object_version_id(current.vo_id, &committed.creating_system_id, committed.tree),
+            object_version_id(vo_id, &committed.creating_system_id, committed.tree),
         )))
     }
 

@@ -56,10 +56,11 @@ pub(super) async fn run(
                 .backend()
                 .party_create(
                     kind,
-                    body,
-                    crate::overview::committal::committal_commit(
+                    crate::overview::committal::write_request(
                         h,
                         crate::api::ehr::committer_proxy(),
+                        body,
+                        None,
                     )?,
                 )
                 .await?;
@@ -94,10 +95,11 @@ pub(super) async fn run(
                     // adapter seam, so the service compares a bare
                     // OBJECT_VERSION_ID (overview §"`ETag` and Last-Modified").
                     super::if_match_token(&p.if_match),
-                    body,
-                    crate::overview::committal::committal_commit(
+                    crate::overview::committal::write_request(
                         h,
                         crate::api::ehr::committer_proxy(),
+                        body,
+                        None,
                     )?,
                 )
                 .await
@@ -253,9 +255,10 @@ async fn run_delete(
             kind,
             preceding.clone(),
             super::if_match_of(h),
-            crate::overview::committal::committal_audit_for_delete(
+            crate::overview::committal::delete_request(
                 h,
                 crate::api::ehr::committer_proxy(),
+                None,
             )?,
         )
         .await

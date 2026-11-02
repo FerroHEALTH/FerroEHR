@@ -21,6 +21,7 @@
               intended shape here (the Rust Book ch11)"
 )]
 
+use ferroehr::service::version_update::WriteRequest;
 use std::collections::BTreeMap;
 
 use uuid::Uuid;
@@ -239,10 +240,9 @@ async fn under_an_identity_source_no_ehr_names_a_party() {
     let svc = service(&db, &pix.uri());
     let party = Uuid::now_v7().to_string();
 
-    let refused = Box::pin(svc.create_ehr_meta(
-        Some(crate::fixtures::status_naming(&party, "local", "PERSON")),
-        None,
-    ))
+    let refused = Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(
+        crate::fixtures::status_naming(&party, "local", "PERSON"),
+    ))))
     .await;
     assert!(
         refused.is_err(),

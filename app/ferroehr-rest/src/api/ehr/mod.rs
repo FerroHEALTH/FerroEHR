@@ -42,27 +42,18 @@ pub mod versioned_ehr_status;
 // representations through the shared `crate::formats::dispatch` adapter, called
 // by its full path (no module alias — every import names its defining module).
 
-use http::HeaderMap;
 use serde_json::Value;
 use uuid::Uuid;
 
 use openehr_base::prelude::ObjectVersionId;
-use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData, UpdateVersion};
 use openehr_its::rest::runtime::ApiError;
 use openehr_rm::prelude::PartyProxy;
 
 use ferroehr::service::response::{ResourceMeta, ServiceResponse};
-use ferroehr::service::version_update::{change_type_coded, lifecycle_state_coded, plain_text};
 
 use crate::overview::error::RestError;
 use crate::overview::params::query_param;
 use crate::state::AppState;
-
-/// openEHR *audit change type* codes (the `openehr` terminology group).
-pub(super) const CHANGE_CREATION: &str = "249";
-pub(super) const CHANGE_MODIFICATION: &str = "251";
-/// `532|complete|` — the lifecycle state stamped on synthesized version updates.
-pub(super) const LIFECYCLE_COMPLETE: &str = "532";
 
 /// The `uid`/`value` of a returned RM object → the resource metadata a read
 /// with an `ETag`/`Last-Modified` needs (the version id is the object's own
@@ -166,44 +157,6 @@ pub(super) fn read_resp(ehr_id: &str, body: Value) -> ServiceResponse {
 /// caller and `ferroehr` for a Basic one.
 pub(crate) fn committer_proxy() -> PartyProxy {
     ferroehr::service::committer::request_committer()
-}
-
-/// Synthesizes the `UPDATE_VERSION` commit envelope for a bare-RM-body write
-/// route: the RM object is the `data`, the `If-Match` is the
-/// `preceding_version_uid`, and the audit carries the change type and committer.
-///
-/// The server defaults are then merged with any committal request headers the
-/// client supplied, the ITS-REST MUST of overview §"openehr-version and
-/// openehr-audit-details" (`crate::overview::committal`).
-///
-/// # Errors
-/// [`ApiError::BadRequest`] when a committal header carries a malformed
-/// identifier (`crate::overview::committal::build_committer`).
-pub(super) fn mk_update_version<T>(
-    headers: &HeaderMap,
-    data: T,
-    change_code: &str,
-    description: &str,
-    preceding: Option<ObjectVersionId>,
-) -> Result<UpdateVersion<T>, ApiError> {
-    let mut uv = UpdateVersion {
-        preceding_version_uid: preceding,
-        signature: None,
-        lifecycle_state: lifecycle_state_coded(LIFECYCLE_COMPLETE),
-        attestations: None,
-        data: Some(data),
-        commit_audit: UpdateAudit::UpdateAudit(UpdateAuditData {
-            _type: None,
-            system_id: None,
-            change_type: change_type_coded(change_code),
-            description: Some(plain_text(description)),
-            committer: committer_proxy(),
-            additional_properties: std::collections::BTreeMap::new(),
-        }),
-        additional_properties: std::collections::BTreeMap::new(),
-    };
-    crate::overview::committal::merge_committal_headers(&mut uv, headers)?;
-    Ok(uv)
 }
 
 /// Decomposes an [`ObjectVersionId`] into the `(versioned-object uuid,

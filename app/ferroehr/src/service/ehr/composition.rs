@@ -21,36 +21,34 @@
 use openehr_base::prelude::ObjectVersionId;
 use openehr_base::v1_3::base_types::identification::lexical::composite_ids_equal;
 use serde_json::Value;
-use sqlx::Connection as _;
 
-use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::datetime::parse_at_time;
 use crate::service::error::{ServiceError, Violation};
 use crate::service::refusal::Missing;
 use crate::service::response::{RawServiceResponse, ReadBody, ResourceMeta, ServiceResponse};
+use crate::service::version_update::WriteRequest;
+use crate::service::write::{Mode, Resolved};
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
-use crate::versioning::change::{Change, Write, commit, record_commit};
+use crate::versioning::change::{
+    Change, Committed, Write, ensure_preceding, lock_current, tip_uid,
+};
 use crate::versioning::object_version_id::{TreeId, VersionIdError, components, parse_tree_id};
 use crate::versioning::read::{read_current, read_version, version_at};
 use crate::versioning::wire::{revision_history, version_envelope, versioned_object};
-use openehr_its::rest::generated::common::UpdateVersion;
 use openehr_rm::prelude::Composition;
 
-use super::resolve_envelope;
 use super::validation::composition_template_id;
 
 impl FerroEhrService {
-    /// `create_composition`: commit the first
-    /// version of a COMPOSITION in `ehr_id` from the caller's full
-    /// `UPDATE_VERSION` envelope, returning the committed version identity
-    /// ([`Committed`](crate::versioning::change::Committed) — the
-    /// `ETag`/`Location`/`Last-Modified` source). The envelope's audit
-    /// attributes, lifecycle state, verbatim signature and attestations are
-    /// honoured on the persisted commit (ITS-REST committal-header merge —
-    /// MUST).
+    /// `create_composition`: commit the first version of a COMPOSITION in
+    /// `ehr_id` from the caller's [`WriteRequest`], returning the committed
+    /// version identity ([`Committed`] — the `ETag`/`Location`/`Last-Modified`
+    /// source). The request's audit attributes, lifecycle state, verbatim
+    /// signature and attestations are honoured on the persisted commit
+    /// (ITS-REST committal-header merge — MUST).
     ///
     /// # Errors
     /// [`ServiceError::NotFound`] when the EHR does not exist;
@@ -62,77 +60,52 @@ impl FerroEhrService {
     pub async fn create_composition(
         &self,
         ehr_id: EhrId,
-        version: UpdateVersion<Composition>,
-    ) -> Result<crate::versioning::change::Committed, ServiceError> {
-        let version = super::canonicalize(version);
-        // 553|incomplete| relaxes validation strictness (master06 §Version
-        // Lifecycle).
-        let super::CommitParts {
+        request: WriteRequest<Composition>,
+    ) -> Result<Committed, ServiceError> {
+        let Resolved {
             audit,
             envelope,
             incomplete,
-            canonical: composition,
-        } = resolve_envelope(
-            version,
-            change_type::CREATION,
-            "COMPOSITION creation",
-            &self.effective_system_id(),
-        )?;
-        // ONE pooled connection carries both gates AND the commit, rather
-        // than the three or four checkouts this path used to take: measured at
-        // +0.4 ms per commit on #3097.
-        let mut conn = acquire(&self.pool).await?;
-        // The EHR-existence (404) and content-writability (409) gates in one
-        // round trip: a COMPOSITION is EHR content (RM ehr master04 §EHR
-        // Creation / §EHR Active Status).
-        let commit_now = self.ensure_ehr_content_writable(&mut *conn, ehr_id).await?;
-        self.validate_for_commit(Kind::Composition, &composition, incomplete)
-            .await?;
-        self.reject_duplicate_persistent(&mut *conn, ehr_id, &composition)
-            .await?;
-
+        } = self.resolve_write(&request, change_type::CREATION, "COMPOSITION creation")?;
+        let composition = openehr_its::json::to_canonical_value(&request.data);
+        drop(request);
+        // Validation may consult the template store and the routed terminology
+        // servers, so it runs before a connection is held; its result surfaces
+        // after the EHR gates, in pre-check order. 553|incomplete| relaxes its
+        // strictness (master06 §Version Lifecycle).
+        let validated = self
+            .validate_for_commit(Kind::Composition, &composition, incomplete)
+            .await;
         // The committed template identity is promoted to `version.template_id`
         // — the ABAC template attribute resolver (`template_of_version`) and the
         // template-delete guard both read that column, so the direct route
         // stamps it exactly like the CONTRIBUTION route.
         let template_id = composition_template_id(&composition).map(str::to_owned);
-
         // With no attestations and no event outbox the commit is ONE folded,
-        // self-atomic statement, so the explicit BEGIN/COMMIT is skipped. The
-        // versioned-write future is boxed: inlining it puts the whole
-        // node-decomposition machinery on every caller's stack.
-        let signing_ctx = self.signing_ctx();
-        let committed = if envelope.attestations.is_empty() && !signing_ctx.outbox_enabled {
-            Box::pin(commit(
-                &mut conn,
-                Write::new(
-                    Some(ehr_id),
-                    Change::create(Kind::Composition, composition, template_id, envelope),
-                    &audit,
-                )
-                .at(commit_now),
-                &signing_ctx,
-            ))
-            .await?
+        // self-atomic statement, so no BEGIN/COMMIT is needed.
+        let mode = if envelope.attestations.is_empty() && !self.signing_ctx().outbox_enabled {
+            Mode::Statement
         } else {
-            let mut tx = sqlx::Connection::begin(&mut *conn).await?;
-            let committed = Box::pin(commit(
-                &mut tx,
-                Write::new(
-                    Some(ehr_id),
-                    Change::create(Kind::Composition, composition, template_id, envelope),
-                    &audit,
-                )
-                .at(commit_now),
-                &signing_ctx,
-            ))
-            .await?;
-            tx.commit().await?;
-            committed
+            Mode::Transaction
         };
-        record_commit(&committed);
-
-        Ok(committed)
+        // ONE pooled connection carries both gates AND the commit: measured at
+        // +0.4 ms per extra checkout on #3097.
+        self.commit_one(&self.pool, mode, async move |conn| {
+            // The EHR-existence (404) and content-writability (409) gates in
+            // one round trip: a COMPOSITION is EHR content (RM ehr master04
+            // §EHR Creation / §EHR Active Status).
+            let commit_now = self.ensure_ehr_content_writable(&mut *conn, ehr_id).await?;
+            validated?;
+            self.reject_duplicate_persistent(&mut *conn, ehr_id, &composition)
+                .await?;
+            Ok(Write::new(
+                Some(ehr_id),
+                Change::create(Kind::Composition, composition, template_id, envelope),
+                audit,
+            )
+            .at(commit_now))
+        })
+        .await
     }
 
     /// The latest COMPOSITION of a versioned object, with the version metadata
@@ -388,156 +361,100 @@ impl FerroEhrService {
         &self,
         ehr_id: EhrId,
         vo_id: VoId,
-        version: UpdateVersion<Composition>,
-    ) -> Result<crate::versioning::change::Committed, ServiceError> {
-        let version = super::canonicalize(version);
-        let preceding_version_uid = version.preceding_version_uid.clone();
-        // Envelope resolution and content validation run BEFORE the write
+        request: WriteRequest<Composition>,
+    ) -> Result<Committed, ServiceError> {
+        let preceding = request.preceding.clone();
+        // Request resolution and content validation run BEFORE the write
         // transaction — validation may consult the template store and the
         // routed terminology servers, so no pool connection or advisory lock
         // is held across it; both results surface below in pre-check order.
-        let resolved = resolve_envelope(
-            version,
-            change_type::MODIFICATION,
-            "COMPOSITION update",
-            &self.effective_system_id(),
-        );
+        let resolved =
+            self.resolve_write(&request, change_type::MODIFICATION, "COMPOSITION update");
+        let composition = openehr_its::json::to_canonical_value(&request.data);
+        drop(request);
         let validated = match &resolved {
             Ok(parts) => Some(
-                self.validate_for_commit(Kind::Composition, &parts.canonical, parts.incomplete)
+                self.validate_for_commit(Kind::Composition, &composition, parts.incomplete)
                     .await,
             ),
             Err(_) => None,
         };
-        let mut conn = acquire(&self.pool).await?;
-        let mut tx = conn.begin().await?;
-        // Serialize concurrent writers of the same object, then read the
-        // placement + every pre-check column in ONE statement (thaw riding).
-        crate::storage::version_repo::commit::advisory_lock(&mut tx, vo_id).await?;
-        let pre = crate::storage::version_repo::placement::update_placement(&mut tx, vo_id).await?;
-        let Some(tip) = pre
-            .placement
-            .tip
-            .as_ref()
-            .filter(|t| t.ehr_id == Some(ehr_id))
-        else {
-            return Err(ServiceError::not_found(
-                Missing::Composition,
-                format!("COMPOSITION {vo_id}"),
-            ));
-        };
-        let expected = self.update_if_match_gate(
-            ehr_id,
-            vo_id,
-            tip,
-            pre.tip_time_committed,
-            preceding_version_uid.as_ref(),
-        )?;
-        let super::CommitParts {
-            audit,
-            envelope,
-            incomplete: _,
-            canonical: composition,
-        } = resolved?;
-        // The lifecycle (deleted → 404, RM common master06 §Logical Deletion)
-        // and the content-write guard are checked from the same merged read.
-        if tip.lifecycle_state == crate::versioning::lifecycle::state::DELETED {
-            return Err(ServiceError::not_found(
-                Missing::Composition,
-                format!("COMPOSITION {vo_id} is deleted"),
-            ));
-        }
-        // is_modifiable = False forbids content writes (RM ehr master04 §EHR
-        // Active Status), after the deleted 404 and before the template 422.
-        if pre.is_modifiable == Some(false) {
-            return Err(crate::versioning::change::not_modifiable_error(ehr_id));
-        }
-        // An update declaring a *different* template than the version it
-        // supersedes is a semantic 422.
-        // NOTE: `versioned_composition.adoc` pins archetype_node_id and
-        // is_persistent across versions but not template_id, so this
-        // convention is our own design.
-        let stored_template = pre.stored_template.as_deref();
-        if let (Some(stored), Some(incoming)) =
-            (stored_template, composition_template_id(&composition))
-            && stored != incoming
-        {
-            return Err(ServiceError::content_invalid(
-                Violation::new(format!(
-                    "is {incoming} on the update, but the stored composition was \
-                     committed against template {stored} (template_id mismatch)"
-                ))
-                .with_path("COMPOSITION.archetype_details.template_id"),
-            ));
-        }
-        if let Some(validation) = validated {
-            validation?;
-        }
-
         let template_id = composition_template_id(&composition).map(str::to_owned);
-
-        // VERSIONED_COMPOSITION cross-version invariants (RM ehr
-        // `versioned_composition.adoc`), checked off the same merged read.
-        super::validation::check_versioned_composition_first_root(pre.first_root, &composition)?;
-        let committed = commit(
-            &mut tx,
-            Write::new(
+        self.commit_one(&self.pool, Mode::Transaction, async move |tx| {
+            // Serialize concurrent writers of the same object, then read the
+            // placement + every pre-check column in ONE statement (thaw riding).
+            crate::storage::version_repo::commit::advisory_lock(tx, vo_id).await?;
+            let pre = crate::storage::version_repo::placement::update_placement(tx, vo_id).await?;
+            let Some(tip) = pre
+                .placement
+                .tip
+                .as_ref()
+                .filter(|t| t.ehr_id == Some(ehr_id))
+            else {
+                return Err(ServiceError::not_found(
+                    Missing::Composition,
+                    format!("COMPOSITION {vo_id}"),
+                ));
+            };
+            ensure_preceding(&tip_uid(vo_id, tip), preceding.as_ref())?;
+            let Resolved {
+                audit, envelope, ..
+            } = resolved?;
+            // The lifecycle (deleted → 404, RM common master06 §Logical
+            // Deletion) and the content-write guard are checked from the same
+            // merged read.
+            if tip.lifecycle_state == crate::versioning::lifecycle::state::DELETED {
+                return Err(ServiceError::not_found(
+                    Missing::Composition,
+                    format!("COMPOSITION {vo_id} is deleted"),
+                ));
+            }
+            // is_modifiable = False forbids content writes (RM ehr master04 §EHR
+            // Active Status), after the deleted 404 and before the template 422.
+            if pre.is_modifiable == Some(false) {
+                return Err(crate::versioning::change::not_modifiable_error(ehr_id));
+            }
+            // An update declaring a *different* template than the version it
+            // supersedes is a semantic 422.
+            // NOTE: `versioned_composition.adoc` pins archetype_node_id and
+            // is_persistent across versions but not template_id, so this
+            // convention is our own design.
+            if let (Some(stored), Some(incoming)) =
+                (pre.stored_template.as_deref(), template_id.as_deref())
+                && stored != incoming
+            {
+                return Err(ServiceError::content_invalid(
+                    Violation::new(format!(
+                        "is {incoming} on the update, but the stored composition was \
+                         committed against template {stored} (template_id mismatch)"
+                    ))
+                    .with_path("COMPOSITION.archetype_details.template_id"),
+                ));
+            }
+            if let Some(validation) = validated {
+                validation?;
+            }
+            // VERSIONED_COMPOSITION cross-version invariants (RM ehr
+            // `versioned_composition.adoc`), checked off the same merged read.
+            super::validation::check_versioned_composition_first_root(
+                pre.first_root,
+                &composition,
+            )?;
+            Ok(Write::new(
                 Some(ehr_id),
                 Change::modify(
                     vo_id,
                     Kind::Composition,
                     composition,
-                    expected,
+                    None,
                     template_id,
                     envelope,
                 ),
-                &audit,
+                audit,
             )
-            .placed(pre.placement),
-            &self.signing_ctx(),
-        )
-        .await?;
-        tx.commit().await?;
-        record_commit(&committed);
-
-        Ok(committed)
-    }
-
-    /// The composition-update `If-Match` gate off the merged in-transaction
-    /// read: the full-`OBJECT_VERSION_ID` compare against the current tip
-    /// (412 on mismatch — ITS-REST overview §Concurrency control), returning
-    /// the expected `VERSION_TREE_ID` the placement decision pins.
-    ///
-    /// # Errors
-    /// [`ServiceError::VersionConflict`] on an `If-Match` mismatch (→ 412);
-    /// the `components` rejection of a malformed `preceding_version_uid`;
-    /// [`ServiceError::Internal`] when the tip carries no commit audit.
-    fn update_if_match_gate(
-        &self,
-        ehr_id: EhrId,
-        vo_id: VoId,
-        tip: &crate::storage::version_repo::placement::TipRow,
-        tip_time_committed: Option<jiff::Timestamp>,
-        preceding_version_uid: Option<&ObjectVersionId>,
-    ) -> Result<Option<TreeId>, ServiceError> {
-        let tree = TreeId::from_columns(tip.trunk_version, tip.branch_number, tip.branch_version);
-        let tip_time_committed = tip_time_committed.ok_or_else(|| {
-            ServiceError::exception(format!(
-                "the current version of COMPOSITION {vo_id} has no commit audit"
-            ))
-        })?;
-        let latest = self.version_meta(
-            ehr_id,
-            vo_id,
-            &tip.creating_system_id,
-            tree,
-            tip_time_committed,
-        );
-        super::ensure_if_match(preceding_version_uid, Some(&latest))?;
-        preceding_version_uid
-            .map(|o| components(o).map(|(_, v)| v))
-            .transpose()
-            .map_err(ServiceError::from)
+            .placed(pre.placement))
+        })
+        .await
     }
 
     /// The current COMPOSITION version metadata (the latest `version_uid` a
@@ -629,25 +546,26 @@ impl FerroEhrService {
     /// (`204_COMPOSITION_deleted`).
     ///
     /// NOTE: it takes the full `OBJECT_VERSION_ID`, the mandatory
-    /// `preceding_version_uid` of `composition_delete.yaml`.
+    /// `preceding_version_uid` of `composition_delete.yaml`; the request's
+    /// `preceding` is a volunteered `If-Match`.
     ///
     /// # Errors
     /// [`ServiceError::NotFound`] when the COMPOSITION does not exist in this
     /// EHR; [`ServiceError::BadRequest`] when it is already deleted;
     /// [`ServiceError::Conflict`] when the EHR is not modifiable or the
-    /// `preceding_version_uid` is stale (→ 409); [`ServiceError::Database`] on
-    /// a storage failure.
+    /// `preceding_version_uid` is stale (→ 409);
+    /// [`ServiceError::VersionConflict`] when the `If-Match` names another
+    /// version (→ 412); [`ServiceError::Database`] on a storage failure.
     pub async fn delete_composition(
         &self,
         ehr_id: EhrId,
         a_version_uid: &ObjectVersionId,
-        volunteered_if_match: Option<&ObjectVersionId>,
-        update_audit: Option<&openehr_its::rest::generated::common::UpdateAudit>,
-    ) -> Result<crate::versioning::change::Committed, ServiceError> {
-        let (vo_id, expected) = components(a_version_uid)?;
+        request: WriteRequest,
+    ) -> Result<Committed, ServiceError> {
+        let (vo_id, _) = components(a_version_uid)?;
         // The delete pre-checks need only the owning EHR, the lifecycle and the
-        // current `VERSION_TREE_ID` — never a node reassembly (a deleted
-        // version stores no nodes anyway).
+        // EHR's flag, never a node reassembly (a deleted version stores no
+        // nodes anyway).
         let current =
             crate::storage::version_repo::meta::current_composition_meta(&self.pool, vo_id)
                 .await?
@@ -666,69 +584,48 @@ impl FerroEhrService {
         if !current.is_modifiable {
             return Err(crate::versioning::change::not_modifiable_error(ehr_id));
         }
-        let current_tree = TreeId::from_columns(
-            current.trunk_version,
-            current.branch_number,
-            current.branch_version,
-        );
-        // The addressed preceding_version_uid must identify THE latest VERSION
-        // by its full three-part identity (Resources.md §Identifier types; RM
-        // common master06 §Distributed Versioning), compared case-insensitively
-        // (BASE master05 §Composite Identifiers and Case): the tree id alone
-        // would let a fabricated creating_system_id delete the latest version.
-        let latest_uid = crate::versioning::object_version_id::object_version_id(
-            vo_id,
-            &current.creating_system_id,
-            current_tree,
-        );
-        if !composite_ids_equal(&latest_uid, a_version_uid.value()) {
-            return Err(ServiceError::conflict(format!(
-                "preceding_version_uid names version {}, latest is {latest_uid}",
-                a_version_uid.value()
-            )));
-        }
-        // A volunteered `If-Match` is evaluated after the 404/400/409
-        // pre-checks, so the RFC 9110 §13.2.1 precedence holds by construction;
-        // a false condition refuses the delete with 412 (ITS-REST overview
-        // Requests_and_responses §"If-Match and accidental overwrites").
-        if let Some(condition) = volunteered_if_match
-            && !composite_ids_equal(&latest_uid, condition.value())
-        {
-            return Err(ServiceError::version_conflict(format!(
-                "If-Match names version {}, latest is {latest_uid}",
-                condition.value()
-            )));
-        }
-        let _ = expected;
-
-        let mut conn = acquire(&self.pool).await?;
-        let mut tx = conn.begin().await?;
-        // A DELETE is a commit on a change-controlled resource, so the
-        // committal request headers merge here too (ITS-REST overview
-        // §"openehr-version and openehr-audit-details": the headers MUST be
-        // accepted on PUT, POST and DELETE).
-        let audit = match update_audit {
-            Some(u) => crate::versioning::audit::AuditInput::from_update(
-                u,
+        self.commit_one(&self.pool, Mode::Transaction, async move |tx| {
+            let placement = lock_current(tx, Some(ehr_id), vo_id, Kind::Composition).await?;
+            let latest_uid = placement
+                .tip
+                .as_ref()
+                .map(|tip| tip_uid(vo_id, tip))
+                .unwrap_or_default();
+            // The addressed preceding_version_uid must identify THE latest
+            // VERSION by its full three-part identity (Resources.md §Identifier
+            // types; RM common master06 §Distributed Versioning), compared
+            // case-insensitively (BASE master05 §Composite Identifiers and
+            // Case): the tree id alone would let a fabricated
+            // creating_system_id delete the latest version.
+            if !composite_ids_equal(&latest_uid, a_version_uid.value()) {
+                return Err(ServiceError::conflict(format!(
+                    "preceding_version_uid names version {}, latest is {latest_uid}",
+                    a_version_uid.value()
+                )));
+            }
+            // A volunteered `If-Match` is evaluated after the 404/400/409
+            // pre-checks, so the RFC 9110 §13.2.1 precedence holds by
+            // construction; a false condition refuses the delete with 412
+            // (ITS-REST overview Requests_and_responses §"If-Match and
+            // accidental overwrites").
+            ensure_preceding(&latest_uid, request.preceding.as_ref())?;
+            // A DELETE is a commit on a change-controlled resource, so the
+            // committal request headers merge here too (ITS-REST overview
+            // §"openehr-version and openehr-audit-details": the headers MUST be
+            // accepted on PUT, POST and DELETE).
+            let audit = self.commit_audit(
+                request.audit.as_ref(),
                 change_type::DELETED,
                 "COMPOSITION delete",
-                &self.effective_system_id(),
-            )?,
-            None => self.audit(change_type::DELETED, "COMPOSITION delete"),
-        };
-        let committed = commit(
-            &mut tx,
-            Write::new(
+            )?;
+            Ok(Write::new(
                 Some(ehr_id),
-                Change::delete(vo_id, Kind::Composition, Some(expected)),
-                &audit,
-            ),
-            &self.signing_ctx(),
-        )
-        .await?;
-        tx.commit().await?;
-        record_commit(&committed);
-        Ok(committed)
+                Change::delete(vo_id, Kind::Composition, None),
+                audit,
+            )
+            .placed(placement))
+        })
+        .await
     }
 
     /// The combined EHR-existence and content-writability gate in one round

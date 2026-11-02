@@ -22,6 +22,7 @@
               fixture indexing are the intended shape here (the Rust Book ch11)"
 )]
 
+use ferroehr::service::version_update::WriteRequest;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
@@ -280,7 +281,7 @@ async fn rolled_back_commit_writes_no_outbox_row() {
         "is_queryable": true,
         "is_modifiable": true
     });
-    Box::pin(svc.create_ehr_meta(Some(typed(&status)), None))
+    Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(typed(&status)))))
         .await
         .map(|(id, _)| id)
         .expect("first EHR for subject-42");
@@ -290,7 +291,7 @@ async fn rolled_back_commit_writes_no_outbox_row() {
     // A second EHR for the SAME subject violates uq_ehr_subject during the
     // EHR_STATUS write, aborting the whole transaction (the commit path,
     // including its outbox insert) — a rolled-back commit.
-    Box::pin(svc.create_ehr_meta(Some(typed(&status)), None))
+    Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(typed(&status)))))
         .await
         .map(|(id, _)| id)
         .expect_err("duplicate subject must conflict");

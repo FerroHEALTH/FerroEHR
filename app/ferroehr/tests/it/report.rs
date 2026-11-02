@@ -22,6 +22,7 @@ use ferroehr::db::domain::DomainPools;
 use ferroehr::manufacturer::MANUFACTURER;
 use ferroehr::report::{CrateOrigin, ManifestEntry, PartStatus, Report};
 use ferroehr::service::FerroEhrService;
+use ferroehr::service::version_update::WriteRequest;
 use ferrohealth_secret::secret::Secret;
 use ferrohealth_secret::secret_url::SecretUrl;
 
@@ -235,7 +236,7 @@ async fn a_reachable_database_gives_levels_and_no_patient_identifier() {
     });
     let status = openehr_its::json::from_canonical_value::<openehr_rm::prelude::EhrStatus>(&status)
         .expect("a valid EHR_STATUS");
-    let ehr_id = Box::pin(svc.create_ehr_meta(Some(status), None))
+    let ehr_id = Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(status))))
         .await
         .map(|(id, _)| id)
         .expect("create_ehr");

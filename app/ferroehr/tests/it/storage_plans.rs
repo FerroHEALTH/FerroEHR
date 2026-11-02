@@ -45,6 +45,7 @@
               test infrastructure and must panic where it happens (the Rust Book ch11)"
 )]
 
+use ferroehr::service::version_update::WriteRequest;
 use std::sync::Arc;
 
 use serde_json::{Value, json};
@@ -1715,8 +1716,9 @@ async fn a_lookup_by_a_person_identifier_reads_the_one_person() {
         let body = person_with_identifier(index);
         svc.party_create(
             ferroehr::service::demographic::types::PartyKind::Person,
-            openehr_its::json::from_canonical_value(&body).expect("the fixture is a PERSON"),
-            None,
+            WriteRequest::new(
+                openehr_its::json::from_canonical_value(&body).expect("the fixture is a PERSON"),
+            ),
         )
         .await
         .expect("create a person");
@@ -1819,7 +1821,7 @@ async fn an_ehr_lookup_by_subject_enters_through_the_subject_index() {
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
     for index in 0..EHRS {
-        Box::pin(svc.create_ehr_meta(Some(ehr_status_with_subject(index)), None))
+        Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(ehr_status_with_subject(index)))))
             .await
             .map(|(id, _)| id)
             .expect("create an EHR with a subject");

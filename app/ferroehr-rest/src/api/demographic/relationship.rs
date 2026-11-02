@@ -1048,13 +1048,12 @@ pub(super) async fn run(
             let body = negotiate::rm_value::<PartyRelationship>(h, &parts.body)?;
             let resp = state
                 .backend()
-                .party_relationship_create(
+                .party_relationship_create(crate::overview::committal::write_request(
+                    h,
+                    crate::api::ehr::committer_proxy(),
                     body,
-                    crate::overview::committal::committal_commit(
-                        h,
-                        crate::api::ehr::committer_proxy(),
-                    )?,
-                )
+                    None,
+                )?)
                 .await?;
             Ok(write_relationship(
                 h,
@@ -1087,10 +1086,11 @@ pub(super) async fn run(
                     // Decode the `W/"…"`/quoted ETag syntax at the adapter seam
                     // so the service compares a bare OBJECT_VERSION_ID.
                     super::if_match_token(&p.if_match),
-                    body,
-                    crate::overview::committal::committal_commit(
+                    crate::overview::committal::write_request(
                         h,
                         crate::api::ehr::committer_proxy(),
+                        body,
+                        None,
                     )?,
                 )
                 .await
@@ -1129,9 +1129,10 @@ pub(super) async fn run(
                 .party_relationship_delete(
                     p.uid_based_id,
                     super::if_match_of(h),
-                    crate::overview::committal::committal_audit_for_delete(
+                    crate::overview::committal::delete_request(
                         h,
                         crate::api::ehr::committer_proxy(),
+                        None,
                     )?,
                 )
                 .await

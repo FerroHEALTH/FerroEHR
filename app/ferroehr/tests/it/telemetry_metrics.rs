@@ -21,6 +21,7 @@
               fixture indexing are the intended shape here (the Rust Book ch11)"
 )]
 
+use ferroehr::service::version_update::WriteRequest;
 use std::sync::OnceLock;
 
 use ferroehr::telemetry::build_info::BuildInfo;
@@ -128,7 +129,7 @@ async fn compositions_committed_total_counts_every_committed_composition_version
 
     // (4) The direct delete route: one 523|deleted| version.
     let latest: ObjectVersionId = v2.parse().expect("OBJECT_VERSION_ID");
-    svc.delete_composition(ehr_id, &latest, None, None)
+    svc.delete_composition(ehr_id, &latest, WriteRequest::new(()))
         .await
         .expect("delete_composition");
     assert_eq!(

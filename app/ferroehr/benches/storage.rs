@@ -75,9 +75,9 @@ use ferroehr::ids::{EhrId, VoId};
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::query::request::AqlQueryRequest;
-use ferroehr::service::version_update::{change_type_coded, lifecycle_state_coded};
+use ferroehr::service::version_update::{WriteRequest, change_type_coded};
 use openehr_base::prelude::ObjectVersionId;
-use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData, UpdateVersion};
+use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData};
 use openehr_rm::prelude::{Composition, PartyProxy};
 
 /// The vendored CKM template the seed commits against: an encounter carrying
@@ -230,32 +230,30 @@ fn committer() -> PartyProxy {
     .expect("the bench committer decodes as a PARTY_PROXY")
 }
 
-/// The `UPDATE_VERSION` envelope carrying `data`, superseding `preceding`.
+/// The direct write of `data` by the bench committer, naming `preceding` as
+/// the current version.
 fn update_version(
     data: &Value,
     change_code: &str,
     preceding: Option<&str>,
-) -> UpdateVersion<Composition> {
-    UpdateVersion {
-        preceding_version_uid: preceding.map(|raw| {
-            raw.parse()
-                .expect("the preceding uid is an OBJECT_VERSION_ID")
-        }),
-        lifecycle_state: lifecycle_state_coded("532"),
-        attestations: None,
-        data: openehr_its::json::from_canonical_value(data)
+) -> WriteRequest<Composition> {
+    let mut request = WriteRequest::new(
+        openehr_its::json::from_canonical_value(data)
             .expect("the seed payload decodes as a COMPOSITION"),
-        commit_audit: UpdateAudit::UpdateAudit(UpdateAuditData {
-            _type: None,
-            system_id: None,
-            change_type: change_type_coded(change_code),
-            description: None,
-            committer: committer(),
-            additional_properties: BTreeMap::new(),
-        }),
-        signature: None,
+    );
+    request.preceding = preceding.map(|raw| {
+        raw.parse()
+            .expect("the preceding uid is an OBJECT_VERSION_ID")
+    });
+    request.audit = Some(UpdateAudit::UpdateAudit(UpdateAuditData {
+        _type: None,
+        system_id: None,
+        change_type: change_type_coded(change_code),
+        description: None,
+        committer: committer(),
         additional_properties: BTreeMap::new(),
-    }
+    }));
+    request
 }
 
 /// The first ENTRY RM type in a composition's content, `OBSERVATION` when the
@@ -295,7 +293,7 @@ async fn seed(svc: &Arc<FerroEhrService>, pool: &PgPool, class: BenchClass) -> C
         .map(|index| {
             let svc = Arc::clone(svc);
             async move {
-                Box::pin(svc.create_ehr_meta(Some(ehr_status(index)), None))
+                Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(ehr_status(index)))))
                     .await
                     .map(|(id, _)| id)
                     .expect("create_ehr")
@@ -444,9 +442,10 @@ async fn seed_persons(svc: &Arc<FerroEhrService>, persons: usize) {
             async move {
                 svc.party_create(
                     PartyKind::Person,
-                    openehr_its::json::from_canonical_value(&person(index))
-                        .expect("the seed person decodes as a PERSON"),
-                    None,
+                    WriteRequest::new(
+                        openehr_its::json::from_canonical_value(&person(index))
+                            .expect("the seed person decodes as a PERSON"),
+                    ),
                 )
                 .await
                 .expect("seed a person");

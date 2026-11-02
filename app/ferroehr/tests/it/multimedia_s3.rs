@@ -26,6 +26,7 @@
               fixture indexing are the intended shape here (the Rust Book ch11)"
 )]
 
+use ferroehr::service::version_update::WriteRequest;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -213,9 +214,10 @@ async fn make_person_with_media(svc: &FerroEhrService, name: &str, media: &Value
     let created = svc
         .party_create(
             PartyKind::Person,
-            openehr_its::json::from_canonical_value(&person_with_media(name, media))
-                .expect("the PERSON decodes"),
-            None,
+            WriteRequest::new(
+                openehr_its::json::from_canonical_value(&person_with_media(name, media))
+                    .expect("the PERSON decodes"),
+            ),
         )
         .await
         .expect("create person");
@@ -331,10 +333,11 @@ async fn commit_offloads_large_multimedia_and_expands() {
         .with_multimedia(sw.engine());
 
     // Commit an EHR whose EHR_STATUS carries a >threshold inline multimedia.
-    let ehr = Box::pin(svc.create_ehr_meta(Some(status_with_media(multimedia(1000))), None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create ehr");
+    let ehr =
+        Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(status_with_media(multimedia(1000))))))
+            .await
+            .map(|(id, _)| id)
+            .expect("create ehr");
 
     // The stored/served form is externalized: data gone, uri + integrity + size
     // present (RM invariants honoured), and the blob exists in the store.
@@ -400,7 +403,7 @@ async fn small_multimedia_stays_inline() {
 
     let media = multimedia(100); // below the 256-byte threshold
     let inline_data = media.get("data").cloned();
-    let ehr = Box::pin(svc.create_ehr_meta(Some(status_with_media(media)), None))
+    let ehr = Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(status_with_media(media)))))
         .await
         .map(|(id, _)| id)
         .expect("create ehr");
@@ -430,10 +433,11 @@ async fn corrupted_blob_fails_integrity_on_expand() {
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
         .with_multimedia(sw.engine());
 
-    let ehr = Box::pin(svc.create_ehr_meta(Some(status_with_media(multimedia(1000))), None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create ehr");
+    let ehr =
+        Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(status_with_media(multimedia(1000))))))
+            .await
+            .map(|(id, _)| id)
+            .expect("create ehr");
     let stored = svc
         .ehr_status_at_time_response(ehr, None)
         .await
@@ -472,14 +476,16 @@ async fn gc_removes_unreferenced_but_keeps_shared_blobs() {
         .with_multimedia(sw.engine());
 
     // Two EHRs carrying the *same* bytes → the same content-addressed blob.
-    let ehr1 = Box::pin(svc.create_ehr_meta(Some(status_with_media(multimedia(1000))), None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr1");
-    let ehr2 = Box::pin(svc.create_ehr_meta(Some(status_with_media(multimedia(1000))), None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr2");
+    let ehr1 =
+        Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(status_with_media(multimedia(1000))))))
+            .await
+            .map(|(id, _)| id)
+            .expect("ehr1");
+    let ehr2 =
+        Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(status_with_media(multimedia(1000))))))
+            .await
+            .map(|(id, _)| id)
+            .expect("ehr2");
     let s1 = svc
         .ehr_status_at_time_response(ehr1, None)
         .await
@@ -528,10 +534,14 @@ async fn physical_party_delete_collects_its_blobs_but_keeps_shared_ones() {
     let shared_media = multimedia(1200);
     let solo = make_person_with_media(&svc, "Solo", &solo_media).await;
     let sharer = make_person_with_media(&svc, "Sharer", &shared_media).await;
-    let ehr = Box::pin(svc.create_ehr_meta(Some(status_with_media(shared_media.clone())), None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr sharing the blob");
+    let ehr = Box::pin(
+        svc.create_ehr_meta(WriteRequest::new(Some(status_with_media(
+            shared_media.clone(),
+        )))),
+    )
+    .await
+    .map(|(id, _)| id)
+    .expect("ehr sharing the blob");
 
     let solo_key = party_blob_key(
         &svc.party_get(PartyKind::Person, solo.clone(), None)
@@ -591,10 +601,12 @@ async fn dump_load_carries_blobs() {
     ))
     .with_multimedia(sw.engine());
 
-    let ehr = Box::pin(source.create_ehr_meta(Some(status_with_media(multimedia(1000))), None))
-        .await
-        .map(|(id, _)| id)
-        .expect("seed ehr");
+    let ehr = Box::pin(
+        source.create_ehr_meta(WriteRequest::new(Some(status_with_media(multimedia(1000))))),
+    )
+    .await
+    .map(|(id, _)| id)
+    .expect("seed ehr");
     let key = blob_key(
         &source
             .ehr_status_at_time_response(ehr, None)
@@ -647,7 +659,7 @@ async fn disabled_by_default_stores_inline_verbatim() {
 
     let media = multimedia(4096); // well above any threshold
     let inline_data = media.get("data").cloned();
-    let ehr = Box::pin(svc.create_ehr_meta(Some(status_with_media(media)), None))
+    let ehr = Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(status_with_media(media)))))
         .await
         .map(|(id, _)| id)
         .expect("create ehr");

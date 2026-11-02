@@ -12,10 +12,9 @@
 //! The envelope types are the generated ITS-REST contract,
 //! [`openehr_its::rest::generated::common`]'s `UpdateVersion<T>`,
 //! `UpdateAudit`, `UpdateAuditData` and `UpdateAttestation`, consumed directly.
-//! This module carries only what the contract does not: the header-merge
-//! carrier [`Committal`], the server-side envelope constructor
-//! [`direct_envelope`], and the base-attribute accessors every commit path
-//! reads through.
+//! This module carries only what the contract does not: the service-boundary
+//! [`WriteRequest`] a direct write arrives as, and the base-attribute
+//! accessors every commit path reads through.
 //!
 //! Four wire facts this seam depends on:
 //!
@@ -38,14 +37,14 @@
 //!   wire-only: `UpdateVersion.yaml` carries it, and it is fed to the version
 //!   signer.
 
-use openehr_base::prelude::TerminologyId;
-use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData, UpdateVersion};
+use openehr_base::prelude::{ObjectVersionId, TerminologyId};
+use openehr_its::rest::generated::common::{UpdateAttestation, UpdateAudit};
 use openehr_rm::prelude::{DvCodedText, DvText, PartyProxy};
 use openehr_rm::v1_2::common::generic::party_identified::{PartyIdentified, PartyIdentifiedData};
 use openehr_rm::v1_2::data_types::text::code_phrase::CodePhrase;
 use openehr_rm::v1_2::data_types::text::dv_text::DvTextData;
 
-use crate::versioning::audit::{OPENEHR, change_type};
+use crate::versioning::audit::OPENEHR;
 use crate::versioning::lifecycle;
 
 /// A `DV_CODED_TEXT` over an openEHR-terminology code, carrying `rubric` as
@@ -223,73 +222,74 @@ pub fn system_committer() -> PartyProxy {
     }))
 }
 
-/// A plain server-side commit envelope around `data`: `532|complete|`
-/// lifecycle, the server's own audit identity, no client signature, no
-/// attestations.
+/// The caller's side of one direct write: the content and the commit metadata
+/// the service does not generate.
 ///
-/// The internal commit paths that synthesize
-/// content use this; wire commits carry the caller's merged envelope instead.
-/// It is a free function because `UPDATE_VERSION` is the generated ITS-REST
-/// contract type — foreign to this crate, so it can carry no inherent
-/// constructor of ours.
-#[must_use]
-pub fn direct_envelope<T>(data: T) -> UpdateVersion<T> {
-    UpdateVersion {
-        preceding_version_uid: None,
-        signature: None,
-        // 532|complete| (RM common master06 §Version Lifecycle).
-        lifecycle_state: lifecycle_state_coded(lifecycle::state::COMPLETE),
-        attestations: None,
-        data: Some(data),
-        commit_audit: UpdateAudit::UpdateAudit(UpdateAuditData {
-            _type: None,
-            system_id: None,
-            // 249|creation| — a placeholder. A caller-supplied `change_type`
-            // is honoured after group + operation validation
-            // (`versioning::audit`, ITS-REST overview §"openehr-version and
-            // openehr-audit-details" MUST-merge); header-derived envelopes
-            // blank this first so only a header-carried value reads as
-            // supplied (`overview::committal`).
-            change_type: change_type_coded(change_type::CREATION),
-            description: None,
-            committer: system_committer(),
-            additional_properties: std::collections::BTreeMap::new(),
-        }),
-        additional_properties: std::collections::BTreeMap::new(),
-    }
+/// A direct write on a change-controlled resource implicitly creates a
+/// `CONTRIBUTION` and an `ORIGINAL_VERSION` (`UpdateVersion.yaml`), and its
+/// metadata reaches the server through the `openehr-version` and
+/// `openehr-audit-details` request headers: "None of these headers are
+/// mandatory, but whatever is provided it MUST be merged with the default
+/// VERSION and `VERSION.audit_details` attributes on commit runtime" (ITS-REST
+/// overview `Requests_and_responses.md` §"openehr-version and
+/// openehr-audit-details"). Every member the caller leaves out is the server
+/// default, so [`WriteRequest::new`] is the plain server commit. A delete
+/// carries no content (RM common master06 §Logical Deletion), so its `data` is
+/// `()`.
+#[derive(Debug, Clone)]
+pub struct WriteRequest<T = ()> {
+    /// The RM content the write commits.
+    pub data: T,
+    /// The caller's `UPDATE_AUDIT` attributes, merged over the server
+    /// defaults; `None` commits under the server's own audit.
+    pub audit: Option<UpdateAudit>,
+    /// `UPDATE_VERSION.lifecycle_state` as its numeric
+    /// `version_lifecycle_state` code; `None` is `532|complete|` (RM common
+    /// master06 §Version Lifecycle).
+    pub lifecycle_state: Option<String>,
+    /// A client-supplied `VERSION.signature`, stored verbatim (RM common
+    /// master06 §Digital Signature).
+    pub signature: Option<String>,
+    /// `UPDATE_VERSION.attestations` committed with the version.
+    pub attestations: Vec<UpdateAttestation>,
+    /// The version the caller names as current (`If-Match`, or the
+    /// `preceding_version_uid` of `UpdateVersion.yaml`), checked once against
+    /// the tip the write locks.
+    pub preceding: Option<ObjectVersionId>,
 }
 
-/// The client-supplied committal metadata of a **direct** commit.
-///
-/// Such a commit's `UPDATE_VERSION` envelope never travels in the request body
-/// — the bare `POST`/`PUT`/`DELETE` writes on a change-controlled resource,
-/// where the only channel for it is the `openehr-version` /
-/// `openehr-audit-details` request headers.
-///
-/// ITS-REST overview `Requests_and_responses.md` §"openehr-version and
-/// openehr-audit-details": "services MUST accept `openehr-version` and
-/// `openehr-audit-details` custom request headers", and "None of these headers
-/// are mandatory, but whatever is provided it MUST be merged with the default
-/// VERSION and `VERSION.audit_details` attributes on commit runtime." This type
-/// carries the two halves of that merge — the `UPDATE_AUDIT` attributes and
-/// the VERSION `lifecycle_state` — for the commit paths whose arguments are
-/// the bare RM content (EHR creation) rather than a full envelope.
-#[derive(Debug, Clone)]
-pub struct Committal {
-    /// The merged `UPDATE_AUDIT` attributes (`change_type`, `description`,
-    /// `committer`, `system_id`), already seeded with the server defaults the
-    /// client did not override.
-    pub audit: UpdateAudit,
-    /// `UPDATE_VERSION.lifecycle_state` as its numeric
-    /// `version_lifecycle_state` code, when the client supplied one through
-    /// `openehr-version`; `None` leaves the server default (`532|complete|`,
-    /// RM common master06 §Version Lifecycle).
-    pub lifecycle_state: Option<String>,
+impl<T> WriteRequest<T> {
+    /// A write of `data` with every commit attribute at the server default.
+    #[must_use]
+    pub fn new(data: T) -> Self {
+        Self {
+            data,
+            audit: None,
+            lifecycle_state: None,
+            signature: None,
+            attestations: Vec::new(),
+            preceding: None,
+        }
+    }
+
+    /// The same request carrying `f(data)`.
+    #[must_use]
+    pub fn map<U>(self, f: impl FnOnce(T) -> U) -> WriteRequest<U> {
+        WriteRequest {
+            data: f(self.data),
+            audit: self.audit,
+            lifecycle_state: self.lifecycle_state,
+            signature: self.signature,
+            attestations: self.attestations,
+            preceding: self.preceding,
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use openehr_its::rest::generated::common::UpdateVersion;
     use openehr_its::rest::generated::ehr::Versionable;
 
     /// The generated envelope reads the ITS-REST wire shape: `commit_audit`,
@@ -357,19 +357,5 @@ mod tests {
             audit_base(&audit).change_type.defining_code.code_string,
             "666"
         );
-    }
-
-    /// The server-side envelope: `532|complete|`, `249|creation|`, the
-    /// system committer, no signature, no attestations.
-    #[test]
-    fn direct_envelope_is_the_server_default_commit() {
-        let uv = direct_envelope(serde_json::json!({ "_type": "COMPOSITION" }));
-        assert_eq!(uv.lifecycle_state.defining_code.code_string, "532");
-        assert!(uv.signature.is_none());
-        assert!(uv.attestations.is_none());
-        assert!(uv.preceding_version_uid.is_none());
-        let base = audit_base(&uv.commit_audit);
-        assert_eq!(base.change_type.defining_code.code_string, "249");
-        assert!(base.system_id.is_none());
     }
 }

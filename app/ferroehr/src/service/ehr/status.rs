@@ -18,28 +18,24 @@
               fragment the seam produced once; stored-content serving"
 )]
 
-use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::refusal::{Clash, Missing, Refusal};
 use crate::service::response::{ResourceMeta, ServiceResponse};
-use openehr_its::rest::generated::common::UpdateVersion;
 use openehr_rm::prelude::EhrStatus;
 use serde_json::Value;
-use sqlx::Connection as _;
 use sqlx::PgConnection;
 
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
+use crate::service::version_update::WriteRequest;
+use crate::service::write::{Mode, Resolved};
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
-use crate::versioning::change::{Change, Write, commit, record_commit};
-use crate::versioning::object_version_id::{
-    TreeId, VersionIdError, expected_from_if_match, parse_tree_id,
-};
+use crate::versioning::change::{Change, Write, ensure_preceding, lock_current, tip_uid};
+use crate::versioning::object_version_id::{TreeId, VersionIdError, parse_tree_id};
 use crate::versioning::read::{read_current, read_version, version_at};
 use crate::versioning::wire::{revision_history, version_envelope, versioned_object};
 
-use super::ensure_if_match;
 use crate::service::datetime::parse_at_time;
 
 impl FerroEhrService {
@@ -106,70 +102,6 @@ impl FerroEhrService {
                 )
             })?;
         Ok(self.version_response(ehr_id, vo_id, read)?)
-    }
-
-    /// The one `EHR_STATUS` commit core (`replace_ehr_status` and the discrete
-    /// mutators both land here): commit a new version from the caller's full
-    /// `UPDATE_VERSION` envelope, sync the promoted subject columns, and return
-    /// the committed version identity.
-    ///
-    /// `vo_id` is the `EHR_STATUS` versioned object, resolved once by the
-    /// caller's `If-Match` meta pre-read; `if_match` is the
-    /// `OBJECT_VERSION_ID` (or bare version) the client believes is current. The
-    /// result is the commit's own
-    /// [`Committed`](crate::versioning::change::Committed), the written version
-    /// identity and commit instant (RM common master06 §Committal and Audits).
-    /// The write path never re-reads the row it just wrote; a `Prefer:
-    /// return=representation` body is read back at the protocol layer.
-    async fn commit_status(
-        &self,
-        ehr_id: EhrId,
-        vo_id: VoId,
-        version: UpdateVersion<EhrStatus>,
-        if_match: &str,
-    ) -> Result<crate::versioning::change::Committed, ServiceError> {
-        let version = super::canonicalize(version);
-        let super::CommitParts {
-            audit,
-            envelope,
-            incomplete,
-            canonical: body,
-        } = super::resolve_envelope(
-            version,
-            change_type::MODIFICATION,
-            "EHR_STATUS update",
-            &self.effective_system_id(),
-        )?;
-        self.validate_for_commit(Kind::EhrStatus, &body, incomplete)
-            .await?;
-        let expected = expected_from_if_match(if_match)?;
-
-        let mut conn = acquire(&self.pool).await?;
-        let mut tx = conn.begin().await?;
-        let committed = commit(
-            &mut tx,
-            Write::new(
-                Some(ehr_id),
-                Change::modify(
-                    vo_id,
-                    Kind::EhrStatus,
-                    body.clone(),
-                    expected,
-                    None,
-                    envelope,
-                ),
-                &audit,
-            ),
-            &self.signing_ctx(),
-        )
-        .await?;
-        // Keep the promoted subject columns in sync (the subject may have
-        // changed); the is_queryable promotion rides this same UPDATE.
-        self.sync_ehr_subject(&mut tx, ehr_id, &body).await?;
-        tx.commit().await?;
-        record_commit(&committed);
-
-        Ok(committed)
     }
 
     /// The `VERSIONED_EHR_STATUS` container object with the container
@@ -601,30 +533,55 @@ impl FerroEhrService {
     pub async fn replace_ehr_status_meta(
         &self,
         an_ehr_id: EhrId,
-        a_status: UpdateVersion<EhrStatus>,
+        request: WriteRequest<EhrStatus>,
     ) -> Result<ResourceMeta, ServiceError> {
-        // The `If-Match` meta pre-read also yields the `vo_id`, threaded into
-        // the write so the versioned object is resolved once (no second
-        // `current_vo`). No current EHR_STATUS ⇒ NotFound (404).
         // NOTE: the ITS-REST wire replaces the whole EHR_STATUS in one PUT; a
         // mismatch → 412.
-        let Some((vo_id, latest)) = self
-            .latest_version_meta_with_vo(an_ehr_id, Kind::EhrStatus)
-            .await?
-        else {
+        let Some((vo_id, _)) = self.current_vo(an_ehr_id, Kind::EhrStatus).await? else {
             return Err(ServiceError::not_found(
                 Missing::Ehr,
                 format!("EHR_STATUS for EHR {an_ehr_id}"),
             ));
         };
-        ensure_if_match(a_status.preceding_version_uid.as_ref(), Some(&latest))?;
-        let if_match = a_status
-            .preceding_version_uid
-            .as_ref()
-            .map(|o| o.value().to_owned())
-            .unwrap_or_default();
+        // Request resolution and validation run before the transaction, and
+        // their refusals surface after the `If-Match` check, in pre-check order.
+        let resolved = self.resolve_write(&request, change_type::MODIFICATION, "EHR_STATUS update");
+        let body = openehr_its::json::to_canonical_value(&request.data);
+        let validated = match &resolved {
+            Ok(parts) => Some(
+                self.validate_for_commit(Kind::EhrStatus, &body, parts.incomplete)
+                    .await,
+            ),
+            Err(_) => None,
+        };
+        let preceding = request.preceding;
+        let content = body.clone();
+        // Keep the promoted subject columns in sync (the subject may have
+        // changed); the is_queryable promotion rides this same UPDATE.
         let committed = self
-            .commit_status(an_ehr_id, vo_id, a_status, &if_match)
+            .commit_one(
+                &self.pool,
+                Mode::SyncSubject(an_ehr_id, &body),
+                async move |tx| {
+                    let placement =
+                        lock_current(tx, Some(an_ehr_id), vo_id, Kind::EhrStatus).await?;
+                    if let Some(tip) = placement.tip.as_ref() {
+                        ensure_preceding(&tip_uid(vo_id, tip), preceding.as_ref())?;
+                    }
+                    let Resolved {
+                        audit, envelope, ..
+                    } = resolved?;
+                    if let Some(validation) = validated {
+                        validation?;
+                    }
+                    Ok(Write::new(
+                        Some(an_ehr_id),
+                        Change::modify(vo_id, Kind::EhrStatus, content, None, None, envelope),
+                        audit,
+                    )
+                    .placed(placement))
+                },
+            )
             .await
             .map_err(ServiceError::flattened)?;
         Ok(self.version_meta(
