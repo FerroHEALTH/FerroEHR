@@ -28,7 +28,6 @@ use crate::service::error::ServiceError;
 use crate::service::refusal::Missing;
 use crate::service::response::{ResourceMeta, ServiceResponse};
 use crate::service::version_update::Committal;
-use crate::versioning::CommitEnv;
 use crate::versioning::audit::change_type;
 use crate::versioning::change::WriteEnvelope;
 use crate::versioning::change::{create, delete, update};
@@ -158,7 +157,7 @@ impl FerroEhrService {
             change_type::CREATION,
             "PARTY creation",
         )?;
-        let ctx = CommitEnv::signing_ctx(self);
+        let ctx = self.signing_ctx();
         // Keep the served bytes for the in-memory representation, unless the
         // commit rewrites the body (then the fresh read is the stored form).
         let repr_body = (!support::commit_rewrites_body(self)).then(|| body.clone());
@@ -260,7 +259,7 @@ impl FerroEhrService {
             change_type::MODIFICATION,
             "PARTY update",
         )?;
-        let ctx = CommitEnv::signing_ctx(self);
+        let ctx = self.signing_ctx();
         let repr_body = (!support::commit_rewrites_body(self)).then(|| body.clone());
         let mut conn = acquire(&self.demographic_pool).await?;
         let mut tx = conn.begin().await?;
@@ -323,7 +322,7 @@ impl FerroEhrService {
         }
 
         let audit = self.demographic_audit(update_audit, change_type::DELETED, "PARTY delete")?;
-        let ctx = CommitEnv::signing_ctx(self);
+        let ctx = self.signing_ctx();
         let mut conn = acquire(&self.demographic_pool).await?;
         let mut tx = conn.begin().await?;
         let committed = delete(

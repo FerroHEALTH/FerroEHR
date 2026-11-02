@@ -1487,7 +1487,7 @@ impl FerroEhrService {
                 error: Some(error),
             }))
         };
-        if self.ehr_row_exists(ehr_id).await? {
+        if crate::storage::ehr_repo::ehr_exists(&mut *acquire(&self.pool).await?, ehr_id).await? {
             return report("an EHR with this id already exists".to_owned());
         }
         // `openehr_canonical_xml`: pull each version's payload out of its
@@ -1679,16 +1679,6 @@ impl FerroEhrService {
                 .map_err(|e| ServiceError::internal("import a multimedia blob", e))?;
         }
         Ok(())
-    }
-
-    /// Whether an EHR with `ehr_id` already exists in the target repository.
-    async fn ehr_row_exists(&self, ehr_id: EhrId) -> Result<bool, ServiceError> {
-        Ok(
-            sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM ehr WHERE id = $1)")
-                .bind(ehr_id)
-                .fetch_one(&mut *acquire(&self.pool).await?)
-                .await?,
-        )
     }
 
     /// Whether an ehr-less demographic container with `vo_id` already exists.

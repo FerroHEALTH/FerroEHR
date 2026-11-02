@@ -26,6 +26,8 @@ use uuid::Uuid;
 
 use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
+use crate::service::error::ServiceError;
+use crate::service::refusal::Missing;
 use crate::storage::error::StorageError;
 use crate::storage::version_repo::meta::CurrentMeta;
 
@@ -573,4 +575,40 @@ pub async fn live_folder_root_exists(
     .bind(root_name)
     .fetch_one(&mut *acquire(pool).await?)
     .await?)
+}
+
+/// Whether the EHR row exists.
+///
+/// # Errors
+/// Returns [`StorageError::Database`] on a driver failure.
+pub async fn ehr_exists<'e>(
+    executor: impl PgExecutor<'e>,
+    ehr_id: EhrId,
+) -> Result<bool, StorageError> {
+    Ok(
+        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM ehr WHERE id = $1)")
+            .bind(ehr_id)
+            .fetch_one(executor)
+            .await?,
+    )
+}
+
+/// The EHR-existence gate every EHR-scoped call runs: a `404` naming the EHR
+/// when its row does not exist (ITS-REST `404_unknown_ehr_id`).
+///
+/// # Errors
+/// [`ServiceError::NotFound`] of kind [`Missing::Ehr`] when the EHR does not
+/// exist; [`ServiceError::Storage`] when the read fails.
+pub async fn require_ehr<'e>(
+    executor: impl PgExecutor<'e>,
+    ehr_id: EhrId,
+) -> Result<(), ServiceError> {
+    if ehr_exists(executor, ehr_id).await? {
+        Ok(())
+    } else {
+        Err(ServiceError::not_found(
+            Missing::Ehr,
+            format!("EHR {ehr_id}"),
+        ))
+    }
 }

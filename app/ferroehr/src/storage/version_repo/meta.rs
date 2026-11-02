@@ -326,20 +326,6 @@ pub async fn content_of(
 
 // ── existence / kind / ownership ──────────────────────────────────────────────
 
-/// Whether the EHR row exists (the CONTRIBUTION-commit EHR-existence precheck
-/// and the contribution-listing 404 distinction).
-///
-/// # Errors
-/// Returns [`StorageError::Database`] on a driver failure.
-pub async fn ehr_exists(pool: &PgPool, ehr_id: EhrId) -> Result<bool, StorageError> {
-    Ok(
-        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM ehr WHERE id = $1)")
-            .bind(ehr_id)
-            .fetch_one(&mut *acquire(pool).await?)
-            .await?,
-    )
-}
-
 /// The kind text of the current version of an object, or `None` if it does not
 /// exist. Mapping to a versioned-object kind is the caller's.
 ///

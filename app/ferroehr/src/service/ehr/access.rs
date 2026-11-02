@@ -39,19 +39,11 @@ use crate::versioning::change::{Change, commit_contribution};
 use crate::versioning::read::read_current;
 
 impl FerroEhrService {
-    /// Drop the cached `EHR_ACCESS` settings for `ehr_id` — the
-    /// [`crate::versioning::CommitEnv`] `invalidate_ehr_access` hook, called
-    /// after any `EHR_ACCESS` commit so the next access decision reflects the
+    /// Drop the cached `EHR_ACCESS` settings for `ehr_id`, called after any
+    /// `EHR_ACCESS` commit so the next access decision reflects the
     /// new version (the settings are change-controlled — RM ehr master04 §EHR
     /// Access).
-    #[expect(
-        clippy::same_name_method,
-        reason = "the `CommitEnv` seam (service/commit_env.rs) deliberately \
-                  mirrors these chapter method names so the versioning layer \
-                  calls them by their own vocabulary; that impl disambiguates \
-                  explicitly with `FerroEhrService::<name>(self, …)`"
-    )]
-    pub(in crate::service) async fn invalidate_ehr_access(&self, ehr_id: EhrId) {
+    pub(crate) async fn invalidate_ehr_access(&self, ehr_id: EhrId) {
         self.ehr_access.invalidate(ehr_id).await;
     }
 

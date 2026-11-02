@@ -29,15 +29,13 @@
 //!
 //! # Integration seams
 //!
-//! `crate::versioning::CommitEnv`, the hooks the CONTRIBUTION commit engine
-//! needs, is implemented for `FerroEhrService` in `service/mod.rs`; its
-//! EHR-owned constituents are authored in this chapter. `default_committer` is
-//! `committer::request_committer`; `ensure_ehr_exists`, `ensure_content_writable`,
-//! `current_vo` and `invalidate_ehr_access` are `FerroEhrService` methods here;
-//! and the two in-transaction hooks delegate to
-//! `check_versioned_composition_invariants` (COMPOSITION modify) and
-//! `FerroEhrService::sync_ehr_subject` (`EHR_STATUS` commit), the same functions
-//! the direct create and update paths run inline. SQL row I/O is a storage seam
+//! The CONTRIBUTION commit engine (`crate::versioning::contribution`) calls
+//! this chapter and storage directly: the EHR-existence gate is
+//! `storage::ehr_repo::require_ehr`, `current_vo` and `invalidate_ehr_access`
+//! are `FerroEhrService` methods here, and in the commit
+//! transaction it runs `check_versioned_composition_invariants` (COMPOSITION
+//! modify) and `FerroEhrService::sync_ehr_subject` (`EHR_STATUS` commit), the
+//! same functions the direct create and update paths run inline. SQL row I/O is a storage seam
 //! ([`crate::storage::ehr_repo`] / [`crate::storage::version_repo`]); no openEHR
 //! spec governs the schema — our own design.
 

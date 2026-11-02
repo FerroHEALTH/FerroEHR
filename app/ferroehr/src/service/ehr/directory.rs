@@ -75,7 +75,7 @@ impl FerroEhrService {
             "FOLDER directory creation",
             &self.effective_system_id(),
         )?;
-        self.ensure_ehr_exists(ehr_id).await?;
+        crate::storage::ehr_repo::require_ehr(&mut *acquire(&self.pool).await?, ehr_id).await?;
         self.validate_for_commit(Kind::Folder, &folder, incomplete)
             .await?;
         check_folder_item_refs(

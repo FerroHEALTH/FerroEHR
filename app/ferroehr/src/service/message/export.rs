@@ -268,10 +268,8 @@ impl FerroEhrService {
     /// Whether an EHR with `ehr_id` exists and the request may read it (the
     /// EHR-existence precondition of both export calls).
     async fn extract_ehr_exists(&self, ehr_id: EhrId) -> Result<bool, ServiceError> {
-        let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM ehr WHERE id = $1)")
-            .bind(ehr_id)
-            .fetch_one(&mut *acquire(&self.pool).await?)
-            .await?;
+        let exists =
+            crate::storage::ehr_repo::ehr_exists(&mut *acquire(&self.pool).await?, ehr_id).await?;
         Ok(exists && !self.ehr_hidden_from_request(ehr_id).await?)
     }
 

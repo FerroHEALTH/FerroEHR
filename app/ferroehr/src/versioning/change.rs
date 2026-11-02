@@ -495,11 +495,10 @@ struct ResolvedWrite {
 /// enclosing `contribution_id` (for the caller's event-outbox envelope).
 ///
 /// The cross-area hooks run AROUND this write, driven by the CONTRIBUTION
-/// orchestration ([`crate::versioning::CommitEnv`], called from
-/// [`super::contribution::commit_version_set`]) and by the direct write paths:
-/// `CommitEnv::pre_composition_modify` for the `VERSIONED_COMPOSITION`
-/// cross-version invariants before a COMPOSITION modify,
-/// `CommitEnv::post_status_commit` for the EHR promoted-subject-column sync
+/// orchestration ([`super::contribution::commit_version_set`]) and by the
+/// direct write paths: `check_versioned_composition_invariants` for the
+/// `VERSIONED_COMPOSITION` cross-version invariants before a COMPOSITION modify,
+/// `FerroEhrService::sync_ehr_subject` for the EHR promoted-subject-column sync
 /// after an `EHR_STATUS` version, and [`meter_committed`] for the
 /// `compositions_committed_total` metric, which must count only work that
 /// actually committed.

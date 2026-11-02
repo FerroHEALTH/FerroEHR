@@ -298,8 +298,7 @@ impl FerroEhrService {
     }
 
     /// Validate a versioned object about to be committed (direct or via a
-    /// CONTRIBUTION) — the [`crate::versioning::CommitEnv`]
-    /// `validate_for_commit` hook. COMPOSITIONs get full RM + terminology +
+    /// CONTRIBUTION). COMPOSITIONs get full RM + terminology +
     /// template validation; the EHR-owned kinds (`EHR_STATUS` / `EHR_ACCESS`
     /// / FOLDER) get structural RM validation. Shared by the direct
     /// create/update path and the CONTRIBUTION path so neither can bypass
@@ -318,14 +317,7 @@ impl FerroEhrService {
     /// when the content is invalid for its kind, or when the privacy policy
     /// refuses it (→ 422); [`ServiceError`] from a failing template resolution
     /// on the COMPOSITION arm.
-    #[expect(
-        clippy::same_name_method,
-        reason = "the `CommitEnv` seam (service/commit_env.rs) deliberately \
-                  mirrors these chapter method names so the versioning layer \
-                  calls them by their own vocabulary; that impl disambiguates \
-                  explicitly with `FerroEhrService::<name>(self, …)`"
-    )]
-    pub(in crate::service) async fn validate_for_commit(
+    pub(crate) async fn validate_for_commit(
         &self,
         kind: Kind,
         data: &Value,
@@ -423,14 +415,13 @@ pub(in crate::service) fn validate_rm_invariants_for_commit(
 /// A violating modification is a `422` naming the invariant; the first-version
 /// root read goes through `crate::storage::node_repo`. Both write flows run
 /// this, the direct update path ([`composition`](super::composition)) inline and
-/// the CONTRIBUTION path through the
-/// [`crate::versioning::CommitEnv::pre_composition_modify`] hook, each in its
+/// the CONTRIBUTION path from [`crate::versioning::contribution`], each in its
 /// own commit transaction.
 ///
 /// # Errors
 /// [`ServiceError::Unprocessable`] naming the violated invariant (→ 422);
 /// [`ServiceError::Database`] if the first-version root read fails.
-pub(in crate::service) async fn check_versioned_composition_invariants(
+pub(crate) async fn check_versioned_composition_invariants(
     tx: &mut PgConnection,
     vo_id: VoId,
     canonical: &Value,
@@ -790,7 +781,7 @@ fn item_ref_root(id_value: &str) -> Option<uuid::Uuid> {
 /// # Errors
 /// [`ServiceError::ValidationFailed`] naming every unresolvable local
 /// reference at its tree path (→ 422).
-pub(in crate::service) async fn check_folder_item_refs<'e>(
+pub(crate) async fn check_folder_item_refs<'e>(
     executor: impl sqlx::PgExecutor<'e>,
     ehr_id: EhrId,
     system_id: &str,
