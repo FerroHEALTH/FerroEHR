@@ -447,7 +447,7 @@ async fn tags_get(state: AppState, parts: RequestParts) -> Result<Response, Rest
     };
     let tags = state
         .backend()
-        .target_tags_get(ehr_id, p.uid_based_id, "COMPOSITION")
+        .target_tags_get(ehr_id, parse_uid_based_id(&p.uid_based_id)?, "COMPOSITION")
         .await?;
     let mut resp = negotiate::body::respond(h, ok, &openehr_its::json::to_canonical_value(&tags));
     resp.extensions_mut().insert(object);
@@ -471,7 +471,12 @@ async fn tags_update(state: AppState, parts: RequestParts) -> Result<Response, R
     let body = item_tags::write_body(h, &parts.body)?;
     let tags = state
         .backend()
-        .target_tags_replace(ehr_id, p.uid_based_id, "COMPOSITION", body)
+        .target_tags_replace(
+            ehr_id,
+            parse_uid_based_id(&p.uid_based_id)?,
+            "COMPOSITION",
+            body,
+        )
         .await?;
     // composition_tags_update.yaml: 200 on `Prefer: return=representation`,
     // 204 when `Prefer` is missing or `return=minimal` (overview §Prefer).
@@ -496,7 +501,12 @@ async fn tags_delete(state: AppState, parts: RequestParts) -> Result<Response, R
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
     state
         .backend()
-        .target_tag_delete(ehr_id, p.uid_based_id, "COMPOSITION", p.key)
+        .target_tag_delete(
+            ehr_id,
+            parse_uid_based_id(&p.uid_based_id)?,
+            "COMPOSITION",
+            p.key,
+        )
         .await?;
     Ok(negotiate::body::empty(no_content))
 }

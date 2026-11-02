@@ -196,14 +196,24 @@ async fn tag_targets_must_be_within_the_same_ehr() {
     // Tagging A's composition from A: accepted. The route family must match
     // the stored kind — the kind guard rejects an EHR_STATUS route for a
     // COMPOSITION target.
-    svc.target_tags_replace(ehr_a, vo_a.to_string(), "COMPOSITION", tag.clone())
-        .await
-        .expect("own-EHR tag accepted");
+    svc.target_tags_replace(
+        ehr_a,
+        crate::fixtures::at(vo_a.to_string()),
+        "COMPOSITION",
+        tag.clone(),
+    )
+    .await
+    .expect("own-EHR tag accepted");
 
     // Tagging A's composition from B: rejected — cross-EHR target (the type
     // matches, so the refusal is the same-EHR duty, not the kind guard).
     let err = svc
-        .target_tags_replace(ehr_b, vo_a.to_string(), "COMPOSITION", tag.clone())
+        .target_tags_replace(
+            ehr_b,
+            crate::fixtures::at(vo_a.to_string()),
+            "COMPOSITION",
+            tag.clone(),
+        )
         .await
         .expect_err("cross-EHR tag target must be rejected");
     assert!(
@@ -264,7 +274,7 @@ async fn tagging_does_not_re_version_or_contribute() {
     for target in [vo.to_string(), v1.clone()] {
         svc.target_tags_replace(
             ehr,
-            target.clone(),
+            crate::fixtures::at(target.clone()),
             "COMPOSITION",
             vec![crate::item_tag_fixture::ehr_tag(
                 "clin-proj-27a",
@@ -276,7 +286,7 @@ async fn tagging_does_not_re_version_or_contribute() {
         .expect("tag write");
         svc.target_tags_replace(
             ehr,
-            target.clone(),
+            crate::fixtures::at(target.clone()),
             "COMPOSITION",
             vec![crate::item_tag_fixture::ehr_tag(
                 "clin-proj-27a",
@@ -286,9 +296,14 @@ async fn tagging_does_not_re_version_or_contribute() {
         )
         .await
         .expect("tag replace");
-        svc.target_tag_delete(ehr, target, "COMPOSITION", "clin-proj-27a".to_owned())
-            .await
-            .expect("tag delete");
+        svc.target_tag_delete(
+            ehr,
+            crate::fixtures::at(target),
+            "COMPOSITION",
+            "clin-proj-27a".to_owned(),
+        )
+        .await
+        .expect("tag delete");
     }
 
     // No new VERSION …

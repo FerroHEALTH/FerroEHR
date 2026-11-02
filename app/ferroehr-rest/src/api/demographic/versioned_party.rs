@@ -23,6 +23,8 @@ use openehr_its::rest::generated::demographic::{
 };
 use openehr_its::rest::runtime::ApiError;
 
+use ferroehr::versioning::object_version_id::parse_version_uid;
+
 use crate::api::RequestParts;
 use crate::negotiate;
 use crate::overview::error::RestError;
@@ -45,7 +47,7 @@ pub(super) async fn run(
             )?;
             let resp = state
                 .backend()
-                .versioned_party_get(p.versioned_object_uid)
+                .versioned_party_get(super::object_of(&p.versioned_object_uid)?)
                 .await?;
             // ETag from VERSIONED_OBJECT.uid.value and Last-Modified from the
             // newest version's commit instant, both via the service metadata
@@ -65,7 +67,7 @@ pub(super) async fn run(
             let vo = p.versioned_object_uid.clone();
             let resp = state
                 .backend()
-                .versioned_party_revision_history(p.versioned_object_uid)
+                .versioned_party_revision_history(super::object_of(&vo)?)
                 .await?;
             // ETag from the addressed VERSIONED_OBJECT (a REVISION_HISTORY has
             // no uid of its own); Last-Modified from the most recent item.
@@ -80,7 +82,10 @@ pub(super) async fn run(
             // Last-Modified (its commit instant rides the response metadata).
             let resp = state
                 .backend()
-                .versioned_party_version_get_at_time(p.versioned_object_uid, p.version_at_time)
+                .versioned_party_version_get_at_time(
+                    super::object_of(&p.versioned_object_uid)?,
+                    p.version_at_time,
+                )
                 .await?;
             let mut out = negotiate::body::respond(h, ok, &resp.body);
             super::set_versioning_headers(&mut out, resp.meta.as_ref());
@@ -94,7 +99,10 @@ pub(super) async fn run(
             let vo = p.versioned_object_uid.clone();
             let resp = state
                 .backend()
-                .versioned_party_version_get_by_id(p.versioned_object_uid, p.version_uid)
+                .versioned_party_version_get_by_id(
+                    super::object_of(&vo)?,
+                    parse_version_uid(&p.version_uid)?.1,
+                )
                 .await?;
             // ETag from VERSION.uid.value; Last-Modified from the served
             // ORIGINAL_VERSION's commit_audit.time_committed.

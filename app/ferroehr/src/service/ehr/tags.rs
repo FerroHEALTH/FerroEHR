@@ -32,7 +32,7 @@ use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::error::{ServiceError, Violation};
 use crate::service::refusal::Missing;
-use crate::versioning::object_version_id::{VersionIdError, parse_uid_based_id};
+use crate::versioning::object_version_id::{UidAddress, VersionIdError};
 
 impl FerroEhrService {
     /// `GET /ehr/{ehr_id}/tags` — all tags in an EHR, optionally filtered.
@@ -375,15 +375,15 @@ impl FerroEhrService {
     /// `GET …/{uid_based_id}/tags` — the tags on one target object.
     ///
     /// # Errors
-    /// [`ServiceError`] for a malformed `uid_based_id` (400-equivalent) or a
+    /// [`ServiceError`] for a missing EHR or target (404-equivalent) or a
     /// failing tag listing.
     pub async fn target_tags_get(
         &self,
         an_ehr_id: EhrId,
-        uid_based_id: String,
+        target: UidAddress,
         target_type: &str,
     ) -> Result<Vec<ItemTag>, ServiceError> {
-        let (vo_id, version) = parse_tag_target(&uid_based_id)?;
+        let (vo_id, version) = (target.vo_id, target.version);
         // The released 404 trigger — "when the `uid_based_id` does not
         // exist" — plus the EHR scope and the route-kind discipline
         // (adjudicated): the guard runs on the GET too; an existing
@@ -398,17 +398,17 @@ impl FerroEhrService {
     /// tags, returning the collection after the write.
     ///
     /// # Errors
-    /// [`ServiceError`] for a malformed `uid_based_id`, a missing EHR or target
+    /// [`ServiceError`] for a missing EHR or target
     /// (404-equivalent), an invalid tag (422-equivalent), or a storage
     /// failure.
     pub async fn target_tags_replace(
         &self,
         an_ehr_id: EhrId,
-        uid_based_id: String,
+        target: UidAddress,
         target_type: &str,
         tags: Vec<UpdateItemTag>,
     ) -> Result<Vec<ItemTag>, ServiceError> {
-        let (vo_id, version) = parse_tag_target(&uid_based_id)?;
+        let (vo_id, version) = (target.vo_id, target.version);
         self.replace_tags(an_ehr_id, vo_id, version.as_ref(), target_type, &tags)
             .await
     }
@@ -416,43 +416,20 @@ impl FerroEhrService {
     /// `DELETE …/{uid_based_id}/tags/{key}` — delete one tag by key.
     ///
     /// # Errors
-    /// [`ServiceError`] for a malformed `uid_based_id`, a missing tag
+    /// [`ServiceError`] for a missing tag
     /// (404-equivalent), or a storage failure.
     pub async fn target_tag_delete(
         &self,
         an_ehr_id: EhrId,
-        uid_based_id: String,
+        target: UidAddress,
         target_type: &str,
         key: String,
     ) -> Result<(), ServiceError> {
-        let (vo_id, version) = parse_tag_target(&uid_based_id)?;
+        let (vo_id, version) = (target.vo_id, target.version);
         self.delete_tag(an_ehr_id, vo_id, version.as_ref(), target_type, &key)
             .await?;
         Ok(())
     }
-}
-
-/// Decode a tag route's `uid_based_id` into the versioned-object id and — for a
-/// VERSION-addressed target — the full `OBJECT_VERSION_ID` it named (RM
-/// `item_tag.adoc`: `target` "may be a `VERSIONED_OBJECT<T>` or a
-/// `VERSION<T>`"), through the one platform decoder
-/// ([`parse_uid_based_id`]).
-///
-/// The stored tail (`creating_system_id::version_tree_id`) is read back off the
-/// decoded id as [`ObjectVersionId::extension`] — BASE
-/// `master05-identification_package.adoc` `UID_BASED_ID.extension` is exactly
-/// "the part right of the first `::`" — so the verbatim, case-preserving bytes
-/// come from the typed structure rather than a second hand-rolled split
-/// ([`tag_target_tail`]).
-///
-/// # Errors
-/// [`ServiceError`] (precondition, → `400`) when the value is neither a UUID nor a
-/// well-formed `OBJECT_VERSION_ID`.
-pub(in crate::service) fn parse_tag_target(
-    uid_based_id: &str,
-) -> Result<(VoId, Option<ObjectVersionId>), ServiceError> {
-    let decoded = parse_uid_based_id(uid_based_id).map_err(VersionIdError::into_argument)?;
-    Ok((decoded.vo_id, decoded.version))
 }
 
 /// The stored tag-target version tail — `creating_system_id::version_tree_id`,

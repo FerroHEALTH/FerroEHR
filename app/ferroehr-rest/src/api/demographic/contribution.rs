@@ -60,7 +60,10 @@ pub(super) async fn run(
             let uid = p.contribution_uid.clone();
             let resp = state
                 .backend()
-                .demographic_contribution_get(p.contribution_uid)
+                .demographic_contribution_get(crate::overview::version_id::parse_uuid(
+                    &p.contribution_uid,
+                    "contribution id",
+                )?)
                 .await?;
             // Weak ETag (the contribution uid — the same identity the 201's
             // ETag carries) + Last-Modified from `audit.time_committed`,

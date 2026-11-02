@@ -310,6 +310,7 @@ pub(crate) fn extension_openapi_router() -> OpenApiRouter<AppState> {
         .merge(ehr::openapi_routes::extension_routes())
         .merge(ehr::access_delay::routes())
         .merge(demographic::relationship::relationship_routes())
+        .merge(demographic::versioned_relationship::versioned_relationship_routes())
         .merge(definition::archetype::archetype_routes())
         .merge(definition::conversion::conversion_routes())
         .merge(query::openapi_routes::cohort_routes())

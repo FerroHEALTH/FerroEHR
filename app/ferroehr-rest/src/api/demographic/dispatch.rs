@@ -10,7 +10,8 @@
 //! this one dispatcher. It classifies the
 //! operation id and forwards to the resource module: [`party`](super::party),
 //! [`tags`](super::tags), [`versioned_party`](super::versioned_party),
-//! [`contribution`](super::contribution), or [`relationship`](super::relationship).
+//! [`contribution`](super::contribution), [`relationship`](super::relationship), or
+//! [`versioned_relationship`](super::versioned_relationship).
 
 use axum::response::{IntoResponse, Response};
 
@@ -37,6 +38,9 @@ async fn run(
     // Our-own-design PARTY_RELATIONSHIP extension routes (no ITS-REST contract):
     // matched before the per-kind party ops (which never share this prefix).
     if op.starts_with("party_relationship") || op.starts_with("versioned_party_relationship") {
+        if super::versioned_relationship::OPS.contains(&op) {
+            return super::versioned_relationship::run(state, op, parts).await;
+        }
         return Box::pin(super::relationship::run(state, op, parts)).await;
     }
     if let Some((kind, action)) = super::parse_party_op(op) {
