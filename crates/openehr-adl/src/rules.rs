@@ -49,6 +49,7 @@ use openehr_lang::v1_1::beom::types::expr_type_def::ExprTypeDef;
 use openehr_lang::v1_1::beom::types::type_def_object_ref::TypeDefObjectRef;
 
 use crate::aom::build::ObjectNode;
+use crate::codes::NodeCoding;
 use crate::error::{SyntaxError, SyntaxErrorCode};
 use crate::parse::{parse_contained_regexp_text, parse_inline_primitive_text};
 use crate::source::SourceArtefact;
@@ -74,12 +75,16 @@ struct AmBuilder {
     /// later `$name` reference recovers it (`LANG/docs/BEL/master03-language`
     /// §Typing).
     variables: std::collections::BTreeMap<String, ExprTypeDef>,
+    /// The archetype's node coding, which names the primitive node id of
+    /// every `matches { … }` leaf.
+    coding: NodeCoding,
 }
 
 impl AmBuilder {
-    fn new(mode: ConstraintMode) -> Self {
+    fn new(mode: ConstraintMode, coding: NodeCoding) -> Self {
         Self {
             mode,
+            coding,
             errors: Vec::new(),
             variables: std::collections::BTreeMap::new(),
         }
@@ -201,7 +206,7 @@ impl BelBuilder for AmBuilder {
 
     fn constraint(&mut self, raw: &str, at: usize) -> Result<Expression, BelError> {
         let inner = if is_contained_regexp(raw) {
-            let cstring = self.record(parse_contained_regexp_text(raw), at)?;
+            let cstring = self.record(parse_contained_regexp_text(raw, self.coding), at)?;
             match self.mode {
                 ConstraintMode::Slot => {
                     ExprConstraint::ExprArchetypeIdConstraint(ExprArchetypeIdConstraint {
@@ -213,7 +218,7 @@ impl BelBuilder for AmBuilder {
                 }),
             }
         } else {
-            let prim = self.record(parse_inline_primitive_text(raw), at)?;
+            let prim = self.record(parse_inline_primitive_text(raw, self.coding), at)?;
             ExprConstraint::ExprConstraint(ExprConstraintData { item: prim })
         };
         Ok(Expression::ExprConstraint(inner))
@@ -366,13 +371,15 @@ fn bel_to_syntax(err: &BelError, offset: usize, src: &str) -> SyntaxError {
 
 /// Parse a raw `rules`-section body into the AM-level statement set.
 ///
-/// Byte offsets in returned errors are relative to `body`.
+/// Every primitive constraint in it carries the primitive node id of `coding`,
+/// the archetype's own (`org.openehr.am.aom2.adl_code_definitions`
+/// §Constants). Byte offsets in returned errors are relative to `body`.
 ///
 /// # Errors
 /// Returns the `S*` catalogue errors (`SINVS`/`SEXPT`/`SAIV` and the cADL codes
 /// raised while parsing embedded `matches { … }` primitive constraints).
-pub fn parse_rules_body(body: &str) -> Result<StatementSet, Vec<SyntaxError>> {
-    let mut builder = AmBuilder::new(ConstraintMode::Rule);
+pub fn parse_rules_body(body: &str, coding: NodeCoding) -> Result<StatementSet, Vec<SyntaxError>> {
+    let mut builder = AmBuilder::new(ConstraintMode::Rule, coding);
     match parse_statements_with(body, &mut builder) {
         Ok(statements) if builder.errors.is_empty() => Ok(StatementSet {
             statement: openehr_base::containers::present(statements),
@@ -389,9 +396,11 @@ pub fn parse_rules_body(body: &str) -> Result<StatementSet, Vec<SyntaxError>> {
     }
 }
 
-/// Parse the `rules` span of an already-parsed [`SourceArtefact`] (the rules
-/// counterpart of driving [`crate::parse::parse_definition_body`] over the
-/// definition span).
+/// Parse the `rules` span of an already-parsed [`SourceArtefact`].
+///
+/// This is the rules counterpart of driving
+/// [`crate::parse::parse_definition_body`] over the definition span, in the
+/// node coding its definition's root names.
 ///
 /// # Errors
 /// Returns the rule errors offset to the whole file.
@@ -402,9 +411,14 @@ pub fn parse_artefact_rules(
     let Some(rules) = artefact.rules.as_ref() else {
         return Ok(None);
     };
+    let coding = artefact
+        .definition
+        .as_ref()
+        .and_then(|definition| src.get(definition.bytes.clone()))
+        .map_or(NodeCoding::At, crate::parse::definition_coding);
     let body = src.get(rules.bytes.clone()).unwrap_or_default();
     let offset = rules.bytes.start;
-    match parse_rules_body(body) {
+    match parse_rules_body(body, coding) {
         Ok(set) => Ok(Some(set)),
         Err(errs) => Err(errs
             .into_iter()
@@ -435,14 +449,18 @@ pub fn parse_artefact_rules(
 ///
 /// The grammar admits more than one assertion after a single `include`/`exclude`
 /// keyword, so every parsed [`Statement::Assertion`] in the block is returned in
-/// source order.
+/// source order. Each regex matcher carries the primitive node id of `coding`,
+/// the archetype's own.
 ///
 /// # Errors
 /// Returns the `S*` errors on a malformed slot assertion (regex compile `SCSRE`,
 /// or `SINVS`/`SEXPT` for the expression shape), and `SUNK` when the parsed
 /// tree carries a node the printer has no ADL syntax for.
-pub fn parse_slot_assertions(text: &str) -> Result<Vec<Assertion>, Vec<SyntaxError>> {
-    let mut builder = AmBuilder::new(ConstraintMode::Slot);
+pub fn parse_slot_assertions(
+    text: &str,
+    coding: NodeCoding,
+) -> Result<Vec<Assertion>, Vec<SyntaxError>> {
+    let mut builder = AmBuilder::new(ConstraintMode::Slot, coding);
     let stmts = match parse_statements_with(text, &mut builder) {
         Ok(stmts) if builder.errors.is_empty() => stmts,
         Ok(_) => return Err(builder.errors),
@@ -491,6 +509,19 @@ fn matches_operands(assertion: &Assertion) -> Option<(&Expression, &Expression)>
             Some((&b.left_operand, &b.right_operand))
         }
         _ => None,
+    }
+}
+
+/// Recodes the short-form primitive node id of a slot assertion's matcher to
+/// `coding`, for an archetype recoded between at- and id-codes; any other
+/// assertion shape is left as it is.
+pub(crate) fn recode_slot_matcher(assertion: &mut Assertion, coding: NodeCoding) {
+    if let Expression::ExprBinaryOperator(b) = assertion.expression.as_mut()
+        && b.operator == OperatorKind::Matches
+        && let Expression::ExprConstraint(ExprConstraint::ExprArchetypeIdConstraint(c)) =
+            b.right_operand.as_mut()
+    {
+        coding.recode_primitive_node_id(&mut c.item.node_id);
     }
 }
 

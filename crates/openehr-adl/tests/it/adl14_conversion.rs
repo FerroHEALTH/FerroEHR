@@ -832,3 +832,63 @@ fn malformed_build_uid_stays_in_other_details() {
         "the other standardised items still convert"
     );
 }
+
+// ── slot assertions follow the id-coding ─────────────────────────────────────
+
+/// The node ids of every slot-assertion matcher under `obj`.
+fn slot_matcher_node_ids(
+    obj: &openehr_am::v2_4::aom2::constraint_model::c_object::CObject,
+    out: &mut Vec<String>,
+) {
+    use openehr_am::v2_4::aom2::constraint_model::c_object::CObject;
+    use openehr_am::v2_4::aom2::rules::expr_constraint::ExprConstraint;
+    use openehr_am::v2_4::beom::core::expression::Expression;
+    match obj {
+        CObject::CComplexObject(CComplexObject::CComplexObject(d)) => {
+            for attribute in d.attributes.iter().flatten() {
+                for child in attribute.children.iter().flatten() {
+                    slot_matcher_node_ids(child, out);
+                }
+            }
+        }
+        CObject::ArchetypeSlot(s) => {
+            for assertion in s.includes.iter().chain(s.excludes.iter()).flatten() {
+                if let Expression::ExprBinaryOperator(b) = assertion.expression.as_ref()
+                    && let Expression::ExprConstraint(ExprConstraint::ExprArchetypeIdConstraint(c)) =
+                        b.right_operand.as_ref()
+                {
+                    out.push(c.item.node_id.clone());
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+#[test]
+fn a_converted_slot_assertion_takes_the_id_coded_primitive_node_id() {
+    // ADL2 conversion recodes an archetype to id-codes, and `Primitive_node_id`
+    // "For id-coded archetypes … is `id9999`"
+    // (`org.openehr.am.aom2.adl_code_definitions` §Constants), the slot
+    // matcher included.
+    let src = std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join(
+        "../../corpus/archetypes/ckm/adl14/openEHR-DEMOGRAPHIC-CLUSTER.provider_identifier.v0.adl",
+    ))
+    .expect("read the 1.4 archetype");
+    let converted = parse_and_convert(
+        &src,
+        &ConvertConfig::default(),
+        &mut ConversionLog::default(),
+    )
+    .expect("convert");
+    let (definition, _) = data(&converted);
+    let mut ids = Vec::new();
+    slot_matcher_node_ids(
+        &openehr_am::v2_4::aom2::constraint_model::c_object::CObject::CComplexObject(
+            definition.clone(),
+        ),
+        &mut ids,
+    );
+    assert!(!ids.is_empty(), "the archetype carries a slot include");
+    assert!(ids.iter().all(|id| id == "id9999"), "{ids:?}");
+}

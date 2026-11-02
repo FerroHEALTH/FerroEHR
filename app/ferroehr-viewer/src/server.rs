@@ -74,8 +74,7 @@ pub fn router(app_state: AppState) -> axum::Router {
             "/auth/oidc/callback",
             axum::routing::get(crate::oidc::callback),
         )
-        // Result export: a plain form-POST download; the handler enforces the
-        // viewer session itself like every page.
+        // Result export: a plain form-POST download behind the session guard.
         .route(
             "/export/aql/{format}",
             axum::routing::post(crate::export::export_aql),
@@ -375,11 +374,12 @@ fn icon(content_type: &'static str, bytes: &'static [u8]) -> axum::response::Res
 /// a session cookie that no longer opens. Any other method is answered as a
 /// page whose session ended ([`crate::session_client::signed_out_url`]),
 /// returning to the page posted to or, for a post handler, to the dashboard,
-/// so no handler runs a post without a session. An authenticated response
-/// leaves with the sliding idle anchor moved, unless the handler wrote the
-/// session itself.
+/// so no handler runs a post without a session. An authenticated request
+/// carries its [`ViewerSession`] as an extension, which a route handler takes
+/// as `Extension<ViewerSession>`. An authenticated response leaves with the
+/// sliding idle anchor moved, unless the handler wrote the session itself.
 pub async fn login_guard(
-    request: axum::extract::Request,
+    mut request: axum::extract::Request,
     next: axum::middleware::Next,
 ) -> axum::response::Response {
     let state = request.extensions().get::<AppState>().cloned();
@@ -390,9 +390,10 @@ pub async fn login_guard(
             s.config.session.idle_minutes,
         )
     });
-    let authenticated = session
+    let viewer = session
         .as_ref()
-        .is_some_and(|s| s.get::<ViewerSession>(SESSION_KEY).is_some());
+        .and_then(|s| s.get::<ViewerSession>(SESSION_KEY));
+    let authenticated = viewer.is_some();
 
     if !authenticated && !is_public_path(request.uri().path()) {
         let method = request.method();
@@ -432,6 +433,9 @@ pub async fn login_guard(
         return response;
     }
 
+    if let Some(viewer) = viewer {
+        request.extensions_mut().insert(viewer);
+    }
     let mut response = next.run(request).await;
     if authenticated
         && !sets_session_cookie(response.headers())

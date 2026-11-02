@@ -814,7 +814,11 @@ fn renumber_obj(obj: &mut CObject, cx: &mut Converter<'_>) {
             p.node_id = cx.new_node_id(&p.node_id);
             p.target_path = rewrite_path(&p.target_path, cx);
         }
-        CObject::ArchetypeSlot(s) => s.node_id = cx.new_node_id(&s.node_id),
+        CObject::ArchetypeSlot(s) => {
+            s.node_id = cx.new_node_id(&s.node_id);
+            let assertions = s.includes.iter_mut().chain(s.excludes.iter_mut()).flatten();
+            assertions.for_each(|a| crate::rules::recode_slot_matcher(a, NodeCoding::Id));
+        }
         primitive => NodeCoding::Id.recode_primitive_node_id(common_mut(primitive).1),
     }
 }

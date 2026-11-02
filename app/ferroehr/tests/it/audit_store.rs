@@ -251,6 +251,8 @@ async fn repeated_batches_store_each_token_once_and_index_through_the_pending_li
 
 #[tokio::test]
 async fn reap_deletes_only_rows_past_the_horizon() {
+    use ferroehr::system_log::config::Retention;
+
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let store = store_over(&pool);
@@ -263,8 +265,15 @@ async fn reap_deletes_only_rows_past_the_horizon() {
         store.insert(&event, None).await.expect("insert");
     }
 
-    // retention 0 = keep forever.
-    assert_eq!(store.reap(0).await.expect("reap 0"), 0);
+    // No horizon keeps every record that states no end.
+    let today = now.to_zoned(jiff::tz::TimeZone::UTC).date();
+    assert_eq!(
+        store
+            .reap_due(today, Retention::Forever)
+            .await
+            .expect("reap forever"),
+        0
+    );
     let count: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.audit_event")
         .fetch_one(&pool)
         .await
@@ -272,7 +281,13 @@ async fn reap_deletes_only_rows_past_the_horizon() {
     assert_eq!(count, 2);
 
     // A 30-day horizon reaps exactly the row older than the horizon.
-    assert_eq!(store.reap(30).await.expect("reap 30"), 1);
+    assert_eq!(
+        store
+            .reap_due(today, Retention::Days(30))
+            .await
+            .expect("reap 30"),
+        1
+    );
     let remaining: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.audit_event")
         .fetch_one(&pool)
         .await
@@ -1373,6 +1388,8 @@ async fn request_ids_and_version_uids_add_no_token_and_stay_searchable() {
 /// record names.
 #[tokio::test]
 async fn retention_removes_the_tokens_only_its_records_named() {
+    use ferroehr::system_log::config::Retention;
+
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let store = store_over(&pool);
@@ -1436,7 +1453,16 @@ async fn retention_removes_the_tokens_only_its_records_named() {
     assert!(named.is_err(), "a token a live record names was deleted");
     tx.rollback().await.expect("rollback");
 
-    assert_eq!(store.reap(30).await.expect("reap"), 1);
+    assert_eq!(
+        store
+            .reap_due(
+                Timestamp::now().to_zoned(jiff::tz::TimeZone::UTC).date(),
+                Retention::Days(30),
+            )
+            .await
+            .expect("reap"),
+        1
+    );
     let left = token_ids(&pool).await;
     assert!(!left.contains(&own), "the reaped record's own token stayed");
     assert!(
