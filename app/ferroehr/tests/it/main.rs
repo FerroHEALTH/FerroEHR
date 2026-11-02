@@ -6,13 +6,13 @@
 //! definitions, demographics, query, validity, admin, terminology, message,
 //! subject proxy), change control + version signing, the AQL engine, the
 //! storage/node codec, validation, telemetry, the IHE ATNA system log, and the
-//! quarantined extensions (eventing, multimedia, tenancy) and the FHIR audit and
+//! quarantined extensions (the outbox feed, multimedia) and the FHIR audit and
 //! terminology clients.
 //!
 //! Most tests take a fully-migrated `PostgreSQL` 18 database from the shared
-//! harness (`testkit::db()`); the broker/blob suites (`events_amqp`,
-//! `multimedia_s3`) additionally start real
-//! testcontainers and are serialized by the nextest `containers` group.
+//! harness (`testkit::db()`); the blob suite (`multimedia_s3`) additionally
+//! starts a real testcontainer and is serialized by the nextest `containers`
+//! group.
 //!
 //! One binary per crate, split into topic modules
 //! (`.claude/rules/testing.md` §One integration-test binary per crate).
@@ -53,7 +53,6 @@ mod db_outage;
 mod decommission;
 mod directory_item_refs;
 mod ehr_index_ihe;
-mod events_amqp;
 mod ext_functions;
 mod federation_node;
 mod fixtures;
@@ -66,7 +65,7 @@ mod multimedia_s3;
 mod node_header;
 mod one_schema_per_statement;
 mod opt_resource_meta;
-mod outbox_prune;
+mod outbox_feed;
 mod persistence;
 mod privacy_leak;
 mod privacy_policy;

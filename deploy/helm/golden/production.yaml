@@ -274,11 +274,6 @@ data:
         scope = "system/Patient.rs"
         token_endpoint = "https://idp.example.com/realms/pix/protocol/openid-connect/token"
     
-    [events]
-      enabled = false
-      exchange = "ferroehr.events"
-      tls = false
-    
     [management]
       base_path = "/management"
       enabled = true
@@ -536,7 +531,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited Cedar policy propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: 3b76430f50e61a6a0e2d5484a5b46c3b92deec38182eefce35c8794e0c31846b
+        checksum/config: d2e37e3ae02073a52cf10a9db14f34d90f9eaffe1691527593673119bcd8d453
       labels:
         app.kubernetes.io/name: ferroehr
         app.kubernetes.io/instance: ferroehr

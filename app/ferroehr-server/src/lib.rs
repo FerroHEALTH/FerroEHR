@@ -29,6 +29,7 @@ use ferroehr::config::management::EndpointLevels;
 use ferroehr::config::management::ManagementConfig;
 use ferroehr::db::domain::{Domain, DomainPools};
 use ferroehr::decommission::{Decommission, Erasure};
+use ferroehr::extensions::outbox;
 use ferroehr::ids::EhrId;
 use ferroehr::manufacturer::MANUFACTURER;
 use ferroehr::report::Report;
@@ -1091,22 +1092,18 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     let audit_config: AuditConfig = config.audit.clone();
     let (audit_sender, audit_handle) = start_audit(&audit_config, &pool, &pools.audit).await;
 
-    // Contribution-outbox eventing (off by default).
-    let outbox_enabled = config.events.enabled;
-    #[cfg(feature = "events")]
-    let events_handle = if config.events.enabled {
-        tracing::info!(exchange = %config.events.exchange, "contribution-outbox eventing enabled");
-        Some(ferroehr::extensions::events::publisher::start(
-            config.events.clone(),
-            pool.clone(),
-            pools.party.clone(),
-        ))
-    } else {
-        None
-    };
-    #[cfg(not(feature = "events"))]
-    ferroehr::extensions::events::require_disabled(&config.events)
-        .map_err(|e| anyhow::anyhow!(e))?;
+    // The commit-event outbox: a commit writes its row only while a reader is
+    // named, and every reader the configuration no longer names is marked
+    // inactive, so it holds the prune back no longer.
+    let outbox_enabled = config.outbox.enabled();
+    outbox::reconcile_domains(&pools, &config.outbox.readers)
+        .await
+        .context("reconciling the outbox readers with [outbox] readers")?;
+    let outbox_prune = tokio::spawn(outbox::scheduled_prune(
+        pools.clone(),
+        config.outbox.retention_days,
+        Duration::from_secs(config.outbox.prune_interval_secs),
+    ));
 
     // Health indicators.
     let mut indicators: Vec<Arc<dyn HealthIndicator>> = vec![
@@ -1129,10 +1126,6 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         .filter(|delivery| !delivery.statuses().is_empty())
     {
         indicators.push(Arc::new(indicators::AuditDeliveryHealth::new(delivery)));
-    }
-    #[cfg(feature = "events")]
-    if let Some(handle) = &events_handle {
-        indicators.push(Arc::new(indicators::EventsHealth::new(handle.healthy())));
     }
 
     telemetry.start_samplers(pool.clone());
@@ -1251,7 +1244,6 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         admin: config.admin.clone(),
         smart: config.smart.clone(),
         terminology_api_enabled: config.terminology.api_enabled,
-        events_admin_api: config.events.admin_api,
         audit_organization_claim: config.authz.abac.organization_claim().map(str::to_owned),
         rbac: config.authz.rbac.clone(),
         assurance: config.authz.assurance.clone(),
@@ -1276,11 +1268,8 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     if let Some(handle) = audit_handle {
         handle.shutdown(AUDIT_DRAIN_TIMEOUT).await;
     }
-    #[cfg(feature = "events")]
-    if let Some(handle) = events_handle {
-        handle.shutdown(AUDIT_DRAIN_TIMEOUT).await;
-    }
     support_watch.abort();
+    outbox_prune.abort();
     parent_statistics.abort();
     if let Some(handle) = usage_report {
         handle.abort();

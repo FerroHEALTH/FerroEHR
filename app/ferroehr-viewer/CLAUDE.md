@@ -120,8 +120,8 @@ that FerroUI lacks is filed on FerroUI and added there, never built here.
   the grammar the CDR enforces with; never a second parser.
 - Every BFF fan-out is bounded by `cdr::FANOUT_CONCURRENCY`.
 - Optional CDR surfaces are probe-and-hide: the management tabs on
-  `GET /management/info`, Subscriptions on `GET /admin/event_subscription`; a
-  `404` hides the entry, any other answer counts as present.
+  `GET /management/info`; a `404` hides the entry, any other answer counts as
+  present.
 
 ## No viewer-local domain state
 

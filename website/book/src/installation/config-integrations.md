@@ -1,7 +1,7 @@
 # Integrations
 
 Query execution, the patient identity source and the three optional
-integrations: `[query]`, `[ehr_index]`, `[events]`, `[terminology]`,
+integrations: `[query]`, `[ehr_index]`, `[outbox]`, `[terminology]`,
 `[multimedia]`. Everything except the query knobs and the identity source is
 off by default, and a disabled integration contacts nothing and mounts no
 routes. Precedence, the environment-name grammar, and file discovery are on the
@@ -163,30 +163,17 @@ discard, so asking for it breaks data minimisation
 ([GDPR Art. 5(1)(c)](https://eur-lex.europa.eu/eli/reg/2016/679/oj)), and its
 `$match` is patient matching.
 
-## `[events]`
+## `[outbox]`
 
-Contribution-outbox eventing to an AMQP broker, plus its admin API. Off by
-default; the envelopes are PHI-free by design.
+The commit-event outbox and its cursor feed. Off until a reader is named; the
+envelopes are PHI-free by design. The feed, its routes and its scope are on
+[Change events (outbox feed)](../beyond-core/outbox-feed.md).
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `enabled` | bool | `false` | Spawn the outbox publisher. It also gates the per-commit outbox INSERT, so with it off the commit path writes no outbox rows at all. |
-| `url` | secret URL | `amqp://guest:guest@localhost:5672/%2f` | AMQP broker URL; credentials are redacted from every rendering. |
-| `url_file` | path | unset | Read the broker URL from a file instead, for a mounted secret. At most one of the pair, where the built-in development default does not count as "set". |
-| `exchange` | string | `ferroehr.events` | Topic exchange for the PHI-free envelope stream. |
-| `tls` | bool | `false` | Upgrade an `amqp://` URL to `amqps://` (an already-`amqps://` URL is TLS regardless). Under `deployment_profile = "production"`, an enabled outbox that still publishes over `amqp://` opens the [`plaintext_broker`](configuration.md#deployment_profile) gap. |
-| `batch_size` | int | `128` | Rows drained per poll. |
-| `poll_interval_ms` | int | `1000` | Idle poll interval. |
-| `retention_days` | int | `7` | Published-row retention window. |
-| `prune_interval_secs` | int | `3600` | Retention-prune cadence. |
-| `publish_max_retries` | int | `3` | Per-row publish retries before backing off. |
-| `admin_api` | bool | `false` | Mount the `/admin/event_subscription` CRUD routes. |
-
-> [!NOTE]
-> Eventing needs the `events` build feature, which is on in the published binary
-> and container images. A binary built with `--no-default-features` refuses at
-> startup if `events.enabled` is set, rather than running with the publisher
-> silently absent.
+| `readers` | list of strings | `[]` | The readers of the feed, each matching `^[a-z][a-z0-9-]{0,62}$`. With none, no commit writes an outbox row. Boot registers each one and marks every reader the list no longer names inactive, so it holds the prune back no longer. |
+| `retention_days` | int | `7` | How long an acknowledged row is kept after its commit; at least `1`. |
+| `prune_interval_secs` | int | `3600` | How often the retention prune runs; at least `1`. |
 
 ## `[terminology]`
 

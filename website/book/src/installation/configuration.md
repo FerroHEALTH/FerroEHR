@@ -83,8 +83,8 @@ no way to spell an array index.
 > Secret-typed keys are redacted everywhere the configuration is rendered (the
 > `/management/env` snapshot, `GET /ferroehr/rest/extensions/v1/admin/config`, `ferroehr config
 > check`, `ferroehr report`, logs), and a secret-URL key shows its host and path
-> with the embedded credentials masked. Each secret, and each database and
-> broker URL, has a `*_file` sibling that reads the value from a
+> with the embedded credentials masked. Each secret, and each database URL,
+> has a `*_file` sibling that reads the value from a
 > file, for Kubernetes and Docker secret mounts. Setting a key and its `*_file`
 > sibling at once is a boot error.
 
@@ -260,7 +260,6 @@ ticked by being present:
 | `auth_off` | `[auth] enabled = true`, so no request is served unauthenticated (CRA Annex I Part I(2)(d)) |
 | `rbac_off` | `[authz.rbac] enabled = true` whenever authentication is on, so a caller reaches only the operations its roles allow (CRA Annex I Part I(2)(d)). Not reported while `auth_off` is |
 | `plaintext_listener` | `[server.tls]` set, or `[server] listen` on a loopback address, so data does not cross the network in clear (CRA Annex I Part I(2)(e)). A deployment behind a TLS-terminating ingress accepts `plaintext_listener` by name, which records that the ingress carries the encryption. The gap also opens when `[management] port` is set on an enabled management surface: that listener binds every interface and never speaks TLS, so unset the port (the surface then shares the main listener) or accept the gap by name where the port is unreachable off the host |
-| `plaintext_broker` | An `amqps://` broker URL, or `tls = true`, on the enabled change-event outbox (`[events]`), so change events do not cross the network in clear (CRA Annex I Part I(2)(e)). A deployment whose broker path stays on a segment it trusts accepts `plaintext_broker` by name |
 | `plaintext_audit_feed` | An `https://` URL for an enabled audit FHIR feed (`[audit.fhir_feed] url`), so the access records, which name the patient and the professional, do not cross the network in clear (CRA Annex I Part I(2)(e)). A deployment whose repository is reached on a segment it trusts accepts `plaintext_audit_feed` by name |
 | `plaintext_object_store` | `[multimedia] allow_http = false` on an enabled multimedia store, so the externalised clinical blobs travel over an `https://` endpoint (CRA Annex I Part I(2)(e)). A deployment whose object store is reached on a segment it trusts accepts `plaintext_object_store` by name |
 
@@ -298,7 +297,7 @@ rather than inherit from a quickstart. See
 | `[licence]` | The commercial licence token | [Authentication & access](config-auth.md) |
 | `[query]` | AQL execution budgets and result ceilings | [Integrations](config-integrations.md) |
 | `[ehr_index]`, `[ehr_index.oauth]`, `[ehr_index.tls]` | Who holds the patient-to-EHR cross-reference: an IHE patient identity source over PIXm (the default) or the in-instance map | [Integrations](config-integrations.md#ehr_index) |
-| `[events]` | Change eventing | [Integrations](config-integrations.md) |
+| `[outbox]` | The commit-event outbox and the readers of its feed | [Integrations](config-integrations.md#outbox) |
 | `[terminology]`, `[multimedia]` | The terminology server, multimedia externalization | [Integrations](config-integrations.md) |
 | `[audit]`, `[audit.store]`, `[audit.syslog]`, `[audit.fhir_feed]` | The IHE ATNA audit trail and its sinks | [Audit](config-audit.md) |
 | `[origins]` | The origins of data the deployment recognises, which a retention period and an ABAC rule may name (EHDS Annex II 3.4) | [Audit](config-audit.md#origins-the-origins-a-deployment-recognises) |

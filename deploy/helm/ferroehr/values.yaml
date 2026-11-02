@@ -471,9 +471,6 @@ secrets:
   # -- PGP key passphrase (config.signing.mode=pgp). MOUNTED as
   # /etc/ferroehr-secrets/signing.key_passphrase (signing.key_passphrase_file).
   signingKeyPassphrase: ""
-  # -- AMQP broker URL for [events] (carries credentials). MOUNTED as
-  # /etc/ferroehr-secrets/events.url (events.url_file).
-  eventsUrl: ""
   # -- Argon2id password hashes for [[auth.basic.users]], keyed by user-id. Each
   # is MOUNTED as /etc/ferroehr-secrets/auth.basic.users.<user>.password_hash
   # and the chart injects the matching `password_hash_file` into the rendered TOML.
@@ -778,13 +775,12 @@ config:
       templates: {}
       archetypes: {}
 
-  # [events] — contribution-outbox eventing → AMQP. Our own extension; no
-  # openEHR spec governs it. Off by default.
-  # Envelopes are PHI-FREE by design. The broker URL is the secrets.eventsUrl secret.
-  events:
-    enabled: false
-    exchange: ferroehr.events
-    tls: false
+  # [outbox] — the commit-event outbox and its cursor feed. Our own extension;
+  # no openEHR spec governs it. Off until a reader is named: FerroBRIDGE reads
+  # the feed (scope __ferroehr.outbox) and delivers the PHI-free events to a
+  # message broker.
+  #   outbox:
+  #     readers: [ferrobridge]
 
   # [terminology] — terminology extension API + the FHIR terminology server.
   #

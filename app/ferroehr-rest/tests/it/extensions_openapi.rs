@@ -69,7 +69,6 @@ const FAMILY_SLUGS: &[&str] = &[
     "terminology",
     "relationships",
     "messaging",
-    "events",
     "audit",
     "smart",
 ];
@@ -110,7 +109,7 @@ fn extensions_doc_is_non_empty() {
         "/ferroehr/rest/api-docs/openapi.json",
         "/ferroehr/rest/extensions/v1/terminology",
         "/ferroehr/rest/extensions/v1/demographic/party_relationship",
-        "/ferroehr/rest/extensions/v1/admin/event_subscription",
+        "/ferroehr/rest/extensions/v1/admin/outbox/{reader}",
         "/ferroehr/rest/fhir/r4/AuditEvent",
     ] {
         assert!(
@@ -534,7 +533,6 @@ fn app_config() -> AppConfig {
             ..SmartConfig::default()
         },
         terminology_api_enabled: true,
-        events_admin_api: true,
         audit_organization_claim: None,
         rbac: ferroehr::config::authz::RbacConfig::default(),
         assurance: ferrohealth_smart::assurance::AssuranceSection::default(),

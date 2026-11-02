@@ -154,7 +154,7 @@ covers production.
 ### Integration
 
 - [Terminology](https://ferroehr.eu/docs/latest/beyond-core/terminology.html) through any FHIR terminology server, such as FerroTERM
-- [Change events](https://ferroehr.eu/docs/latest/beyond-core/amqp.html) over AMQP for every commit, without patient data by default
+- [Change events](https://ferroehr.eu/docs/latest/beyond-core/outbox-feed.html) for every commit over a cursor feed, without patient data, which FerroBRIDGE delivers to an AMQP broker
 - [Multimedia storage](https://ferroehr.eu/docs/latest/beyond-core/s3-multimedia.html) in any S3-compatible store, with integrity checks
 - [The FerroEHR Viewer](https://ferroehr.eu/docs/latest/viewer/index.html), a web interface over the same public API
 - [The `openehr-*` Rust crates](https://ferroehr.eu/docs/latest/crates.html), the openEHR specifications as libraries (listed below)

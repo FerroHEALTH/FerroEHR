@@ -279,15 +279,15 @@ fn report_parses_with_an_optional_output() -> Result<(), clap::Error> {
 async fn run_report_writes_a_redacted_file_naming_an_unreachable_database() -> anyhow::Result<()> {
     const DB_PW: &str = "DB_PW_SENTINEL_31c7";
     const MIGRATE_PW: &str = "MIGRATE_PW_SENTINEL_84ad";
-    const EVENTS_PW: &str = "EVENTS_PW_SENTINEL_5e02";
+    const FEED_PW: &str = "FEED_PW_SENTINEL_5e02";
     let dir = assert_fs::TempDir::new()?;
     let config = dir.child("ferroehr.toml");
     config.write_str(&format!(
         "[db]\n\
          url = \"postgres://reportuser:{DB_PW}@127.0.0.1:1/ferroehr\"\n\
          migrate_url = \"postgres://migrator:{MIGRATE_PW}@127.0.0.1:1/ferroehr\"\n\
-         [events]\n\
-         url = \"amqp://mq:{EVENTS_PW}@broker:5672/vh\"\n\
+         [audit.fhir_feed]\n\
+         url = \"https://feed:{FEED_PW}@arr.example/fhir\"\n\
          [ehr_index]\n\
          provider = \"local\"\n"
     ))?;
@@ -303,10 +303,10 @@ async fn run_report_writes_a_redacted_file_naming_an_unreachable_database() -> a
     for leak in [
         DB_PW,
         MIGRATE_PW,
-        EVENTS_PW,
+        FEED_PW,
         "reportuser",
         "migrator:",
-        "mq:",
+        "feed:",
     ] {
         assert!(!written.contains(leak), "{leak} leaked:\n{written}");
     }

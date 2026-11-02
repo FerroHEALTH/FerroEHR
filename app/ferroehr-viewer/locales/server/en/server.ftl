@@ -13,7 +13,6 @@ row-order = Row order
 access-recorded-without-category-data = every access is recorded without the category of the data it reached
 multimedia-files-stored-over-connection-without = multimedia files are stored over a connection without encryption
 access-records-sent-audit-repository-without = access records are sent to the audit repository without encryption
-change-events-published-message-broker-without = change events are published to a message broker without encryption
 listener-serves-plain-http-address-reachable = a listener serves plain HTTP on an address reachable from the network
 requests-served-without-authentication = requests are served without authentication
 schema-preparation-runs-clinical-runtime-credential = schema preparation runs on the clinical runtime credential

@@ -174,8 +174,8 @@ automountServiceAccountToken: false
 # (https://cheatsheetseries.owasp.org/cheatsheets/Kubernetes_Security_Cheat_Sheet.html).
 # A key spelled `FERROEHR__…` is injected as an environment VALUE. Only two are
 # left in that form — `audit.fhir_feed.url` and `multimedia.access_key_id`, the
-# remaining config keys with no `*_file` sibling. The DSN and the AMQP URL moved
-# to files once the server gained `db.url_file` and `events.url_file`.
+# remaining config keys with no `*_file` sibling. The DSN moved to a file once
+# the server gained `db.url_file`.
 apiVersion: v1
 kind: Secret
 metadata:
@@ -256,11 +256,6 @@ data:
     
     [ehr_index]
       provider = "local"
-    
-    [events]
-      enabled = false
-      exchange = "ferroehr.events"
-      tls = false
     
     [management]
       base_path = "/management"
@@ -540,7 +535,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited Cedar policy propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: 4b88ad398de605754ea622432c1eb779036d9c6e1f4d211bf8f112d4ece2827c
+        checksum/config: 2033e4d4815185ff2fa7a0cc8bd9a1c3f6ba036fd255a93510ca6d984db27633
       labels:
         app.kubernetes.io/name: ferroehr
         app.kubernetes.io/instance: ferroehr

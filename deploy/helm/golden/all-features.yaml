@@ -202,13 +202,6 @@ spec:
           matchLabels:
             app.kubernetes.io/name: otel-collector
     - ports:
-      - port: 5671
-        protocol: TCP
-      to:
-      - podSelector:
-          matchLabels:
-            app.kubernetes.io/name: rabbitmq
-    - ports:
       - port: 443
         protocol: TCP
       - port: 6514
@@ -461,8 +454,8 @@ automountServiceAccountToken: false
 # (https://cheatsheetseries.owasp.org/cheatsheets/Kubernetes_Security_Cheat_Sheet.html).
 # A key spelled `FERROEHR__…` is injected as an environment VALUE. Only two are
 # left in that form — `audit.fhir_feed.url` and `multimedia.access_key_id`, the
-# remaining config keys with no `*_file` sibling. The DSN and the AMQP URL moved
-# to files once the server gained `db.url_file` and `events.url_file`.
+# remaining config keys with no `*_file` sibling. The DSN moved to a file once
+# the server gained `db.url_file`.
 apiVersion: v1
 kind: Secret
 metadata:
@@ -480,7 +473,6 @@ stringData:
   multimedia.secret_access_key: "s3-secret"
   terminology.server.oauth.client_secret: "tx-client-secret"
   ehr_index.oauth.client_secret: "pix-client-secret"
-  events.url: "amqps://user:pass@rabbitmq:5671/%2f"
   FERROEHR__AUDIT__FHIR_FEED__URL: "https://arr:arr-password@arr.example.com/fhir"
   FERROEHR__MULTIMEDIA__ACCESS_KEY_ID: "AKIAEXAMPLE"
 ---
@@ -675,11 +667,6 @@ data:
         scope = "system/Patient.rs"
         token_endpoint = "https://idp.example.com/realms/pix/protocol/openid-connect/token"
     
-    [events]
-      enabled = true
-      exchange = "ferroehr.events"
-      tls = true
-    
     [management]
       base_path = "/management"
       enabled = true
@@ -699,6 +686,9 @@ data:
       endpoint = "https://s3.example.com"
       region = "eu-west-1"
       threshold_bytes = 262144
+    
+    [outbox]
+      readers = ["ferrobridge"]
     
     [privacy]
       subject_namespaces = ["urn:oid:2.999.7.1"]
@@ -1558,7 +1548,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited Cedar policy propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: d767900164440ffe01136f8487a6d6f6430967c1f3c25038b66c6d029c14c21d
+        checksum/config: 31ec914413651ddf92db77539840a57c58ca9c21fce662ed2c42cf2fca85936c
         prometheus.io/scrape: "true"
         prometheus.io/port: "9100"
         prometheus.io/path: "/management/prometheus"
@@ -1629,8 +1619,6 @@ spec:
               value: "/etc/ferroehr-secrets/db.migrate_url"
             - name: FERROEHR__SIGNING__KEY_PASSPHRASE_FILE
               value: "/etc/ferroehr-secrets/signing.key_passphrase"
-            - name: FERROEHR__EVENTS__URL_FILE
-              value: "/etc/ferroehr-secrets/events.url"
             - name: FERROEHR__AUDIT__FHIR_FEED__URL
               valueFrom:
                 secretKeyRef:
@@ -1765,8 +1753,6 @@ spec:
               - secret:
                   name: ferroehr-env
                   items:
-                    - key: events.url
-                      path: events.url
                     - key: signing.key_passphrase
                       path: signing.key_passphrase
                     - key: multimedia.secret_access_key

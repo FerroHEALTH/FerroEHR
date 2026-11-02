@@ -27,7 +27,6 @@ secrets:
   # renders fine and refuses to start. Low-entropy on purpose: it must read as a
   # fixture to a human and to a secret scanner alike.
   signingKeyPassphrase: ci-fixture-not-a-secret-passphrase
-  eventsUrl: amqps://user:pass@rabbitmq:5671/%2f
   auditFhirFeedUrl: https://arr:arr-password@arr.example.com/fhir
   multimediaAccessKeyId: AKIAEXAMPLE
   multimediaSecretAccessKey: s3-secret
@@ -143,10 +142,8 @@ config:
       enabled: true
       # url is a SecretUrl (its userinfo may carry ARR basic-auth credentials),
       # so it arrives as secrets.auditFhirFeedUrl, never through the ConfigMap.
-  events:
-    enabled: true
-    exchange: ferroehr.events
-    tls: true
+  outbox:
+    readers: [ferrobridge]
   terminology:
     api_enabled: true
     server:
@@ -208,7 +205,7 @@ networkPolicy:
               app.kubernetes.io/name: postgres
       port: 5432
     # One raw rule per enabled integration — this overlay turns everything on, so
-    # it carries the OTLP collector, the AMQP broker and the outbound HTTPS
+    # it carries the OTLP collector and the outbound HTTPS
     # destinations (OIDC issuer, terminology server, S3, the FHIR audit feed).
     rules:
       - to:
@@ -217,13 +214,6 @@ networkPolicy:
                 app.kubernetes.io/name: otel-collector
         ports:
           - port: 4317
-            protocol: TCP
-      - to:
-          - podSelector:
-              matchLabels:
-                app.kubernetes.io/name: rabbitmq
-        ports:
-          - port: 5671
             protocol: TCP
       - to:
           - ipBlock:

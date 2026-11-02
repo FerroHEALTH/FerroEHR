@@ -264,8 +264,9 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
     (db, pool, app)
 }
 
-/// An admin bearer token for `subject`, so no role gate stops a route before
-/// its handler and the record names the probe that caused it.
+/// An admin bearer token for `subject`, holding every scope the route table
+/// names (the outbox feed's own included), so no role or scope gate stops a
+/// route before its handler and the record names the probe that caused it.
 fn admin_bearer(subject: &str) -> String {
     let exp = u64::try_from(jiff::Timestamp::now().as_second()).expect("timestamp") + 3600;
     let claims: Value = json!({
@@ -274,6 +275,7 @@ fn admin_bearer(subject: &str) -> String {
         "aud": AUDIENCE,
         "exp": exp,
         "roles": ["ADMIN"],
+        "scope": format!("{} __ferroehr.outbox", common::FULL_SCOPES),
     });
     common::bearer(&claims)
 }

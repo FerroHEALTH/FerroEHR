@@ -147,11 +147,6 @@ data:
     [ehr_index]
       provider = "local"
     
-    [events]
-      enabled = false
-      exchange = "ferroehr.events"
-      tls = false
-    
     [management]
       base_path = "/management"
       enabled = true
@@ -263,7 +258,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited Cedar policy propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: 11024a657dbc23baa566fc4cca26b87bca38b67f37cae7a31e61a19d2ab543d7
+        checksum/config: 2c9d70f9ef667f25d90ae61028988f4bc755de27cae85a839ea0d84120405774
       labels:
         app.kubernetes.io/name: ferroehr
         app.kubernetes.io/instance: ferroehr

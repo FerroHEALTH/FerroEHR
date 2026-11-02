@@ -34,11 +34,10 @@ spec_profile = "development"
 # missing and not named in deployment_accepts (shared_credential,
 # shared_cluster, open_subject_namespace, audit_off, audit_fails_open,
 # no_category_map, open_ehr_access_default, migrate_on_runtime_credential,
-# auth_off, rbac_off, plaintext_listener, plaintext_broker, plaintext_audit_feed,
+# auth_off, rbac_off, plaintext_listener, plaintext_audit_feed,
 # plaintext_object_store; accept plaintext_listener
 # behind a TLS-terminating ingress; a [management] port opens it too, since that
-# listener is plain HTTP on every interface; plaintext_broker opens on an
-# enabled [events] amqp:// URL without tls,
+# listener is plain HTTP on every interface;
 # plaintext_audit_feed on an enabled [audit.fhir_feed] http:// url,
 # plaintext_object_store on an enabled [multimedia] with allow_http). Our own
 # posture; auth_off and rbac_off follow CRA Annex I Part I(2)(d), the plaintext_* gaps (e).
@@ -520,19 +519,16 @@ timeout_ms = 30000           # 0 disables the per-query budget (408 on overrun)
 # written; this only bounds the case where nothing else does.
 max_result_rows = 10000      # 0 = unbounded
 
-# ── [events] — contribution-outbox eventing (PHI-free envelopes) ──────────────
-[events]
-enabled = false
-url = "amqp://guest:guest@localhost:5672/%2f"   # credentials redacted in every rendering
-#? url_file = "/run/secrets/events-amqp"   # or a mounted file instead of env
-exchange = "ferroehr.events"
-tls = false                  # PROD: true (amqps); production: plaintext_broker on amqp://
-batch_size = 128
-poll_interval_ms = 1000
-retention_days = 7
+# ── [outbox] — the commit-event outbox and its cursor feed ───────────────────
+# Each reader pulls the PHI-free commit events over GET /admin/outbox/{reader}
+# (scope __ferroehr.outbox) and acknowledges them; FerroBRIDGE delivers them on
+# to a message broker. With no reader no commit writes an outbox row. Boot
+# registers every reader named here and marks every other one inactive, so a
+# removed reader no longer holds the prune back. Our own extension.
+[outbox]
+readers = []                 # e.g. ["ferrobridge"]; names match ^[a-z][a-z0-9-]{0,62}$
+retention_days = 7           # an acknowledged row is kept this long after its commit
 prune_interval_secs = 3600
-publish_max_retries = 3
-admin_api = false            # mount /admin/event_subscription CRUD
 
 # ── [terminology] — terminology API + the terminology server ──────────────────
 [terminology]

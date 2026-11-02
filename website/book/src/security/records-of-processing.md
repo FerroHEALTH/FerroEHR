@@ -30,7 +30,7 @@ The identity fields Art. 30(1)(a) asks for are yours in every case:
 | Joint controllers, if any | *yours* |
 | Representative in the Union, if applicable | *yours* |
 | Data protection officer | *yours* |
-| Processors engaged | *yours*: the PostgreSQL operator, and any object store, message broker, terminology server or identity provider the deployment is configured against |
+| Processors engaged | *yours*: the PostgreSQL operator, and any object store, outbox reader, terminology server or identity provider the deployment is configured against |
 
 > [!NOTE]
 > One transmission is on by default and is not a processor relationship: the
@@ -108,17 +108,17 @@ The identity fields Art. 30(1)(a) asks for are yours in every case:
 | Retention | `[audit.store] retention_days`, `0` meaning forever, reaped hourly otherwise. Where an active identifier rule names a jurisdiction with a registered floor, a shorter value is refused at boot |
 | Security measures | Records are hash-chained and verifiable with `audit.verify_audit_chain()`; the runtime role may insert and stamp delivery and nothing else; the `audit` schema sits outside all three pseudonymisation domains; the syslog feed can run over RFC 5425 TLS with a client certificate |
 
-## 6. Change-event publication (off by default)
+## 6. Change-event feed (off by default)
 
 | Art. 30 field | What the software does |
 |---|---|
-| Purpose | Telling downstream systems that a commit happened, when `[events]` is enabled |
+| Purpose | Telling downstream systems that a commit happened, when `[outbox] readers` names a reader |
 | Categories of data subject | Record subjects, indirectly |
 | Categories of personal data | A PHI-free envelope: the contribution id, the EHR id, the commit instant, and per version the object id, kind, version number, change type and template. No clinical content |
-| Recipients | The configured AMQP broker, and whoever consumes from it |
-| Third-country transfers | *yours*: wherever the broker runs |
-| Retention | Published rows pruned after `[events] retention_days`, seven days by default |
-| Security measures | Written in the same transaction as the commit it announces, so there is no event without its commit; optional TLS to the broker; the envelope carries identifiers, so a consumer still has to authenticate to the API to read anything |
+| Recipients | The configured readers (FerroBRIDGE, for one), and whoever they deliver to |
+| Third-country transfers | *yours*: wherever the readers and their broker run |
+| Retention | Rows pruned `[outbox] retention_days` after their commit, seven days by default, once every active reader has acknowledged them |
+| Security measures | Written in the same transaction as the commit it announces, so there is no event without its commit; read only by a caller holding the `__ferroehr.outbox` scope, one access record per read; the envelope carries identifiers, so a consumer still has to authenticate to the API to read anything |
 
 ## Fields no software can fill
 

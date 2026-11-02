@@ -97,10 +97,9 @@ Two global flags and three subcommand groups round the CLI out:
 
 ## Build features
 
-The server builds with three additive cargo features, all **on by default**:
+The server builds with two additive cargo features, both **on by default**:
 `fhir` (the FHIR terminology providers, and the FHIR `AuditEvent` the audit
-store, the audit feed and the ITI-81 retrieval carry), `events`
-(contribution-outbox eventing and the AMQP transport), and `multimedia`
+store, the audit feed and the ITI-81 retrieval carry), and `multimedia`
 (`DV_MULTIMEDIA` externalization to S3-compatible object storage). Their
 implementations live in a separate crate that the platform library pulls in
 only when the matching feature is on, so a build without them contains none of
@@ -113,7 +112,7 @@ cargo build --release --locked -p ferroehr-server --no-default-features
 ```
 
 A slim binary refuses loudly at boot if the configuration enables an
-integration it was built without: `multimedia.enabled`, `events.enabled`,
+integration it was built without: `multimedia.enabled`,
 `audit.store.enabled`, `audit.fhir_feed.enabled`, or a configured external
 FHIR terminology provider. The syslog ATNA feed and the in-process terminology
 bundle remain available in slim builds.

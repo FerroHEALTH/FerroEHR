@@ -380,8 +380,6 @@ const ADMIN_READ: &[(&str, &str)] = &[
     ("GET", "/admin/report/contribution/count"),
     ("GET", "/admin/report/composition_version/count"),
     ("GET", "/admin/report/versioned_composition/count"),
-    ("GET", "/admin/event_subscription"),
-    ("GET", "/admin/event_subscription/{subscription_id}"),
     // The storage-parity sweep mutates nothing and answers identifiers +
     // defect classes only — a pinned EXTENSION_READ_ROUTES read despite the
     // POST verb, so a read-only integrity auditor can run it (#2692).
@@ -402,6 +400,8 @@ const ADMIN_READ: &[(&str, &str)] = &[
     // The audited read of a party's protected national identifiers (#3776). It
     // also needs `authz.rbac.identifier_reader_role`, checked in its handler.
     ("GET", "/admin/party/identifiers"),
+    // The outbox feed read (#4786); a read moves no cursor.
+    ("GET", "/admin/outbox/{reader}"),
 ];
 
 /// Admin-class writes (relative to their namespace).
@@ -451,9 +451,8 @@ const ADMIN_WRITE: &[(&str, &str)] = &[
     // REPLACES stored rows, so it stays out of EXTENSION_READ_ROUTES and a
     // read-only server refuses it (#3143).
     ("POST", "/admin/integrity/rebuild-nodes"),
-    ("POST", "/admin/event_subscription"),
-    ("PUT", "/admin/event_subscription/{subscription_id}"),
-    ("DELETE", "/admin/event_subscription/{subscription_id}"),
+    // The outbox acknowledgement moves the reader's cursor (#4786).
+    ("POST", "/admin/outbox/{reader}/ack"),
 ];
 
 /// The ITI-81 audit retrieval: the node's security-surveillance record, so the

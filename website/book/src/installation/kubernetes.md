@@ -222,7 +222,7 @@ therefore classifies every key it renders and takes one of two actions.
 
 **A secret the chart routes:** `signing.key_passphrase`,
 `multimedia.secret_access_key`, a Basic user's `password_hash`, a terminology
-`client_secret`, and the three URL-shaped ones (`db.url`, `events.url`,
+`client_secret`, and the two URL-shaped ones (`db.url` and
 `audit.fhir_feed.url`) has a `secrets:` key of its own, so
 a value under `config:` is a mistake and fails the render, naming the key that
 belongs there:
@@ -317,7 +317,6 @@ separation that profile checks made, except one it accepts by name:
 | `open_ehr_access_default` | `config.authz.rbac.ehr_access_default: restricted` |
 | `auth_off` | OIDC authentication on |
 | `rbac_off` | the role gate on (`config.authz.rbac.enabled: true`, the chart's default) |
-| `plaintext_broker` | no AMQP integration on |
 | `plaintext_audit_feed`, `plaintext_object_store` | the audit FHIR feed and the multimedia store off; an `https://` URL for either when you turn it on |
 | `plaintext_listener` | accepted by name: TLS ends at the Ingress (`ingress.tls`), the pod listens in plain HTTP, and the NetworkPolicy admits only the ingress controller's namespace (`networkPolicy.ingressFrom`, with `networkPolicy.ingressAllowAll: false`) |
 
@@ -478,7 +477,7 @@ the same way: put the token the licensor issued under `config.files` as
 `GET /management/status` then reports `licence.use = "commercial"`. Without
 it the pod runs under the `non-commercial` grant every build embeds (see
 [Licensing & legal](../licensing.md#installing-a-commercial-licence)). Secret-bearing scalar values go under
-`secrets:`: `signingKeyPassphrase`, `eventsUrl`,
+`secrets:`: `signingKeyPassphrase`,
 `auditFhirFeedUrl`, `basicUserPasswordHashes`,
 `multimediaAccessKeyId`, `multimediaSecretAccessKey`,
 `terminologyClientSecret`, and the database DSN comes from
@@ -500,7 +499,6 @@ asks for a read-only volume instead.
 | `secrets.multimediaSecretAccessKey` | mounted at `/etc/ferroehr-secrets/multimedia.secret_access_key` |
 | `secrets.basicUserPasswordHashes` (per user-id) | mounted at `/etc/ferroehr-secrets/auth.basic.users.<user>.password_hash`; the chart injects the matching `password_hash_file` |
 | `secrets.terminologyClientSecret` | mounted at `/etc/ferroehr-secrets/terminology.server.oauth.client_secret`; the chart injects the matching `client_secret_file` into `config.terminology.server.oauth`, which must declare the grant |
-| `secrets.eventsUrl` | mounted at `/etc/ferroehr-secrets/events.url` |
 | `secrets.auditFhirFeedUrl` | env; `audit.fhir_feed.url` is the only credential-bearing key with no `*_file` sibling |
 | `secrets.multimediaAccessKeyId` | env; an access key *id* is not secret (it is reported unredacted by the management surface's `env` endpoint) |
 
@@ -681,7 +679,7 @@ access level, nothing to forget:
 | Probe | Route | Contract |
 |---|---|---|
 | liveness | `/health/liveness` | 200 while the process is up; touches no dependency |
-| readiness | `/health/readiness` | 200 (up or degraded) or 503 (down, booting or draining): checks the database ping, migrations applied, the audit sender and the event outbox, each bounded at one second |
+| readiness | `/health/readiness` | 200 (up or degraded) or 503 (down, booting or draining): checks the database ping, migrations applied and the audit sender, each bounded at one second |
 | startup | `/health/liveness` | the same constant, with a long failure threshold, so a slow first boot is not killed mid-migration |
 
 That split is deliberate: a database outage must fail *readiness* (the pod stops
@@ -839,11 +837,10 @@ is an explicit, auditable decision:
 | Specification generation | `config.spec_profile` | `development` | One coupled choice; `stable` runs the released generations. |
 | ADMIN API | `config.admin.enabled` | off | Physical, irreversible delete. Gate behind admin RBAC. |
 | Terminology extension API | `config.terminology.api_enabled` | off | 404 when off. |
-| Event-subscription API | `config.events.admin_api` | off | Admin CRUD over event filters. |
+| Outbox feed | `config.outbox.readers` | none | The commit-event feed for the readers named; FerroBRIDGE delivers it to a broker. See [Change events](../beyond-core/outbox-feed.md). |
 | Bearer tokens | `config.auth.issuer` | unset | With `config.auth.audience`; the issuer's metadata and key set are read at boot, asymmetric algorithms only. |
 | RBAC | `config.authz.rbac.enabled` | **on** | The coarse role gate (active while `config.auth.enabled`). |
 | ABAC | `config.authz.abac.enabled` | off | Cedar (policies via a `config.files` mount) or a remote policy decision point. |
-| Eventing → AMQP | `config.events.enabled` | off | Envelopes are **PHI-free** by design. Use `config.events.tls: true`; URL via `secrets.eventsUrl`. |
 | S3 multimedia | `config.multimedia.enabled` | off | ⚠ Offloaded blobs are PHI. Private, encrypted, HTTPS bucket; keys via `secrets.multimediaAccessKeyId` and `secrets.multimediaSecretAccessKey`. |
 | Terminology server | `config.terminology.server.enabled` | off | The one FHIR terminology server, at `config.terminology.server.url`. To run FerroTERM in the cluster instead, use `terminology.enabled` ([FerroTERM](#ferroterm-a-terminology-server-beside-the-cdr-off-by-default)), which sets these keys for you. |
 | ATNA audit trail | `config.audit.enabled` | **on** | On with the local store only; forwarding (`config.audit.syslog`, `config.audit.fhir_feed`) is opt-in per sink. |

@@ -54,8 +54,8 @@ sections are on
 
 ## Build features, and what a slim build refuses
 
-Three of these capabilities are also **cargo features** of the server build
-(`fhir`, `events`, and `multimedia`) all on in the published binaries and
+Two of these capabilities are also **cargo features** of the server build
+(`fhir` and `multimedia`), both on in the published binaries and
 container images, and on in any default build. Their code lives in a separate
 crate the platform pulls in only when the matching feature is on, so a
 `--no-default-features` build contains none of it.
@@ -86,9 +86,11 @@ for the exact list of settings a slim binary rejects.
   for local codes, plus any number of external FHIR terminology servers for
   validating coded values against external value sets; FerroTERM ships with the
   quickstart as the terminology overlay and runs beside the sandbox CDR.
-- **[Change events (AMQP)](amqp.md):** a transactional outbox that publishes a
-  PHI-free, at-least-once event for every commit to an AMQP broker, so
-  downstream systems can respond to changes instead of polling.
+- **[Change events (outbox feed)](outbox-feed.md):** a transactional outbox
+  that records a PHI-free event for every commit and serves it, in order and
+  at least once, to the readers you name; FerroBRIDGE delivers the events on to
+  an AMQP broker, so downstream systems can respond to changes instead of
+  polling.
 - **[S3 multimedia](s3-multimedia.md):** threshold-based, content-addressed
   offload of large `DV_MULTIMEDIA` blobs to any S3-compatible object store, with
   integrity verification on the way back in.

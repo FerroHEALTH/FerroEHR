@@ -12,7 +12,7 @@
 //! chapters that touch integration, deployment and security-of-access were
 //! checked as the last possible spec home: master14 governs
 //! archetype-to-archetype data conversion (`GENERIC_ENTRY` + `FEEDER_AUDIT`) and
-//! not message brokers or outbound emission; master13 is
+//! not change feeds or outbound emission; master13 is
 //! informative deployment guidance prescribing no eventing or
 //! blob offload; master07 governs the `EHR_ACCESS` object and
 //! authn-at-deployment. The one place a submodule touches spec-defined data is
@@ -27,9 +27,8 @@
 //!
 //! | Submodule | Gate (config path, default off) |
 //! |---|---|
-//! | [`events`] | `events.enabled` |
 //! | [`multimedia`] | `multimedia.enabled` |
+//! | [`outbox`] | `outbox.readers` (empty) |
 
-pub mod events;
 pub mod multimedia;
 pub mod outbox;

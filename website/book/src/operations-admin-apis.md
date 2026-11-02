@@ -111,7 +111,7 @@ Details that decide behaviour:
   query's other versions survive.
 - **The config view is redacted structurally, not by key name.** Passwords and
   password hashes, signing-key secrets and S3 secret keys render as
-  `***`; every URL that can carry credentials (database, AMQP, the FHIR audit
+  `***`; every URL that can carry credentials (database, the FHIR audit
   feed, the terminology server and its token endpoint, the remote policy
   server, the OTLP collector, the object store, the usage-report endpoint)
   keeps its host and path and masks the embedded credentials
@@ -690,13 +690,13 @@ other `Content-Type` is **415**.
 
 ## Other routes under `{base}/admin`
 
-One further family shares the `/admin` path prefix but **not** the
-`admin.enabled` switch: it has its own, and answers **404** (not `405`) while
-that switch is off, because the group is simply not serving:
+The outbox feed shares the `/admin` path prefix but **not** the
+`admin.enabled` switch: it answers for the readers `[outbox] readers` names,
+and **404** for any other name, whatever `admin.enabled` says:
 
-| Routes | Own switch | Documented in |
+| Routes | Gate | Documented in |
 |---|---|---|
-| `{base}/admin/event_subscription…` | `events.admin_api` | [Change events (AMQP)](beyond-core/amqp.md) |
+| `{base}/admin/outbox/{reader}`, `{base}/admin/outbox/{reader}/ack` | `outbox.readers` and the `__ferroehr.outbox` scope | [Change events (outbox feed)](beyond-core/outbox-feed.md) |
 
 They are still admin-class routes for authorization, so the same **401** /
 **403** split applies.

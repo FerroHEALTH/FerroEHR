@@ -13,6 +13,8 @@ admin_ehr_delete_all	true	Some(Admin)	None	None	true	Skip	Some(Audited { action:
 admin_lift_access_restriction	false	-	None	None	-	Skip	None	-	false	false	false
 admin_lift_restriction	false	-	None	None	-	Skip	None	-	false	false	false
 admin_load	false	-	None	None	-	Skip	None	-	false	false	false
+admin_outbox_ack	false	-	None	None	-	Skip	Some(Audited { action: Update, object: ApplicationActivity })	-	false	false	false
+admin_outbox_read	false	-	None	None	-	Skip	Some(Audited { action: Read, object: ApplicationActivity })	-	false	false	false
 admin_party_delete	false	-	None	None	-	Skip	Some(Audited { action: Delete, object: Demographic })	-	false	false	false
 admin_party_identifiers	false	-	None	None	-	Skip	Some(Audited { action: Read, object: Demographic })	-	false	false	false
 admin_put_retention_policy	false	-	None	None	-	Skip	None	-	false	false	false
@@ -100,11 +102,6 @@ ehr_status_tags_update	true	Some(Clinical)	Some(EhrStatus)	Some(Update)	true	Pre
 ehr_status_update	true	Some(Clinical)	Some(EhrStatus)	Some(Update)	true	Pre	Some(Audited { action: Update, object: Ehr })	Update	false	false	false
 ehr_tags_get	true	Some(Clinical)	Some(Ehr)	Some(Read)	false	Pre	Some(Audited { action: Read, object: Ehr })	Read	false	false	false
 env_view	false	-	None	None	-	Skip	None	-	false	false	false
-event_subscription_create	false	-	None	None	-	Skip	None	-	false	false	false
-event_subscription_delete	false	-	None	None	-	Skip	None	-	false	false	false
-event_subscription_get	false	-	None	None	-	Skip	None	-	false	false	false
-event_subscription_list	false	-	None	None	-	Skip	None	-	false	false	false
-event_subscription_update	false	-	None	None	-	Skip	None	-	false	false	false
 family_openapi_json	false	-	None	None	-	Skip	None	-	false	false	false
 flamegraph_view	false	-	None	None	-	Skip	None	-	false	false	false
 group_create	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Create, object: Demographic })	Create	false	false	false

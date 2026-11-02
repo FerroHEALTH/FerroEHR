@@ -603,10 +603,10 @@ impl FerroEhrService {
     /// consumer has disclosed nothing through this channel.
     ///
     /// It carries no contribution: the EHR's contributions went with it, and
-    /// their pending outbox rows with them. The routing key is `EHR.erase.-`,
-    /// so a consumer can bind to erasures alone and a wildcard subscription
-    /// receives them with everything else. No openEHR spec governs eventing —
-    /// our own extension; ITS-REST 1.1.0 defines no change notification.
+    /// their outbox rows with them. Like every outbox insert it holds the
+    /// outbox lock shared to the commit's end ([`crate::extensions::outbox`]).
+    /// No openEHR spec governs eventing — our own extension; ITS-REST 1.1.0
+    /// defines no change notification.
     ///
     /// # Errors
     /// [`ServiceError::Database`] when the insert fails.
@@ -625,8 +625,10 @@ impl FerroEhrService {
                 "versions": [{"kind": "EHR", "change_type": "erase"}],
             });
             sqlx::query(
-                "INSERT INTO event_outbox (ehr_id, envelope, committed_at) \
-                 VALUES ($1, $2, now())",
+                "WITH gate AS (SELECT pg_advisory_xact_lock_shared( \
+                     hashtext(current_schema() || '.event_outbox'), 0)) \
+                 INSERT INTO event_outbox (ehr_id, envelope, committed_at) \
+                 SELECT $1, $2, now() FROM gate",
             )
             .bind(*ehr_id)
             .bind(&envelope)
@@ -688,8 +690,10 @@ impl FerroEhrService {
             "versions": versions,
         });
         sqlx::query(
-            "INSERT INTO event_outbox (ehr_id, envelope, committed_at) \
-             VALUES (NULL, $1, now())",
+            "WITH gate AS (SELECT pg_advisory_xact_lock_shared( \
+                 hashtext(current_schema() || '.event_outbox'), 0)) \
+             INSERT INTO event_outbox (ehr_id, envelope, committed_at) \
+             SELECT NULL::uuid, $1, now() FROM gate",
         )
         .bind(&envelope)
         .execute(&mut **tx)
