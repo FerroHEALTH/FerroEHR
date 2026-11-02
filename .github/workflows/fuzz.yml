@@ -26,20 +26,13 @@
 name: Fuzz
 
 on:
-  pull_request:
-    # This list IS the harnesses' dependency set — every `path =` entry in
-    # fuzz/Cargo.toml — so adding a dependency there means adding a line here.
-    # An omission does not fail; it silently stops guarding, which is the shape
-    # of failure this whole lane exists to stop repeating.
-    paths:
-      - "fuzz/**"
-      - "crates/openehr-adl/**"
-      - "crates/openehr-base/**"
-      - "crates/openehr-its/**"
-      - "crates/openehr-sdt/**"
-      - "crates/openehr-query/**"
-      - "crates/openehr-rm/**"
-      - ".github/workflows/fuzz.yml"
+  # The harness build of a pull request and of a merge-queue entry. ci.yml
+  # calls this workflow when the change reaches fuzz/ or a crate the harnesses
+  # build: scripts/lib/change-lanes.sh derives that set from the
+  # path-dependency closure of fuzz/Cargo.toml (#4740), and `conclusion`
+  # counts the build, so a broken harness stops the merge it came with. A call
+  # runs `build` alone: the campaign below runs on the schedule and by hand.
+  workflow_call:
   schedule:
     - cron: "41 2 * * *" # daily 02:41 UTC (off-the-hour to dodge load spikes)
   workflow_dispatch:
@@ -48,11 +41,6 @@ on:
         description: "Seconds to fuzz each target (default 300)"
         required: false
         default: "300"
-
-concurrency:
-  # Never cancel a running campaign: a cancelled run loses the corpus it grew.
-  group: fuzz-${{ github.ref }}
-  cancel-in-progress: false
 
 # No permissions by default — the job grants its own; without this the workflow
 # would inherit the repository default.
@@ -108,23 +96,6 @@ jobs:
           workspaces: fuzz
           key: build
 
-      # The trigger list above claims to be the harnesses' dependency set. A
-      # claim with no check is a wish, and this particular wish going stale is
-      # invisible: the job simply stops running on the crate that broke it.
-      - name: The trigger paths still cover every harness dependency
-        run: |
-          deps=$(grep -oE '^openehr-[a-z0-9-]+ = \{ path' fuzz/Cargo.toml \
-                 | cut -d' ' -f1 | sort)
-          paths=$(grep -oE 'crates/openehr-[a-z0-9-]+/\*\*' .github/workflows/fuzz.yml \
-                 | sed -E 's|crates/([^/]*)/\*\*|\1|' | sort -u)
-          if [ "$deps" != "$paths" ]; then
-            echo "the pull_request paths filter and fuzz/Cargo.toml disagree:"
-            diff <(echo "$deps") <(echo "$paths") || true
-            echo "add the missing crate to the paths filter in this workflow"
-            exit 1
-          fi
-          echo "trigger paths cover every harness dependency"
-
       # The pin above and its row in docs/VERSIONS.md move together; a drift
       # here means one of them was edited by hand.
       - name: The nightly pin agrees with docs/VERSIONS.md
@@ -144,9 +115,13 @@ jobs:
 
   fuzz:
     name: ${{ matrix.target }}
-    # A campaign on a pull request would be the slow job the header refuses to
-    # ship; the build above is the PR-path guard.
-    if: github.event_name != 'pull_request'
+    # A campaign on a pull request or in the merge queue would be the slow job
+    # the header refuses to ship; the build above is their guard.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    # Never cancel a running campaign: a cancelled run loses the corpus it grew.
+    concurrency:
+      group: fuzz-${{ matrix.target }}-${{ github.ref }}
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
