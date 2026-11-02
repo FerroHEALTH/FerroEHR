@@ -14,15 +14,6 @@
 //! These assert only that the gate did not reject (`!= 403`): the concrete
 //! post-gate status is real-backend behaviour, not the gate's, so pinning it
 //! here would couple an authorization test to unrelated handler outcomes.
-#![expect(
-    clippy::unwrap_used,
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-
 use std::sync::Arc;
 use std::time::Duration;
 

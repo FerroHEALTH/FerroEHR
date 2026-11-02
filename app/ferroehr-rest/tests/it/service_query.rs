@@ -13,15 +13,6 @@
 //!   (`responses/409_StoredQuery_version.yaml`), never a silent overwrite;
 //! - the no-version store path upserts (spec: "stores a new query, or updates
 //!   an existing query", `operations/definition_query_store.yaml`, no `409`).
-#![expect(
-    clippy::expect_used,
-    clippy::unwrap_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions are the \
-              intended shape here (the Rust Book ch11)"
-)]
-
 use axum::Router;
 use http::{StatusCode, header};
 use http_body_util::BodyExt;

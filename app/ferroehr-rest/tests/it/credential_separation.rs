@@ -23,14 +23,6 @@
 //! boundary — our own design/extension (GDPR Art. 4(5) and Art. 32(1)(a); the
 //! migrations carry the derivation).
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions are the \
-              intended shape here (the Rust Book ch11)"
-)]
-
 use std::sync::Arc;
 
 use axum::Router;

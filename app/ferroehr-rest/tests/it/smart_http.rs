@@ -8,16 +8,6 @@
 //! template, AQL and composition families (master08 §Resource Scopes), with the
 //! `ehrId` launch context a `patient/` grant is confined to (master07 §Context
 //! Selection).
-#![expect(
-    clippy::unwrap_used,
-    clippy::expect_used,
-    clippy::indexing_slicing,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions are the \
-              intended shape here (the Rust Book ch11)"
-)]
-
 use axum::Router;
 use axum::body::Body;
 use http::{Request, StatusCode, header};

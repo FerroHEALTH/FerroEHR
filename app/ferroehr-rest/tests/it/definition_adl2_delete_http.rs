@@ -14,14 +14,6 @@
 //! "conflict" of ITS-REST `specifications/docs/overview/Requests_and_responses.md`
 //! §HTTP status codes. Each test pins one sentence the book's "Deleting a
 //! template" section says of this delete.
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions are the \
-              intended shape here (the Rust Book ch11)"
-)]
-
 use axum::Router;
 use http::{StatusCode, header};
 

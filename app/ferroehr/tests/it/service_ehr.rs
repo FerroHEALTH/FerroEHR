@@ -8,19 +8,6 @@
 //! REST layer calls it, asserting both the RM payload (`.body`) and the resource
 //! metadata (`.meta`, from which the HTTP edge derives `ETag`/`Location`).
 
-#![expect(
-    clippy::indexing_slicing,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-#![expect(
-    clippy::too_many_lines,
-    reason = "an end-to-end suite drives one long lifecycle per test on purpose: \
-              splitting a case would hide the order its assertions depend on"
-)]
-
 use serde_json::{Value, json};
 
 use openehr_base::prelude::ObjectVersionId;

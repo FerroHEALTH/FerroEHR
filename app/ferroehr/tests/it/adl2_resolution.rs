@@ -10,15 +10,6 @@
 //! §Referencing): an interface reference, the identifier down to its major
 //! version, "will match the latest release available of that major version".
 
-#![expect(
-    clippy::expect_used,
-    clippy::panic,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions are the \
-              intended shape here (the Rust Book ch11)"
-)]
-
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::error::ServiceError;
 

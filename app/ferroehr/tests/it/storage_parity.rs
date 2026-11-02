@@ -14,14 +14,6 @@
 //! the `UPDATE`/`DELETE` matched something, or it would pass while testing
 //! nothing.
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this module's \
-              fixture helpers; a failing fixture must panic at the fixture (the \
-              Rust Book ch11)"
-)]
-
 use ferroehr::service::version_update::WriteRequest;
 use serde_json::Value;
 use sqlx::PgPool;

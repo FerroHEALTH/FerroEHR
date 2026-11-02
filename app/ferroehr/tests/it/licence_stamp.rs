@@ -8,15 +8,6 @@
 //! build with no embedded token and under a licence's key once one is in
 //! force.
 
-#![expect(
-    clippy::expect_used,
-    clippy::indexing_slicing,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-
 use ferroehr::ids::EhrId;
 use ferroehr::licence::document::{Licence, Use};
 use ferroehr::licence::stamp::StampKey;

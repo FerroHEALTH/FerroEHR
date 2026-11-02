@@ -12,16 +12,6 @@
 //! in its `external_ref`; a read, an AQL query and the contribution list tell
 //! it apart. A `patient/`-only token may update or delete what such a commit
 //! inserted and is refused (`403`) on a version anyone else committed.
-#![expect(
-    clippy::unwrap_used,
-    clippy::expect_used,
-    clippy::indexing_slicing,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions are the \
-              intended shape here (the Rust Book ch11)"
-)]
-
 use axum::Router;
 use axum::body::Body;
 use http::{Request, StatusCode, header};

@@ -13,14 +13,6 @@
 //! what the CNF extension bindings drive: the `message-extract` family in
 //! Veredictum's `artifacts/vocab/wire_surface.yaml`, over the same corpus
 //! fixtures the CNF cases carry.
-#![expect(
-    clippy::panic,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-
 use std::path::PathBuf;
 
 use axum::body::Body;

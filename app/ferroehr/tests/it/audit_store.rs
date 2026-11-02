@@ -11,13 +11,6 @@
 //! schema-separation rationale is BASE
 //! `architecture_overview/master07-security.adoc` §Access logging).
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only reaches \
-              `#[test]`-annotated functions, so it misses this module's helpers; panicking \
-              assertions are the intended shape here (the Rust Book ch11)"
-)]
-
 use jiff::Timestamp;
 use sqlx::Row;
 

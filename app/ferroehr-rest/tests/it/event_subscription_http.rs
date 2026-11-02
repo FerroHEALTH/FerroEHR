@@ -11,15 +11,6 @@
 //! Design: event/subscription semantics are spec-silent; the surface is our own,
 //! config-gated like the terminology group, mounted under `/admin/` and
 //! dispatching to the `EventSubscriptionAdapter` extension.
-#![expect(
-    clippy::unwrap_used,
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-
 use axum::Router;
 use axum::body::Body;
 use http::{Request, StatusCode};

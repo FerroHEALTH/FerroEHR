@@ -15,14 +15,6 @@
 //! write_the_served_openapi_snapshot`) and review its diff. No specification
 //! governs this: our own design.
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helper; a failed fixture step is a failed test here (the Rust \
-              Book ch11)"
-)]
-
 use std::path::PathBuf;
 
 use serde_json::Value;

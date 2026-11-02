@@ -8,14 +8,6 @@
 //! NOTE: no openEHR spec governs this — our own design, for
 //! `docs/law/eu/cra/text.html` Annex I Part I(2)(m).
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this module's \
-              fixture helpers and async bodies; a failing fixture must panic at \
-              the fixture (the Rust Book ch11)"
-)]
-
 use ferroehr::db::DbConfig;
 use ferroehr::db::domain::{DomainPools, StorageConfig};
 use ferroehr::decommission::{Decommission, DecommissionError, Erasure};

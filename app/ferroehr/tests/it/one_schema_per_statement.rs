@@ -21,13 +21,6 @@
 //! design/extension (GDPR Art. 4(5) and Art. 32(1)(a);
 //! <https://eur-lex.europa.eu/eli/reg/2016/679/oj>).
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this module's \
-              helpers; a failing fixture must panic at the fixture (the Rust Book ch11)"
-)]
-
 use std::path::{Path, PathBuf};
 
 use ferroehr::db::domain::Domain;

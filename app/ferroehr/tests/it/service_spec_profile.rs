@@ -14,19 +14,6 @@
 //! `CLUSTER` there is exactly a body the development generation reads and the
 //! released one cannot.
 
-#![expect(
-    clippy::expect_used,
-    clippy::panic,
-    clippy::indexing_slicing,
-    let_underscore_drop,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              RESULT_SET row indexing are the intended shape here (the Rust Book \
-              ch11), and the archive temp-dir cleanup is best-effort — its failure \
-              is not a test outcome"
-)]
-
 use serde_json::{Value, json};
 
 use ferroehr::config::profile::SpecProfile;

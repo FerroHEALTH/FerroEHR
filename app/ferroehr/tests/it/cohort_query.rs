@@ -13,15 +13,6 @@
 //! rather than served, and every execution — suppressed ones included — leaves
 //! one access record naming the cohort by digest and never by value.
 
-#![expect(
-    clippy::expect_used,
-    clippy::panic,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions are the \
-              intended shape here (the Rust Book ch11)"
-)]
-
 use std::collections::BTreeMap;
 
 use serde_json::{Value, json};

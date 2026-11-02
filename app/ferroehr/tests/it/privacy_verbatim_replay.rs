@@ -13,14 +13,6 @@
 //! shipped rule in `strict` mode. The library default is the refusing posture
 //! (#3243), so the permissive side has to say so.
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions are the \
-              intended shape here (the Rust Book ch11)"
-)]
-
 use ferroehr::service::error::ServiceError;
 use ferroehr::service::refusal::Invalid;
 use std::sync::Arc;

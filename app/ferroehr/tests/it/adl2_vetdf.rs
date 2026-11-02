@@ -19,14 +19,6 @@
 //! that resolves it; the same contract against a real `FerroTERM` is
 //! `adl2_vetdf_ferroterm`. Real `PostgreSQL` 18 via the shared testkit harness.
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-
 use std::sync::Arc;
 
 use ferroehr::service::FerroEhrService;

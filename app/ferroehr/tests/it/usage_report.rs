@@ -10,13 +10,6 @@
 //! through the validator first, so a validator that accepts everything cannot
 //! pass the suite.
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this module's \
-              helpers; a failing fixture must panic at the fixture (the Rust Book ch11)"
-)]
-
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, Instant};

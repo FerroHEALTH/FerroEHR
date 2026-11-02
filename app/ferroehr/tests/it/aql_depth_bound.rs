@@ -11,14 +11,6 @@
 //! `ferroehr-server`'s `RUNTIME_THREAD_STACK_BYTES`), which is the stack the
 //! passes have in production.
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions are the \
-              intended shape here (the Rust Book ch11)"
-)]
-
 use openehr_query::parser::MAX_EXPRESSION_DEPTH;
 
 use ferroehr::service::FerroEhrService;

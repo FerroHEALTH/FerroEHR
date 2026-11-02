@@ -15,15 +15,6 @@
 //! ADL2 operational template validated by the `openehr-adl` engine, uploaded
 //! through the wire and stored verbatim, so the text/plain GET echoes it
 //! exactly.
-#![expect(
-    clippy::unwrap_used,
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions are the \
-              intended shape here (the Rust Book ch11)"
-)]
-
 use axum::body::Body;
 use http::{Request, StatusCode, header};
 use serde_json::Value;

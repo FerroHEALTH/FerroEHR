@@ -5,13 +5,6 @@
 //! never reaches the trail: the FHIR `AuditEvent` the store renders for each
 //! record, and the columns migration 0017 added to render it from.
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only reaches \
-              `#[test]`-annotated functions, so it misses this helper module; a failed read \
-              is the test failing (the Rust Book ch11)"
-)]
-
 use ferroehr::system_log::store::{AuditSearchFilter, AuditStore};
 use sqlx::PgPool;
 

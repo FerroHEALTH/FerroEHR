@@ -15,11 +15,6 @@
 //! the two measured parsers trap an error, while the ones written as a single
 //! SQL expression fold into the plan of a representative AQL predicate.
 
-#![expect(
-    clippy::expect_used,
-    reason = "integration tests fail loudly on harness errors"
-)]
-
 use sqlx::Row as _;
 use sqlx::{Executor as _, PgPool, Postgres, Transaction};
 
