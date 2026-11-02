@@ -28,7 +28,7 @@
 use axum::response::{IntoResponse, Response};
 use ferroehr::ids::EhrId;
 use ferroehr::service::error::ServiceError;
-use ferroehr::service::status::ServiceStatus;
+use ferroehr::service::refusal::Missing;
 use uuid::Uuid;
 
 use super::authn::{Principal, current_principal};
@@ -150,9 +150,5 @@ fn override_recorded(state: &AppState, ehr_id: EhrId) -> Result<Option<Response>
 
 /// The `404` an unknown EHR answers.
 fn not_found(message: String) -> Response {
-    RestError::from(ferroehr::service::status::StatusError::new(
-        ServiceStatus::EhrIdDoesNotExist,
-        message,
-    ))
-    .into_response()
+    RestError::from(ServiceError::not_found(Missing::Ehr, message)).into_response()
 }

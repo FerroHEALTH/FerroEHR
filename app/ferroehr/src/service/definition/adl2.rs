@@ -376,7 +376,7 @@ impl FerroEhrService {
 
     /// The (cached) [`WebTemplate`] for a stored ADL2/OPT2 template on the
     /// FLAT/STRUCTURED commit path, the ADL2 twin of
-    /// [`web_template_for`](crate::service::FerroEhrService::web_template_for)'s
+    /// [`web_template`](crate::service::FerroEhrService::web_template)'s
     /// OPT 1.4 resolution and reached as its fallback when a template id is not
     /// an ADL 1.4 template. The Web Template carries the AOM2
     /// archetype-conformance constraints ([`build_web_template_v2_4`]), so such
@@ -412,7 +412,7 @@ impl FerroEhrService {
         }
         // Compile the stored ADL2 source to its OPT2 (async) before the sync WT
         // build, mapping an unknown ADL2 template to the commit-path 422 the OPT
-        // 1.4 side uses (`web_template_for`).
+        // 1.4 side uses (`web_template`).
         let opt = match self.adl2_operational_template_for(template_id).await {
             Ok(opt) => opt,
             Err(ServiceError::NotFound(_)) => {

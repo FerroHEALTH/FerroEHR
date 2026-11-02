@@ -443,7 +443,7 @@ async fn incomplete_lifecycle_relaxes_lower_bounds_but_not_wrongness() {
 
 // ── WebTemplate cache: per-commit store-read elimination + invalidation ──────
 // The commit path validates each COMPOSITION against its operational template's
-// derived-runtime `WebTemplate`, resolved through `web_template_for`. That seam
+// derived-runtime `WebTemplate`, resolved through `web_template`. That seam
 // is cache-first: once a template is warm, subsequent commits are served from
 // the in-memory `WebTemplate` cache and never re-read `template_store` (the
 // profiled per-commit OPT read). No openEHR spec governs the cache; the spec
@@ -476,7 +476,7 @@ async fn warm_template_is_served_from_cache_without_a_store_read() {
         .map(|(id, _)| id)
         .expect("create_ehr");
 
-    // First commit warms the cache (web_template_for: miss → build → cache).
+    // First commit warms the cache (web_template: miss → build → cache).
     svc.create_composition(
         ehr_uuid,
         uv(&composition("ips_canonical.json"), "249", None),

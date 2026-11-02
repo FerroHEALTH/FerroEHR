@@ -38,6 +38,8 @@ use crate::extensions::access::authz::classify::Mode;
 use crate::extensions::access::authz::request::{AccessMode, AuthzRequest, ResourceKind};
 use ferrohealth_authz::request::Attr;
 use openehr_its::rest::runtime::ApiError;
+
+use ferroehr::service::error::ServiceError;
 use openehr_rm::prelude::Composition;
 
 use crate::api::RequestParts;
@@ -53,7 +55,6 @@ use crate::state::AppState;
 use crate::{negotiate, params};
 use ferroehr::aql::sql::subject::SubjectScope;
 use ferroehr::aql::subject::{EhrSubject, TouchedSubjects};
-use ferroehr::service::status::{ServiceStatus, StatusError};
 use ferroehr::versioning::object_version_id::parse_uid_based_id;
 use ferrohealth_smart::guard::Requirement;
 use ferrohealth_smart::openehr::smart_scopes::{Permission, ResourceFamily};
@@ -777,10 +778,15 @@ fn engine_error(
     error: &(dyn std::error::Error + 'static),
 ) -> Response {
     let overloaded = std::iter::successors(Some(error), |e| e.source())
-        .filter_map(<dyn std::error::Error>::downcast_ref::<StatusError>)
-        .find(|err| err.status == ServiceStatus::ServiceOverloaded);
+        .filter_map(<dyn std::error::Error>::downcast_ref::<ServiceError>)
+        .find_map(|err| match err {
+            ServiceError::Overloaded(curated) => Some(curated.message),
+            _ => None,
+        });
     let mut resp = match overloaded {
-        Some(err) => RestError::from(err.clone()).into_response(),
+        Some(message) => {
+            RestError::from(ApiError::ServiceUnavailable(message.to_owned())).into_response()
+        }
         None => RestError::from(crate::overview::error::internal_fault_caused(step, error))
             .into_response(),
     };
@@ -1063,7 +1069,7 @@ mod tests {
             Box::pin(async move {
                 ferroehr::aql::subject::ehr_subject(&pool, ferroehr::ids::EhrId(uuid::Uuid::nil()))
                     .await
-                    .map_err(|e| ResolveError::new("ehr subject lookup", StatusError::from(e)))
+                    .map_err(|e| ResolveError::new("ehr subject lookup", ServiceError::from(e)))
             })
         });
         let principal = principal_with_patient("P1");
@@ -1087,7 +1093,7 @@ mod tests {
             Box::pin(async move {
                 Err(ResolveError::new(
                     "ehr subject lookup",
-                    StatusError::exception("lookup failed".to_owned()),
+                    ServiceError::exception("lookup failed"),
                 ))
             })
         });

@@ -168,7 +168,7 @@ impl FerroEhrService {
         tx.commit().await?;
 
         // The create path needs no `WebTemplate`-cache invalidation: the insert
-        // never overwrites and `web_template_for` caches only successful builds,
+        // never overwrites and `web_template` caches only successful builds,
         // so a freshly stored template_id can have no pre-existing entry. The
         // cache is invalidated where a template's lifetime ends, in the delete.
         // The Web Template built above is cached, so the upload's representation

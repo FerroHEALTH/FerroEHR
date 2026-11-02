@@ -75,8 +75,6 @@ use crate::system_log::sender::AuditSender;
 use crate::versioning::SigningCtx;
 use crate::versioning::signature::signer::Signer;
 use openehr_sdt::flat::cache::WebTemplateCache;
-use openehr_sdt::flat::webtemplate::model::WebTemplate;
-use status::StatusError;
 
 /// The default openEHR system identifier stamped into `EHR.system_id`,
 /// `AUDIT_DETAILS.system_id`, and every `OBJECT_VERSION_ID.creating_system_id`.
@@ -529,23 +527,6 @@ impl FerroEhrService {
     }
 
     // ── Accessors ─────────────────────────────────────────────────────────────
-
-    /// The `WebTemplate` derived from a stored OPT: one resolution serves
-    /// validation,
-    /// FLAT/STRUCTURED conversion, and `wt+json` (the derived runtime artefact;
-    /// the `WebTemplate` format itself is spec-silent, `crate::templates`).
-    ///
-    /// # Errors
-    ///
-    /// `content_invalid` when no OPT with `template_id` is stored ("operational
-    /// template not known" — the commit-path `422`,
-    /// `422.yaml`: "the underlying template is not known") or when
-    /// the stored OPT fails to parse/build into a `WebTemplate`; a
-    /// storage-classified status (`exception`, `conflict`, or
-    /// `service_overloaded`) on a database failure while loading it.
-    pub async fn web_template(&self, template_id: &str) -> Result<Arc<WebTemplate>, StatusError> {
-        Ok(self.web_template_for(template_id).await?)
-    }
 
     /// The AQL plan cache, for observability. No openEHR spec governs it.
     #[must_use]
