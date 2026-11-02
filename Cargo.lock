@@ -1923,7 +1923,7 @@ dependencies = [
 
 [[package]]
 name = "docs-meta"
-version = "5.6.0-rc9"
+version = "5.6.0-rc10"
 
 [[package]]
 name = "dotenvy"
@@ -2240,7 +2240,7 @@ dependencies = [
 
 [[package]]
 name = "ferroehr"
-version = "5.6.0-rc9"
+version = "5.6.0-rc10"
 dependencies = [
  "aes-gcm 0.11.1",
  "argon2 0.6.0",
@@ -2319,7 +2319,7 @@ dependencies = [
 
 [[package]]
 name = "ferroehr-ext"
-version = "5.6.0-rc9"
+version = "5.6.0-rc10"
 dependencies = [
  "base64 0.23.1",
  "bytes",
@@ -2337,7 +2337,7 @@ dependencies = [
 
 [[package]]
 name = "ferroehr-rest"
-version = "5.6.0-rc9"
+version = "5.6.0-rc10"
 dependencies = [
  "argon2 0.6.0",
  "assert_fs",
@@ -2401,7 +2401,7 @@ dependencies = [
 
 [[package]]
 name = "ferroehr-server"
-version = "5.6.0-rc9"
+version = "5.6.0-rc10"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -2425,7 +2425,7 @@ dependencies = [
 
 [[package]]
 name = "ferroehr-viewer"
-version = "5.6.0-rc9"
+version = "5.6.0-rc10"
 dependencies = [
  "anyhow",
  "axum",
@@ -2827,7 +2827,7 @@ dependencies = [
 
 [[package]]
 name = "forwarders"
-version = "5.6.0-rc9"
+version = "5.6.0-rc10"
 dependencies = [
  "anyhow",
  "proc-macro2",
@@ -4107,7 +4107,7 @@ checksum = "92daf443525c4cce67b150400bc2316076100ce0b3686209eb8cf3c31612e6f0"
 
 [[package]]
 name = "loadtest"
-version = "5.6.0-rc9"
+version = "5.6.0-rc10"
 dependencies = [
  "anyhow",
  "clap",
@@ -4701,7 +4701,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-codegen"
-version = "5.6.0-rc9"
+version = "5.6.0-rc10"
 dependencies = [
  "http",
  "roxmltree",
@@ -7158,7 +7158,7 @@ dependencies = [
 
 [[package]]
 name = "testkit"
-version = "5.6.0-rc9"
+version = "5.6.0-rc10"
 dependencies = [
  "ferroehr",
  "jiff",
