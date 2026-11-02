@@ -40,10 +40,7 @@ use crate::fixtures::{composition, uv};
 /// Create an EHR + one composition on `svc` and return
 /// `(EHR.system_id, OBJECT_VERSION_ID, AUDIT_DETAILS.system_id)`.
 async fn stamped_identities(svc: &FerroEhrService) -> (String, String, String) {
-    let ehr_id: EhrId = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create_ehr");
+    let ehr_id: EhrId = crate::fixtures::create_ehr(svc).await;
     let ehr = svc.ehr_read(ehr_id).await.expect("ehr_read").body;
     let ehr_system_id = ehr["system_id"]["value"]
         .as_str()
@@ -97,8 +94,7 @@ async fn configured_system_id_stamps_ehr_audit_and_version_uid() {
 
 #[tokio::test]
 async fn unset_system_id_keeps_the_compatibility_default() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     let (ehr_system_id, ovid, audit_system_id) = stamped_identities(&svc).await;
 

@@ -30,45 +30,13 @@
               fixture indexing are the intended shape here (the Rust Book ch11)"
 )]
 
+use crate::fixtures::uv;
 use serde_json::{Value, json};
 use sqlx::PgPool;
-
-use openehr_rm::prelude::PartyProxy;
 
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::error::ServiceError;
 use ferroehr::service::refusal::{Clash, Invalid, Refusal};
-
-use ferroehr::service::version_update::{change_type_coded, lifecycle_state_coded};
-use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData, UpdateVersion};
-
-/// The `UPDATE_VERSION` commit envelope for a bare-RM write.
-fn uv<T: serde::de::DeserializeOwned>(
-    data: &Value,
-    change_code: &str,
-    preceding: Option<&str>,
-) -> UpdateVersion<T> {
-    UpdateVersion {
-        preceding_version_uid: preceding.map(|p| p.parse().expect("OBJECT_VERSION_ID")),
-        lifecycle_state: lifecycle_state_coded("532"),
-        attestations: None,
-        data: openehr_its::json::from_canonical_value(data)
-            .expect("the fixture commit body decodes as its RM type"),
-        commit_audit: UpdateAudit::UpdateAudit(UpdateAuditData {
-            _type: None,
-            system_id: None,
-            change_type: change_type_coded(change_code),
-            description: None,
-            committer: openehr_its::json::from_canonical_value::<PartyProxy>(
-                &json!({ "_type": "PARTY_IDENTIFIED", "name": "conformance tester" }),
-            )
-            .expect("committer"),
-            additional_properties: std::collections::BTreeMap::new(),
-        }),
-        signature: None,
-        additional_properties: std::collections::BTreeMap::new(),
-    }
-}
 
 /// Read a workspace fixture relative to this crate's manifest dir.
 fn fixture(rel: &str) -> String {
@@ -108,11 +76,7 @@ async fn composition_validation_gates_persistence() {
         .await
         .expect("upload IPS OPT");
 
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create_ehr")
-        .to_string();
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
     // ── valid composition → committed and retrievable ────────────────────────
@@ -198,11 +162,7 @@ async fn composition_update_is_validated() {
     svc.template_adl14_upload(&fixture(IPS_OPT))
         .await
         .expect("upload IPS OPT");
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create_ehr")
-        .to_string();
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
     // Seed a valid v1.
@@ -266,11 +226,7 @@ async fn direct_route_commits_stamp_the_template_id() {
     svc.template_adl14_upload(&fixture(IPS_OPT))
         .await
         .expect("upload IPS OPT");
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create_ehr")
-        .to_string();
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
     // ── create (direct route) ────────────────────────────────────────────────
@@ -373,10 +329,7 @@ async fn incomplete_lifecycle_relaxes_lower_bounds_but_not_wrongness() {
     svc.template_adl14_upload(&fixture(IPS_OPT))
         .await
         .expect("upload IPS OPT");
-    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create_ehr");
+    let ehr_uuid = crate::fixtures::create_ehr(&svc).await;
 
     // A composition missing its mandatory sections (content emptied): under the
     // IPS template each SECTION has occurrences min >= 1, so this is a pure
@@ -471,10 +424,7 @@ async fn warm_template_is_served_from_cache_without_a_store_read() {
         .expect("template_id")
         .to_owned();
 
-    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create_ehr");
+    let ehr_uuid = crate::fixtures::create_ehr(&svc).await;
 
     // First commit warms the cache (web_template: miss → build → cache).
     svc.create_composition(
@@ -556,10 +506,7 @@ async fn deleting_a_template_invalidates_its_web_template_cache() {
     // A commit against the now-deleted template resolves to the clean
     // "template not known" 422 — only reachable if the stale WebTemplate was
     // evicted (otherwise the FK would fail with a database error instead).
-    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create_ehr");
+    let ehr_uuid = crate::fixtures::create_ehr(&svc).await;
     let err = svc
         .create_composition(
             ehr_uuid,
@@ -633,10 +580,7 @@ async fn element_without_value_or_null_flavour_is_rejected_at_commit() {
     svc.template_adl14_upload(&fixture(IPS_OPT))
         .await
         .expect("upload IPS OPT");
-    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create_ehr");
+    let ehr_uuid = crate::fixtures::create_ehr(&svc).await;
 
     let mut broken = composition("ips_canonical.json");
     let emptied = strip_first_element_value(&mut broken, "")
@@ -711,11 +655,7 @@ async fn direct_route_commit_against_an_adl2_template_stamps_and_guards() {
         openehr_sdt::flat::convert::composition_from_flat(&flat, &wt, "2026-08-03T12:00:00Z")
             .expect("FLAT converts to a canonical COMPOSITION");
 
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create_ehr")
-        .to_string();
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
     let ovid = svc
         .create_composition(ehr_uuid, uv(&composition, "249", None))

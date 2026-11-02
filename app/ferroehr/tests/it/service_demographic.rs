@@ -18,8 +18,8 @@
 )]
 
 use serde_json::{Value, json};
-use sqlx::PgPool;
 
+use crate::fixtures::db_now;
 use crate::typed_body::typed;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::types::PartyKind;
@@ -35,19 +35,6 @@ fn ovid(v: &Value) -> &str {
 /// The bare versioned-object UUID from an `OBJECT_VERSION_ID`.
 fn vo_uuid(v: &Value) -> String {
     ovid(v).split("::").next().expect("vo uuid").to_owned()
-}
-
-/// The DB's current instant (`SELECT now()`) as a `jiff::Timestamp`. Time-travel
-/// probes MUST anchor their reference instant on this server clock — the same
-/// clock that stamps `version.committed_at` — never on the test-process wall
-/// clock: a client/DB clock skew under parallel test load would race
-/// the at-time read against the version validity intervals.
-async fn db_now(pool: &PgPool) -> jiff::Timestamp {
-    sqlx::query_scalar::<_, jiff_sqlx::Timestamp>("SELECT now()")
-        .fetch_one(pool)
-        .await
-        .expect("db now()")
-        .to_jiff()
 }
 
 fn person(name: &str) -> Value {
@@ -192,8 +179,7 @@ async fn person_is_live(svc: &FerroEhrService, vo_id: ferroehr::ids::VoId) -> bo
 /// deleted party is no longer present.
 #[tokio::test]
 async fn party_typed_calls_round_trip() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     // The create → the new VERSIONED_OBJECT's id.
     let vo_id = crate::fixtures::create_party(&svc, uv(&person("Jane"), None))
@@ -438,8 +424,7 @@ async fn person_lifecycle_end_to_end() {
 /// `PartyKind`).
 #[tokio::test]
 async fn party_write_responses_match_a_fresh_read() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     // create → the built-from-commit body equals a fresh read.
     let created = svc
@@ -509,8 +494,7 @@ async fn party_write_responses_match_a_fresh_read() {
 /// from the last (most recent) VERSION.uid.value".
 #[tokio::test]
 async fn person_delete_by_versioned_uid_is_refused() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     let created = svc
         .party_create(PartyKind::Person, typed(&person("Jane")), None)
@@ -546,8 +530,7 @@ async fn person_delete_by_versioned_uid_is_refused() {
 /// A foreign source is a `422` and commits nothing.
 #[tokio::test]
 async fn update_without_uid_refuses_a_foreign_relationship_source() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     let first = svc
         .party_create(PartyKind::Person, typed(&person("First")), None)
@@ -601,8 +584,7 @@ async fn update_without_uid_refuses_a_foreign_relationship_source() {
 
 #[tokio::test]
 async fn role_create_and_get() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     let created = svc
         .party_create(PartyKind::Role, typed(&role("Clinician")), None)
@@ -625,8 +607,7 @@ async fn role_create_and_get() {
 /// CONTRIBUTION audit.
 #[tokio::test]
 async fn demographic_contribution_member_without_committer_is_refused() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let coded = |code: &str, value: &str| {
         json!({
             "_type": "DV_CODED_TEXT", "value": value,
@@ -669,8 +650,7 @@ async fn demographic_contribution_member_without_committer_is_refused() {
 
 #[tokio::test]
 async fn demographic_contribution_multi_version() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     let body = json!({
         "_type": "CONTRIBUTION",
@@ -738,8 +718,7 @@ async fn demographic_contribution_multi_version() {
 
 #[tokio::test]
 async fn party_tags_crud() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     let created = svc
         .party_create(PartyKind::Person, typed(&person("Tagged")), None)
@@ -797,8 +776,7 @@ async fn party_tags_crud() {
 /// at the same seam (RFC 9110 §8.8.3 — an entity-tag is a quoted string).
 #[tokio::test]
 async fn party_update_if_match_is_case_insensitive_and_quote_tolerant() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     let created = svc
         .party_create(PartyKind::Person, typed(&person("Jane")), None)
@@ -943,8 +921,7 @@ async fn inline_relationships_are_stored_and_served_verbatim() {
 /// container id accepts, a foreign container id still refuses.
 #[tokio::test]
 async fn inline_relationship_source_matches_the_version_container_not_the_version() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     let created = svc
         .party_create(PartyKind::Person, typed(&person("Jane Container")), None)
@@ -1043,8 +1020,7 @@ async fn inline_relationship_source_matches_the_version_container_not_the_versio
 /// cross-checked here against the value the commit audits carry.
 #[tokio::test]
 async fn versioned_party_owner_id_names_the_serving_system() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     let created = svc
         .party_create(PartyKind::Person, typed(&person("Jane")), None)
@@ -1080,8 +1056,7 @@ async fn versioned_party_owner_id_names_the_serving_system() {
 /// are each the 400, and the spec spelling commits.
 #[tokio::test]
 async fn demographic_contribution_refuses_the_lenient_spellings() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let coded = |code: &str, value: &str| {
         json!({ "value": value,
             "defining_code": { "terminology_id": { "value": "openehr" }, "code_string": code } })
@@ -1153,8 +1128,7 @@ async fn demographic_contribution_refuses_the_lenient_spellings() {
 /// and `UpdateAudit.yaml` leave `additionalProperties` open).
 #[tokio::test]
 async fn demographic_contribution_audit_refusals_agree_with_the_ehr_path() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let complete = json!({ "value": "complete",
         "defining_code": { "terminology_id": { "value": "openehr" }, "code_string": "532" } });
     let audit = json!({ "change_type": { "value": "creation",
@@ -1226,8 +1200,7 @@ async fn demographic_contribution_audit_refusals_agree_with_the_ehr_path() {
 /// `contribution`, stay the 400 naming their member path.
 #[tokio::test]
 async fn demographic_contribution_member_is_open_but_assigned_members_are_refused() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let member = |extra: &[(&str, Value)]| {
         let mut version = json!({
             "lifecycle_state": { "value": "complete",

@@ -16,6 +16,7 @@
 #![expect(
     clippy::expect_used,
     clippy::indexing_slicing,
+    clippy::panic,
     reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
               reaches `#[test]`-annotated functions, so it misses this module's \
               fixture helpers; a failing fixture must panic at the fixture (the \
@@ -501,4 +502,123 @@ pub(crate) async fn artefact_stored(pool: &sqlx::PgPool, hrid: &str) -> bool {
         .fetch_one(pool)
         .await
         .expect("the artefact store answers")
+}
+
+/// A fresh, fully migrated database and the platform service over it, both
+/// domains on its one pool. Hold the database for as long as the service.
+pub(crate) async fn service() -> (testkit::TestDb, ferroehr::service::FerroEhrService) {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = ferroehr::service::FerroEhrService::new(
+        &ferroehr::db::domain::DomainPools::from_shared(&db.pool()),
+    );
+    (db, svc)
+}
+
+/// Create an EHR with no subject and no supplied id; return its id.
+pub(crate) async fn create_ehr(svc: &ferroehr::service::FerroEhrService) -> ferroehr::ids::EhrId {
+    Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr")
+}
+
+/// An `EHR_STATUS` whose `PARTY_SELF` subject carries an `external_ref` — RM
+/// ehr master04 §EHR Status (the subject 0..1 identifies the EHR).
+pub(crate) fn status_for_subject(subject_id: &str) -> Value {
+    json!({
+        "_type": "EHR_STATUS",
+        "archetype_node_id": "openEHR-EHR-EHR_STATUS.generic.v1",
+        "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID",
+                              "value": "openEHR-EHR-EHR_STATUS.generic.v1" },
+            "rm_version": "1.2.0"
+        },
+        "name": { "_type": "DV_TEXT", "value": "EHR Status" },
+        "subject": {
+            "_type": "PARTY_SELF",
+            "external_ref": {
+                "_type": "PARTY_REF",
+                "namespace": "patients",
+                "type": "PERSON",
+                "id": { "_type": "HIER_OBJECT_ID", "value": subject_id }
+            }
+        },
+        "is_queryable": true,
+        "is_modifiable": true
+    })
+}
+
+/// Build a client pointing at `base` with a short, test-friendly timeout.
+pub(crate) fn provider(
+    base: &str,
+) -> ferroehr::service::terminology::fhir::FhirTerminologyProvider {
+    use ferroehr::service::terminology::config::TerminologyServerConfig;
+    use ferroehr::service::terminology::fhir::FhirTerminologyProvider;
+    let cfg = TerminologyServerConfig {
+        enabled: true,
+        url: ferrohealth_secret::secret_url::SecretUrl::new(base),
+        request_timeout_ms: 800,
+        ..TerminologyServerConfig::default()
+    };
+    FhirTerminologyProvider::new(&cfg).expect("build provider")
+}
+
+pub(crate) fn plan_ok(q: &str) -> ferroehr::aql::ir::QueryIr {
+    let ast = openehr_query::parser::parse_str(q)
+        .unwrap_or_else(|e| panic!("parse failed for {q:?}: {e}"));
+    ferroehr::aql::plan(
+        &ast,
+        &ferroehr::aql::ir::Params::default(),
+        ferroehr::config::profile::SpecProfile::default(),
+    )
+    .unwrap_or_else(|e| panic!("plan failed for {q:?}: {e}"))
+}
+
+pub(crate) async fn setup() -> (
+    testkit::TestDb,
+    ferroehr::service::FerroEhrService,
+    ferroehr::ids::EhrId,
+) {
+    let (db, svc) = service().await;
+    let ehr_id = create_ehr(&svc).await;
+    (db, svc, ehr_id)
+}
+
+/// The base composition with its template stripped and a `DV_QUANTITY` leaf.
+pub(crate) fn base_composition() -> Value {
+    let path = format!(
+        "{}/../../crates/openehr-its/tests/vendor/openehr_sdk/composition/canonical_json/minimal_observation.json",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    serde_json::from_str(&std::fs::read_to_string(&path).expect("read fixture"))
+        .expect("parse fixture")
+}
+
+/// The DB's current instant (`SELECT now()`) as a `jiff::Timestamp`. Time-travel
+/// probes MUST anchor their reference instant on this server clock — the same
+/// clock that stamps `version.committed_at` — never on the test-process wall
+/// clock: a client/DB clock skew under parallel test load would race
+/// the at-time read against the version validity intervals.
+pub(crate) async fn db_now(pool: &sqlx::PgPool) -> jiff::Timestamp {
+    sqlx::query_scalar::<_, jiff_sqlx::Timestamp>("SELECT now()")
+        .fetch_one(pool)
+        .await
+        .expect("db now()")
+        .to_jiff()
+}
+
+pub(crate) async fn pending_count(pool: &sqlx::PgPool) -> i64 {
+    sqlx::query_scalar("SELECT count(*) FROM clinical.event_outbox WHERE published_at IS NULL")
+        .fetch_one(pool)
+        .await
+        .expect("pending count")
+}
+
+/// The `OBJECT_VERSION_ID` of the first version listed in a served CONTRIBUTION.
+pub(crate) fn first_version_uid(contribution: &Value) -> String {
+    contribution["versions"][0]["id"]["value"]
+        .as_str()
+        .expect("versions[0].id.value")
+        .to_owned()
 }

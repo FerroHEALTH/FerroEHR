@@ -31,7 +31,6 @@
 #![expect(
     clippy::expect_used,
     clippy::unwrap_used,
-    clippy::indexing_slicing,
     reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
               reaches `#[test]`-annotated functions, so it misses this integration \
               module's helpers and async bodies; panicking assertions and direct \
@@ -43,6 +42,7 @@ use ferroehr::service::query::request::AqlQueryRequest;
 use serde_json::{Value, json};
 use uuid::Uuid;
 
+use crate::fixtures::first_version_uid;
 use crate::fixtures::{change_type, committer, composition, uv};
 
 /// The service's own system id (`DEFAULT_SYSTEM_ID`) — the local
@@ -70,14 +70,6 @@ fn modify_contribution(data: &Value, preceding: &str) -> Value {
             "committer": committer("branching tester")
         }
     })
-}
-
-/// The `OBJECT_VERSION_ID` of the first version listed in a served CONTRIBUTION.
-fn first_version_uid(contribution: &Value) -> String {
-    contribution["versions"][0]["id"]["value"]
-        .as_str()
-        .expect("versions[0].id.value")
-        .to_owned()
 }
 
 /// A whole-EHR, ALL-versions `EXTRACT_SPEC` (RM `ehr_extract` master04
@@ -124,10 +116,7 @@ fn all_versions_spec(ehr: ferroehr::ids::EhrId) -> Value {
 /// from another openEHR system would carry (RM common master06 §Copying: the
 /// `creating_system_id` identifies the system of original creation).
 async fn foreign_extract(svc: &FerroEhrService) -> (Value, String) {
-    let source = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create source ehr");
+    let source = crate::fixtures::create_ehr(svc).await;
     let v1 = svc
         .create_composition(source, uv(&composition("v1"), "249", None))
         .await
@@ -179,8 +168,7 @@ async fn modifying_an_imported_foreign_version_forks_a_branch() {
     let source_svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
         &source_db.pool(),
     ));
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let (extract, vo) = foreign_extract(&source_svc).await;
     let (target, vo_id) = import_foreign(&svc, extract, &vo).await;
 
@@ -299,8 +287,7 @@ async fn the_served_imported_version_is_the_wrapper_shape_without_data() {
     let source_svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
         &source_db.pool(),
     ));
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let (extract, vo) = foreign_extract(&source_svc).await;
     let (target, vo_id) = import_foreign(&svc, extract, &vo).await;
 
@@ -358,8 +345,7 @@ async fn merge_provenance_is_preserved_by_the_route_that_carries_it() {
     let source_svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
         &source_db.pool(),
     ));
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let (mut extract, vo) = foreign_extract(&source_svc).await;
 
     // Stamp merge provenance onto the LATEST foreign version, as a merging
@@ -446,8 +432,7 @@ async fn a_version_tree_with_branches_reexports_and_reimports_whole() {
     let source_svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
         &source_db.pool(),
     ));
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let (extract, vo) = foreign_extract(&source_svc).await;
     let (target, vo_id) = import_foreign(&svc, extract, &vo).await;
 
@@ -523,8 +508,7 @@ async fn all_versions_returns_the_branch_row_beside_the_trunk() {
     let source_svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
         &source_db.pool(),
     ));
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let (extract, vo) = foreign_extract(&source_svc).await;
     let (target, vo_id) = import_foreign(&svc, extract, &vo).await;
 

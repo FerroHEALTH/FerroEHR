@@ -48,8 +48,7 @@ const OPT_TEMPLATE_ID: &str = "IDCR Allergies List.v0";
 
 #[tokio::test]
 async fn archetype_upload_get_list_replace_delete() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (db, svc) = crate::fixtures::service().await;
     let adl = fixture(ARCHETYPE_REL);
 
     // Precondition: not present yet.
@@ -119,8 +118,7 @@ async fn archetype_upload_get_list_replace_delete() {
 /// verbatim, so nothing is lost on the round trip.
 #[tokio::test]
 async fn archetype_with_revision_history_section_uploads() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (db, svc) = crate::fixtures::service().await;
     let adl = fixture(REVISION_HISTORY_ARCHETYPE_REL);
 
     svc.upload_archetype(adl.clone())
@@ -138,8 +136,7 @@ async fn archetype_with_revision_history_section_uploads() {
 
 #[tokio::test]
 async fn archetype_errors() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     // Invalid ADL → 422 reporting invalid_archetype.
     let bad = svc
@@ -194,8 +191,7 @@ async fn archetype_semantic_validity_runs_the_14_engine() {
     // structural probe: a source that PARSES but violates an ADL 1.4 / AOM 1.4
     // rule is rejected. ADL1.4 master08 §Validity Rules VARDT — the topmost
     // definition typename must match the RM class of the archetype id.
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let adl = fixture(ARCHETYPE_REL);
 
     // Break VARDT: the id is a COMPOSITION, the definition root now claims
@@ -231,8 +227,7 @@ async fn adl14_convert_to_adl2_migration_round_trip() {
     // converts to ADL2 source that validates through the full ADL2 pipeline
     // (the same service path a native ADL2 upload takes). No openEHR spec
     // governs 1.4 → 2 conversion — our own design/extension.
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let adl = fixture(ARCHETYPE_REL);
 
     svc.upload_archetype(adl)
@@ -296,8 +291,7 @@ fn listed_template_ids(list: &[serde_json::Value]) -> Vec<String> {
 
 #[tokio::test]
 async fn opt_upload_get_list_filter_delete() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let xml = fixture(OPT_REL);
 
     // An XML document that is no OPT is refused and stores nothing.
@@ -392,11 +386,7 @@ async fn opt_delete_refuses_while_referenced() {
         .expect("upload opt");
 
     // Reference the template from a committed version row.
-    let ehr: uuid::Uuid = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr")
-        .into();
+    let ehr: uuid::Uuid = crate::fixtures::create_ehr(&svc).await.into();
     let referenced = sqlx::query("UPDATE version SET template_id = $1 WHERE ehr_id = $2")
         .bind(OPT_TEMPLATE_ID)
         .bind(ehr)
@@ -449,8 +439,7 @@ async fn opt_delete_refuses_while_referenced() {
 /// and the `offset`/`fetch` window rather than returning the full set.
 #[tokio::test]
 async fn template_adl14_list_filters_and_paginates() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     // Two templates: "IDCR Allergies List.v0" and "IDCR Problem List.v1".
     svc.template_adl14_upload(&fixture(OPT_REL))
@@ -546,8 +535,7 @@ async fn template_adl14_list_filters_and_paginates() {
 /// (`specifications/parameters/query/filter_version.yaml`).
 #[tokio::test]
 async fn template_adl14_list_absent_version_collapses_to_latest() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     // Two versions of the one family: the v0 fixture, and a v9 sibling made
     // by re-versioning its template_id (the store keys by template_id, so
@@ -606,8 +594,7 @@ async fn template_adl14_list_absent_version_collapses_to_latest() {
 /// formalism stores.
 #[tokio::test]
 async fn query_store_rejects_non_aql_formalism() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     let aql = "SELECT c FROM EHR e CONTAINS COMPOSITION c".to_owned();
 
@@ -650,8 +637,7 @@ async fn query_store_rejects_non_aql_formalism() {
 /// (case-insensitive, §NOTE).
 #[tokio::test]
 async fn query_store_name_grammar_and_reserved_name() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     let aql = "SELECT c FROM EHR e CONTAINS COMPOSITION c".to_owned();
 
@@ -709,8 +695,7 @@ async fn query_store_name_grammar_and_reserved_name() {
 
 #[tokio::test]
 async fn opt_errors() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     // Invalid OPT → 422 reporting invalid_template.
     let bad = svc
@@ -768,8 +753,7 @@ const ADL2_TMPL_HRID: &str = "openEHR-EHR-COMPOSITION.t_vitals.v2.0.0";
 
 #[tokio::test]
 async fn adl2_upload_get_list_by_kind_delete() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (db, svc) = crate::fixtures::service().await;
 
     // Preconditions: empty, and a source that is no ADL2 is refused.
     assert_eq!(svc.artefacts_count().await.unwrap(), 0);
@@ -859,8 +843,7 @@ async fn adl2_upload_get_list_by_kind_delete() {
 
 #[tokio::test]
 async fn adl2_errors() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     // Unparseable ADL2 (unrecognised header) is *syntactically invalid
     // content* — the released 400 branch (ITS-REST `responses/400.yaml`:
@@ -950,8 +933,7 @@ fn listed_query_names(list: &[serde_json::Value]) -> Vec<String> {
               single container"
 )]
 async fn query_store_get_list_delete() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let good = "SELECT c FROM COMPOSITION c";
     let precondition = |e: &ServiceError| {
         matches!(
@@ -1103,8 +1085,7 @@ async fn query_store_get_list_delete() {
 /// `/definition/template/adl2` POST) and invalid source is a 400.
 #[tokio::test]
 async fn adl2_template_upload_wire_conflicts_on_duplicate() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     let tmpl = adl2_source("template", "openEHR-EHR-COMPOSITION.t_wire.v1.0.0", None);
     let hrid = svc.template_adl2_upload(&tmpl).await.expect("first upload");
@@ -1235,8 +1216,7 @@ component_terminologies
 /// (`201`); a node id repeated inside the included archetype is still `422`.
 #[tokio::test]
 async fn adl2_template_upload_accepts_node_ids_reused_by_an_included_archetype() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     let hrid = svc
         .template_adl2_upload(OPT2_REUSED_IDS)
@@ -1272,8 +1252,7 @@ async fn adl2_template_resolves_on_the_commit_path_and_validates() {
 
     const HRID: &str = "openEHR-EHR-COMPOSITION.commit_resolver.v1.0.0";
 
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     let opt = adl2_source("operational_template", HRID, None);
     svc.template_adl2_upload(&opt)
@@ -1306,10 +1285,7 @@ async fn adl2_template_resolves_on_the_commit_path_and_validates() {
         Some(HRID),
         "the example declares the ADL2 template id"
     );
-    let ehr = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .expect("create an EHR")
-        .0;
+    let ehr = crate::fixtures::create_ehr(&svc).await;
     svc.create_composition(ehr, crate::fixtures::uv(&comp, "249", None))
         .await
         .expect("a self-consistent instance validates clean against the ADL2 template");
@@ -1348,8 +1324,7 @@ async fn adl2_template_with_filler_projects_the_filled_web_template() {
     }
     const ARCH: &str = include_str!("../../../../corpus/fixtures/adl2/archetype/cnf_count_a.adls");
     const TMPL: &str = include_str!("../../../../corpus/fixtures/adl2/opt/flat_parity_a.adls");
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     svc.template_adl2_upload(ARCH)
         .await

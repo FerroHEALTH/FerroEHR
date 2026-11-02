@@ -28,52 +28,20 @@
               fixture indexing are the intended shape here (the Rust Book ch11)"
 )]
 
+use crate::fixtures::uv;
 use ferroehr::service::error::ServiceError;
 use ferroehr::service::refusal::{Malformed, Missing};
 use serde_json::{Value, json};
 
-use openehr_rm::prelude::PartyProxy;
 use openehr_rm::v1_2::ehr_extract::common::extract_spec::ExtractSpec;
 
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::version_update::{change_type_coded, lifecycle_state_coded};
-use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData, UpdateVersion};
-
-fn uv<T: serde::de::DeserializeOwned>(
-    data: &Value,
-    change_code: &str,
-    preceding: Option<&str>,
-) -> UpdateVersion<T> {
-    UpdateVersion {
-        preceding_version_uid: preceding.map(|p| p.parse().expect("OBJECT_VERSION_ID")),
-        lifecycle_state: lifecycle_state_coded("532"),
-        attestations: None,
-        data: openehr_its::json::from_canonical_value(data)
-            .expect("the fixture commit body decodes as its RM type"),
-        commit_audit: UpdateAudit::UpdateAudit(UpdateAuditData {
-            _type: None,
-            system_id: None,
-            change_type: change_type_coded(change_code),
-            description: None,
-            committer: openehr_its::json::from_canonical_value::<PartyProxy>(
-                &json!({ "_type": "PARTY_IDENTIFIED", "name": "conformance tester" }),
-            )
-            .expect("committer"),
-            additional_properties: std::collections::BTreeMap::new(),
-        }),
-        signature: None,
-        additional_properties: std::collections::BTreeMap::new(),
-    }
-}
 
 /// Seed an EHR with an `EHR_STATUS` (create → update = two versions), a directory
 /// `FOLDER`, and the auto-created `EHR_ACCESS`. Returns the EHR id and the
 /// `EHR_STATUS` version-container uid.
 async fn seed_ehr(svc: &FerroEhrService) -> (ferroehr::ids::EhrId, String) {
-    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr");
+    let ehr_uuid = crate::fixtures::create_ehr(svc).await;
 
     let mut status = svc
         .ehr_status_at_time_response(ehr_uuid, None)
@@ -120,8 +88,7 @@ fn find_by_xtype<'a>(extract: &'a Value, xtype: &str) -> Option<&'a Value> {
 
 #[tokio::test]
 async fn export_ehrs_carries_every_versioned_object_latest_only() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let (ehr, _status_vo) = seed_ehr(&svc).await;
 
     let extracts = svc.extract_ehrs(ehr).await.expect("export_ehrs");
@@ -190,8 +157,7 @@ async fn export_ehrs_carries_every_versioned_object_latest_only() {
 
 #[tokio::test]
 async fn export_ehr_extracts_honours_item_list_and_all_versions() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let (ehr, status_vo) = seed_ehr(&svc).await;
 
     // Request only the EHR_STATUS version container, all versions, with revision
@@ -275,8 +241,7 @@ async fn export_ehr_extracts_honours_item_list_and_all_versions() {
 
 #[tokio::test]
 async fn export_ehrs_unknown_ehr_is_ehr_id_does_not_exist() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let err = svc
         .extract_ehrs(ferroehr::ids::EhrId(uuid::Uuid::now_v7()))
         .await
@@ -291,8 +256,7 @@ async fn export_ehrs_unknown_ehr_is_ehr_id_does_not_exist() {
 /// `Item_validity` on import (`extract_content_item.adoc`).
 #[tokio::test]
 async fn extract_spec_flags_are_honoured() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let (ehr, _status_vo) = seed_ehr(&svc).await;
 
     // Bad extract_type → precondition.
@@ -440,8 +404,7 @@ fn criteria_spec(ehr: &str, criteria: &Value) -> ExtractSpec {
 /// "Query expressions use variables such as $ehr to mean the current EHR").
 #[tokio::test]
 async fn criteria_select_the_primary_set_ehr_bound() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let (ehr, _status_vo) = seed_ehr(&svc).await;
 
     let spec = criteria_spec(
@@ -474,8 +437,7 @@ async fn criteria_select_the_primary_set_ehr_bound() {
 /// whole-EHR over-export.
 #[tokio::test]
 async fn criteria_in_a_foreign_formalism_are_refused() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let (ehr, _status_vo) = seed_ehr(&svc).await;
 
     let spec = criteria_spec(
@@ -498,8 +460,7 @@ async fn criteria_in_a_foreign_formalism_are_refused() {
 /// precondition refusal naming the criterion index.
 #[tokio::test]
 async fn criteria_that_do_not_parse_as_aql_are_refused() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let (ehr, _status_vo) = seed_ehr(&svc).await;
 
     let spec = criteria_spec(
@@ -524,8 +485,7 @@ async fn criteria_that_do_not_parse_as_aql_are_refused() {
 /// "True if this EHR should be included in population queries").
 #[tokio::test]
 async fn criteria_select_from_a_non_queryable_ehr() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let (ehr, _status_vo) = seed_ehr(&svc).await;
     crate::fixtures::set_not_queryable(&svc, ehr).await;
 

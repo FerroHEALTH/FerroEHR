@@ -31,6 +31,7 @@ use ferroehr::service::version_update::Committal;
 use openehr_its::rest::generated::common::{UpdateAudit, UpdateVersion};
 use serde_json::{Value, json};
 
+use crate::fixtures::setup;
 use crate::fixtures::{change_type, composition, folder, lifecycle};
 
 /// The token issuer of the professional's login.
@@ -117,16 +118,6 @@ fn person() -> Value {
             }
         }]
     })
-}
-
-async fn setup() -> (testkit::TestDb, FerroEhrService, EhrId) {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create_ehr");
-    (db, svc, ehr_id)
 }
 
 /// The refusal class a write reports.

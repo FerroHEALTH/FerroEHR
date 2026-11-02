@@ -32,12 +32,11 @@ use std::sync::Arc;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::error::ServiceError;
 use ferroehr::service::refusal::Invalid;
-use ferroehr::service::terminology::config::TerminologyServerConfig;
-use ferroehr::service::terminology::fhir::FhirTerminologyProvider;
 use serde_json::json;
 use wiremock::matchers::{method, path, query_param};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
+use crate::fixtures::provider;
 use crate::terminology_wire::{operation, parameter};
 
 const HRID: &str = "openEHR-EHR-OBSERVATION.vetdf.v1.0.0";
@@ -83,17 +82,6 @@ terminology
     >
 "
     .to_owned()
-}
-
-/// Build a client pointing at `base`; every call is a fresh remote answer.
-fn provider(base: &str) -> FhirTerminologyProvider {
-    let cfg = TerminologyServerConfig {
-        enabled: true,
-        url: ferrohealth_secret::secret_url::SecretUrl::new(base),
-        request_timeout_ms: 800,
-        ..TerminologyServerConfig::default()
-    };
-    FhirTerminologyProvider::new(&cfg).expect("build provider")
 }
 
 /// An `OperationOutcome` carrying one `tx-issue-type` coding.

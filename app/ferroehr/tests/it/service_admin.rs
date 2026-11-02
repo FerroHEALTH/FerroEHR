@@ -316,11 +316,7 @@ async fn admin_template_delete_happy_unknown_and_referenced() {
     svc.template_adl14_upload(&read_fixture(OPT_FIXTURE_REL))
         .await
         .expect("re-upload opt");
-    let ehr: Uuid = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr")
-        .into();
+    let ehr: Uuid = crate::fixtures::create_ehr(&svc).await.into();
     let referenced = sqlx::query("UPDATE version SET template_id = $1 WHERE ehr_id = $2")
         .bind(OPT_TEMPLATE_ID)
         .bind(ehr)
@@ -1030,10 +1026,7 @@ async fn writing_an_archived_object_thaws_it_back_to_the_primary_tier() {
     let (_db, pool, svc) = repository().await;
     let pool = &pool;
 
-    let ehr = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr");
+    let ehr = crate::fixtures::create_ehr(&svc).await;
     let before = svc
         .ehr_status_at_time_response(ehr, None)
         .await

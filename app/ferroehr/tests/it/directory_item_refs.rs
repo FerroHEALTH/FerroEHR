@@ -11,9 +11,9 @@
 
 use serde_json::{Value, json};
 
+use ferroehr::service::DEFAULT_SYSTEM_ID;
 use ferroehr::service::error::ServiceError;
 use ferroehr::service::refusal::Invalid;
-use ferroehr::service::{DEFAULT_SYSTEM_ID, FerroEhrService};
 
 use crate::fixtures::{composition, uv};
 
@@ -57,12 +57,8 @@ fn assert_unresolvable(err: &ServiceError, expected_path_fragment: &str) {
 
 #[tokio::test]
 async fn direct_directory_routes_gate_this_system_refs() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr_create");
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_uuid = crate::fixtures::create_ehr(&svc).await;
 
     // A this-system (`local`) reference to a uid that exists nowhere: refused,
     // naming the item's path.
@@ -154,12 +150,8 @@ async fn direct_directory_routes_gate_this_system_refs() {
 
 #[tokio::test]
 async fn contribution_path_gates_this_system_refs() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr_create");
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_uuid = crate::fixtures::create_ehr(&svc).await;
 
     // Version identity is repository-allocated (a CONTRIBUTION member never
     // carries its own uid), so a folder references content committed EARLIER:

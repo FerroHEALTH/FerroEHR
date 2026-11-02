@@ -85,10 +85,7 @@ struct Seeded {
 async fn seed(svc: &FerroEhrService, pool: &PgPool) -> Seeded {
     let mut first: Option<Seeded> = None;
     for index in 0..8 {
-        let ehr = Box::pin(svc.create_ehr_meta(None, None))
-            .await
-            .map(|(id, _)| id)
-            .expect("create an EHR");
+        let ehr = crate::fixtures::create_ehr(svc).await;
         let body = composition(&format!("plan shapes {index}"));
         let created = svc
             .create_composition(ehr, uv(&body, "249", None))
@@ -115,10 +112,7 @@ async fn seed(svc: &FerroEhrService, pool: &PgPool) -> Seeded {
     // One more EHR, archived: its version, node and attestation rows move into
     // the `cold` partitions, which is what gives a pruning assertion something
     // to exclude.
-    let archived = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create the archived EHR");
+    let archived = crate::fixtures::create_ehr(svc).await;
     svc.create_composition(archived, uv(&composition("archived"), "249", None))
         .await
         .expect("commit into the EHR that is about to be archived");
@@ -463,10 +457,7 @@ async fn the_foreign_key_check_of_a_node_row_probes_one_version() {
     // Mostly single-version objects beside one long history: the statistics
     // under which the planner rated a scan of all of an object's versions as
     // cheap as the primary key (#4340).
-    let ehr = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create an EHR");
+    let ehr = crate::fixtures::create_ehr(&svc).await;
     let body = composition("foreign-key lookup");
     for _ in 0..300 {
         svc.create_composition(ehr, uv(&body, "249", None))
@@ -564,10 +555,7 @@ async fn a_read_by_version_tree_id_probes_one_version() {
 
     // Single-version objects beside one long history, as in the foreign-key
     // probe above; the read addresses a trunk version in the middle of it.
-    let ehr = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create an EHR");
+    let ehr = crate::fixtures::create_ehr(&svc).await;
     let body = composition("tree id read");
     for _ in 0..300 {
         svc.create_composition(ehr, uv(&body, "249", None))
@@ -767,10 +755,7 @@ async fn the_head_row_update_is_heap_only() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
-    let ehr = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create an EHR");
+    let ehr = crate::fixtures::create_ehr(&svc).await;
     let body = composition("heap-only head");
     let mut committed = svc
         .create_composition(ehr, uv(&body, "249", None))
@@ -1372,10 +1357,7 @@ async fn a_chain_of_path_bindings_is_estimated_at_the_rows_it_reads() {
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
     let mut ehrs = Vec::new();
     for index in 0..4_u8 {
-        let ehr = Box::pin(svc.create_ehr_meta(None, None))
-            .await
-            .map(|(id, _)| id)
-            .expect("create an EHR");
+        let ehr = crate::fixtures::create_ehr(&svc).await;
         for reading in 0..10_u8 {
             let body = wide_observation_composition(
                 &format!("readings {index}.{reading}"),
@@ -1497,10 +1479,7 @@ async fn a_projection_over_named_ehrs_holds_its_plan_whatever_the_archetype_stat
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
     let mut ehrs = Vec::new();
     for index in 0..8_u8 {
-        let ehr = Box::pin(svc.create_ehr_meta(None, None))
-            .await
-            .map(|(id, _)| id)
-            .expect("create an EHR");
+        let ehr = crate::fixtures::create_ehr(&svc).await;
         for reading in 0..5_u8 {
             let body = wide_observation_composition(
                 &format!("readings {index}.{reading}"),
@@ -1769,10 +1748,7 @@ async fn a_lookup_by_an_element_text_reads_the_one_composition() {
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
     for index in 0..COMPOSITIONS {
-        let ehr = Box::pin(svc.create_ehr_meta(None, None))
-            .await
-            .map(|(id, _)| id)
-            .expect("create an EHR");
+        let ehr = crate::fixtures::create_ehr(&svc).await;
         let body =
             text_observation_composition(&format!("note {index}"), &format!("needle {index}"));
         svc.create_composition(ehr, uv(&body, "249", None))
@@ -1934,12 +1910,7 @@ async fn seed_stale_parent_statistics(svc: &FerroEhrService, pool: &PgPool) -> V
     let body = composition("parent statistics");
     let mut ehrs = Vec::new();
     for _ in 0..20 {
-        ehrs.push(
-            Box::pin(svc.create_ehr_meta(None, None))
-                .await
-                .map(|(id, _)| id)
-                .expect("create an EHR"),
-        );
+        ehrs.push(crate::fixtures::create_ehr(svc).await);
     }
     for index in 0..300 {
         let ehr = *ehrs.get(index % ehrs.len()).expect("the seed holds EHRs");
@@ -2100,12 +2071,7 @@ async fn a_population_contains_enters_through_the_archetype_index() {
     let gp_data_set = ckm_example(&svc, "gp-data-set").await;
     let mut ehrs = Vec::new();
     for _ in 0..20 {
-        ehrs.push(
-            Box::pin(svc.create_ehr_meta(None, None))
-                .await
-                .map(|(id, _)| id)
-                .expect("create an EHR"),
-        );
+        ehrs.push(crate::fixtures::create_ehr(&svc).await);
     }
     for index in 0..300_usize {
         let body = if index.div_euclid(ehrs.len()).is_multiple_of(2) {
@@ -2158,10 +2124,7 @@ async fn the_maintenance_task_analyzes_the_partitioned_parents() {
     let pool = db.pool();
     let pools = ferroehr::db::domain::DomainPools::from_shared(&pool);
     let svc = FerroEhrService::new(&pools);
-    let ehr = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create an EHR");
+    let ehr = crate::fixtures::create_ehr(&svc).await;
     for _ in 0..5 {
         svc.create_composition(ehr, uv(&composition("maintenance"), "249", None))
             .await

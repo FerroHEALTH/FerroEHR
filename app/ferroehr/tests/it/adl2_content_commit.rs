@@ -146,11 +146,7 @@ fn creation(data: &Value) -> UpdateVersion<openehr_rm::prelude::Composition> {
 }
 
 async fn new_ehr(svc: &FerroEhrService) -> EhrId {
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create_ehr")
-        .to_string();
+    let ehr_id = crate::fixtures::create_ehr(svc).await.to_string();
     EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"))
 }
 
@@ -173,8 +169,7 @@ async fn upload(svc: &FerroEhrService, cases: &[&Case]) {
 /// on the canonical path.
 #[tokio::test]
 async fn every_adl2_content_case_gets_its_answer_on_the_canonical_commit() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let all = cases();
     let committed: Vec<&Case> = all
         .iter()
@@ -255,8 +250,7 @@ fn count_flat(
 /// `C_ORDERED`").
 #[tokio::test]
 async fn a_flat_body_breaking_an_adl2_constraint_is_refused() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let (body, wt) = count_range(&svc).await;
     let ehr = new_ehr(&svc).await;
     for (magnitude, admitted) in [(15, true), (25, false)] {
@@ -278,8 +272,7 @@ async fn a_flat_body_breaking_an_adl2_constraint_is_refused() {
 /// The STRUCTURED twin of the FLAT case.
 #[tokio::test]
 async fn a_structured_body_breaking_an_adl2_constraint_is_refused() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let (body, wt) = count_range(&svc).await;
     let ehr = new_ehr(&svc).await;
     for (magnitude, admitted) in [(15, true), (25, false)] {
@@ -308,8 +301,7 @@ async fn a_structured_body_breaking_an_adl2_constraint_is_refused() {
 /// refused with the violations a `422` carries (ITS-REST `responses/422.yaml`).
 #[tokio::test]
 async fn a_value_outside_every_range_of_a_union_is_refused() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let all = cases();
     let accepted = all
         .iter()
@@ -400,8 +392,7 @@ fn element_values(composition: &Value) -> Vec<Value> {
 /// `simplified_formats/master05-rm_mapping.adoc` §`DV_INTERVAL`).
 #[tokio::test]
 async fn an_adl2_composition_reads_back_in_flat_and_structured_with_nothing_lost() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let all = cases();
     let admitted: Vec<&Case> = all
         .iter()
@@ -520,8 +511,7 @@ fn locatables(composition: &Value) -> BTreeMap<String, Value> {
 /// and the template's `rm_release` (RM `ARCHETYPED.rm_version`).
 #[tokio::test]
 async fn a_simplified_commit_stores_the_names_and_archetype_details_of_the_canonical_body() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let all = cases();
     let admitted: Vec<&Case> = all
         .iter()
@@ -595,8 +585,7 @@ async fn one_row(svc: &FerroEhrService, ehr: EhrId, aql: &str) -> Value {
 /// any previous minor or patch variant of X).
 #[tokio::test]
 async fn aql_finds_a_flat_adl2_commit_by_interface_and_full_archetype_ids() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let (body, wt) = count_range(&svc).await;
     let ehr = new_ehr(&svc).await;
     let canonical = openehr_sdt::flat::convert::submitted_composition_from_flat(

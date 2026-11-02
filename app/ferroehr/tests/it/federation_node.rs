@@ -133,10 +133,7 @@ async fn a_moved_ehr_keeps_every_object_version_id_and_creating_system_id() {
     let (_db_a, node_a) = node(NODE_A).await;
     let (_db_b, node_b) = node(NODE_B).await;
 
-    let ehr = Box::pin(node_a.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create the EHR on A");
+    let ehr = crate::fixtures::create_ehr(&node_a).await;
     node_a
         .create_directory(ehr, uv(&folder("root"), "249", None))
         .await

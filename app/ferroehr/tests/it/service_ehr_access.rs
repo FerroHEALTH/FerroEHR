@@ -15,8 +15,8 @@
 //!
 //! The concrete scheme is our own design — no openEHR spec governs it.
 
+use ferroehr::service::DEFAULT_SYSTEM_ID;
 use ferroehr::service::ehr::access_types::DefaultAccess;
-use ferroehr::service::{DEFAULT_SYSTEM_ID, FerroEhrService};
 use serde_json::{Value, json};
 
 fn committer(name: &str) -> Value {
@@ -67,14 +67,10 @@ fn ehr_access_with_settings() -> Value {
 
 #[tokio::test]
 async fn ehr_access_settings_round_trip_through_contribution() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     // A fresh EHR gets the default (settings-less) EHR_ACCESS → default-open.
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create_ehr");
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
     assert!(
         svc.current_ehr_access_settings(ehr_id)
             .await

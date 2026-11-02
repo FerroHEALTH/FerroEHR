@@ -59,17 +59,13 @@ fn composition_with_bad_category() -> Value {
 /// satisfies (RM ehr, DIRECTORY package).
 #[tokio::test]
 async fn ehr_composition_lifecycle_end_to_end() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     // ── EHR create + retrieve ────────────────────────────────────────────────
     // NOTE: `create_ehr` returns the new UUID; the RM `EHR` body is read
     // via `ehr_object`, and the ETag/Location meta (ehr_id == uid) is exactly
     // that returned uuid, so the meta assertions fold into the uuid/body checks.
-    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr_create");
+    let ehr_uuid = crate::fixtures::create_ehr(&svc).await;
     let ehr_id = ehr_uuid.to_string();
     let ehr = svc.ehr_object(ehr_uuid).await.expect("ehr object");
     assert_eq!(ehr["_type"], "EHR");
@@ -402,13 +398,9 @@ async fn is_modifiable_false_blocks_content_writes_but_not_ehr_status() {
     // modifiable" (§"EHR Creation"), which is how the EHR is reactivated.
     // Wire code for a blocked content write is underdetermined by ITS-REST →
     // we return 409 Conflict (the generic `conflict` — no status names an is_modifiable block, #2151).
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
-    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr");
+    let ehr_uuid = crate::fixtures::create_ehr(&svc).await;
 
     // Seed a COMPOSITION and a directory while the EHR is active (default
     // is_modifiable = true), so update/delete have a target once deactivated.
@@ -551,8 +543,7 @@ async fn is_modifiable_false_blocks_content_writes_but_not_ehr_status() {
 
 #[tokio::test]
 async fn creating_an_ehr_with_an_existing_id_conflicts() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     let id = ferroehr::ids::EhrId(uuid::Uuid::now_v7());
     svc.create_ehr_with_id_meta(id, None, None)
@@ -574,8 +565,7 @@ async fn creating_an_ehr_with_an_existing_id_conflicts() {
 /// commits a first version — RM common master06 §Contributions).
 #[tokio::test]
 async fn ehr_creation_merges_the_committal_metadata() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     let committal = Committal {
         audit: UpdateAudit::UpdateAudit(UpdateAuditData {
@@ -652,8 +642,7 @@ async fn ehr_creation_merges_the_committal_metadata() {
 /// group code and an out-of-group token are both rejected.
 #[tokio::test]
 async fn ehr_creation_rejects_a_change_type_that_is_not_a_creation() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     let committal = |code: &str| Committal {
         audit: UpdateAudit::UpdateAudit(UpdateAuditData {
@@ -689,8 +678,7 @@ async fn ehr_creation_rejects_a_change_type_that_is_not_a_creation() {
 /// CONTRIBUTION path answers.
 #[tokio::test]
 async fn ehr_creation_refuses_a_stated_empty_system_id() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let committal = Committal {
         audit: UpdateAudit::UpdateAudit(UpdateAuditData {
             _type: None,
@@ -722,8 +710,7 @@ async fn ehr_creation_refuses_a_stated_empty_system_id() {
 
 #[tokio::test]
 async fn unknown_ehr_is_not_found() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let missing = ferroehr::ids::EhrId(uuid::Uuid::now_v7());
     assert!(svc.ehr_object(missing).await.is_err());
 }
@@ -738,8 +725,7 @@ async fn ehr_status_subject_type_is_enforced_end_to_end() {
     // client meets, and the ITS-REST overview (`Requests_and_responses.md` §HTTP
     // status codes) answers it `400` ("could not be parsed or is invalid"), not
     // the semantic `422`. The anonymous empty PARTY_SELF stays accepted.
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     let wrong_subject = json!({
         "_type": "EHR_STATUS",
@@ -779,10 +765,7 @@ async fn ehr_status_subject_type_is_enforced_end_to_end() {
 
     // (2) The PUT seam is the same typed door, so the same body is
     //     unrepresentable there too — an EHR_STATUS commit cannot carry it.
-    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr");
+    let ehr_uuid = crate::fixtures::create_ehr(&svc).await;
     let status_v1 = svc
         .ehr_status_at_time_response(ehr_uuid, None)
         .await
@@ -827,14 +810,9 @@ async fn ehr_status_subject_type_is_enforced_end_to_end() {
 
 #[tokio::test]
 async fn contribution_commits_a_composition_atomically() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr")
-        .to_string();
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
     let body = json!({
@@ -880,14 +858,9 @@ async fn contribution_preserves_the_client_change_type_and_rejects_invalid_combo
     // as 422 (the adjudicated mirror of the directional released
     // 400_CONTRIBUTION trigger), an out-of-group code as 422 (content
     // validation).
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr")
-        .to_string();
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
     let created = svc
@@ -1012,14 +985,9 @@ async fn templateless_composition_still_gets_rm_and_terminology_validation() {
     // a COMPOSITION without a declared template_id must still fail on
     // RM-invariant / RM-terminology violations (here: an invalid category code),
     // and a valid templateless composition must still commit.
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr")
-        .to_string();
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
     let bad = svc
@@ -1039,14 +1007,9 @@ async fn templateless_composition_still_gets_rm_and_terminology_validation() {
 async fn contribution_rejects_an_invalid_composition() {
     // the CONTRIBUTION commit path must run composition validation and
     // reject the whole contribution atomically.
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr")
-        .to_string();
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
     let body = json!({
@@ -1075,14 +1038,9 @@ async fn contribution_rejects_an_invalid_composition() {
 
 #[tokio::test]
 async fn revision_history_lists_every_version() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr")
-        .to_string();
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
     let mut status = svc
@@ -1111,8 +1069,7 @@ async fn revision_history_lists_every_version() {
 
 #[tokio::test]
 async fn ehr_get_by_subject_finds_the_ehr() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     let status = json!({
         "_type": "EHR_STATUS",
@@ -1161,8 +1118,7 @@ async fn ehr_get_by_subject_finds_the_ehr() {
 
 #[tokio::test]
 async fn stored_query_crud() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     let aql = "SELECT c FROM EHR e CONTAINS COMPOSITION c".to_owned();
     svc.query_store(
@@ -1194,8 +1150,7 @@ async fn stored_query_semver_prefix_resolves_to_latest_match() {
     // `parameters/path/version.yaml` — a partial `{major}` or
     // `{major}.{minor}` version resolves to the HIGHEST stored version
     // matching the prefix.
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     // Store-time AQL validation is now enforced, so the per-version bodies must
     // be well-formed AQL (the letters `a`/`b`/`c` keep them distinguishable).
@@ -1247,8 +1202,7 @@ async fn stored_query_list_matches_name_prefix() {
     // `definition_query_list.yaml` — the qualified name is a PATTERN:
     // `org.openehr` "will list all versions of all queries with names starting
     // with `org.openehr`"; empty ⇒ wildcard.
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     for (name, version) in [
         ("org.example::all_comps", "1.0.0"),
@@ -1287,14 +1241,9 @@ async fn stored_query_list_matches_name_prefix() {
 
 #[tokio::test]
 async fn item_tag_crud() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr")
-        .to_string();
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
     let comp = svc
         .create_composition(ehr_uuid, uv(&composition("Tagged"), "249", None))
@@ -1346,14 +1295,9 @@ async fn item_tag_wire_shape_is_the_rm_item_tag() {
     // the ITEM_TAG wire shape is the OAS `ItemTag` schema
     // (`additionalProperties: false`): key/value/target_path plus
     // OBJECT_REF-shaped `target` and `owner_id`; no `id`, no `target_type`.
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr")
-        .to_string();
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
     let comp = svc
         .create_composition(ehr_uuid, uv(&composition("Tagged"), "249", None))
@@ -1406,14 +1350,9 @@ async fn item_tag_wire_shape_is_the_rm_item_tag() {
 /// coexist, and the key-only wire DELETE removes the whole key set.
 #[tokio::test]
 async fn item_tag_identity_is_the_key_and_target_path_pair() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr")
-        .to_string();
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
     let comp = svc
         .create_composition(ehr_uuid, uv(&composition("PairTagged"), "249", None))
@@ -1469,14 +1408,9 @@ async fn item_tag_identity_is_the_key_and_target_path_pair() {
 /// `HIER_OBJECT_ID` for the container, an `OBJECT_VERSION_ID` for a version.
 #[tokio::test]
 async fn item_tag_version_and_container_targets_are_distinct() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr")
-        .to_string();
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
     let version_uid = svc
         .create_composition(ehr_uuid, uv(&composition("VersionTagged"), "249", None))
@@ -1571,14 +1505,9 @@ async fn a_surviving_tag_keeps_its_creation_instant_across_a_replace() {
     // NOTE: no openEHR spec governs this — our own design: RM common
     // master07-tags.adoc models ITEM_TAG with no timestamp, so `created_at` is a
     // storage column of ours.
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (db, svc) = crate::fixtures::service().await;
 
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr")
-        .to_string();
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
     let comp = svc
         .create_composition(ehr_uuid, uv(&composition("Tagged"), "249", None))
@@ -1659,14 +1588,9 @@ async fn item_tag_put_replaces_the_whole_collection() {
     // PUT "updates the list of ALL ITEM_TAG resources … providing an
     // empty list will effectively remove all ITEM_TAG" — a full replace, not an
     // additive upsert.
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr")
-        .to_string();
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
     let comp = svc
         .create_composition(ehr_uuid, uv(&composition("Tagged"), "249", None))
@@ -1757,13 +1681,9 @@ async fn ehr_creation_produces_an_ehr_access() {
     // RM ehr § "EHR Creation" — creating an EHR yields a root EHR
     // object, an EHR_STATUS AND an EHR_ACCESS; `EHR.ehr_access` (1..1) is an
     // OBJECT_REF whose type is VERSIONED_EHR_ACCESS (invariant Ehr_access_valid).
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
-    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr");
+    let ehr_uuid = crate::fixtures::create_ehr(&svc).await;
     let ehr = svc.ehr_object(ehr_uuid).await.expect("ehr object");
     let access = &ehr["ehr_access"];
     assert_eq!(access["_type"], "OBJECT_REF");
@@ -1785,8 +1705,7 @@ async fn duplicate_subject_ehr_creation_conflicts() {
     // ITS-REST `409_EHR.yaml` + CNF master06
     // `I_EHR_SERVICE.create_ehr-two_ehrs_same_patient` — a second EHR for the
     // same subject (external_ref id + namespace) must be rejected.
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     let status = |subject: &str| {
         json!({
@@ -1838,14 +1757,8 @@ async fn duplicate_subject_ehr_creation_conflicts() {
         .await
         .map(|(id, _)| id)
         .expect("different subject creates");
-    Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("subject-less EHR creates");
-    Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("multiple subject-less EHRs never conflict");
+    crate::fixtures::create_ehr(&svc).await;
+    crate::fixtures::create_ehr(&svc).await;
 }
 
 #[tokio::test]
@@ -1854,14 +1767,9 @@ async fn version_get_at_time_returns_the_original_version() {
     // `versioned_composition_version_get_at_time` return the VERSION extant at
     // the given time (or the latest), as an ORIGINAL_VERSION with the
     // `200_VERSION_at_time` ETag/Location metadata.
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr")
-        .to_string();
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
     // EHR_STATUS: no version_at_time → the latest VERSION.
@@ -1946,13 +1854,9 @@ async fn version_get_at_time_returns_the_original_version() {
 /// endpoint binds only that slot; extra hierarchies come via CONTRIBUTION only.
 #[tokio::test]
 async fn ehr_folders_indexes_multiple_hierarchies_in_rank_order() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
-    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr");
+    let ehr_uuid = crate::fixtures::create_ehr(&svc).await;
 
     // Before any folder: `EHR.folders`/`EHR.directory` (both 0..1) are absent.
     let ehr0 = svc.ehr_object(ehr_uuid).await.expect("ehr0");
@@ -2091,12 +1995,8 @@ async fn ehr_folders_indexes_multiple_hierarchies_in_rank_order() {
 /// while leaving the directory (rank 1) intact.
 #[tokio::test]
 async fn logical_delete_of_a_secondary_hierarchy_drops_it_from_folders() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr");
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_uuid = crate::fixtures::create_ehr(&svc).await;
 
     // Two hierarchies, both via CONTRIBUTION.
     let f1 = svc
@@ -2176,12 +2076,8 @@ async fn logical_delete_of_a_secondary_hierarchy_drops_it_from_folders() {
 /// only (ITS-REST binds only the directory).
 #[tokio::test]
 async fn directory_endpoint_rejects_a_second_directory_create() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr");
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_uuid = crate::fixtures::create_ehr(&svc).await;
 
     svc.create_directory(ehr_uuid, uv(&folder("root"), "249", None))
         .await
@@ -2237,13 +2133,9 @@ async fn change_ehr_status(
 /// (`EHR_STATUS` "is always modifiable", ehr/master04 §"EHR Active Status").
 #[tokio::test]
 async fn ehr_status_discrete_mutators() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
-    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .expect("ehr_create")
-        .0;
+    let ehr_uuid = crate::fixtures::create_ehr(&svc).await;
 
     // Defaults: both flags true (default_ehr_status).
     let v1 = svc
@@ -2382,13 +2274,9 @@ async fn directory_version_exists(
 /// and an unknown version id does not.
 #[tokio::test]
 async fn directory_has_version() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
-    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr_create");
+    let ehr_uuid = crate::fixtures::create_ehr(&svc).await;
 
     let dir_v1 = svc
         .create_directory(ehr_uuid, uv(&folder("root"), "249", None))
@@ -2450,14 +2338,10 @@ async fn directory_has_version() {
 ///   `subject/is_queryable` sync rides the write's UPDATE).
 #[tokio::test]
 async fn write_responses_match_a_fresh_read() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     // Fix E — built-from-commit EHR body == fresh ehr_summary read.
-    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr_create");
+    let ehr_uuid = crate::fixtures::create_ehr(&svc).await;
     let built = svc
         .ehr_created_object(ehr_uuid)
         .await
@@ -2562,10 +2446,7 @@ async fn ehr_system_id_is_recorded_at_creation_and_survives_a_config_change() {
 
     let first = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
         .with_system_id("openehr.first.example.com");
-    let ehr_uuid = Box::pin(first.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr create");
+    let ehr_uuid = crate::fixtures::create_ehr(&first).await;
     let at_creation = first.ehr_object(ehr_uuid).await.expect("ehr at creation");
     assert_eq!(
         at_creation["system_id"]["value"], "openehr.first.example.com",
@@ -2592,10 +2473,7 @@ async fn ehr_system_id_is_recorded_at_creation_and_survives_a_config_change() {
 
     // An EHR created AFTER the change does take the new id — the value is
     // pinned at creation, not frozen repository-wide.
-    let later_uuid = Box::pin(second.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr create post-change");
+    let later_uuid = crate::fixtures::create_ehr(&second).await;
     let later = second.ehr_object(later_uuid).await.expect("later ehr");
     assert_eq!(
         later["system_id"]["value"], "openehr.second.example.com",
@@ -2612,13 +2490,9 @@ async fn the_default_ehr_status_satisfies_the_locatable_root_invariants() {
     // common locatable.adoc defines as `archetype_details /= Void`; a bootstrap
     // status without it would be an archetype root by position and not by
     // content — invalid RM the server itself authored.
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
-    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr create");
+    let ehr_uuid = crate::fixtures::create_ehr(&svc).await;
     let status = svc
         .get_ehr_status(ehr_uuid)
         .await
@@ -2661,8 +2535,7 @@ async fn subject_identity_is_matched_exactly_and_never_case_folded() {
     // NOTE: no openEHR spec governs the comparison — our own design; ITS-REST
     // `409_EHR` names the subject id and namespace pair without saying how
     // they compare.
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     let status = |subject: &str, namespace: &str| {
         json!({
@@ -2755,13 +2628,9 @@ async fn the_bootstrap_ehr_status_version_has_no_preceding_version_uid() {
     // JSON"), is absent from the wire rather than rendered null. This pins the
     // EHR-creation commit, where the EHR_STATUS version is authored entirely by
     // the server on a path no client write touches.
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
-    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr create");
+    let ehr_uuid = crate::fixtures::create_ehr(&svc).await;
     let status_v1 = svc.get_ehr_status(ehr_uuid).await.expect("status v1");
     let ovid_v1 = uid(&status_v1).to_owned();
     let parts: Vec<&str> = ovid_v1.split("::").collect();
@@ -2813,12 +2682,8 @@ async fn the_bootstrap_ehr_status_version_has_no_preceding_version_uid() {
 /// filtering only on the owning EHR.
 #[tokio::test]
 async fn wrong_kind_uid_on_a_resource_read_is_not_found() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr_create");
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_uuid = crate::fixtures::create_ehr(&svc).await;
 
     // The EHR's own EHR_STATUS container id, and one committed COMPOSITION.
     let status_v1 = svc

@@ -53,6 +53,7 @@ use ferroehr::service::FerroEhrService;
 use crate::admin_fixture::{
     archive_dir, count_for_ehr, repository, seed_full_ehr, truncate_to_half,
 };
+use crate::fixtures::status_for_subject;
 use crate::fixtures::{change_type, committer, composition, source_chain, uid, uv};
 use crate::typed_body::typed;
 use ferroehr::service::admin::types::{
@@ -80,33 +81,6 @@ fn assert_clean(reports: &[DumpLoadFailReport], what: &str) {
         reports.is_empty(),
         "a clean {what} reports no failures, got {reports:?}"
     );
-}
-
-/// An `EHR_STATUS` whose `PARTY_SELF` subject carries an `external_ref` — RM
-/// ehr master04 §EHR Status (the subject 0..1 identifies the EHR).
-fn status_for_subject(subject_id: &str) -> Value {
-    json!({
-        "_type": "EHR_STATUS",
-        "archetype_node_id": "openEHR-EHR-EHR_STATUS.generic.v1",
-        "archetype_details": {
-            "_type": "ARCHETYPED",
-            "archetype_id": { "_type": "ARCHETYPE_ID",
-                              "value": "openEHR-EHR-EHR_STATUS.generic.v1" },
-            "rm_version": "1.2.0"
-        },
-        "name": { "_type": "DV_TEXT", "value": "EHR Status" },
-        "subject": {
-            "_type": "PARTY_SELF",
-            "external_ref": {
-                "_type": "PARTY_REF",
-                "namespace": "patients",
-                "type": "PERSON",
-                "id": { "_type": "HIER_OBJECT_ID", "value": subject_id }
-            }
-        },
-        "is_queryable": true,
-        "is_modifiable": true
-    })
 }
 
 /// The per-EHR row counts across the versioned-object tables (used to prove the
@@ -480,10 +454,7 @@ async fn sevenz_compressed_export_round_trips_through_the_detected_container() {
 ///
 /// Returns the EHR and the `OBJECT_VERSION_ID`s of every COMPOSITION version.
 async fn seed_mixed_kind_ehr(svc: &FerroEhrService) -> (EhrId, Vec<String>) {
-    let ehr = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr");
+    let ehr = crate::fixtures::create_ehr(svc).await;
 
     let mut status = svc
         .ehr_status_at_time_response(ehr, None)
@@ -1066,10 +1037,7 @@ async fn attestations_round_trip_and_the_restored_signature_verifies() {
     let (_dst_db, dst_pool, target) = repository().await;
     let target = target.with_signer(Arc::new(Signer::from_config(&config).expect("signer")));
 
-    let ehr_id = Box::pin(source.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr");
+    let ehr_id = crate::fixtures::create_ehr(&source).await;
     let contribution = attested_contribution();
 
     let created = source

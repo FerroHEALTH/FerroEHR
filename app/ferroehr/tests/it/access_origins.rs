@@ -24,6 +24,7 @@ use ferroehr::service::query::request::AqlQueryRequest;
 use serde_json::{Value, json};
 use sqlx::Row;
 
+use crate::fixtures::setup;
 use crate::fixtures::{composition, uv};
 
 /// A `FEEDER_AUDIT` whose originating system is `system_id`.
@@ -46,16 +47,6 @@ fn section_from(name: &str, system_id: &str) -> Value {
         "name": { "_type": "DV_TEXT", "value": name },
         "feeder_audit": feeder_audit(system_id)
     })
-}
-
-async fn setup() -> (testkit::TestDb, FerroEhrService, EhrId) {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create_ehr");
-    (db, svc, ehr_id)
 }
 
 /// Commit `body` and return the versioned object id and the creating system.

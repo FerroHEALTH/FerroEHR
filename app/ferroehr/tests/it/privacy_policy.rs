@@ -264,10 +264,7 @@ async fn the_subject_rule_also_binds_the_ehr_status_update_path() {
 async fn a_named_composer_is_accepted_by_default() {
     let db = testkit::db().await.expect("testkit database");
     let strict = service(&db, &PrivacyConfig::default());
-    let ehr_id = Box::pin(strict.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create_ehr");
+    let ehr_id = crate::fixtures::create_ehr(&strict).await;
 
     let named = composition("privacy composition");
     strict
@@ -287,10 +284,7 @@ async fn a_named_composer_is_accepted_by_default() {
 async fn composer_identifiers_are_accepted_and_a_self_party_needs_the_opt_in() {
     let db = testkit::db().await.expect("testkit database");
     let strict = service(&db, &PrivacyConfig::default());
-    let ehr_id = Box::pin(strict.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create_ehr");
+    let ehr_id = crate::fixtures::create_ehr(&strict).await;
 
     let mut identified = composition("privacy composition");
     identified["composer"]["identifiers"] =
@@ -381,10 +375,7 @@ fn composition_with_text(name: &str, text: &str) -> Value {
 async fn strict_mode_refuses_a_composition_carrying_a_synthetic_bsn() {
     let db = testkit::db().await.expect("testkit database");
     let svc = service(&db, &PrivacyConfig::default());
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create_ehr");
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
 
     let carrying = composition_with_text(
         "scanner strict",
@@ -415,10 +406,7 @@ async fn warn_mode_accepts_the_same_composition() {
             ..PrivacyConfig::default()
         },
     );
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create_ehr");
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
     let carrying = composition_with_text(
         "scanner warn",
         &format!("referral note for {SYNTHETIC_BSN}"),
@@ -434,10 +422,7 @@ async fn an_identifier_from_another_jurisdiction_is_refused_by_the_same_default(
     // every jurisdiction the build ships.
     let db = testkit::db().await.expect("testkit database");
     let svc = service(&db, &PrivacyConfig::default());
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create_ehr");
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
 
     let carrying = composition_with_text(
         "scanner cross-border",
@@ -463,10 +448,7 @@ async fn a_terminology_code_satisfying_a_checksum_is_not_refused() {
     // string attribute — a structural carve-out, not a per-country one.
     let db = testkit::db().await.expect("testkit database");
     let svc = service(&db, &PrivacyConfig::default());
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create_ehr");
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
 
     let mut coded = composition_with_text("coded", "a clinical synopsis");
     coded["content"][0]["data"]["items"][0]["value"] = json!({
@@ -516,10 +498,7 @@ fn lab_result(id: &str, kind: &str) -> Value {
 async fn a_lab_result_whose_order_number_passes_the_nhs_check_commits() {
     let db = testkit::db().await.expect("testkit database");
     let svc = service(&db, &PrivacyConfig::default());
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create_ehr");
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
     for order in ORDER_NUMBERS {
         svc.create_composition(
             ehr_id,
@@ -534,10 +513,7 @@ async fn a_lab_result_whose_order_number_passes_the_nhs_check_commits() {
 async fn an_nhs_number_typed_as_one_is_still_refused_while_the_rule_is_on() {
     let db = testkit::db().await.expect("testkit database");
     let svc = service(&db, &PrivacyConfig::default());
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create_ehr");
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
     let error = svc
         .create_composition(
             ehr_id,
