@@ -341,23 +341,11 @@ pub(crate) async fn audited_app(
     subject: &'static str,
     user: &str,
 ) -> (testkit::TestDb, PgPool, Router, String) {
-    use ferroehr::system_log::config::{AuditConfig, StoreConfig};
     use ferroehr::system_log::sender::{
         AuditHandle, ResolvedSubject, SubjectLookup, SubjectResolver, start,
     };
     let (db, pool) = migrated_pool().await;
-    let audit = AuditConfig {
-        enabled: true,
-        store: StoreConfig {
-            enabled: true,
-            retention_days: 0,
-            retention_years: None,
-            sgb_v_309_controller: false,
-            verify_interval_seconds: 0,
-            full_verify_interval_seconds: 0,
-        },
-        ..AuditConfig::default()
-    };
+    let audit = local_audit();
     let resolver: SubjectResolver = Arc::new(move |_ehr_id| {
         Box::pin(async move {
             SubjectLookup::Found(ResolvedSubject {
@@ -440,6 +428,30 @@ pub(crate) fn null_resolvers() -> AuthzResolvers {
         content_of_version: Arc::new(|_, _| Box::pin(async { Ok::<_, ResolveError>(None) })),
         content: Arc::default(),
     }
+}
+
+/// Auditing on, recording to the local audit store with no retention or
+/// verification schedule.
+pub(crate) fn local_audit() -> ferroehr::system_log::config::AuditConfig {
+    ferroehr::system_log::config::AuditConfig {
+        enabled: true,
+        store: ferroehr::system_log::config::StoreConfig {
+            enabled: true,
+            retention_days: 0,
+            retention_years: None,
+            sgb_v_309_controller: false,
+            verify_interval_seconds: 0,
+            full_verify_interval_seconds: 0,
+        },
+        ..ferroehr::system_log::config::AuditConfig::default()
+    }
+}
+
+/// A router built with `config` over a fresh real service; hold the returned
+/// database guard for the test's lifetime.
+pub(crate) async fn app(config: AppConfig) -> (testkit::TestDb, Router) {
+    let (db, service) = test_service().await;
+    (db, router_with(config, service).await)
 }
 
 /// Drive one request through `app` and return its status, headers and body.

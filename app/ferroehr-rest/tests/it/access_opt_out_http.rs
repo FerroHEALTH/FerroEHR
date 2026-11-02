@@ -34,7 +34,7 @@ use axum::Router;
 use axum::body::Body;
 use ferroehr::config::authz::AuthzConfig;
 use ferroehr::service::FerroEhrService;
-use ferroehr::system_log::config::{AuditConfig, StoreConfig};
+use ferroehr::system_log::config::AuditConfig;
 use ferroehr::system_log::sender::{AuditHandle, start};
 use ferroehr::system_log::store::AuditStore;
 use ferroehr_rest::extensions::access::authz::AuthzHandle;
@@ -69,18 +69,9 @@ fn basic(name: &str) -> String {
 async fn app(declared: bool) -> (testkit::TestDb, PgPool, Router) {
     let (db, pool) = common::migrated_pool().await;
     let audit = AuditConfig {
-        enabled: true,
         purpose_codes: vec!["TREAT".to_owned(), "ETREAT".to_owned()],
         emergency_purpose_codes: vec!["ETREAT".to_owned()],
-        store: StoreConfig {
-            enabled: true,
-            retention_days: 0,
-            retention_years: None,
-            sgb_v_309_controller: false,
-            verify_interval_seconds: 0,
-            full_verify_interval_seconds: 0,
-        },
-        ..AuditConfig::default()
+        ..common::local_audit()
     };
     let (sender, _handle): (_, AuditHandle) = start(audit, None, Some(pool.clone()))
         .await

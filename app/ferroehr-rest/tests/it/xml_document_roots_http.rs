@@ -66,8 +66,7 @@ fn assert_class_named_root(uri: &str, tag: &str, root: &str) {
 
 #[tokio::test]
 async fn documents_without_a_published_element_keep_their_class_named_roots() {
-    let (_pg, service) = common::test_service().await;
-    let app = common::router_with(common::api_config(false), service).await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
 
     let ehr_id = common::create_ehr(&app).await;
 

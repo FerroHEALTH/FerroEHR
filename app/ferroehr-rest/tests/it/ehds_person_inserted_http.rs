@@ -29,7 +29,6 @@ use serde_json::{Value, json};
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
-use ferroehr::config::rest::RestConfig;
 use ferroehr_rest::config::AppConfig;
 use ferrohealth_smart::config::{AuthSection, IssuerKey};
 
@@ -70,19 +69,12 @@ async fn issuer() -> MockServer {
 /// A server trusting `issuer`, whose `patient/` grants count.
 async fn app(issuer: &str) -> (testkit::TestDb, Router) {
     let mut cfg = AppConfig {
-        server: common::server(),
-        rest: RestConfig {
-            base_path: BASE.to_owned(),
-            swagger_ui: ferroehr::config::management::AccessLevel::Off,
-            cors_permissive: false,
-            ..Default::default()
-        },
         auth: AuthSection {
             issuer: IssuerKey::Flat(issuer.to_owned()),
             audience: vec![AUDIENCE.to_owned()],
             ..AuthSection::default()
         },
-        ..Default::default()
+        ..common::api_config(false)
     };
     cfg.smart.patient_issuers = vec![issuer.to_owned()];
     let (pg, service) = common::test_service().await;

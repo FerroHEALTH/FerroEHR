@@ -33,7 +33,6 @@ use ferroehr::config::authz::AuthzConfig;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::admin::access_delay::config::{AccessDelayConfig, AccessDelayPolicy};
 use ferroehr::system_log::categories::CategoryMapConfig;
-use ferroehr::system_log::config::{AuditConfig, StoreConfig};
 use ferroehr::system_log::sender::{
     AuditHandle, ResolvedSubject, SubjectLookup, SubjectResolver, start,
 };
@@ -56,18 +55,7 @@ const PATIENT: &str = "patient-7";
 /// holding the subject-scoped audit role.
 async fn app() -> (testkit::TestDb, PgPool, Router) {
     let (db, pool) = common::migrated_pool().await;
-    let audit = AuditConfig {
-        enabled: true,
-        store: StoreConfig {
-            enabled: true,
-            retention_days: 0,
-            retention_years: None,
-            sgb_v_309_controller: false,
-            verify_interval_seconds: 0,
-            full_verify_interval_seconds: 0,
-        },
-        ..AuditConfig::default()
-    };
+    let audit = common::local_audit();
     let resolver: SubjectResolver = Arc::new(|_ehr_id| {
         Box::pin(async {
             SubjectLookup::Found(ResolvedSubject {

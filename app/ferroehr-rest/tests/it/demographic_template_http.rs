@@ -34,10 +34,6 @@ use http_body_util::BodyExt;
 use serde_json::{Value, json};
 use tower::ServiceExt;
 
-use ferroehr::config::rest::RestConfig;
-use ferroehr_rest::config::AppConfig;
-use ferrohealth_smart::config::AuthSection;
-
 use crate::common;
 
 const BASE: &str = "/ferroehr/rest/openehr/v1";
@@ -51,32 +47,9 @@ fn corpus_opt(name: &str) -> String {
     std::fs::read_to_string(path).expect("OPT fixture under corpus/fixtures/opt/valid")
 }
 
-fn config() -> AppConfig {
-    AppConfig {
-        server: common::server(),
-        rest: RestConfig {
-            base_path: BASE.to_owned(),
-            swagger_ui: ferroehr::config::management::AccessLevel::Off,
-            cors_permissive: false,
-            ..Default::default()
-        },
-        auth: AuthSection {
-            enabled: false,
-            basic: None,
-            ..AuthSection::default()
-        },
-        ..Default::default()
-    }
-}
-
-async fn app() -> (testkit::TestDb, Router) {
-    let (pg, service) = common::test_service().await;
-    (pg, common::router_with(config(), service).await)
-}
-
 /// A router with both demographic templates uploaded through the wire.
 async fn app_with_templates() -> (testkit::TestDb, Router) {
-    let (pg, app) = app().await;
+    let (pg, app) = common::app(common::api_config(false)).await;
     for name in ["role.v2.opt", "person.v2.opt"] {
         let (status, body) = upload(&app, corpus_opt(name)).await;
         assert_eq!(status, StatusCode::CREATED, "{name} uploads: {body}");
@@ -293,7 +266,7 @@ fn example_uri(template_id: &str, level: &str, kind: &str) -> String {
 
 #[tokio::test]
 async fn role_template_uploads_and_lists_its_root() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let (status, body) = upload(&app, corpus_opt("role.v2.opt")).await;
     assert_eq!(status, StatusCode::CREATED, "Role.v2 uploads: {body}");
 

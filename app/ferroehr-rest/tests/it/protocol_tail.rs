@@ -28,10 +28,6 @@ use axum::body::Body;
 use http::{Request, StatusCode, header};
 use serde_json::Value;
 
-use ferroehr::config::rest::RestConfig;
-use ferroehr_rest::config::AppConfig;
-use ferrohealth_smart::config::AuthSection;
-
 use crate::common;
 use crate::common::{etag_uid, ips_canonical_composition, ips_opt_xml, send};
 
@@ -42,29 +38,6 @@ const EHR_ID: &str = "7d44b88c-4199-4bad-97dc-d78268e01398";
 const VO_ID: &str = "8849182c-82ad-4088-a07f-48ead4180515";
 /// The client-supplied EHR id the `PUT /ehr/{ehr_id}` committal test creates.
 const CREATED_EHR_ID: &str = "1f4d1a3e-24bb-4a1f-9e6f-2f0dcb0a5c11";
-
-fn config() -> AppConfig {
-    AppConfig {
-        server: common::server(),
-        rest: RestConfig {
-            base_path: BASE.to_owned(),
-            swagger_ui: ferroehr::config::management::AccessLevel::Off,
-            cors_permissive: false,
-            ..Default::default()
-        },
-        auth: AuthSection {
-            enabled: false,
-            basic: None,
-            ..AuthSection::default()
-        },
-        ..Default::default()
-    }
-}
-
-async fn app() -> (testkit::TestDb, Router) {
-    let (pg, service) = common::test_service().await;
-    (pg, common::router_with(config(), service).await)
-}
 
 fn vo_of(ovid: &str) -> &str {
     ovid.split("::").next().expect("vo uuid")
@@ -129,7 +102,7 @@ async fn commit_ips_composition(app: &Router) -> (String, String) {
 
 #[tokio::test]
 async fn options_root_is_system_options_and_conformance() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     // The System API mounts at the API base-path root ONLY
     // (`system.openapi.yaml` servers `{baseUrl}/v1`, path `/`); the former
     // bare-`/` alias was our own duplication and is gone.
@@ -160,7 +133,7 @@ async fn options_root_is_system_options_and_conformance() {
 
 #[tokio::test]
 async fn committal_headers_merge_into_the_commit() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let (ehr_id, v1) = commit_ips_composition(&app).await;
     let vo = vo_of(&v1).to_owned();
 
@@ -251,7 +224,7 @@ async fn committal_headers_merge_into_the_commit() {
 /// resource reading as deleted (`204`) while its content stayed stored.
 #[tokio::test]
 async fn a_deleted_lifecycle_header_on_a_content_commit_is_refused() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let (ehr_id, v1) = commit_ips_composition(&app).await;
     let vo = vo_of(&v1).to_owned();
 
@@ -294,7 +267,7 @@ async fn a_deleted_lifecycle_header_on_a_content_commit_is_refused() {
 /// §Logical Deletion). The accepting twin states the `523` the DELETE commits.
 #[tokio::test]
 async fn a_contradictory_lifecycle_header_on_delete_is_refused() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let (ehr_id, v1) = commit_ips_composition(&app).await;
 
     let refused = common::req("DELETE", format!("{BASE}/ehr/{ehr_id}/composition/{v1}"))
@@ -327,7 +300,7 @@ async fn a_contradictory_lifecycle_header_on_delete_is_refused() {
 /// `audit_change_type` group, RM common master06 §Contributions).
 #[tokio::test]
 async fn client_change_type_amendment_is_merged() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let (ehr_id, v1) = commit_ips_composition(&app).await;
     let vo = vo_of(&v1).to_owned();
 
@@ -369,7 +342,7 @@ async fn client_change_type_amendment_is_merged() {
 /// (`AUDIT_DETAILS.Change_type_valid`).
 #[tokio::test]
 async fn client_change_type_mismatch_and_out_of_group_are_rejected() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let (ehr_id, v1) = commit_ips_composition(&app).await;
     let vo = vo_of(&v1).to_owned();
     let mut body = ips_canonical_composition();
@@ -402,7 +375,7 @@ async fn client_change_type_mismatch_and_out_of_group_are_rejected() {
 /// `523|deleted|` `ORIGINAL_VERSION`.
 #[tokio::test]
 async fn delete_accepts_and_merges_committal_headers() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let (ehr_id, v1) = commit_ips_composition(&app).await;
     let vo = vo_of(&v1).to_owned();
 
@@ -449,7 +422,7 @@ async fn delete_accepts_and_merges_committal_headers() {
 /// `EHR_STATUS` `ORIGINAL_VERSION`.
 #[tokio::test]
 async fn ehr_create_accepts_and_merges_committal_headers() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
 
     // `Prefer: return=representation` yields the RM EHR body, whose
     // `ehr_status` OBJECT_REF carries the committed version's identity.
@@ -513,7 +486,7 @@ async fn ehr_create_accepts_and_merges_committal_headers() {
 /// accepted on.
 #[tokio::test]
 async fn ehr_create_with_id_accepts_and_merges_committal_headers() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
 
     let req = common::req("PUT", format!("{BASE}/ehr/{CREATED_EHR_ID}"))
         .prefer_representation()
@@ -568,7 +541,7 @@ async fn ehr_create_with_id_accepts_and_merges_committal_headers() {
 /// (`AUDIT_DETAILS.Change_type_valid`), and a restated `249` passes.
 #[tokio::test]
 async fn ehr_create_rejects_a_change_type_that_is_not_a_creation() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
 
     for (token, expected) in [
         ("250", StatusCode::BAD_REQUEST),
@@ -595,7 +568,7 @@ async fn ehr_create_rejects_a_change_type_that_is_not_a_creation() {
 /// compatibility" — accepted with the same attribute-path-in-value grammar.
 #[tokio::test]
 async fn bare_deprecated_audit_details_header_is_accepted() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let (ehr_id, v1) = commit_ips_composition(&app).await;
     let vo = vo_of(&v1).to_owned();
 
@@ -637,7 +610,7 @@ async fn malformed_if_match_is_rejected_not_bypassed() {
     // A required If-Match that is not a well-formed OBJECT_VERSION_ID must be a
     // client error (400), never a silent skip of the precondition — rejected
     // before the backend, so the (non-existent) target ids are irrelevant.
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let req = common::req("PUT", format!("{BASE}/ehr/{EHR_ID}/composition/{VO_ID}"))
         .if_match("\"not-an-object-version-id\"")
         .json(r#"{"_type":"COMPOSITION"}"#)
@@ -650,7 +623,7 @@ async fn malformed_if_match_is_rejected_not_bypassed() {
 async fn malformed_if_match_on_ehr_status_update_is_rejected() {
     // The required-If-Match ehr_status update rejects a malformed precondition
     // (400) before the backend, never treating it as no-precondition.
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let req = common::req("PUT", format!("{BASE}/ehr/{EHR_ID}/ehr_status"))
         .if_match("\"garbage\"")
         .json(r#"{"_type":"EHR_STATUS"}"#)
@@ -663,7 +636,7 @@ async fn malformed_if_match_on_ehr_status_update_is_rejected() {
 async fn malformed_if_match_on_directory_update_is_rejected() {
     // The required-If-Match directory update rejects a malformed precondition
     // (400) at the wire, never a silent bypass.
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let req = common::req("PUT", format!("{BASE}/ehr/{EHR_ID}/directory"))
         .if_match("\"a::b::c::3\"")
         .json(r#"{"_type":"FOLDER","name":{"value":"root"}}"#)
@@ -676,7 +649,7 @@ async fn malformed_if_match_on_directory_update_is_rejected() {
 
 #[tokio::test]
 async fn versioned_composition_serves_xml() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let (ehr_id, v1) = commit_ips_composition(&app).await;
     let vo = vo_of(&v1);
 
@@ -707,7 +680,7 @@ async fn composition_version_serves_xml_with_signature() {
     // conformance to the published XSDs, whose VERSION document element is
     // abstract (`Version.xsd`), so the conforming response names a derived type
     // with `xsi:type="ORIGINAL_VERSION"` (XML Schema Part 1 §2.6.1 + §3.4.6).
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let (ehr_id, v1) = commit_ips_composition(&app).await;
     let vo = vo_of(&v1);
 
@@ -751,7 +724,7 @@ async fn composition_version_serves_xml_with_signature() {
 /// representation-local).
 #[tokio::test]
 async fn composition_get_serves_stored_json_verbatim() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     // The committed body must be uid-less so the stamped-field PLACEMENT is
     // what the byte comparison exercises (the borutjures case on #2913).
     let mut fixture = ips_canonical_composition();
@@ -843,7 +816,7 @@ async fn composition_get_serves_stored_json_verbatim() {
 /// invariant `Owner_id_valid`). The coherent pair still serves 200.
 #[tokio::test]
 async fn versioned_composition_version_by_id_is_container_scoped() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     // Two independent compositions in the same EHR: the second create gives a
     // second container in the same EHR (the IPS OPT is event-category, so a
     // second create is allowed).

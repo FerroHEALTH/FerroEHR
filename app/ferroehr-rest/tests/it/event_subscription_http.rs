@@ -28,31 +28,16 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 use uuid::Uuid;
 
-use ferroehr::config::rest::RestConfig;
 use ferroehr_rest::config::AppConfig;
-use ferrohealth_smart::config::AuthSection;
 
 use crate::common;
 
-const BASE: &str = "/ferroehr/rest/openehr/v1";
 const GROUP: &str = "/ferroehr/rest/extensions/v1/admin/event_subscription";
 
 fn config(enabled: bool) -> AppConfig {
     AppConfig {
-        server: common::server(),
-        rest: RestConfig {
-            base_path: BASE.to_owned(),
-            swagger_ui: ferroehr::config::management::AccessLevel::Off,
-            cors_permissive: false,
-            ..Default::default()
-        },
-        auth: AuthSection {
-            enabled: false,
-            basic: None,
-            ..AuthSection::default()
-        },
         events_admin_api: enabled,
-        ..Default::default()
+        ..common::api_config(false)
     }
 }
 

@@ -34,14 +34,6 @@ use crate::common::BASE;
 use crate::common::header;
 use crate::common::{create_ehr, etag_uid, send};
 
-async fn app() -> (testkit::TestDb, Router) {
-    let (pg, service) = common::test_service().await;
-    (
-        pg,
-        common::router_with(common::api_config(false), service).await,
-    )
-}
-
 fn last_modified(h: &header::HeaderMap) -> Option<&str> {
     h.get(header::LAST_MODIFIED).and_then(|v| v.to_str().ok())
 }
@@ -104,7 +96,7 @@ async fn current_ehr_status(app: &Router, ehr_id: &str) -> (Value, String) {
 
 #[tokio::test]
 async fn ehr_create_default_is_minimal_with_headers() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let req = common::req("POST", format!("{BASE}/ehr")).build();
     let (status, h, body) = send(&app, req).await;
 
@@ -124,7 +116,7 @@ async fn ehr_create_default_is_minimal_with_headers() {
 
 #[tokio::test]
 async fn ehr_create_representation_returns_body() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let req = common::req("POST", format!("{BASE}/ehr"))
         .prefer_representation()
         .build();
@@ -144,7 +136,7 @@ async fn ehr_create_representation_returns_body() {
 
 #[tokio::test]
 async fn ehr_status_update_default_is_204_with_headers() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ehr_id = create_ehr(&app).await;
     let (mut status_body, current) = current_ehr_status(&app, &ehr_id).await;
     // Re-commit the current status (a new version) — strip the uid the server owns.
@@ -173,7 +165,7 @@ async fn ehr_status_update_default_is_204_with_headers() {
 
 #[tokio::test]
 async fn ehr_status_update_representation_is_200_with_body() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ehr_id = create_ehr(&app).await;
     let (mut status_body, current) = current_ehr_status(&app, &ehr_id).await;
     status_body.as_object_mut().unwrap().remove("uid");
@@ -200,7 +192,7 @@ async fn ehr_status_update_representation_is_200_with_body() {
 
 #[tokio::test]
 async fn composition_get_sets_etag_and_location() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ehr_id = create_ehr(&app).await;
     upload_opt(&app).await;
     let ovid = commit_composition(&app, &ehr_id).await;
@@ -229,7 +221,7 @@ async fn versioned_ehr_status_version_at_time_sets_version_headers() {
     // 200_VERSION_of_EHR_STATUS_at_time declares ETag_VERSION (the version_uid)
     // plus a `Location_deprecated` header — the deprecated Location is no longer
     // emitted (overview §"Deprecated headers").
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ehr_id = create_ehr(&app).await;
     let (_body, current) = current_ehr_status(&app, &ehr_id).await;
 
@@ -256,7 +248,7 @@ async fn versioned_ehr_status_version_at_time_sets_version_headers() {
 
 #[tokio::test]
 async fn composition_delete_is_204_with_headers() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ehr_id = create_ehr(&app).await;
     upload_opt(&app).await;
     let ovid = commit_composition(&app, &ehr_id).await;
@@ -295,7 +287,7 @@ async fn composition_delete_is_204_with_headers() {
 /// byte-equal to the IMF-fixdate rendering of that instant.
 #[tokio::test]
 async fn version_read_last_modified_is_the_commit_audit_instant() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ehr_id = create_ehr(&app).await;
 
     // …/versioned_ehr_status/version — the ORIGINAL_VERSION at the latest time.
@@ -347,7 +339,7 @@ async fn version_read_last_modified_is_the_commit_audit_instant() {
 /// "derived from `VERSION.commit_audit.time_committed.value`".
 #[tokio::test]
 async fn container_reads_carry_etag_and_newest_commit_last_modified() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ehr_id = create_ehr(&app).await;
 
     // A second EHR_STATUS version, so "newest" is distinguishable from v1.
@@ -418,7 +410,7 @@ async fn container_reads_carry_etag_and_newest_commit_last_modified() {
 /// (read) / the commit result (write) to the wire.
 #[tokio::test]
 async fn composition_read_and_write_carry_the_commit_instant() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ehr_id = create_ehr(&app).await;
     upload_opt(&app).await;
 
@@ -510,7 +502,7 @@ async fn composition_read_and_write_carry_the_commit_instant() {
 /// the version row (read) and the commit result (write).
 #[tokio::test]
 async fn ehr_status_read_and_write_carry_the_commit_instant() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ehr_id = create_ehr(&app).await;
 
     // GET /ehr_status.
@@ -567,7 +559,7 @@ async fn ehr_status_read_and_write_carry_the_commit_instant() {
 /// state identifiers". No `Location` on a GET (§Location).
 #[tokio::test]
 async fn ehr_get_carries_the_weak_ehr_id_etag() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ehr_id = create_ehr(&app).await;
 
     let req = common::req("GET", format!("{BASE}/ehr/{ehr_id}")).build();
@@ -597,7 +589,7 @@ async fn ehr_get_carries_the_weak_ehr_id_etag() {
 /// commit instant) alongside the `ETag`/`Location` it already emitted.
 #[tokio::test]
 async fn ehr_create_carries_last_modified() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let req = common::req("POST", format!("{BASE}/ehr")).build();
     let (status, h, _b) = send(&app, req).await;
     assert_eq!(status, StatusCode::CREATED);
@@ -678,7 +670,7 @@ async fn stored_tag_keys(app: &Router, ehr_id: &str, uid_based_id: &str) -> Vec<
 /// union of the two.
 #[tokio::test]
 async fn composition_update_echoes_each_item_tag_target_under_its_own_header() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ehr_id = create_ehr(&app).await;
     upload_opt(&app).await;
     let ovid = commit_composition(&app, &ehr_id).await;
@@ -736,7 +728,7 @@ async fn composition_update_echoes_each_item_tag_target_under_its_own_header() {
 /// header's collection is not confirmed at all.
 #[tokio::test]
 async fn composition_update_echoes_nothing_for_an_absent_item_tag_header() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ehr_id = create_ehr(&app).await;
     upload_opt(&app).await;
     let ovid = commit_composition(&app, &ehr_id).await;
@@ -793,7 +785,7 @@ fn preference_applied(h: &header::HeaderMap) -> Option<String> {
 /// — every write path declares what it applied, including the applied default.
 #[tokio::test]
 async fn writes_declare_the_applied_preference() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ehr_id = create_ehr(&app).await;
 
     // Template upload (the definition group's own identifier body).
@@ -862,7 +854,7 @@ async fn writes_declare_the_applied_preference() {
 /// minimal outcome IS `204`.
 #[tokio::test]
 async fn ehr_status_update_identifier_is_never_204() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ehr_id = create_ehr(&app).await;
     let (mut status_body, current) = current_ehr_status(&app, &ehr_id).await;
     status_body.as_object_mut().unwrap().remove("uid");
@@ -898,7 +890,7 @@ async fn ehr_status_update_identifier_is_never_204() {
 /// reach of the SHOULD is the adjudicated reading.
 #[tokio::test]
 async fn contribution_get_carries_etag_and_last_modified() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ehr_id = create_ehr(&app).await;
     let (mut status_body, v1) = current_ehr_status(&app, &ehr_id).await;
     status_body.as_object_mut().unwrap().remove("uid");
@@ -1036,7 +1028,7 @@ async fn stored_commit_instant(app: &Router, ehr_id: &str, contribution_uid: &st
 /// the same adjudicated reading the CONTRIBUTION GET applies.
 #[tokio::test]
 async fn contribution_commit_carries_last_modified_on_both_prefer_branches() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ehr_id = create_ehr(&app).await;
 
     // `return=minimal` — a headers-only 201: the header is the only place the
@@ -1092,7 +1084,7 @@ async fn contribution_commit_carries_last_modified_on_both_prefer_branches() {
 /// with no tags stays an empty `200 []`.
 #[tokio::test]
 async fn tag_get_and_delete_guard_the_target() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ehr_id = create_ehr(&app).await;
     upload_opt(&app).await;
     let version_uid = commit_composition(&app, &ehr_id).await;
@@ -1167,7 +1159,7 @@ async fn tag_get_and_delete_guard_the_target() {
 /// tag with the same key are ONE tag, last-wins.
 #[tokio::test]
 async fn tag_empty_target_path_normalizes_to_absent() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ehr_id = create_ehr(&app).await;
     upload_opt(&app).await;
     let version_uid = commit_composition(&app, &ehr_id).await;
@@ -1205,7 +1197,7 @@ async fn tag_empty_target_path_normalizes_to_absent() {
 /// matching tags stays `200 []`.
 #[tokio::test]
 async fn ehr_wide_tag_listing_guards_the_ehr() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ehr_id = create_ehr(&app).await;
 
     let (status, _h, body) = send(
@@ -1240,7 +1232,7 @@ async fn ehr_wide_tag_listing_guards_the_ehr() {
 /// and the `ehr_tags_get` filters (AND-combined, exact — our own handling).
 #[tokio::test]
 async fn tag_collection_disciplines() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ehr_id = create_ehr(&app).await;
     upload_opt(&app).await;
     let version_uid = commit_composition(&app, &ehr_id).await;
@@ -1323,7 +1315,7 @@ async fn tag_collection_disciplines() {
 /// design.)
 #[tokio::test]
 async fn an_undecodable_header_value_is_refused_not_dropped() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ehr_id = create_ehr(&app).await;
     upload_opt(&app).await;
 
@@ -1368,7 +1360,7 @@ async fn an_undecodable_header_value_is_refused_not_dropped() {
 /// `params::emit_item_tag_header`, shared by both echo paths.
 #[tokio::test]
 async fn an_emptied_item_tag_collection_echoes_no_header_not_an_empty_one() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ehr_id = create_ehr(&app).await;
     upload_opt(&app).await;
     let ovid = commit_composition(&app, &ehr_id).await;
@@ -1415,7 +1407,7 @@ async fn an_emptied_item_tag_collection_echoes_no_header_not_an_empty_one() {
 /// commit, the value the create response sent, on both read routes.
 #[tokio::test]
 async fn ehr_reads_carry_the_last_modified_of_the_create() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let status_body = serde_json::json!({
         "_type": "EHR_STATUS",
         "archetype_node_id": "openEHR-EHR-EHR_STATUS.generic.v1",
@@ -1464,7 +1456,7 @@ async fn ehr_reads_carry_the_last_modified_of_the_create() {
 /// read's `Last-Modified` moves to that commit and never precedes the create.
 #[tokio::test]
 async fn an_ehr_read_is_dated_by_its_latest_folder_change() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let req = common::req("POST", format!("{BASE}/ehr")).build();
     let (status, h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::CREATED, "{body}");

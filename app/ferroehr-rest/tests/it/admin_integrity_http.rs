@@ -133,8 +133,7 @@ async fn the_streamed_sweep_completes_under_a_timeout_the_aggregated_one_cannot_
 
 #[tokio::test]
 async fn a_wildcard_accept_keeps_the_aggregated_document() {
-    let (_pg, service) = common::test_service().await;
-    let app = common::router_with(common::api_config(true), service).await;
+    let (_pg, app) = common::app(common::api_config(true)).await;
 
     let (status, report) = common::send_json(&app, verify(Some("*/*"))).await;
 
@@ -184,8 +183,7 @@ async fn the_rebuild_answers_a_report_over_an_undamaged_repository() {
 
 #[tokio::test]
 async fn a_sys_version_without_a_vo_id_is_refused() {
-    let (_pg, service) = common::test_service().await;
-    let app = common::router_with(common::api_config(true), service).await;
+    let (_pg, app) = common::app(common::api_config(true)).await;
 
     let (status, body) = common::send_body(&app, rebuild("?sys_version=2")).await;
 
@@ -203,8 +201,7 @@ async fn a_sys_version_without_a_vo_id_is_refused() {
 
 #[tokio::test]
 async fn the_rebuild_is_gated_with_the_rest_of_the_admin_group() {
-    let (_pg, service) = common::test_service().await;
-    let app = common::router_with(common::api_config(false), service).await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
 
     let (status, _) = common::send_body(&app, rebuild("")).await;
 

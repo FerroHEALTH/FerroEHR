@@ -31,10 +31,6 @@ use axum::body::Body;
 use http::{Request, StatusCode, header};
 use serde_json::{Value, json};
 
-use ferroehr::config::rest::RestConfig;
-use ferroehr_rest::config::AppConfig;
-use ferrohealth_smart::config::AuthSection;
-
 use crate::common;
 use crate::common::EXT;
 use crate::common::header;
@@ -112,29 +108,6 @@ fn relationship_body() -> Value {
     })
 }
 
-fn config() -> AppConfig {
-    AppConfig {
-        server: common::server(),
-        rest: RestConfig {
-            base_path: BASE.to_owned(),
-            swagger_ui: ferroehr::config::management::AccessLevel::Off,
-            cors_permissive: false,
-            ..Default::default()
-        },
-        auth: AuthSection {
-            enabled: false,
-            basic: None,
-            ..AuthSection::default()
-        },
-        ..Default::default()
-    }
-}
-
-async fn app() -> (testkit::TestDb, Router) {
-    let (pg, service) = common::test_service().await;
-    (pg, common::router_with(config(), service).await)
-}
-
 /// A canonical-JSON `GET` against the composed router.
 async fn get_json(app: &Router, uri: String) -> (StatusCode, header::HeaderMap, String) {
     let req = common::req("GET", uri).accept("application/json").build();
@@ -158,7 +131,7 @@ fn vo_of(ovid: &str) -> &str {
 
 #[tokio::test]
 async fn person_create_default_is_minimal_with_headers() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let req = common::req("POST", format!("{BASE}/demographic/person"))
         .json(person_body().to_string())
         .build();
@@ -181,7 +154,7 @@ async fn person_create_default_is_minimal_with_headers() {
 
 #[tokio::test]
 async fn person_create_representation_returns_body() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let req = common::req("POST", format!("{BASE}/demographic/person"))
         .prefer_representation()
         .json(person_body().to_string())
@@ -205,7 +178,7 @@ async fn person_create_representation_returns_body() {
 /// responses"; §"Deprecated headers" deprecates `Location` on `GET`.
 #[tokio::test]
 async fn person_get_sets_etag_and_no_location() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ovid = create(&app, "person", &person_body()).await;
     let vo = vo_of(&ovid);
 
@@ -229,7 +202,7 @@ async fn person_get_sets_etag_and_no_location() {
 
 #[tokio::test]
 async fn deleted_person_read_is_204() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ovid = create(&app, "person", &person_body()).await;
     let vo = vo_of(&ovid);
 
@@ -251,7 +224,7 @@ async fn deleted_person_read_is_204() {
 /// §Location scopes it to creation/redirect responses.
 #[tokio::test]
 async fn person_delete_is_204_with_etag_and_no_location() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ovid = create(&app, "person", &person_body()).await;
 
     let req = common::req("DELETE", format!("{BASE}/demographic/person/{ovid}")).build();
@@ -310,7 +283,7 @@ fn actor_body(rm_type: &str) -> Value {
 /// container id a version id.
 #[tokio::test]
 async fn party_delete_by_versioned_object_uid_is_400_for_every_kind() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let kinds = [
         ("agent", actor_body("AGENT")),
         ("group", actor_body("GROUP")),
@@ -348,7 +321,7 @@ async fn party_delete_by_versioned_object_uid_is_400_for_every_kind() {
 /// headers") — and no `Location`, which §Location scopes to creation/redirect.
 #[tokio::test]
 async fn stale_update_is_412_with_latest_etag_and_no_location() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ovid = create(&app, "person", &person_body()).await;
     let vo = vo_of(&ovid);
     // A syntactically valid but stale OBJECT_VERSION_ID (same VO, wrong version).
@@ -380,7 +353,7 @@ async fn stale_update_is_412_with_latest_etag_and_no_location() {
 /// unquoted value is accepted for the same reason.
 #[tokio::test]
 async fn update_accepts_weak_bare_quoted_and_unquoted_if_match() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
 
     for shape in ["weak", "quoted", "unquoted"] {
         let ovid = create(&app, "person", &person_body()).await;
@@ -415,7 +388,7 @@ async fn update_accepts_weak_bare_quoted_and_unquoted_if_match() {
 /// raise a spurious `412`.
 #[tokio::test]
 async fn update_if_match_compares_case_insensitively() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ovid = create(&app, "person", &person_body()).await;
     let vo = vo_of(&ovid).to_owned();
     let upper = ovid.to_uppercase();
@@ -441,7 +414,7 @@ async fn update_if_match_compares_case_insensitively() {
 /// cannot be evaluated must not run as if none was sent.
 #[tokio::test]
 async fn malformed_if_match_is_400() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ovid = create(&app, "person", &person_body()).await;
     let vo = vo_of(&ovid).to_owned();
 
@@ -463,7 +436,7 @@ async fn malformed_if_match_is_400() {
 /// the server emits (same normalization seam as `PUT`).
 #[tokio::test]
 async fn delete_accepts_the_weak_if_match_form() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ovid = create(&app, "person", &person_body()).await;
 
     let req = common::req("DELETE", format!("{BASE}/demographic/person/{ovid}"))
@@ -511,7 +484,7 @@ async fn delete_accepts_the_weak_if_match_form() {
 /// §Version Lifecycle / §Incomplete Content).
 #[tokio::test]
 async fn direct_party_write_honours_the_openehr_version_lifecycle_state() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
 
     // CREATE with the header's lifecycle half.
     let req = common::req("POST", format!("{BASE}/demographic/person"))
@@ -570,7 +543,7 @@ async fn direct_party_write_honours_the_openehr_version_lifecycle_state() {
 
 #[tokio::test]
 async fn versioned_party_reads_emit_versioning_headers() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ovid = create(&app, "person", &person_body()).await;
     let vo = vo_of(&ovid).to_owned();
 
@@ -658,7 +631,7 @@ async fn versioned_party_reads_emit_versioning_headers() {
 /// process's system zone and the assertion is independent of what that zone is.
 #[tokio::test]
 async fn version_at_time_without_offset_resolves_in_the_local_timezone() {
-    let (pg, app) = app().await;
+    let (pg, app) = common::app(common::api_config(false)).await;
     let v1 = create(&app, "person", &person_body()).await;
     let vo = vo_of(&v1).to_owned();
 
@@ -719,7 +692,7 @@ async fn version_at_time_without_offset_resolves_in_the_local_timezone() {
 /// reads carry the same versioning headers and no `Location`.
 #[tokio::test]
 async fn versioned_party_relationship_reads_emit_versioning_headers() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ovid = create(&app, "party_relationship", &relationship_body()).await;
     let vo = vo_of(&ovid).to_owned();
 
@@ -756,7 +729,7 @@ async fn versioned_party_relationship_reads_emit_versioning_headers() {
 #[tokio::test]
 async fn role_create_uses_role_segment() {
     // The 5× kind fan-out routes each kind to its own segment.
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let req = common::req("POST", format!("{BASE}/demographic/role"))
         .json(role_body().to_string())
         .build();
@@ -774,7 +747,7 @@ async fn party_relationship_create_is_mounted_with_headers() {
     // The our-own-design PARTY_RELATIONSHIP extension route is mounted and
     // reaches the seam (a create returns 201 + ETag/Location on the
     // /demographic/party_relationship segment; an unmounted route would 404).
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let req = common::req("POST", format!("{EXT}/demographic/party_relationship"))
         .prefer_representation()
         .json(relationship_body().to_string())
@@ -797,7 +770,7 @@ async fn party_relationship_create_is_mounted_with_headers() {
 
 #[tokio::test]
 async fn party_relationship_get_is_mounted() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ovid = create(&app, "party_relationship", &relationship_body()).await;
     let vo = vo_of(&ovid);
 
@@ -818,7 +791,7 @@ async fn party_relationship_get_is_mounted() {
 /// and the latest `version_uid` deletes it with a `204`.
 #[tokio::test]
 async fn party_relationship_delete_needs_the_version_uid() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ovid = create(&app, "party_relationship", &relationship_body()).await;
     let vo = vo_of(&ovid).to_owned();
 
@@ -849,7 +822,7 @@ async fn versioned_party_relationship_is_mounted() {
     // The versioned-party-relationship read is a real implementation now, so a
     // created relationship reads back its VERSIONED_PARTY_RELATIONSHIP → `200`
     // (an unmounted path would 404), which still proves the route is mounted.
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ovid = create(&app, "party_relationship", &relationship_body()).await;
     let vo = vo_of(&ovid);
 
@@ -887,7 +860,7 @@ async fn versioned_party_relationship_is_mounted() {
 /// description and committer (`change_type` stays operation-owned).
 #[tokio::test]
 async fn demographic_committal_headers_merge_into_the_commit() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
 
     let req = common::req("POST", format!("{BASE}/demographic/person")).header("openEHR-AUDIT_DETAILS.description", "value=\"Registered at intake\"",).header("openEHR-AUDIT_DETAILS.committer", "name=\"John Doe\", external_ref.id=\"BC8132EA-8F4A-11E7-BB31-BE2E44B06B34\", external_ref.namespace=\"demographic\", external_ref.type=\"PERSON\"",).json(person_body().to_string()).build();
     let (status, h, _b) = send(&app, req).await;
@@ -935,7 +908,7 @@ fn preference_applied(h: &header::HeaderMap) -> Option<String> {
 /// `return=minimal`".
 #[tokio::test]
 async fn demographic_writes_declare_the_applied_preference() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
 
     let req = common::req("POST", format!("{BASE}/demographic/person"))
         .json(person_body().to_string())
@@ -972,7 +945,7 @@ async fn demographic_writes_declare_the_applied_preference() {
 /// (§"Prefer only identifier").
 #[tokio::test]
 async fn person_create_identifier_returns_the_uid_body() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let req = common::req("POST", format!("{BASE}/demographic/person"))
         .header("Prefer", "return=identifier")
         .json(person_body().to_string())
@@ -997,7 +970,7 @@ async fn person_create_identifier_returns_the_uid_body() {
 /// latest `version_uid` in the `ETag` header").
 #[tokio::test]
 async fn stale_delete_conflict_echoes_latest_version_etag() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let v1 = create(&app, "person", &person_body()).await;
     // Supersede v1 with an update.
     let put = common::req("PUT", format!("{BASE}/demographic/person/{}", vo_of(&v1)))
@@ -1057,7 +1030,7 @@ fn contribution_of(data: &Value) -> Value {
 /// `responses/400_CONTRIBUTION.yaml` for an invalid content.
 #[tokio::test]
 async fn a_contribution_member_of_the_wrong_kind_is_400() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let folder = json!({
         "_type": "FOLDER",
         "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
@@ -1097,7 +1070,7 @@ async fn a_contribution_member_of_the_wrong_kind_is_400() {
 /// reading of the overview §"`ETag` and Last-Modified" SHOULD.
 #[tokio::test]
 async fn demographic_contribution_get_carries_etag_and_last_modified() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let commit = serde_json::json!({
         "versions": [{
             "data": person_body(),
@@ -1156,7 +1129,7 @@ async fn demographic_contribution_get_carries_etag_and_last_modified() {
 /// ACTOR kind, while a populated list commits.
 #[tokio::test]
 async fn an_actor_with_an_empty_languages_array_is_400() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     for rm_type in ["AGENT", "GROUP", "ORGANISATION", "PERSON"] {
         let seg = rm_type.to_lowercase();
         let mut body = actor_body(rm_type);

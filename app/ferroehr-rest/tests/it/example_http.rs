@@ -33,10 +33,6 @@ use http_body_util::BodyExt;
 use serde_json::Value;
 use tower::ServiceExt;
 
-use ferroehr::config::rest::RestConfig;
-use ferroehr_rest::config::AppConfig;
-use ferrohealth_smart::config::AuthSection;
-
 use crate::common;
 use crate::common::demo_vitals_opt_xml;
 
@@ -47,28 +43,9 @@ const XML_MIME: &str = "application/xml";
 const FLAT_MIME: &str = "application/openehr.wt.flat+json";
 const STRUCTURED_MIME: &str = "application/openehr.wt.structured+json";
 
-fn config() -> AppConfig {
-    AppConfig {
-        server: common::server(),
-        rest: RestConfig {
-            base_path: BASE.to_owned(),
-            swagger_ui: ferroehr::config::management::AccessLevel::Off,
-            cors_permissive: false,
-            ..Default::default()
-        },
-        auth: AuthSection {
-            enabled: false,
-            basic: None,
-            ..AuthSection::default()
-        },
-        ..Default::default()
-    }
-}
-
 /// A router over a fresh real service with the Demo Vitals OPT already uploaded.
 async fn app_with_template() -> (testkit::TestDb, Router) {
-    let (pg, service) = common::test_service().await;
-    let app = common::router_with(config(), service).await;
+    let (pg, app) = common::app(common::api_config(false)).await;
     let req = common::req("POST", format!("{BASE}/definition/template/adl1.4"))
         .header(header::CONTENT_TYPE, "application/xml")
         .body(demo_vitals_opt_xml())

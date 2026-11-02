@@ -33,14 +33,6 @@ use tower::ServiceExt;
 /// A syntactically valid id that is never created — the "unknown" probe.
 const ABSENT: &str = "00000000-0000-0000-0000-000000000000";
 
-async fn app(admin_enabled: bool) -> (testkit::TestDb, Router) {
-    let (pg, service) = common::test_service().await;
-    (
-        pg,
-        common::router_with(common::api_config(admin_enabled), service).await,
-    )
-}
-
 /// A bodyless `GET` of the [`BASE`]-relative `path`.
 fn get(path: &str) -> Request<Body> {
     common::get(&common::full(path))
@@ -59,7 +51,7 @@ fn post_json(path: &str, body: &str) -> Request<Body> {
 /// rather than trivially zero.
 #[tokio::test]
 async fn the_activity_report_counts_what_the_released_wire_committed() {
-    let (_pg, app) = app(true).await;
+    let (_pg, app) = common::app(common::api_config(true)).await;
 
     let (status, body) = send_body(&app, get("/admin/report/contribution?a_service=Ehr")).await;
     assert_eq!(status, StatusCode::OK, "empty-server list: {body}");
@@ -96,7 +88,7 @@ async fn the_activity_report_counts_what_the_released_wire_committed() {
 /// answers one.
 #[tokio::test]
 async fn the_report_time_interval_filters_the_commit_window() {
-    let (_pg, app) = app(true).await;
+    let (_pg, app) = common::app(common::api_config(true)).await;
     let _ehr_id = create_ehr(&app).await;
 
     let (status, body) = send_body(
@@ -120,7 +112,7 @@ async fn the_report_time_interval_filters_the_commit_window() {
 /// and a `time_interval` that is not `<lower>/<upper>`.
 #[tokio::test]
 async fn the_report_refuses_an_unknown_service_and_a_malformed_interval() {
-    let (_pg, app) = app(true).await;
+    let (_pg, app) = common::app(common::api_config(true)).await;
 
     for path in [
         "/admin/report/contribution",
@@ -144,7 +136,7 @@ async fn the_report_refuses_an_unknown_service_and_a_malformed_interval() {
 /// the one boundary parser, so all four refuse.
 #[tokio::test]
 async fn the_report_refuses_an_interval_whose_lower_bound_is_after_its_upper() {
-    let (_pg, app) = app(true).await;
+    let (_pg, app) = common::app(common::api_config(true)).await;
 
     let inverted = "time_interval=2026-12-31T00:00:00Z/2020-01-01T00:00:00Z";
     for route in [
@@ -176,7 +168,7 @@ async fn the_report_refuses_an_interval_whose_lower_bound_is_after_its_upper() {
 /// Re-archiving is idempotent.
 #[tokio::test]
 async fn archiving_an_ehr_is_read_neutral_and_idempotent() {
-    let (_pg, app) = app(true).await;
+    let (_pg, app) = common::app(common::api_config(true)).await;
     let ehr_id = create_ehr(&app).await;
 
     let body = format!(r#"{{"ehr_ids":["{ehr_id}"]}}"#);
@@ -199,7 +191,7 @@ async fn archiving_an_ehr_is_read_neutral_and_idempotent() {
 /// `{ "<field>": [ … ] }` is `400` too.
 #[tokio::test]
 async fn the_archive_routes_refuse_unknown_malformed_and_shapeless_requests() {
-    let (_pg, app) = app(true).await;
+    let (_pg, app) = common::app(common::api_config(true)).await;
 
     for (path, field) in [
         ("/admin/archive/ehrs", "ehr_ids"),
@@ -306,7 +298,7 @@ fn party_body(rm_type: &str, archetype: &str, name: &str) -> serde_json::Value {
 /// unarchived, and the same party archives fine on its own.
 #[tokio::test]
 async fn archiving_a_party_relationship_id_is_refused_like_an_unknown_party() {
-    let (_pg, app) = app(true).await;
+    let (_pg, app) = common::app(common::api_config(true)).await;
 
     let source = create_demographic(
         &app,
@@ -423,7 +415,7 @@ async fn vo_rows(pool: &sqlx::PgPool, relation: &str, vo_id: &str) -> i64 {
 /// answer `200` throughout.
 #[tokio::test]
 async fn restoring_an_archived_ehr_makes_it_queryable_again() {
-    let (_pg, app) = app(true).await;
+    let (_pg, app) = common::app(common::api_config(true)).await;
     let ehr_id = create_ehr(&app).await;
     // Joins the EHR's current EHR_STATUS version, which archiving moves out of
     // the primary tier; `SELECT e/ehr_id/value` alone reads the `ehr` row, which
@@ -462,7 +454,7 @@ async fn restoring_an_archived_ehr_makes_it_queryable_again() {
 /// partition and reappear in the hot one.
 #[tokio::test]
 async fn restoring_an_archived_party_moves_its_rows_back_to_the_primary_tier() {
-    let (pg, app) = app(true).await;
+    let (pg, app) = common::app(common::api_config(true)).await;
     let pool = pg.pool();
 
     let party = create_demographic(
@@ -499,7 +491,7 @@ async fn restoring_an_archived_party_moves_its_rows_back_to_the_primary_tier() {
 /// still applies, so the id has to name a real record.
 #[tokio::test]
 async fn restoring_an_unarchived_record_succeeds_and_changes_nothing() {
-    let (pg, app) = app(true).await;
+    let (pg, app) = common::app(common::api_config(true)).await;
     let pool = pg.pool();
     let ehr_id = create_ehr(&app).await;
     let party = create_demographic(
@@ -539,7 +531,7 @@ async fn restoring_an_unarchived_record_succeeds_and_changes_nothing() {
 /// empty list restores nothing and succeeds — all-or-nothing in every branch.
 #[tokio::test]
 async fn the_restore_routes_refuse_unknown_malformed_and_shapeless_requests() {
-    let (_pg, app) = app(true).await;
+    let (_pg, app) = common::app(common::api_config(true)).await;
 
     for (path, field) in [
         ("/admin/archive/ehrs/restore", "ehr_ids"),
@@ -595,7 +587,7 @@ fn archive_dir() -> String {
 #[tokio::test]
 async fn dump_and_load_round_trip_in_both_containers() {
     for compression in [None, Some("zip")] {
-        let (_pg, app) = app(true).await;
+        let (_pg, app) = common::app(common::api_config(true)).await;
         let _ehr = create_ehr(&app).await;
         let dir = archive_dir();
 
@@ -637,7 +629,7 @@ async fn dump_and_load_round_trip_in_both_containers() {
 /// so no value is representable.
 #[tokio::test]
 async fn dump_refuses_every_unrepresentable_request_shape() {
-    let (_pg, app) = app(true).await;
+    let (_pg, app) = common::app(common::api_config(true)).await;
     let dir = archive_dir();
 
     for (label, body) in [
@@ -680,7 +672,7 @@ async fn dump_refuses_every_unrepresentable_request_shape() {
 /// server path, and a mangled manifest is a `500` naming that entry.
 #[tokio::test]
 async fn load_refusals_name_no_server_path() {
-    let (_pg, app) = app(true).await;
+    let (_pg, app) = common::app(common::api_config(true)).await;
     let empty = archive_dir();
     std::fs::create_dir_all(&empty).expect("create the empty location");
     let (status, body) = send_body(
@@ -725,7 +717,7 @@ async fn load_refusals_name_no_server_path() {
 /// independent of the container axis.
 #[tokio::test]
 async fn dump_serves_every_declared_enumeration_member() {
-    let (_pg, app) = app(true).await;
+    let (_pg, app) = common::app(common::api_config(true)).await;
     let _ehr = create_ehr(&app).await;
 
     for logical in ["openehr_canonical_json", "openehr_canonical_xml"] {
@@ -770,7 +762,7 @@ async fn dump_serves_every_declared_enumeration_member() {
 /// before the backend is touched.
 #[tokio::test]
 async fn the_admin_gate_covers_the_extension_groups() {
-    let (_pg, app) = app(false).await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
 
     let (status, _) = send_body(&app, get("/admin/report/contribution?a_service=Ehr")).await;
     assert_eq!(status, StatusCode::METHOD_NOT_ALLOWED);
