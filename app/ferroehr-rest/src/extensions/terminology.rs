@@ -29,7 +29,6 @@
               with no RM type (typed-FHIR evaluation tracked separately)"
 )]
 
-use axum::extract::State;
 use axum::response::Response;
 use http::StatusCode;
 use serde_json::json;
@@ -38,7 +37,7 @@ use utoipa_axum::routes;
 
 use openehr_its::rest::runtime::ApiError;
 
-use crate::api::{RequestParts, guarded_dispatch};
+use crate::api::{RequestParts, guarded_handler};
 use crate::overview::error::RestError;
 
 use crate::state::AppState;
@@ -47,7 +46,7 @@ use crate::{negotiate, params};
 /// The terminology extension routes as a native `utoipa-axum` router: each
 /// `#[utoipa::path]` handler single-sources its route and its `OpenAPI` path.
 /// Group-relative paths (nested under the extensions root); every
-/// operation is served through [`guarded_dispatch`] onto its handler, so the
+/// operation is served through [`guarded_dispatch`](crate::api::guarded_dispatch) onto its handler, so the
 /// wire behaviour is identical to the generated groups' `mount` adapter.
 pub(crate) fn routes() -> OpenApiRouter<AppState> {
     // One `routes!` per PATH (handlers in a single call must share the path;
@@ -66,183 +65,146 @@ pub(crate) fn routes() -> OpenApiRouter<AppState> {
 // generated-group adapter) and runs it through the shared guarded dispatch, so
 // the EHR_ACCESS gate, ABAC PEP, and ATNA audit tagging apply uniformly.
 
-/// Every terminology id the server knows
-/// (`GET /terminology`).
-///
-/// Body: `{"terminology_ids": [..]}`. Config-gated: `404` when
-/// `terminology_api_enabled` is off (the route stays mounted but the backend is
-/// never consulted).
-///
-/// OUR OWN EXTENSION — no openEHR spec governs this wire shape: no ITS-REST
-/// contract defines a terminology API. The URL layout, the JSON envelopes, and
-/// the existence-by-`404` convention are ours.
-#[utoipa::path(
-    get, path = "/terminology", tag = "terminology",
-    responses(
-        (status = 200, description = "The known terminology ids.", body = serde_json::Value),
-        (status = 404, description = "The terminology extension is disabled (`terminology_api_enabled` off). With authentication enabled, an unauthenticated request to a disabled group is answered `401` first (the group gate sits behind authentication).", body = serde_json::Value)
-    )
-)]
-pub(crate) async fn terminology_ids(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "terminology_ids", parts, |state, parts| async move {
-        ids(&state, &parts)
-    })
-    .await
+guarded_handler! {
+    /// Every terminology id the server knows
+    /// (`GET /terminology`).
+    ///
+    /// Body: `{"terminology_ids": [..]}`. Config-gated: `404` when
+    /// `terminology_api_enabled` is off (the route stays mounted but the backend is
+    /// never consulted).
+    ///
+    /// OUR OWN EXTENSION — no openEHR spec governs this wire shape: no ITS-REST
+    /// contract defines a terminology API. The URL layout, the JSON envelopes, and
+    /// the existence-by-`404` convention are ours.
+    #[utoipa::path(
+        get, path = "/terminology", tag = "terminology",
+        responses(
+            (status = 200, description = "The known terminology ids.", body = serde_json::Value),
+            (status = 404, description = "The terminology extension is disabled (`terminology_api_enabled` off). With authentication enabled, an unauthenticated request to a disabled group is answered `401` first (the group gate sits behind authentication).", body = serde_json::Value)
+        )
+    )]
+    terminology_ids => |state, parts| async move {
+            ids(&state, &parts)
+        }
 }
 
-/// One terminology's descriptor, which also answers whether it exists
-/// (`GET /terminology/{terminology_id}`).
-///
-/// An unknown terminology maps to `404`.
-///
-/// OUR OWN EXTENSION — no openEHR spec governs this wire shape: no ITS-REST
-/// contract defines a terminology API. The URL layout, the JSON envelopes, and
-/// the existence-by-`404` convention are ours.
-#[utoipa::path(
-    get, path = "/terminology/{terminology_id}", tag = "terminology",
-    params(("terminology_id" = String, Path, description = "The terminology id.")),
-    responses(
-        (status = 200, description = "The terminology descriptor.", body = serde_json::Value),
-        (status = 404, description = "Unknown terminology, or the terminology extension is disabled. With authentication enabled, an unauthenticated request to a disabled group is answered `401` first (the group gate sits behind authentication).", body = serde_json::Value)
-    )
-)]
-pub(crate) async fn terminology_description(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "terminology_description",
-        parts,
-        |state, parts| async move { description(&state, &parts) },
-    )
-    .await
+guarded_handler! {
+    /// One terminology's descriptor, which also answers whether it exists
+    /// (`GET /terminology/{terminology_id}`).
+    ///
+    /// An unknown terminology maps to `404`.
+    ///
+    /// OUR OWN EXTENSION — no openEHR spec governs this wire shape: no ITS-REST
+    /// contract defines a terminology API. The URL layout, the JSON envelopes, and
+    /// the existence-by-`404` convention are ours.
+    #[utoipa::path(
+        get, path = "/terminology/{terminology_id}", tag = "terminology",
+        params(("terminology_id" = String, Path, description = "The terminology id.")),
+        responses(
+            (status = 200, description = "The terminology descriptor.", body = serde_json::Value),
+            (status = 404, description = "Unknown terminology, or the terminology extension is disabled. With authentication enabled, an unauthenticated request to a disabled group is answered `401` first (the group gate sits behind authentication).", body = serde_json::Value)
+        )
+    )]
+    terminology_description => |state, parts| async move { description(&state, &parts) }
 }
 
-/// A term definition
-/// (`GET /terminology/{terminology_id}/term/{code}`).
-///
-/// The optional `at_date` selects an effective-dated definition. An unknown
-/// terminology or code maps to `404`.
-///
-/// OUR OWN EXTENSION — no openEHR spec governs this wire shape: no ITS-REST
-/// contract defines a terminology API. The URL layout, the JSON envelopes, and
-/// the existence-by-`404` convention are ours.
-#[utoipa::path(
-    get, path = "/terminology/{terminology_id}/term/{code}", tag = "terminology",
-    params(
-        ("terminology_id" = String, Path, description = "The terminology id."),
-        ("code" = String, Path, description = "The term code."),
-        ("at_date" = Option<String>, Query, description = "Optional ISO-8601 effective date; absent means the current definition.")
-    ),
-    responses(
-        (status = 200, description = "The term extract.", body = serde_json::Value),
-        (status = 404, description = "Unknown terminology or code, or the terminology extension is disabled. With authentication enabled, an unauthenticated request to a disabled group is answered `401` first (the group gate sits behind authentication).", body = serde_json::Value)
-    )
-)]
-pub(crate) async fn terminology_get_term(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "terminology_get_term", parts, get_term).await
+guarded_handler! {
+    /// A term definition
+    /// (`GET /terminology/{terminology_id}/term/{code}`).
+    ///
+    /// The optional `at_date` selects an effective-dated definition. An unknown
+    /// terminology or code maps to `404`.
+    ///
+    /// OUR OWN EXTENSION — no openEHR spec governs this wire shape: no ITS-REST
+    /// contract defines a terminology API. The URL layout, the JSON envelopes, and
+    /// the existence-by-`404` convention are ours.
+    #[utoipa::path(
+        get, path = "/terminology/{terminology_id}/term/{code}", tag = "terminology",
+        params(
+            ("terminology_id" = String, Path, description = "The terminology id."),
+            ("code" = String, Path, description = "The term code."),
+            ("at_date" = Option<String>, Query, description = "Optional ISO-8601 effective date; absent means the current definition.")
+        ),
+        responses(
+            (status = 200, description = "The term extract.", body = serde_json::Value),
+            (status = 404, description = "Unknown terminology or code, or the terminology extension is disabled. With authentication enabled, an unauthenticated request to a disabled group is answered `401` first (the group gate sits behind authentication).", body = serde_json::Value)
+        )
+    )]
+    terminology_get_term => get_term
 }
 
-/// Strict subsumption test
-/// (`GET /terminology/{terminology_id}/subsumes`).
-///
-/// Body: `{"subsumes": bool}`. Both codes are required query parameters.
-///
-/// OUR OWN EXTENSION — no openEHR spec governs this wire shape: no ITS-REST
-/// contract defines a terminology API. The URL layout, the JSON envelopes, and
-/// the existence-by-`404` convention are ours.
-#[utoipa::path(
-    get, path = "/terminology/{terminology_id}/subsumes", tag = "terminology",
-    params(
-        ("terminology_id" = String, Path, description = "The terminology id."),
-        ("ref_code" = String, Query, description = "The reference (ancestor-candidate) code. Required."),
-        ("candidate" = String, Query, description = "The candidate (descendant) code. Required.")
-    ),
-    responses(
-        (status = 200, description = "The subsumption result.", body = serde_json::Value),
-        (status = 400, description = "A required query parameter (`ref_code`/`candidate`) is missing or blank.", body = serde_json::Value),
-        (status = 404, description = "The terminology extension is disabled. With authentication enabled, an unauthenticated request to a disabled group is answered `401` first (the group gate sits behind authentication).", body = serde_json::Value)
-    )
-)]
-pub(crate) async fn terminology_subsumes(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "terminology_subsumes", parts, subsumes).await
+guarded_handler! {
+    /// Strict subsumption test
+    /// (`GET /terminology/{terminology_id}/subsumes`).
+    ///
+    /// Body: `{"subsumes": bool}`. Both codes are required query parameters.
+    ///
+    /// OUR OWN EXTENSION — no openEHR spec governs this wire shape: no ITS-REST
+    /// contract defines a terminology API. The URL layout, the JSON envelopes, and
+    /// the existence-by-`404` convention are ours.
+    #[utoipa::path(
+        get, path = "/terminology/{terminology_id}/subsumes", tag = "terminology",
+        params(
+            ("terminology_id" = String, Path, description = "The terminology id."),
+            ("ref_code" = String, Query, description = "The reference (ancestor-candidate) code. Required."),
+            ("candidate" = String, Query, description = "The candidate (descendant) code. Required.")
+        ),
+        responses(
+            (status = 200, description = "The subsumption result.", body = serde_json::Value),
+            (status = 400, description = "A required query parameter (`ref_code`/`candidate`) is missing or blank.", body = serde_json::Value),
+            (status = 404, description = "The terminology extension is disabled. With authentication enabled, an unauthenticated request to a disabled group is answered `401` first (the group gate sits behind authentication).", body = serde_json::Value)
+        )
+    )]
+    terminology_subsumes => subsumes
 }
 
-/// A value set's extract, which also answers whether it exists
-/// (`GET /terminology/{terminology_id}/value_set/{value_set_id}`).
-///
-/// An unknown value set maps to `404`.
-///
-/// OUR OWN EXTENSION — no openEHR spec governs this wire shape: no ITS-REST
-/// contract defines a terminology API. The URL layout, the JSON envelopes, and
-/// the existence-by-`404` convention are ours.
-#[utoipa::path(
-    get, path = "/terminology/{terminology_id}/value_set/{value_set_id}", tag = "terminology",
-    params(
-        ("terminology_id" = String, Path, description = "The terminology id."),
-        ("value_set_id" = String, Path, description = "The value set id.")
-    ),
-    responses(
-        (status = 200, description = "The value set extract.", body = serde_json::Value),
-        (status = 404, description = "Unknown terminology or value set, or the terminology extension is disabled. With authentication enabled, an unauthenticated request to a disabled group is answered `401` first (the group gate sits behind authentication).", body = serde_json::Value)
-    )
-)]
-pub(crate) async fn terminology_value_set(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "terminology_value_set", parts, value_set).await
+guarded_handler! {
+    /// A value set's extract, which also answers whether it exists
+    /// (`GET /terminology/{terminology_id}/value_set/{value_set_id}`).
+    ///
+    /// An unknown value set maps to `404`.
+    ///
+    /// OUR OWN EXTENSION — no openEHR spec governs this wire shape: no ITS-REST
+    /// contract defines a terminology API. The URL layout, the JSON envelopes, and
+    /// the existence-by-`404` convention are ours.
+    #[utoipa::path(
+        get, path = "/terminology/{terminology_id}/value_set/{value_set_id}", tag = "terminology",
+        params(
+            ("terminology_id" = String, Path, description = "The terminology id."),
+            ("value_set_id" = String, Path, description = "The value set id.")
+        ),
+        responses(
+            (status = 200, description = "The value set extract.", body = serde_json::Value),
+            (status = 404, description = "Unknown terminology or value set, or the terminology extension is disabled. With authentication enabled, an unauthenticated request to a disabled group is answered `401` first (the group gate sits behind authentication).", body = serde_json::Value)
+        )
+    )]
+    terminology_value_set => value_set
 }
 
-/// Value-set membership test
-/// (`GET /terminology/{terminology_id}/value_set/{value_set_id}/validate`).
-///
-/// Body: `{"valid": bool}`. `candidate_code` is a required query parameter.
-///
-/// OUR OWN EXTENSION — no openEHR spec governs this wire shape: no ITS-REST
-/// contract defines a terminology API. The URL layout, the JSON envelopes, and
-/// the existence-by-`404` convention are ours.
-#[utoipa::path(
-    get, path = "/terminology/{terminology_id}/value_set/{value_set_id}/validate", tag = "terminology",
-    params(
-        ("terminology_id" = String, Path, description = "The terminology id."),
-        ("value_set_id" = String, Path, description = "The value set id."),
-        ("candidate_code" = String, Query, description = "The candidate code to test for membership. Required."),
-        ("at_date" = Option<String>, Query, description = "Optional ISO-8601 effective date; absent means the current value set.")
-    ),
-    responses(
-        (status = 200, description = "The membership result.", body = serde_json::Value),
-        (status = 400, description = "The required `candidate_code` query parameter is missing or blank.", body = serde_json::Value),
-        (status = 404, description = "The terminology extension is disabled. With authentication enabled, an unauthenticated request to a disabled group is answered `401` first (the group gate sits behind authentication).", body = serde_json::Value)
-    )
-)]
-pub(crate) async fn terminology_value_set_validate(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "terminology_value_set_validate",
-        parts,
-        value_set_validate,
-    )
-    .await
+guarded_handler! {
+    /// Value-set membership test
+    /// (`GET /terminology/{terminology_id}/value_set/{value_set_id}/validate`).
+    ///
+    /// Body: `{"valid": bool}`. `candidate_code` is a required query parameter.
+    ///
+    /// OUR OWN EXTENSION — no openEHR spec governs this wire shape: no ITS-REST
+    /// contract defines a terminology API. The URL layout, the JSON envelopes, and
+    /// the existence-by-`404` convention are ours.
+    #[utoipa::path(
+        get, path = "/terminology/{terminology_id}/value_set/{value_set_id}/validate", tag = "terminology",
+        params(
+            ("terminology_id" = String, Path, description = "The terminology id."),
+            ("value_set_id" = String, Path, description = "The value set id."),
+            ("candidate_code" = String, Query, description = "The candidate code to test for membership. Required."),
+            ("at_date" = Option<String>, Query, description = "Optional ISO-8601 effective date; absent means the current value set.")
+        ),
+        responses(
+            (status = 200, description = "The membership result.", body = serde_json::Value),
+            (status = 400, description = "The required `candidate_code` query parameter is missing or blank.", body = serde_json::Value),
+            (status = 404, description = "The terminology extension is disabled. With authentication enabled, an unauthenticated request to a disabled group is answered `401` first (the group gate sits behind authentication).", body = serde_json::Value)
+        )
+    )]
+    terminology_value_set_validate => value_set_validate
 }
 
 /// The config gate: the terminology extension is opt-in, and while it is off
