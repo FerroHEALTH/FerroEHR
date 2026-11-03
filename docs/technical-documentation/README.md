@@ -42,9 +42,19 @@ The EHR system Cadasto B.V. declares is FerroEHR and FerroBRIDGE together
 - FerroEHR as a product with digital elements under the CRA.
 
 FerroBRIDGE keeps the documentation of the European interoperability software
-component (EHDS Art. 2(2)(n), Annex II 2.1 to 2.3) with its own releases. The
-two components meet only over the openEHR REST API, which is what keeps them
-independent of each other (EHDS Art. 30(1)(b)).
+component (EHDS Art. 2(2)(n), Annex II 2.1 to 2.3) with its own releases, and,
+from FerroBRIDGE 0.0.16, of the logging component's recording of its FHIR
+facade's accesses (FerroHEALTH/FerroBRIDGE#1377). The openEHR REST API carries
+no end-user identity on a read, so FerroEHR's record of a facade read names
+the bridge's credential; the bridge writes the Annex II 3.2 record with the
+natural person behind the access through `ehds-logging` and sends it as an IHE
+BALP `AuditEvent` through `ihe-atna` to an Audit Record Repository the
+operator configures. FerroEHR's part of the logging component is the recording
+of its own API's accesses, the store, the review tools and the ITI-81
+retrieval. The two harmonised components stay independent of each other (EHDS
+Art. 2(2)(n) and (o), Art. 30(1)(b)): FerroEHR meets FerroBRIDGE only over the
+openEHR REST API, and inside FerroBRIDGE only its server crate links the two
+logging crates, never its interoperability crates.
 
 The access log is planned to become a shared FerroHEALTH service in FerroSYS
 (#3661). From the release that ships it, the declared EHR system is FerroEHR,
@@ -57,8 +67,9 @@ and category (Annex II 3.4), the natural person's access-log route (EHDS Art.
 9) and the ITI-81 retrieval. This tree then documents FerroEHR's part, the
 documentation of FerroSYS's part covers the rest, and the scope above and the
 list in `scripts/checks/technical-documentation.sh` change in the same
-release. Both parts stay outside FerroBRIDGE, so the two harmonised components
-remain independent ([`docs/architecture.md`](../architecture.md#regulatory-position-ehds-and-cra)).
+release. The central store and the review stay outside FerroBRIDGE, whose
+facade recorder is kept out of its interoperability crates, so the two
+harmonised components remain independent ([`docs/architecture.md`](../architecture.md#regulatory-position-ehds-and-cra)).
 
 ## Contents
 
@@ -181,3 +192,4 @@ source of every release is public at its tag.
 | 2026-11-02 | 5.6.0-rc8 | The access classification reads one operation table, with every operation's audit class unchanged (#4721). The ADL 1.4 to ADL 2 conversion routes are access records, the template conversion naming the template it reads (#4655). A rejected access record refuses the request with `503` through the one service error type (#4657). The audit store's batch insert takes one batch-column struct, and functions no path called are deleted from the store and the chain check (#4746, #4747). Audit migration 0021 drops the empty linkage domain, its schema, its role and the `btree_gist` extension, while the subject crossings keep their `linkage`-domain access records (#4684). A COMPOSITION tag read's access record names the tagged COMPOSITION (#4768), and under `spec_profile = "stable"` a party read records one access to each party it discloses through `reverse_relationships` (#4775). The FerroAUDIT pins stay at 0.3.3, and the [hazard log](../../website/book/src/compliance/hazard-log.md) is reviewed, and every test it names exists |
 | 2026-11-02 | 5.6.0-rc9 | 5.6.0-rc8 was tagged and not published, so 5.6.0-rc9 carries its row above. Since then: audit migration 0022 drops `audit.reap_audit_events`, `audit.reap_audit_events_years` and `audit.reap_audit_events_before` with their `EXECUTE` grants, and the unused store method that called `audit.reap_audit_events` is deleted; the trail is reaped only through `audit.reap_audit_events_due`, which honours each record's own retention end (#4770). The FerroAUDIT pins stay at 0.3.3, and the [hazard log](../../website/book/src/compliance/hazard-log.md) is reviewed, and every test it names exists |
 | 2026-11-02 | 5.6.0-rc10 | 5.6.0-rc9 was tagged and not published, so 5.6.0-rc10 carries its row above. The logging component's modules are unchanged since then. Outside them, the access record of a VERSION read names the content it served and the origins of a COMPOSITION's data, with the parsed EHR id (#4660), and every read of the outbox feed is an access record (#4786). The FerroAUDIT pins stay at 0.3.3, and the [hazard log](../../website/book/src/compliance/hazard-log.md) is reviewed, and every test it names exists |
+| 2026-11-03 | 5.6.0 | The scope names FerroBRIDGE's recording of its FHIR facade's accesses as part of the logging component, from FerroBRIDGE 0.0.16 (FerroHEALTH/FerroBRIDGE#1377), and how the two harmonised components stay independent with it (#4822); FerroEHR's modules of the component are unchanged |
