@@ -30,11 +30,11 @@ crate::locale::messages! {
         ReferenceCode2 = "reference-code-2",
         /// `term code`
         TermCode2 = "term-code-2",
-        /// `OperationalTemplateV2 parse: '$e'`
+        /// `OperationalTemplateV2 parse`
         Operationaltemplatev2Parse = "operationaltemplatev2-parse",
         /// WebTemplate build: `$value0`
         WebtemplateBuild = "webtemplate-build",
-        /// terminology JSON: `$e`
+        /// `terminology JSON`
         TerminologyJson = "terminology-json",
         /// a `$what` is required
         AIsRequired = "a-is-required",

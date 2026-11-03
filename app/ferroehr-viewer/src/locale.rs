@@ -190,49 +190,53 @@ messages! {
         VersionPrefixLatestMatch = "version-prefix-latest-match",
         /// `Latest version (no version sent)`
         LatestVersionNoVersionSent = "latest-version-no-version-sent",
-        /// `ITEM_TAG list JSON: '$e'`
+        /// `ITEM_TAG list JSON`
         ItemTagListJson = "item-tag-list-json",
         /// `$with_secondsZ`
         Z = "z",
-        /// readiness JSON: `$e`
+        /// `readiness JSON`
         ReadinessJson = "readiness-json",
-        /// management info JSON: `$e`
+        /// `management info JSON`
         ManagementInfoJson = "management-info-json",
-        /// metric list JSON: `$e`
+        /// `metric list JSON`
         MetricListJson = "metric-list-json",
-        /// metric detail JSON: `$e`
+        /// `metric detail JSON`
         MetricDetailJson = "metric-detail-json",
-        /// loggers JSON: `$e`
+        /// `loggers JSON`
         LoggersJson = "loggers-json",
-        /// loggers JSON: `$e`
+        /// `loggers JSON`
         LoggersJson2 = "loggers-json-2",
-        /// loggers JSON: `$e`
+        /// `loggers JSON`
         LoggersJson3 = "loggers-json-3",
         /// the composition changed since this page loaded — reload and retry. `$detail`
         CompositionChangedSincePageLoadedReload = "composition-changed-since-page-loaded-reload",
-        /// versioned object JSON: `$e`
+        /// `versioned object JSON`
         VersionedObjectJson = "versioned-object-json",
-        /// version JSON: `$e`
+        /// `version JSON`
         VersionJson = "version-json",
-        /// revision history JSON: `$e`
+        /// `revision history JSON`
         RevisionHistoryJson = "revision-history-json",
-        /// EHR JSON: `$e`
+        /// `EHR JSON`
         EhrJson = "ehr-json",
-        /// `ehr_status JSON: '$e'`
+        /// `ehr_status JSON`
         EhrStatusJson = "ehr-status-json",
-        /// EHR JSON: `$e`
+        /// `EHR JSON`
         EhrJson2 = "ehr-json-2",
-        /// AQL result JSON: `$e`
+        /// `AQL result JSON`
         AqlResultJson = "aql-result-json",
-        /// EHR JSON: `$e`
+        /// `EHR JSON`
         EhrJson3 = "ehr-json-3",
-        /// OPT 1.4 parse: `$e`
+        /// `directory JSON`
+        DirectoryJson = "directory-json",
+        /// `SMART configuration JSON`
+        SmartConfigurationJson = "smart-configuration-json",
+        /// `OPT 1.4 parse`
         Opt14Parse = "opt-1-4-parse",
         /// WebTemplate build: `$value0`
         WebtemplateBuild2 = "webtemplate-build-2",
-        /// template list JSON: `$e`
+        /// `template list JSON`
         TemplateListJson = "template-list-json",
-        /// ADL2 template list JSON: `$e`
+        /// `ADL2 template list JSON`
         Adl2TemplateListJson = "adl2-template-list-json",
         /// `the latest version's full OBJECT_VERSION_ID is required to delete a composition:...`
         LatestVersionSFullObjectVersion = "latest-version-s-full-object-version",

@@ -144,6 +144,19 @@ pub async fn fetch_admin_config() -> Result<String, ViewerError> {
 /// summary.
 pub(crate) type Endpoint = (String, String, String);
 
+/// One of the CDR's served OpenAPI documents ([`fetch_openapi`]), as its raw
+/// text and its parsed tree.
+///
+/// # Errors
+/// The errors of [`fetch_openapi`]; [`ViewerError::Failed`] when the document
+/// is not JSON.
+pub async fn read_openapi(family: String) -> Result<(String, serde_json::Value), ViewerError> {
+    let body = fetch_openapi(family).await?;
+    let document = serde_json::from_str(&body)
+        .map_err(|e| ViewerError::failed(tr(ConsoleMsg::ServerApiJson), e))?;
+    Ok((body, document))
+}
+
 /// Group an `OpenAPI` document's operations by their first `tag` (falling back
 /// to the first path segment, then `"default"`), as sorted `(group, rows)`
 /// where each row is `(METHOD, path)`. Sorted throughout so server and client

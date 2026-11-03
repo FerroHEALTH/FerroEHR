@@ -72,7 +72,7 @@ crate::locale::messages! {
         MarksEmbeddedLaunchAdvisoryOnlyCdr = "marks-embedded-launch-advisory-only-cdr",
         /// `Launch marker`
         LaunchMarker = "launch-marker",
-        /// `AuditEvent Bundle JSON: '$e'`
+        /// `AuditEvent Bundle JSON`
         AuditeventBundleJson = "auditevent-bundle-json",
         /// Identity claim · `$name`
         IdentityClaim = "identity-claim",
