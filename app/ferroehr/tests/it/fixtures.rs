@@ -54,6 +54,24 @@ pub(crate) fn change_type(code: &str, value: &str) -> Value {
     })
 }
 
+/// Returns a commit `audit`: the `openehr` change type `code` with rubric
+/// `value`, committed by the `PARTY_IDENTIFIED` named `committer_name`.
+pub(crate) fn commit_audit(code: &str, value: &str, committer_name: &str) -> Value {
+    json!({ "change_type": change_type(code, value), "committer": committer(committer_name) })
+}
+
+/// Returns a wire `UPDATE_ATTESTATION` (`666|attestation|`) by the
+/// `PARTY_IDENTIFIED` named `committer_name`, with the `reason` text.
+pub(crate) fn attestation_by(committer_name: &str, reason: &str, is_pending: bool) -> Value {
+    json!({
+        "_type": "UPDATE_ATTESTATION",
+        "change_type": change_type("666", "attestation"),
+        "committer": committer(committer_name),
+        "reason": { "_type": "DV_TEXT", "value": reason },
+        "is_pending": is_pending
+    })
+}
+
 /// A `version_lifecycle_state` member in the released wire shape of
 /// `UPDATE_VERSION.lifecycle_state`, a `DV_CODED_TEXT` (ITS-REST
 /// `schemas/ehr/UpdateVersion.yaml` → `data_types/DvCodedText.yaml`).
@@ -648,4 +666,58 @@ pub(crate) fn deleting(preceding: Option<openehr_base::prelude::ObjectVersionId>
     let mut request = WriteRequest::new(());
     request.preceding = preceding;
     request
+}
+
+/// Seeds an EHR for the extract tests: an `EHR_STATUS` in two versions
+/// (create, then update), a directory `FOLDER` and the auto-created
+/// `EHR_ACCESS`. Returns the EHR id and the `EHR_STATUS` versioned-object uid.
+pub(crate) async fn seed_extract_ehr(svc: &ferroehr::service::FerroEhrService) -> (EhrId, String) {
+    let ehr_uuid = create_ehr(svc).await;
+
+    let mut status = svc
+        .ehr_status(ehr_uuid, None)
+        .await
+        .map(|r| r.body)
+        .expect("status get");
+    let status_ovid = status["uid"]["value"].as_str().expect("uid").to_owned();
+    let status_vo = vo_of(&status_ovid).to_owned();
+    status.as_object_mut().expect("status obj").remove("uid");
+
+    svc.create_directory(
+        ehr_uuid,
+        uv(
+            &json!({
+                "_type": "FOLDER",
+                "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+                "archetype_details": {
+                    "_type": "ARCHETYPED",
+                    "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
+                    "rm_version": "1.1.0"
+                },
+                "name": { "_type": "DV_TEXT", "value": "root" }
+            }),
+            "249",
+            None,
+        ),
+    )
+    .await
+    .expect("directory");
+
+    status["is_modifiable"] = json!(false);
+    Box::pin(svc.replace_ehr_status(ehr_uuid, uv(&status, "251", Some(&status_ovid))))
+        .await
+        .map(|m| m.uid)
+        .expect("status update");
+
+    (ehr_uuid, status_vo)
+}
+
+/// The content item of an extract whose wrapped object has the given
+/// `X_VERSIONED_*` `_type`.
+pub(crate) fn find_by_xtype<'a>(extract: &'a Value, xtype: &str) -> Option<&'a Value> {
+    extract["chapters"][0]["items"]
+        .as_array()
+        .expect("chapter items")
+        .iter()
+        .find(|it| it["item"]["_type"] == json!(xtype))
 }

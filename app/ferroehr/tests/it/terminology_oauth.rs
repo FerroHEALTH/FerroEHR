@@ -60,8 +60,7 @@ async fn the_disabled_default_calls_nothing() {
 
     // A bare service answers the bundle terminologies exactly as before and
     // never reaches out.
-    let db = testkit::db().await.expect("testkit database");
-    let service = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, service) = crate::fixtures::service().await;
     assert!(
         service
             .has_term("ISO_3166-1", "NL", None)

@@ -18,49 +18,12 @@
 //!    (`include_all_versions` ⇒ every version; `include_revision_history` ⇒ the
 //!    full `REVISION_HISTORY`).
 
-use crate::fixtures::uv;
+use crate::fixtures::{find_by_xtype, seed_extract_ehr};
 use ferroehr::error::ServiceError;
 use ferroehr::error::refusal::{Malformed, Missing};
 use serde_json::{Value, json};
 
 use openehr_rm::v1_2::ehr_extract::common::extract_spec::ExtractSpec;
-
-use ferroehr::service::FerroEhrService;
-
-/// Seed an EHR with an `EHR_STATUS` (create → update = two versions), a directory
-/// `FOLDER`, and the auto-created `EHR_ACCESS`. Returns the EHR id and the
-/// `EHR_STATUS` version-container uid.
-async fn seed_ehr(svc: &FerroEhrService) -> (ferroehr::ids::EhrId, String) {
-    let ehr_uuid = crate::fixtures::create_ehr(svc).await;
-
-    let mut status = svc
-        .ehr_status(ehr_uuid, None)
-        .await
-        .map(|r| r.body)
-        .expect("status get");
-    let status_ovid = status["uid"]["value"].as_str().expect("uid").to_owned();
-    let status_vo = status_ovid.split("::").next().unwrap().to_owned();
-    status.as_object_mut().expect("status obj").remove("uid");
-
-    svc.create_directory(
-        ehr_uuid,
-        uv(
-            &json!({ "_type": "FOLDER", "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1", "archetype_details": { "_type": "ARCHETYPED", "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" }, "rm_version": "1.1.0" }, "name": { "_type": "DV_TEXT", "value": "root" } }),
-            "249",
-            None,
-        ),
-    )
-    .await
-    .expect("directory");
-
-    status["is_modifiable"] = json!(false);
-    Box::pin(svc.replace_ehr_status(ehr_uuid, uv(&status, "251", Some(&status_ovid))))
-        .await
-        .map(|m| m.uid)
-        .expect("status update");
-
-    (ehr_uuid, status_vo)
-}
 
 /// The content items of the (single) chapter of an extract.
 fn items(extract: &Value) -> &Vec<Value> {
@@ -69,17 +32,10 @@ fn items(extract: &Value) -> &Vec<Value> {
         .expect("chapter items")
 }
 
-/// The content item whose wrapped object has the given `X_VERSIONED_*` `_type`.
-fn find_by_xtype<'a>(extract: &'a Value, xtype: &str) -> Option<&'a Value> {
-    items(extract)
-        .iter()
-        .find(|it| it["item"]["_type"] == json!(xtype))
-}
-
 #[tokio::test]
 async fn export_ehrs_carries_every_versioned_object_latest_only() {
     let (_db, svc) = crate::fixtures::service().await;
-    let (ehr, _status_vo) = seed_ehr(&svc).await;
+    let (ehr, _status_vo) = seed_extract_ehr(&svc).await;
 
     let extracts = svc.extract_ehrs(ehr).await.expect("export_ehrs");
     assert_eq!(
@@ -148,7 +104,7 @@ async fn export_ehrs_carries_every_versioned_object_latest_only() {
 #[tokio::test]
 async fn export_ehr_extracts_honours_item_list_and_all_versions() {
     let (_db, svc) = crate::fixtures::service().await;
-    let (ehr, status_vo) = seed_ehr(&svc).await;
+    let (ehr, status_vo) = seed_extract_ehr(&svc).await;
 
     // Request only the EHR_STATUS version container, all versions, with revision
     // history.
@@ -247,7 +203,7 @@ async fn export_ehrs_unknown_ehr_is_ehr_id_does_not_exist() {
 #[tokio::test]
 async fn extract_spec_flags_are_honoured() {
     let (_db, svc) = crate::fixtures::service().await;
-    let (ehr, _status_vo) = seed_ehr(&svc).await;
+    let (ehr, _status_vo) = seed_extract_ehr(&svc).await;
 
     // Bad extract_type → precondition.
     let mut spec = json!({
@@ -395,7 +351,7 @@ fn criteria_spec(ehr: &str, criteria: &Value) -> ExtractSpec {
 #[tokio::test]
 async fn criteria_select_the_primary_set_ehr_bound() {
     let (_db, svc) = crate::fixtures::service().await;
-    let (ehr, _status_vo) = seed_ehr(&svc).await;
+    let (ehr, _status_vo) = seed_extract_ehr(&svc).await;
 
     let spec = criteria_spec(
         &ehr.to_string(),
@@ -428,7 +384,7 @@ async fn criteria_select_the_primary_set_ehr_bound() {
 #[tokio::test]
 async fn criteria_in_a_foreign_formalism_are_refused() {
     let (_db, svc) = crate::fixtures::service().await;
-    let (ehr, _status_vo) = seed_ehr(&svc).await;
+    let (ehr, _status_vo) = seed_extract_ehr(&svc).await;
 
     let spec = criteria_spec(
         &ehr.to_string(),
@@ -451,7 +407,7 @@ async fn criteria_in_a_foreign_formalism_are_refused() {
 #[tokio::test]
 async fn criteria_that_do_not_parse_as_aql_are_refused() {
     let (_db, svc) = crate::fixtures::service().await;
-    let (ehr, _status_vo) = seed_ehr(&svc).await;
+    let (ehr, _status_vo) = seed_extract_ehr(&svc).await;
 
     let spec = criteria_spec(
         &ehr.to_string(),
@@ -476,7 +432,7 @@ async fn criteria_that_do_not_parse_as_aql_are_refused() {
 #[tokio::test]
 async fn criteria_select_from_a_non_queryable_ehr() {
     let (_db, svc) = crate::fixtures::service().await;
-    let (ehr, _status_vo) = seed_ehr(&svc).await;
+    let (ehr, _status_vo) = seed_extract_ehr(&svc).await;
     crate::fixtures::set_not_queryable(&svc, ehr).await;
 
     let spec = criteria_spec(

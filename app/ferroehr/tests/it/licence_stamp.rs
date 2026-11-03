@@ -18,7 +18,8 @@ use jiff::civil::date;
 use serde_json::json;
 use uuid::Uuid;
 
-use crate::fixtures::{change_type, committer, composition, vo_of};
+use crate::fixtures::commit_audit;
+use crate::fixtures::{change_type, composition, vo_of};
 
 /// A licence in force for the service builder, bypassing the token chain the
 /// unit tests already cover: the builder only needs the document to derive
@@ -49,14 +50,11 @@ async fn commit_one(svc: &FerroEhrService, ehr_id: EhrId) -> (Uuid, Uuid) {
         "_type": "CONTRIBUTION",
         "versions": [{
             "_type": "ORIGINAL_VERSION",
-            "commit_audit": {
-                "change_type": change_type("249", "creation"),
-                "committer": committer("author")
-            },
+            "commit_audit": commit_audit("249", "creation", "author"),
             "lifecycle_state": change_type("532", "complete"),
             "data": composition("stamped"),
         }],
-        "audit": { "change_type": change_type("249", "creation"), "committer": committer("author") }
+        "audit": commit_audit("249", "creation", "author")
     });
     let created = svc
         .create_ehr_contribution(ehr_id, contribution)

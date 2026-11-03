@@ -23,7 +23,8 @@ use ferrohealth_telemetry::telemetry::Telemetry;
 use openehr_base::prelude::ObjectVersionId;
 use serde_json::json;
 
-use crate::fixtures::{change_type, committer, composition, uv, vo_of};
+use crate::fixtures::commit_audit;
+use crate::fixtures::{change_type, composition, uv, vo_of};
 
 /// The process's telemetry provider, built through the real entry points so
 /// the instruments and their bucket ladders are the shipped ones. Shared
@@ -138,14 +139,11 @@ async fn compositions_committed_total_counts_every_committed_composition_version
         "_type": "CONTRIBUTION",
         "versions": [{
             "_type": "ORIGINAL_VERSION",
-            "commit_audit": {
-                "change_type": change_type("249", "creation"),
-                "committer": committer("metrics tester")
-            },
+            "commit_audit": commit_audit("249", "creation", "metrics tester"),
             "lifecycle_state": change_type("532", "complete"),
             "data": composition("contributed")
         }],
-        "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } },  "committer": committer("metrics tester") }
+        "audit": commit_audit("251", "modification", "metrics tester")
     });
     svc.create_ehr_contribution(ehr_id, contribution)
         .await

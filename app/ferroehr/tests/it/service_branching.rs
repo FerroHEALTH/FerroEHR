@@ -33,8 +33,9 @@ use ferroehr::service::query::request::AqlQueryRequest;
 use serde_json::{Value, json};
 use uuid::Uuid;
 
+use crate::fixtures::commit_audit;
 use crate::fixtures::first_version_uid;
-use crate::fixtures::{change_type, committer, composition, uv};
+use crate::fixtures::{composition, uv};
 
 /// The service's own system id (`DEFAULT_SYSTEM_ID`) — the local
 /// `creating_system_id` every non-import write records.
@@ -51,15 +52,9 @@ fn modify_contribution(data: &Value, preceding: &str) -> Value {
             // Required on every CONTRIBUTION member (ITS-REST
             // UpdateVersion.yaml `required`).
             "lifecycle_state": crate::fixtures::lifecycle("532"),
-            "commit_audit": {
-                "change_type": change_type("251", "modification"),
-                "committer": committer("branching tester")
-            }
+            "commit_audit": commit_audit("251", "modification", "branching tester")
         }],
-        "audit": {
-            "change_type": change_type("251", "modification"),
-            "committer": committer("branching tester")
-        }
+        "audit": commit_audit("251", "modification", "branching tester")
     })
 }
 
@@ -155,10 +150,7 @@ async fn modifying_an_imported_foreign_version_forks_a_branch() {
     // The source and the importing target are separate repositories (a copied
     // versioned object keeps its vo_id, so importing into the SAME repository
     // that already owns it is — correctly — a conflict).
-    let source_db = testkit::db().await.expect("testkit database");
-    let source_svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &source_db.pool(),
-    ));
+    let (_source_db, source_svc) = crate::fixtures::service().await;
     let (_db, svc) = crate::fixtures::service().await;
     let (extract, vo) = foreign_extract(&source_svc).await;
     let (target, vo_id) = import_foreign(&svc, extract, &vo).await;
@@ -276,10 +268,7 @@ async fn modifying_an_imported_foreign_version_forks_a_branch() {
 /// deliberate, which is what this test pins.
 #[tokio::test]
 async fn the_served_imported_version_is_the_wrapper_shape_without_data() {
-    let source_db = testkit::db().await.expect("testkit database");
-    let source_svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &source_db.pool(),
-    ));
+    let (_source_db, source_svc) = crate::fixtures::service().await;
     let (_db, svc) = crate::fixtures::service().await;
     let (extract, vo) = foreign_extract(&source_svc).await;
     let (target, vo_id) = import_foreign(&svc, extract, &vo).await;
@@ -335,10 +324,7 @@ async fn merge_provenance_is_preserved_by_the_route_that_carries_it() {
     // instance is never modified". This test pins that direction end to end: an
     // imported merged version keeps its inputs and serves them, while a local
     // commit that states none carries none (`Is_merged_validity`).
-    let source_db = testkit::db().await.expect("testkit database");
-    let source_svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &source_db.pool(),
-    ));
+    let (_source_db, source_svc) = crate::fixtures::service().await;
     let (_db, svc) = crate::fixtures::service().await;
     let (mut extract, vo) = foreign_extract(&source_svc).await;
 
@@ -424,10 +410,7 @@ fn stamp_merge_provenance(extract: &mut Value, version_uid: &str, merged_in: &st
 
 #[tokio::test]
 async fn a_version_tree_with_branches_reexports_and_reimports_whole() {
-    let source_db = testkit::db().await.expect("testkit database");
-    let source_svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &source_db.pool(),
-    ));
+    let (_source_db, source_svc) = crate::fixtures::service().await;
     let (_db, svc) = crate::fixtures::service().await;
     let (extract, vo) = foreign_extract(&source_svc).await;
     let (target, vo_id) = import_foreign(&svc, extract, &vo).await;
@@ -457,10 +440,7 @@ async fn a_version_tree_with_branches_reexports_and_reimports_whole() {
         wire.contains(&format!("::{LOCAL}::2.1.1")),
         "the exported version tree must include the branch version"
     );
-    let third_db = testkit::db().await.expect("testkit database");
-    let third_svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &third_db.pool(),
-    ));
+    let (_third_db, third_svc) = crate::fixtures::service().await;
     let third = ferroehr::ids::EhrId(Uuid::now_v7());
     third_svc
         .import_ehr(
@@ -501,10 +481,7 @@ async fn a_version_tree_with_branches_reexports_and_reimports_whole() {
 /// RM common master06 §Version Identification).
 #[tokio::test]
 async fn all_versions_returns_the_branch_row_beside_the_trunk() {
-    let source_db = testkit::db().await.expect("testkit database");
-    let source_svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &source_db.pool(),
-    ));
+    let (_source_db, source_svc) = crate::fixtures::service().await;
     let (_db, svc) = crate::fixtures::service().await;
     let (extract, vo) = foreign_extract(&source_svc).await;
     let (target, vo_id) = import_foreign(&svc, extract, &vo).await;

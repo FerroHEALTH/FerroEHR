@@ -22,6 +22,7 @@ use ferroehr::versioning::committer::{CommitterIdentity, with_committer};
 use openehr_its::rest::generated::common::UpdateAudit;
 use serde_json::{Value, json};
 
+use crate::fixtures::committer;
 use crate::fixtures::setup;
 use crate::fixtures::{change_type, composition, folder, lifecycle};
 
@@ -235,7 +236,7 @@ async fn a_basic_login_is_checked_against_this_server() {
 #[tokio::test]
 async fn a_name_only_committer_is_kept_as_stated() {
     let (_db, svc, ehr) = setup().await;
-    let named = json!({ "_type": "PARTY_IDENTIFIED", "name": "Dr Jones" });
+    let named = json!(committer("Dr Jones"));
     let write = svc.create_composition(ehr, version(&composition("c"), "249", None, &named));
     let committed = with_committer(Some(professional()), Box::pin(write))
         .await
@@ -277,7 +278,7 @@ async fn party_self_is_the_persons_committer_only() {
 #[tokio::test]
 async fn a_direct_write_runs_the_committer_invariants() {
     let (_db, svc, ehr) = setup().await;
-    let empty_name = json!({ "_type": "PARTY_IDENTIFIED", "name": "" });
+    let empty_name = json!(committer(""));
     assert_eq!(
         composition_create(&svc, ehr, None, &empty_name).await,
         Some(Refused::ContentInvalid),

@@ -15,6 +15,7 @@ use ferroehr::error::ServiceError;
 use ferroehr::error::refusal::Invalid;
 use ferroehr::service::DEFAULT_SYSTEM_ID;
 
+use crate::fixtures::committer;
 use crate::fixtures::{composition, uv};
 
 /// A root FOLDER whose single `items` entry references `(namespace, id)`.
@@ -209,7 +210,7 @@ async fn contribution_path_gates_this_system_refs() {
                 "code_string": "249"
             }
         },
-        "committer": { "_type": "PARTY_IDENTIFIED", "name": "author" }
+        "committer": committer("author")
     });
     let create_composition = json!({
         "_type": "CONTRIBUTION",
