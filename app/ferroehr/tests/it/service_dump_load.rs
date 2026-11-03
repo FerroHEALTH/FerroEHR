@@ -1646,3 +1646,68 @@ async fn demographic_wave_round_trips_inside_a_7z_container() {
 
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// Rewrite every archived `EHR_ACCESS` version under `dir` to carry `settings`.
+fn store_access_settings(dir: &str, settings: &Value) {
+    for segment in manifest_of(dir)["segments"].as_array().expect("segments") {
+        let path = std::path::Path::new(dir).join(segment.as_str().expect("segment entry"));
+        let mut records: Value =
+            serde_json::from_slice(&std::fs::read(&path).expect("segment")).expect("segment json");
+        for record in records.as_array_mut().expect("records") {
+            for version in record["versions"].as_array_mut().expect("versions") {
+                if version["kind"] == "EHR_ACCESS" {
+                    version["body"]["settings"] = settings.clone();
+                }
+            }
+        }
+        std::fs::write(&path, serde_json::to_vec(&records).expect("segment bytes"))
+            .expect("rewrite the segment");
+    }
+}
+
+/// An archive whose `EHR_ACCESS` settings do not parse is refused with the
+/// `400` a CONTRIBUTION writing them gets, naming the setting and the EHR, and
+/// nothing of it is written; the same archive with settings that parse loads.
+/// Stored, the first would hold the EHR closed.
+#[tokio::test]
+async fn an_archive_whose_access_settings_do_not_parse_is_refused() {
+    let (_src_db, _src_pool, source) = repository().await;
+    let (_dst_db, dst_pool, target) = repository().await;
+    let (dir, ehr) = exported(&source).await;
+    let settings = |default_access: &str| json!({ "_type": "FERROEHR_ACCESS_CONTROL_V1", "default_access": default_access });
+
+    store_access_settings(&dir, &settings("bogus"));
+    let err = target
+        .load_ehrs(dir.clone())
+        .await
+        .expect_err("settings that do not parse are refused");
+    assert!(
+        matches!(err, ServiceError::BadRequest(_)),
+        "the write path's refusal, got {err:?}"
+    );
+    assert!(
+        err.message().contains("EHR_ACCESS.settings.default_access"),
+        "the refusal names the setting, got {err:?}"
+    );
+    assert!(
+        err.message().contains(&ehr.to_string()),
+        "the refusal names the EHR, got {err:?}"
+    );
+    assert!(
+        !ehr_row_exists(&dst_pool, ehr.into()).await,
+        "a refused load commits nothing"
+    );
+
+    store_access_settings(&dir, &settings("restricted"));
+    let reports = target
+        .load_ehrs(dir.clone())
+        .await
+        .expect("settings that parse load");
+    assert_clean(&reports, "load");
+    assert!(
+        ehr_row_exists(&dst_pool, ehr.into()).await,
+        "the EHR loaded"
+    );
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
