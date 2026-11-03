@@ -405,7 +405,8 @@ opt-out in its own services, leave the mark unused.
   person (a SMART `patient/` grant or the patient claim), because Art. 10(2)
   names a healthcare provider or health professional. Its access record
   carries the [emergency mark](audit.md#emergency-access-ehds-art-115), and a
-  route that names the opted-out EHR adds an access record
+  route that names the opted-out EHR, in its path or in a `POST
+  /message/export` manifest, adds an access record
   `access-opt-out-override:ehr-wide` against it.
 - **The record.** Recording, reversing and reading the register are each an
   access record on the EHR (`access-opt-out:ehr-wide`) naming the

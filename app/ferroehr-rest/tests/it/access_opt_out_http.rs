@@ -485,3 +485,64 @@ async fn a_malformed_ehr_id_is_refused_on_every_opt_out_route() {
     assert_eq!(status, StatusCode::BAD_REQUEST, "register: {body}");
     assert!(body.contains("invalid EHR id: not-a-uuid"), "{body}");
 }
+
+/// A canonical `EXTRACT_SPEC` whose manifest names `ehrs`, each by `ehr_id`.
+fn manifest(ehrs: &[&str]) -> String {
+    let entities: Vec<Value> = ehrs
+        .iter()
+        .map(|id| json!({ "_type": "EXTRACT_ENTITY_MANIFEST", "extract_id_key": id, "ehr_id": id }))
+        .collect();
+    json!({
+        "_type": "EXTRACT_SPEC",
+        "extract_type": {
+            "_type": "DV_CODED_TEXT", "value": "openEHR EHR",
+            "defining_code": {
+                "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+                "code_string": "803"
+            }
+        },
+        "include_multimedia": false,
+        "priority": 0,
+        "link_depth": 0,
+        "manifest": { "_type": "EXTRACT_MANIFEST", "entities": entities }
+    })
+    .to_string()
+}
+
+/// A manifest export naming an opted-out EHR reads it as absent to the access
+/// service, and under the Art. 10(2) override exports it with the override
+/// recorded once against the EHR, as a path read records it. Before, the
+/// manifest form exported it under the override with no record.
+#[tokio::test]
+async fn a_manifest_export_under_the_override_records_it() {
+    let (_db, pool, app) = app(true).await;
+    let (ehr, _vo) = ehr_with_composition(&app).await;
+    let (kept, _) = ehr_with_composition(&app).await;
+    assert_eq!(opt_out(&app, &ehr, false).await.0, StatusCode::NO_CONTENT);
+    let uri = format!("{EXT}/message/export");
+    let body = manifest(&[&kept, &ehr, &ehr]);
+    let export = |purpose| {
+        send(
+            &app,
+            "POST",
+            &uri,
+            "service",
+            purpose,
+            Some(("application/json", body.clone())),
+        )
+    };
+
+    let (status, body) = export(Some("TREAT")).await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "an ordinary purpose: {body}");
+
+    let (status, body) = export(Some("ETREAT")).await;
+    assert_eq!(status, StatusCode::OK, "the override exports it: {body}");
+    let extracts: Value = serde_json::from_str(&body).expect("extract list");
+    assert_eq!(extracts.as_array().map(Vec::len), Some(3));
+    assert_eq!(
+        trail(&pool, "access-opt-out-override:ehr-wide", 1).await,
+        vec![("E".to_owned(), "service".to_owned(), true)],
+        "one override record for the opted-out EHR the manifest names twice"
+    );
+}
