@@ -141,6 +141,32 @@ pub(crate) async fn refuse_opted_out(
     Ok(None)
 }
 
+/// Record the Art. 10(2) override for every opted-out EHR an operation names
+/// in its body, such as the manifest of `POST /message/export`, which the path
+/// check in [`refuse_opted_out`] cannot see. Each EHR is recorded once, before
+/// any of its content is read; under no override this records nothing, and the
+/// export reads an opted-out EHR as absent.
+///
+/// # Errors
+/// The `500` of an unreadable mark and the `503` of an override record
+/// refused under `[audit] fail_mode = "closed"`.
+pub(crate) async fn record_overrides(
+    state: &AppState,
+    op: &str,
+    ehr_ids: &[EhrId],
+) -> Result<(), ServiceError> {
+    if applies(state, op) != OptOut::Overridden {
+        return Ok(());
+    }
+    let named: std::collections::BTreeSet<EhrId> = ehr_ids.iter().copied().collect();
+    for ehr_id in named {
+        if state.backend().is_ehr_opted_out(ehr_id).await? {
+            state.backend().record_access_opt_out_override(ehr_id)?;
+        }
+    }
+    Ok(())
+}
+
 /// Record the Art. 10(2) override of the opt-out of `ehr_id` and let the
 /// request proceed.
 fn override_recorded(state: &AppState, ehr_id: EhrId) -> Result<Option<Response>, ServiceError> {
