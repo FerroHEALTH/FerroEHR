@@ -425,8 +425,8 @@ async fn opt_delete_refuses_while_referenced() {
 /// The ITS-REST `definition_template_adl1.4_list` filter + pagination params
 /// (`operations/definition_template_adl1.4_list.yaml`;
 /// `parameters/query/filter_template_id.yaml` — "supports wildcards `*`").
-/// Two OPTs are uploaded through the
-/// wire-shaped `DefinitionAdapter`; the list must honour the `template_id` glob
+/// Two OPTs are uploaded, and the wire-shaped
+/// `FerroEhrService::template_adl14_list` must honour the `template_id` glob
 /// and the `offset`/`fetch` window rather than returning the full set.
 #[tokio::test]
 async fn template_adl14_list_filters_and_paginates() {

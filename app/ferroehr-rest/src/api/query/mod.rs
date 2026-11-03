@@ -6,7 +6,7 @@
 //! `query-*.openapi.yaml` OAS group (generated into `openehr_its::rest`).
 //!
 //! The `execute` module is the frame every operation runs in, implementing the generated
-//! operation contract over the `ferroehr-sm` native API; it splits along the
+//! operation contract over the `FerroEhrService` query methods; it splits along the
 //! spec's query-type axis — `adhoc` (`/query/aql`) and `stored`
 //! (`/query/{qualified_query_name}[/{version}]`) — over shared request-decoding
 //! and `RESULT_SET` rendering in `response`.

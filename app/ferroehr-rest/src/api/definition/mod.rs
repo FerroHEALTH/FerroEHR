@@ -21,8 +21,8 @@
 //! own spec-silence flag.
 //!
 //! Each module implements the generated operation contract over the
-//! `ferroehr-sm` native API (`DefinitionAdl14Service` / `DefinitionAdl2Service` /
-//! `DefinitionQueryService` + the wire-shaped `DefinitionAdapter` extension).
+//! `FerroEhrService` methods of `ferroehr::service::definition`, the wire-shaped
+//! ones of `ferroehr::service::definition::wire` among them.
 
 pub(crate) mod archetype;
 pub(crate) mod conversion;
@@ -73,8 +73,8 @@ fn party_example_response(
 
 /// Fold the wire `template_id`/`concept`/`version`/`offset`/`fetch` query
 /// parameters (decoded on both `definition_template_*_list` operations) into the
-/// [`TemplateListFilter`] + [`Page`] the `DefinitionAdapter` list methods
-/// carry. `offset` defaults to `0` (`parameters/query/offset.yaml`); a `fetch`
+/// [`TemplateListFilter`] + [`Page`] the `FerroEhrService` template list
+/// methods carry. `offset` defaults to `0` (`parameters/query/offset.yaml`); a `fetch`
 /// of `0`/absent is normalized to "all" by [`Page::limit`]. Negative wire values
 /// (out of the spec's `integer`/`0`-based range) degrade to the defaults rather
 /// than erroring.
