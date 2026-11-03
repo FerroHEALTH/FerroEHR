@@ -19,9 +19,9 @@ use std::time::Duration;
 
 use axum::Router;
 use axum::body::Body;
+use ferroehr::config::access_delay::{AccessDelayConfig, AccessDelayPolicy};
 use ferroehr::config::authz::AuthzConfig;
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::admin::access_delay::config::{AccessDelayConfig, AccessDelayPolicy};
 use ferroehr::system_log::categories::CategoryMapConfig;
 use ferroehr::system_log::sender::{
     AuditHandle, ResolvedSubject, SubjectLookup, SubjectResolver, start,

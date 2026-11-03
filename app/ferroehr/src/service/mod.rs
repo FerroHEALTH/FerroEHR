@@ -17,8 +17,8 @@
 //! and the clinical domain, and the access record each one owes.
 //!
 //! The root modules beside the chapters carry the cross-chapter service
-//! vocabulary: the version-commit envelope
-//! ([`version_update`]), the list cursor ([`list`]), the
+//! vocabulary: the CONTRIBUTION commit both chapters share
+//! (`contribution`), the version-commit envelope ([`version_update`]), the list cursor ([`list`]), the
 //! platform-service enumeration ([`platform_service`]), the
 //! protocol-adapter response envelope ([`response`]), and the crate-internal
 //! ITS-REST datetime-request-parameter decoder (`datetime`).
@@ -42,6 +42,7 @@ pub mod message;
 pub mod query;
 pub mod terminology;
 
+pub(crate) mod contribution;
 pub(crate) mod datetime;
 pub mod list;
 pub mod platform_service;
@@ -193,14 +194,14 @@ pub struct FerroEhrService {
     /// spec governs it — our own performance design.
     pub(in crate::service) created_ehr_repr: moka::future::Cache<EhrId, Value>,
     /// The national-identifier protection engine
-    /// ([`crate::service::demographic::identifier::engine`]), when the
+    /// ([`crate::identifier_protection::engine`]), when the
     /// deployment configured one.
     ///
     /// `None` leaves identifiers stored exactly as written, which is the
     /// default posture; the binary installs the compiled
     /// `[demographic.identifier_protection]` section.
     pub(in crate::service) identifiers:
-        Option<Arc<demographic::identifier::engine::IdentifierProtection>>,
+        Option<Arc<crate::identifier_protection::engine::IdentifierProtection>>,
     /// The clinical-side data-minimisation policy
     /// ([`crate::privacy`]) every clinical commit body is checked against.
     ///
@@ -226,7 +227,7 @@ pub struct FerroEhrService {
     /// The `[access_delay]` policy (EHDS Art. 3(3)); `None` in [`Self::new`],
     /// which leaves the person's access immediate.
     pub(in crate::service) access_delay:
-        Option<Arc<admin::access_delay::config::AccessDelayPolicy>>,
+        Option<Arc<crate::config::access_delay::AccessDelayPolicy>>,
 }
 
 impl FerroEhrService {
@@ -294,7 +295,7 @@ impl FerroEhrService {
     #[must_use]
     pub fn with_identifier_protection(
         mut self,
-        engine: Arc<demographic::identifier::engine::IdentifierProtection>,
+        engine: Arc<crate::identifier_protection::engine::IdentifierProtection>,
     ) -> Self {
         self.identifiers = Some(engine);
         self
@@ -304,7 +305,7 @@ impl FerroEhrService {
     #[must_use]
     pub fn identifier_protection(
         &self,
-    ) -> Option<&demographic::identifier::engine::IdentifierProtection> {
+    ) -> Option<&crate::identifier_protection::engine::IdentifierProtection> {
         self.identifiers.as_deref()
     }
 
@@ -316,7 +317,7 @@ impl FerroEhrService {
     #[must_use]
     pub fn with_identifier_protection_opt(
         mut self,
-        engine: Option<Arc<demographic::identifier::engine::IdentifierProtection>>,
+        engine: Option<Arc<crate::identifier_protection::engine::IdentifierProtection>>,
     ) -> Self {
         self.identifiers = engine;
         self

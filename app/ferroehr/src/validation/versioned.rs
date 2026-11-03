@@ -7,7 +7,7 @@
 //! declares.
 //!
 //! The service's direct write paths and the CONTRIBUTION path in
-//! [`crate::versioning::contribution`] run them inside their own commit
+//! [`crate::service::contribution`] run them inside their own commit
 //! transactions.
 
 #![expect(
@@ -37,7 +37,7 @@ use crate::validation::category::code;
 /// A violating modification is a `422` naming the invariant; the first-version
 /// root read goes through `crate::storage::node_repo`. Both write flows run
 /// this, the direct composition update inline and the CONTRIBUTION path from
-/// [`crate::versioning::contribution`], each in its own commit transaction.
+/// [`crate::service::contribution`], each in its own commit transaction.
 ///
 /// # Errors
 /// [`ServiceError::Unprocessable`] naming the violated invariant (→ 422);

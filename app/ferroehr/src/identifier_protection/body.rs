@@ -17,6 +17,12 @@
 //! unconfigured type is left exactly as written: this module protects what the
 //! deployment declared and never guesses.
 
+#![expect(
+    clippy::disallowed_types,
+    reason = "owner-approved 2026-08-03 (#1694): service-surface signatures over stored canonical \
+              fragments and dynamic shapes"
+)]
+
 use serde_json::Value;
 
 /// The `urn` prefix a substituted identifier carries in the stored body.

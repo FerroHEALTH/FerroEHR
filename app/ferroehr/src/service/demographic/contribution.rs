@@ -6,7 +6,7 @@
 //! the released spec). A demographic
 //! CONTRIBUTION wraps a change-set of party / relationship versions with
 //! `ehr_id = None`, committed through the shared CONTRIBUTION engine
-//! ([`crate::versioning::contribution::commit_version_set`]) with `party_only = true`
+//! ([`crate::service::contribution::commit_version_set`]) with `party_only = true`
 //! (RM common master06 §Contributions).
 //!
 //! The retrieval reads go through `crate::storage::version_repo` (storage owns
@@ -32,10 +32,11 @@ use uuid::Uuid;
 use crate::error::ServiceError;
 use crate::error::refusal::Missing;
 use crate::service::FerroEhrService;
+use crate::service::contribution::commit_version_set;
 use crate::service::response::{ResourceMeta, ServiceResponse};
 use crate::storage::version_repo;
 use crate::versioning::audit::AuditInput;
-use crate::versioning::contribution::{commit_version_set, decode_new_contribution};
+use crate::versioning::contribution::decode_new_contribution;
 use crate::versioning::object_version_id::{TreeId, version_id};
 
 impl FerroEhrService {

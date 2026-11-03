@@ -292,7 +292,7 @@ impl FerroEhrService {
     /// This is the EHR-owned commit hook (RM common master06 §Committal
     /// and Audits), called inside the commit transaction of the EHR-create and
     /// `EHR_STATUS`-update paths and, for the CONTRIBUTION path, from
-    /// [`crate::versioning::contribution`]. The `UPDATE`
+    /// [`crate::service::contribution`]. The `UPDATE`
     /// stays inline here because it maps the subject-uniqueness constraint
     /// violation to a service-level [`ServiceError::Conflict`]; the
     /// `ehr.subject_*` columns are spec-silent index plumbing (our own design).

@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The EHDS Art. 3(3) delay of the person's own access: the policy, the
-//! professional's hold and release, the register, and the expiry records.
+//! The EHDS Art. 3(3) delay of the person's own access: the professional's
+//! hold and release, the register, and the expiry records under the policy
+//! of [`crate::config::access_delay`].
 //!
 //! Regulation (EU) 2025/327 Art. 3(1) gives a person access to their data
 //! "immediately after" it is registered, and Art. 3(3) lets a Member State
@@ -17,18 +18,16 @@
 //! releasing and expiring a hold are each an access record. No openEHR spec
 //! governs any of it: our own design/extension.
 
-pub mod config;
-
 use std::sync::Arc;
 use std::time::Duration;
 
 use sqlx::Connection as _;
 
+use crate::config::access_delay::AccessDelayPolicy;
 use crate::db::acquire::acquire;
 use crate::error::ServiceError;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
-use crate::service::admin::access_delay::config::AccessDelayPolicy;
 use crate::storage::access_delay;
 use crate::system_log::event::EventActionCode;
 
