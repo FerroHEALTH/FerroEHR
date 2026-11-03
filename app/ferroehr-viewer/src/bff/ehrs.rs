@@ -27,8 +27,7 @@
 use serde_json::Value;
 
 use crate::error::ViewerError;
-use crate::locale::tr_served;
-use crate::locale::{Msg, tr, tr_with};
+use crate::locale::{Msg, tr, tr_served};
 
 /// The fixed AQL that lists EHRs newest-first for the recent-EHRs table.
 /// Validated by the `fixed_aql_parses` test; never concatenated with user
@@ -69,14 +68,10 @@ pub(crate) fn aql_request_body(aql: &str, parameters: &Value, offset: u32, fetch
 /// contract.
 ///
 /// # Errors
-/// [`ViewerError::Internal`] when the body is not valid JSON.
+/// [`ViewerError::Failed`] when the body is not valid JSON.
 pub(crate) fn parse_result_set(body: &str, offset: u32) -> Result<ResultPage, ViewerError> {
-    let doc: Value = serde_json::from_str(body).map_err(|e| {
-        ViewerError::Internal(tr_with(
-            Msg::AqlResultJson,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
+    let doc: Value =
+        serde_json::from_str(body).map_err(|e| ViewerError::failed(tr(Msg::AqlResultJson), e))?;
     let columns = doc
         .get("columns")
         .and_then(Value::as_array)
@@ -112,7 +107,7 @@ pub(crate) fn parse_result_set(body: &str, offset: u32) -> Result<ResultPage, Vi
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
-/// [`ViewerError::Internal`] when the result set is not valid JSON.
+/// [`ViewerError::Failed`] when the result set is not valid JSON.
 pub async fn list_ehrs(
     // First row of the page to return.
     offset: u32,
@@ -173,12 +168,11 @@ pub(crate) fn subject_ehr_status(subject_id: &str, subject_namespace: &str) -> V
 /// `GET /ehr?subject_id…`).
 ///
 /// # Errors
-/// [`ViewerError::Internal`] when the body is not valid JSON or carries no
+/// [`ViewerError::Failed`] when the body is not valid JSON or carries no
 /// `ehr_id`.
 pub(crate) fn parse_ehr_id(body: &str) -> Result<String, ViewerError> {
-    let doc: Value = serde_json::from_str(body).map_err(|e| {
-        ViewerError::Internal(tr_with(Msg::EhrJson3, &[("e", (e).to_string().into())]))
-    })?;
+    let doc: Value =
+        serde_json::from_str(body).map_err(|e| ViewerError::failed(tr(Msg::EhrJson3), e))?;
     doc.get("ehr_id")
         .and_then(|v| v.get("value"))
         .and_then(Value::as_str)

@@ -46,7 +46,7 @@ pub mod status;
 use serde_json::Value;
 
 use crate::error::ViewerError;
-use crate::locale::{Msg, tr_with};
+use crate::locale::{Msg, tr};
 
 /// The EHR resource's own summary facts, flattened for the detail header.
 ///
@@ -101,11 +101,10 @@ pub async fn fetch_ehr_summary(
 /// renders what the CDR did send.
 ///
 /// # Errors
-/// [`ViewerError::Internal`] when the body is not valid JSON.
+/// [`ViewerError::Failed`] when the body is not valid JSON.
 fn parse_ehr_summary(body: &str) -> Result<EhrSummary, ViewerError> {
-    let doc: Value = serde_json::from_str(body).map_err(|e| {
-        ViewerError::Internal(tr_with(Msg::EhrJson, &[("e", (e).to_string().into())]))
-    })?;
+    let doc: Value =
+        serde_json::from_str(body).map_err(|e| ViewerError::failed(tr(Msg::EhrJson), e))?;
     Ok(EhrSummary {
         ehr_id: json_path(&doc, &["ehr_id", "value"]),
         system_id: json_path(&doc, &["system_id", "value"]),

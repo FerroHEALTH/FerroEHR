@@ -527,10 +527,10 @@ enum DirectoryPanel {
 }
 
 /// The refusal of a directory document the CDR sent that is not JSON.
-fn unreadable(error: &serde_json::Error) -> Refused {
+fn unreadable(error: serde_json::Error) -> Refused {
     Refused::new(
         tr(RecordsMsg::DirectoryRefused),
-        ViewerError::Internal(error.to_string()),
+        ViewerError::failed(tr(Msg::DirectoryJson), error),
     )
 }
 
@@ -614,13 +614,13 @@ async fn read_tab(ehr_id: String) -> EhrModel<DirectoryPanel> {
         };
         let root: Value = match serde_json::from_str(&shown.body) {
             Ok(root) => root,
-            Err(error) => return DirectoryPanel::Refused(unreadable(&error)),
+            Err(error) => return DirectoryPanel::Refused(unreadable(error)),
         };
         let folders = match &folder_path {
             Some(path) => match fetch_directory_subtree(ehr_id.clone(), path.clone()).await {
                 Ok(DirectorySubtree::Found(body)) => match serde_json::from_str::<Value>(&body) {
                     Ok(sub) => Folders::Path(sub),
-                    Err(error) => Folders::Refused(unreadable(&error)),
+                    Err(error) => Folders::Refused(unreadable(error)),
                 },
                 Ok(DirectorySubtree::Missing) => Folders::NoPath,
                 Err(error) => {
@@ -946,7 +946,7 @@ async fn read_edit(ehr_id: String) -> Form<Editor, ()> {
         .unwrap_or_else(|| current.version_uid.clone());
     let base: Value = match serde_json::from_str(&current.body) {
         Ok(base) => base,
-        Err(error) => return Form::Refused(unreadable(&error)),
+        Err(error) => return Form::Refused(unreadable(error)),
     };
     let mut working = working_tree(posted.as_ref(), &base);
     let renaming = posted

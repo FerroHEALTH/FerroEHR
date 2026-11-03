@@ -51,8 +51,7 @@
 )]
 
 use crate::error::ViewerError;
-use crate::locale::tr_served;
-use crate::locale::{Msg, tr_with};
+use crate::locale::{Msg, tr, tr_served};
 use crate::uid::container_uid_of;
 
 /// Which EHR-side object an `ITEM_TAG` target turned out to be.
@@ -187,9 +186,8 @@ pub async fn resolve_ehr_target(
 async fn ehr_status_container(cdr: &crate::bff::Cdr, ehr_id: &str) -> Result<String, ViewerError> {
     let url = cdr.rest_v1(&format!("ehr/{}", urlencoding::encode(ehr_id)));
     let response = cdr.get(&url).ok().await?;
-    let doc: serde_json::Value = serde_json::from_str(&response.body).map_err(|e| {
-        ViewerError::Internal(tr_with(Msg::EhrJson2, &[("e", (e).to_string().into())]))
-    })?;
+    let doc: serde_json::Value = serde_json::from_str(&response.body)
+        .map_err(|e| ViewerError::failed(tr(Msg::EhrJson2), e))?;
     Ok(container_uid_of(
         doc.get("ehr_status")
             .and_then(|status| status.get("id"))

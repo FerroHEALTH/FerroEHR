@@ -15,9 +15,9 @@ value-set-id-2 = value set id
 terminology-id = terminology id
 reference-code-2 = reference code
 term-code-2 = term code
-operationaltemplatev2-parse = OperationalTemplateV2 parse: { $e }
+operationaltemplatev2-parse = OperationalTemplateV2 parse
 webtemplate-build = WebTemplate build: { $value0 }
-terminology-json = terminology JSON: { $e }
+terminology-json = terminology JSON
 a-is-required = a { $what } is required
 
 ## Numbers: the marks FerroUI's formatter groups a number with

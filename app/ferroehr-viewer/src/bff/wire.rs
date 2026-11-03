@@ -19,7 +19,7 @@
 use serde_json::Value;
 
 use crate::error::ViewerError;
-use crate::locale::{Msg, tr_with};
+use crate::locale::{Msg, tr};
 
 /// One entry in a versioned object's revision history, flattened for the
 /// version selector, the history table and the audit card.
@@ -64,14 +64,10 @@ pub async fn revision_history(
 /// missing field reads as empty rather than failing.
 ///
 /// # Errors
-/// [`ViewerError::Internal`] when the body is not valid JSON.
+/// [`ViewerError::Failed`] when the body is not valid JSON.
 pub(crate) fn parse_versions(body: &str) -> Result<Vec<VersionEntry>, ViewerError> {
-    let doc: Value = serde_json::from_str(body).map_err(|e| {
-        ViewerError::Internal(tr_with(
-            Msg::RevisionHistoryJson,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
+    let doc: Value = serde_json::from_str(body)
+        .map_err(|e| ViewerError::failed(tr(Msg::RevisionHistoryJson), e))?;
     let items = doc
         .get("items")
         .and_then(Value::as_array)
@@ -122,7 +118,7 @@ fn text_at(value: &Value, pointer: &str) -> String {
 /// distinguishable" as theirs (EHDS Art. 5).
 pub fn committer_label(attribute: impl Fn(&str) -> Option<String>) -> String {
     if attribute("_type").as_deref() == Some("PARTY_SELF") {
-        crate::locale::tr(Msg::CommitterPerson)
+        tr(Msg::CommitterPerson)
     } else {
         attribute("name").unwrap_or_default()
     }
@@ -205,20 +201,15 @@ pub async fn read_versioned_facts(
 /// failing the card.
 ///
 /// # Errors
-/// [`ViewerError::Internal`] when either body is not valid JSON.
+/// [`ViewerError::Failed`] when either body is not valid JSON.
 pub fn versioned_facts(
     object_body: &str,
     version_body: &str,
 ) -> Result<VersionedObjectFacts, ViewerError> {
-    let object: Value = serde_json::from_str(object_body).map_err(|e| {
-        ViewerError::Internal(tr_with(
-            Msg::VersionedObjectJson,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
-    let version: Value = serde_json::from_str(version_body).map_err(|e| {
-        ViewerError::Internal(tr_with(Msg::VersionJson, &[("e", (e).to_string().into())]))
-    })?;
+    let object: Value = serde_json::from_str(object_body)
+        .map_err(|e| ViewerError::failed(tr(Msg::VersionedObjectJson), e))?;
+    let version: Value = serde_json::from_str(version_body)
+        .map_err(|e| ViewerError::failed(tr(Msg::VersionJson), e))?;
     Ok(VersionedObjectFacts {
         object_uid: crate::uid::uid_value_of_document(&object),
         owner_id: text_at(&object, "/owner_id/id/value"),

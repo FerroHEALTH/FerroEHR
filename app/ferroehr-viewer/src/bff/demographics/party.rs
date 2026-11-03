@@ -41,9 +41,9 @@ use serde_json::Value;
 
 use crate::bff::demographics::PartyKind;
 use crate::error::ViewerError;
+use crate::locale::Msg;
 use crate::locale::records::RecordsMsg;
-use crate::locale::tr_served;
-use crate::locale::{Msg, tr, tr_with};
+use crate::locale::{tr, tr_served, tr_with};
 use crate::uid::container_uid_of;
 
 /// The viewer's view of one party version.
@@ -284,12 +284,8 @@ pub async fn delete_party(
 /// [`ViewerError::Invalid`] when the body is not valid JSON, not an object, or
 /// declares a different `_type`.
 fn checked_party_body(body: &str, kind: PartyKind) -> Result<String, ViewerError> {
-    let doc: Value = serde_json::from_str(body.trim()).map_err(|e| {
-        ViewerError::Invalid(tr_with(
-            RecordsMsg::PartyBodyNotValidJson,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
+    let doc: Value = serde_json::from_str(body.trim())
+        .map_err(|e| ViewerError::rejected(tr(RecordsMsg::PartyBodyNotValidJson), e))?;
     let object = doc
         .as_object()
         .ok_or_else(|| ViewerError::Invalid(tr(RecordsMsg::PartyBodyMustJsonObject)))?;
@@ -317,14 +313,10 @@ fn checked_party_body(body: &str, kind: PartyKind) -> Result<String, ViewerError
 /// server offers for the conditional round-trip. `None` falls back to the body.
 ///
 /// # Errors
-/// [`ViewerError::Internal`] when the body is not valid JSON.
+/// [`ViewerError::Failed`] when the body is not valid JSON.
 fn parse_party_state(body: &str, served_etag: Option<&str>) -> Result<PartyState, ViewerError> {
-    let doc: Value = serde_json::from_str(body).map_err(|e| {
-        ViewerError::Internal(tr_with(
-            RecordsMsg::PartyJson,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
+    let doc: Value = serde_json::from_str(body)
+        .map_err(|e| ViewerError::failed(tr(RecordsMsg::PartyJson), e))?;
     let version_uid =
         served_etag.map_or_else(|| crate::uid::uid_value_of_document(&doc), str::to_owned);
     let identities = doc.get("identities").filter(|value| !value.is_null());
@@ -439,12 +431,8 @@ pub(super) fn apply_party_edits(
     identities: &str,
     details: &str,
 ) -> Result<String, ViewerError> {
-    let mut doc: Value = serde_json::from_str(base).map_err(|e| {
-        ViewerError::Invalid(tr_with(
-            RecordsMsg::LoadedPartyDocumentNotValidJson,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
+    let mut doc: Value = serde_json::from_str(base)
+        .map_err(|e| ViewerError::rejected(tr(RecordsMsg::LoadedPartyDocumentNotValidJson), e))?;
     let identities = parse_identities(identities).map_err(ViewerError::Invalid)?;
     let details = parse_details(details).map_err(ViewerError::Invalid)?;
     let object = doc
@@ -455,10 +443,6 @@ pub(super) fn apply_party_edits(
         Some(details) => drop(object.insert("details".to_owned(), details)),
         None => drop(object.remove("details")),
     }
-    serde_json::to_string(&doc).map_err(|e| {
-        ViewerError::Invalid(tr_with(
-            RecordsMsg::EditedPartyCouldNotSerialized,
-            &[("e", (e).to_string().into())],
-        ))
-    })
+    serde_json::to_string(&doc)
+        .map_err(|e| ViewerError::rejected(tr(RecordsMsg::EditedPartyCouldNotSerialized), e))
 }

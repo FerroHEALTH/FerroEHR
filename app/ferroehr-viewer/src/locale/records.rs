@@ -114,19 +114,19 @@ crate::locale::messages! {
         EhrCreated = "ehr-created",
         /// `$size bytes`
         Bytes = "bytes",
-        /// CONTRIBUTION JSON: `$e`
+        /// `CONTRIBUTION JSON`
         ContributionJson = "contribution-json",
-        /// the party body is not valid JSON: `$e`
+        /// `the party body is not valid JSON`
         PartyBodyNotValidJson = "party-body-not-valid-json",
-        /// party JSON: `$e`
+        /// `party JSON`
         PartyJson = "party-json",
         /// identities is not valid JSON: `$e`
         IdentitiesNotValidJson = "identities-not-valid-json",
         /// details is not valid JSON: `$e`
         DetailsNotValidJson = "details-not-valid-json",
-        /// the loaded party document is not valid JSON (`$e`) — reload this tab and retry
+        /// `the loaded party document is not valid JSON, so reload this tab and retry`
         LoadedPartyDocumentNotValidJson = "loaded-party-document-not-valid-json",
-        /// the edited party could not be serialized: `$e`
+        /// `the edited party could not be serialized`
         EditedPartyCouldNotSerialized = "edited-party-could-not-serialized",
         /// the `$end` party's id is required
         PartySIdRequired = "party-s-id-required",
@@ -134,9 +134,9 @@ crate::locale::messages! {
         PartySKindMustOneFive = "party-s-kind-must-one-five",
         /// details is not valid JSON: `$e`
         DetailsNotValidJson2 = "details-not-valid-json-2",
-        /// the edited relationship could not be serialized: `$e`
+        /// `the edited relationship could not be serialized`
         EditedRelationshipCouldNotSerialized = "edited-relationship-could-not-serialized",
-        /// `PARTY_RELATIONSHIP JSON: '$e'`
+        /// `PARTY_RELATIONSHIP JSON`
         PartyRelationshipJson = "party-relationship-json",
         /// not valid JSON: `$e`
         NotValidJson = "not-valid-json",
@@ -148,13 +148,13 @@ crate::locale::messages! {
         DocumentNotValidJson = "document-not-valid-json",
         /// `$civilZ`
         Z2 = "z-2",
-        /// contributions JSON: `$e`
+        /// `contributions JSON`
         ContributionsJson = "contributions-json",
         /// `other_details is not valid JSON: '$e'`
         OtherDetailsNotValidJson = "other-details-not-valid-json",
-        /// `the loaded EHR_STATUS document is not valid JSON ('$e') — reload this tab and retry`
+        /// `the loaded EHR_STATUS document is not valid JSON, so reload this tab and retry`
         LoadedEhrStatusDocumentNotValid = "loaded-ehr-status-document-not-valid",
-        /// `the edited EHR_STATUS could not be serialized: '$e'`
+        /// `the edited EHR_STATUS could not be serialized`
         EditedEhrStatusCouldNotSerialized = "edited-ehr-status-could-not-serialized",
         /// New EHR `$new_id`
         NewEhr = "new-ehr",
@@ -170,7 +170,7 @@ crate::locale::messages! {
         RelationshipTypeRequiredStoredRelationshipS = "relationship-type-required-stored-relationship-s",
         /// `the '$end' party must be named by its versioned_object_uid, not by one version's...`
         PartyMustNamedVersionedObjectUid = "party-must-named-versioned-object-uid",
-        /// the loaded relationship document is not valid JSON (`$e`) — reload this screen and retry
+        /// `the loaded relationship document is not valid JSON, so reload this screen and retry`
         LoadedRelationshipDocumentNotValidJson = "loaded-relationship-document-not-valid-json",
         /// The EHR status flag `is_queryable`, on a badge
         FlagQueryable = "flag-queryable",

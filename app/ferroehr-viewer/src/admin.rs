@@ -228,8 +228,8 @@ mod tests {
         assert!(renders_admin_ops(&Ok(AdminAvailability::Available)));
         assert!(!renders_admin_ops(&Ok(AdminAvailability::Disabled)));
         assert!(!renders_admin_ops(&Err(ViewerError::Unauthenticated)));
-        assert!(!renders_admin_ops(&Err(ViewerError::CdrUnreachable(
-            "connection refused".to_owned()
+        assert!(!renders_admin_ops(&Err(ViewerError::unreachable(
+            std::io::Error::other("connection refused")
         ))));
         assert!(!renders_admin_ops(&Err(ViewerError::Internal(
             "conformance manifest JSON: expected value".to_owned()

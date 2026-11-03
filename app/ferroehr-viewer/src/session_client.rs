@@ -70,8 +70,8 @@ mod tests {
 
     #[test]
     fn only_the_two_session_refusals_end_the_session() {
-        assert!(!ends_session(&ViewerError::CdrUnreachable(
-            "down".to_owned()
+        assert!(!ends_session(&ViewerError::unreachable(
+            std::io::Error::other("down")
         )));
         assert!(!ends_session(&ViewerError::Forbidden("nope".to_owned())));
         assert!(!ends_session(&ViewerError::Cdr {

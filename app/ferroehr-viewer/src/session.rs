@@ -66,7 +66,7 @@ impl SessionKeys {
     /// to at least 64 bytes.
     ///
     /// # Errors
-    /// [`ViewerError::Internal`] when the configured secret is not valid
+    /// [`ViewerError::Failed`] when the configured secret is not valid
     /// base64 or decodes to fewer than 64 bytes (a boot-time refusal).
     pub fn from_secret(secret: &str) -> Result<Self, ViewerError> {
         if secret.trim().is_empty() {
@@ -81,11 +81,9 @@ impl SessionKeys {
         }
         let bytes = base64::engine::general_purpose::STANDARD
             .decode(secret.trim())
-            .map_err(|e| ViewerError::Internal(format!("session.secret is not base64: {e}")))?;
+            .map_err(|e| ViewerError::failed("session.secret is not base64", e))?;
         let key = cookie::Key::try_from(bytes.as_slice()).map_err(|e| {
-            ViewerError::Internal(format!(
-                "session.secret must decode to at least 64 bytes: {e}"
-            ))
+            ViewerError::failed("session.secret must decode to at least 64 bytes", e)
         })?;
         Ok(Self { key })
     }
@@ -178,10 +176,10 @@ impl CookieSession {
     /// Insert one typed entry.
     ///
     /// # Errors
-    /// [`ViewerError::Internal`] when the value does not serialize (a bug).
+    /// [`ViewerError::Failed`] when the value does not serialize (a bug).
     pub fn insert<T: Serialize>(&mut self, key: &str, value: &T) -> Result<(), ViewerError> {
         let value = serde_json::to_string(value)
-            .map_err(|e| ViewerError::Internal(format!("session serialization: {e}")))?;
+            .map_err(|e| ViewerError::failed("session serialization", e))?;
         self.entries.insert(key.to_owned(), value);
         Ok(())
     }
@@ -203,7 +201,7 @@ impl CookieSession {
     /// absolute lifetime again at the next sealing.
     ///
     /// # Errors
-    /// [`ViewerError::Internal`] when the value does not serialize (a bug).
+    /// [`ViewerError::Failed`] when the value does not serialize (a bug).
     pub fn sign_in(&mut self, viewer: &ViewerSession) -> Result<(), ViewerError> {
         self.insert(SESSION_KEY, viewer)?;
         self.signed_in = None;
@@ -321,7 +319,7 @@ fn cookie_value(headers: &http::HeaderMap) -> Option<String> {
 /// and "sign out" are the same operation.
 ///
 /// # Errors
-/// [`ViewerError::Internal`] when the payload does not serialize or the
+/// [`ViewerError::Failed`] when the payload does not serialize or the
 /// sealed value is not a valid header (both bugs, surfaced loudly).
 pub fn set_cookie(
     keys: &SessionKeys,
@@ -348,7 +346,7 @@ fn set_cookie_at(
             entries: session.entries.clone(),
         };
         let payload = serde_json::to_string(&envelope)
-            .map_err(|e| ViewerError::Internal(format!("session serialization: {e}")))?;
+            .map_err(|e| ViewerError::failed("session serialization", e))?;
         let lifetime_left = signed_in
             .saturating_add(seconds(config.absolute_minutes))
             .saturating_sub(now);
@@ -366,7 +364,7 @@ fn set_cookie_at(
     // Rendered unencoded: the sealed value is base64, whose alphabet is
     // entirely within RFC 6265's cookie-octet set.
     http::HeaderValue::from_str(&cookie.to_string())
-        .map_err(|e| ViewerError::Internal(format!("session cookie header: {e}")))
+        .map_err(|e| ViewerError::failed("session cookie header", e))
     // NOTE: no openEHR spec governs the viewer session — our own design;
     // flags per the OWASP Session Management Cheat Sheet (HttpOnly, Lax for
     // the OIDC top-level callback redirect, Secure behind TLS).
@@ -422,7 +420,7 @@ pub fn outside_request() -> ViewerError {
 /// answer of the request being drawn.
 ///
 /// # Errors
-/// [`ViewerError::Internal`] outside a request or on a sealing failure.
+/// [`ViewerError::Failed`] outside a request or on a sealing failure.
 pub fn commit(session: &CookieSession) -> Result<(), ViewerError> {
     let state = crate::scope::state()?;
     let header = set_cookie(&state.session_keys, session, &state.config.session)?;

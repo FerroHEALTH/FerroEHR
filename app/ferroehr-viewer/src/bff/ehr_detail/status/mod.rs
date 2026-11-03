@@ -39,8 +39,7 @@ use serde_json::Value;
 
 use crate::bff::wire::{VersionEntry, VersionedObjectFacts};
 use crate::error::ViewerError;
-use crate::locale::tr_served;
-use crate::locale::{Msg, tr_with};
+use crate::locale::{Msg, tr, tr_served};
 pub mod edit;
 
 /// The viewer's view of an EHR's CURRENT `EHR_STATUS`.
@@ -91,7 +90,7 @@ pub struct EhrStatusState {
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
-/// [`ViewerError::Internal`] when the body is not valid JSON.
+/// [`ViewerError::Failed`] when the body is not valid JSON.
 pub async fn fetch_ehr_status(
     // The EHR whose current status document to read.
     ehr_id: String,
@@ -312,17 +311,13 @@ pub async fn fetch_status_version_at_time(
 /// server offers for the conditional round-trip. `None` falls back to the body.
 ///
 /// # Errors
-/// [`ViewerError::Internal`] when the body is not valid JSON.
+/// [`ViewerError::Failed`] when the body is not valid JSON.
 pub(crate) fn parse_status_state(
     body: &str,
     served_etag: Option<&str>,
 ) -> Result<EhrStatusState, ViewerError> {
-    let doc: Value = serde_json::from_str(body).map_err(|e| {
-        ViewerError::Internal(tr_with(
-            Msg::EhrStatusJson,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
+    let doc: Value =
+        serde_json::from_str(body).map_err(|e| ViewerError::failed(tr(Msg::EhrStatusJson), e))?;
     let other_details = doc
         .get("other_details")
         .filter(|value| !value.is_null())

@@ -20,7 +20,7 @@
 
 use crate::bff::dashboard::Count;
 use crate::error::ViewerError;
-use crate::locale::{Msg, tr_served, tr_served_with};
+use crate::locale::{Msg, tr_served};
 
 /// One row of the template list, distilled from the ITS-REST Definition list
 /// shape (`template_id` / `concept` / `created_timestamp`).
@@ -81,17 +81,13 @@ fn root_is_composition(archetype_id: &str) -> bool {
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
-/// [`ViewerError::Internal`] when the CDR body is not valid JSON.
+/// [`ViewerError::Failed`] when the CDR body is not valid JSON.
 pub async fn list_templates() -> Result<Vec<TemplateRow>, ViewerError> {
     let cdr = crate::bff::cdr()?;
     let url = cdr.rest_v1("definition/template/adl1.4?version=*");
     let body = cdr.get(&url).ok().await?.body;
-    let value = serde_json::from_str::<serde_json::Value>(&body).map_err(|e| {
-        ViewerError::Internal(tr_served_with(
-            Msg::TemplateListJson,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
+    let value = serde_json::from_str::<serde_json::Value>(&body)
+        .map_err(|e| ViewerError::failed(tr_served(Msg::TemplateListJson), e))?;
     let rows = value
         .as_array()
         .map(|items| items.iter().map(template_row).collect())
@@ -164,17 +160,13 @@ pub async fn upload_template(
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
-/// [`ViewerError::Internal`] when the CDR body is not valid JSON.
+/// [`ViewerError::Failed`] when the CDR body is not valid JSON.
 pub async fn list_adl2_templates() -> Result<Vec<TemplateRow>, ViewerError> {
     let cdr = crate::bff::cdr()?;
     let url = cdr.rest_v1("definition/template/adl2?version=*");
     let body = cdr.get(&url).ok().await?.body;
-    let value = serde_json::from_str::<serde_json::Value>(&body).map_err(|e| {
-        ViewerError::Internal(tr_served_with(
-            Msg::Adl2TemplateListJson,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
+    let value = serde_json::from_str::<serde_json::Value>(&body)
+        .map_err(|e| ViewerError::failed(tr_served(Msg::Adl2TemplateListJson), e))?;
     let rows = value
         .as_array()
         .map(|items| items.iter().map(template_row).collect())

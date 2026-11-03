@@ -29,7 +29,7 @@
 
 use crate::error::ViewerError;
 use crate::locale::definitions::DefinitionsMsg;
-use crate::locale::{tr_served, tr_with};
+use crate::locale::{tr, tr_served, tr_with};
 
 /// One terminology's descriptor, flattened for the descriptor card.
 ///
@@ -222,12 +222,7 @@ async fn terminology_get(path: &str) -> Result<Option<serde_json::Value>, Viewer
     let body = response.ok()?.body;
     serde_json::from_str::<serde_json::Value>(&body)
         .map(Some)
-        .map_err(|e| {
-            ViewerError::Internal(tr_with(
-                DefinitionsMsg::TerminologyJson,
-                &[("e", (e).to_string().into())],
-            ))
-        })
+        .map_err(|e| ViewerError::failed(tr(DefinitionsMsg::TerminologyJson), e))
 }
 
 /// The optional `at_date` query fragment, introduced by `lead` (`?` when it
@@ -264,7 +259,7 @@ fn require_value(value: &str, what: &str) -> Result<String, ViewerError> {
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] when the CDR
 /// refuses this session; [`ViewerError::Cdr`] / [`ViewerError::CdrUnreachable`]
-/// from the CDR; [`ViewerError::Internal`] when the body is not JSON.
+/// from the CDR; [`ViewerError::Failed`] when the body is not JSON.
 pub async fn list_terminologies() -> Result<Option<Vec<String>>, ViewerError> {
     let Some(body) = terminology_get("terminology").await? else {
         return Ok(None);

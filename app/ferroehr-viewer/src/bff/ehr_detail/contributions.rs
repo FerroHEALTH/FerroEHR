@@ -15,7 +15,7 @@ use serde_json::Value;
 use crate::activity::ActivityPoint;
 use crate::error::ViewerError;
 use crate::locale::records::RecordsMsg;
-use crate::locale::tr_with;
+use crate::locale::tr;
 
 /// Contributions read for the activity timeline before day-bucketing. The
 /// timeline answers a different question than the list ("when was this EHR
@@ -90,14 +90,10 @@ pub async fn list_contributions(
 /// / zero rather than failing.
 ///
 /// # Errors
-/// [`ViewerError::Internal`] when the body is not valid JSON.
+/// [`ViewerError::Failed`] when the body is not valid JSON.
 fn parse_contributions(body: &str) -> Result<ContributionPage, ViewerError> {
-    let doc: Value = serde_json::from_str(body).map_err(|e| {
-        ViewerError::Internal(tr_with(
-            RecordsMsg::ContributionsJson,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
+    let doc: Value = serde_json::from_str(body)
+        .map_err(|e| ViewerError::failed(tr(RecordsMsg::ContributionsJson), e))?;
     let rows = doc
         .get("rows")
         .and_then(Value::as_array)
@@ -119,7 +115,7 @@ fn contribution_row(value: &Value) -> ContributionRow {
         time_committed: contribution_field(value, "time_committed"),
         // The list names a `PARTY_SELF` committer by its flag alone (EHDS Art. 5).
         committer: if value.get("inserted_by_person").and_then(Value::as_bool) == Some(true) {
-            crate::locale::tr(crate::locale::Msg::CommitterPerson)
+            tr(crate::locale::Msg::CommitterPerson)
         } else {
             contribution_field(value, "committer")
         },
@@ -146,7 +142,7 @@ fn contribution_field(value: &Value, key: &str) -> String {
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
-/// [`ViewerError::Internal`] when the page is not valid JSON.
+/// [`ViewerError::Failed`] when the page is not valid JSON.
 pub async fn contribution_activity(
     // The EHR whose contribution instants feed the timeline.
     ehr_id: String,

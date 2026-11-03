@@ -127,7 +127,7 @@ pub async fn download_template(
                 Err(_invalid) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
             }
         }
-        Err(error) => (StatusCode::BAD_GATEWAY, error.to_string()).into_response(),
+        Err(error) => (StatusCode::BAD_GATEWAY, crate::error::error_chain(&error)).into_response(),
     }
 }
 

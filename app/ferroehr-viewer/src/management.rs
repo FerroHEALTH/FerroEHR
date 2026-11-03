@@ -42,8 +42,7 @@
 use ferrohealth_health::document::Readiness;
 
 use crate::error::ViewerError;
-use crate::locale::{Msg, tr};
-use crate::locale::{tr_served, tr_served_with};
+use crate::locale::{Msg, tr, tr_served};
 
 /// One headline metric: its name, its tile label, and an optional
 /// `(label, value)` sample filter.
@@ -173,7 +172,7 @@ pub fn falls_back_to_public_readiness(status: http::StatusCode) -> bool {
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::CdrUnauthorized`] when the CDR no longer accepts this
 /// session; [`ViewerError::Cdr`] on any other status than `200`/`503`;
-/// [`ViewerError::Internal`] when the body is not JSON.
+/// [`ViewerError::Failed`] when the body is not JSON.
 pub async fn fetch_readiness() -> Result<ReadinessView, ViewerError> {
     let cdr = crate::bff::cdr()?;
     let url = cdr.management_url("health");
@@ -189,12 +188,8 @@ pub async fn fetch_readiness() -> Result<ReadinessView, ViewerError> {
     } else {
         response.ok()?.body
     };
-    readiness_view(&body, is_detailed).map_err(|e| {
-        ViewerError::Internal(tr_served_with(
-            Msg::ReadinessJson,
-            &[("e", (e).to_string().into())],
-        ))
-    })
+    readiness_view(&body, is_detailed)
+        .map_err(|e| ViewerError::failed(tr_served(Msg::ReadinessJson), e))
 }
 
 // ── Management: the probe ───────────────────────────────────────────────────
@@ -298,17 +293,13 @@ fn leaf_text(value: &serde_json::Value) -> String {
 /// [`ViewerError::CdrUnauthorized`] when the CDR no longer accepts this
 /// session, [`ViewerError::Forbidden`] when the endpoint's access level refuses
 /// it; [`ViewerError::Cdr`] / [`ViewerError::CdrUnreachable`] from the CDR;
-/// [`ViewerError::Internal`] when the body is not JSON.
+/// [`ViewerError::Failed`] when the body is not JSON.
 pub async fn fetch_build_info() -> Result<Option<BuildInfoView>, ViewerError> {
     let Some(body) = management_get("info").await? else {
         return Ok(None);
     };
-    let value = serde_json::from_str::<serde_json::Value>(&body).map_err(|e| {
-        ViewerError::Internal(tr_served_with(
-            Msg::ManagementInfoJson,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
+    let value = serde_json::from_str::<serde_json::Value>(&body)
+        .map_err(|e| ViewerError::failed(tr_served(Msg::ManagementInfoJson), e))?;
     Ok(Some(build_info_view(&value)))
 }
 
@@ -436,12 +427,8 @@ pub async fn fetch_metric_names() -> Result<Option<Vec<String>>, ViewerError> {
     let Some(body) = management_get("metrics").await? else {
         return Ok(None);
     };
-    let value = serde_json::from_str::<serde_json::Value>(&body).map_err(|e| {
-        ViewerError::Internal(tr_served_with(
-            Msg::MetricListJson,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
+    let value = serde_json::from_str::<serde_json::Value>(&body)
+        .map_err(|e| ViewerError::failed(tr_served(Msg::MetricListJson), e))?;
     let mut names: Vec<String> = value
         .get("names")
         .and_then(serde_json::Value::as_array)
@@ -477,12 +464,8 @@ pub async fn fetch_metric_detail(
     let Some(body) = management_get(&path).await? else {
         return Ok(None);
     };
-    let value = serde_json::from_str::<serde_json::Value>(&body).map_err(|e| {
-        ViewerError::Internal(tr_served_with(
-            Msg::MetricDetailJson,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
+    let value = serde_json::from_str::<serde_json::Value>(&body)
+        .map_err(|e| ViewerError::failed(tr_served(Msg::MetricDetailJson), e))?;
     Ok(Some(metric_detail_view(&value)))
 }
 
@@ -558,12 +541,8 @@ pub async fn fetch_loggers() -> Result<Option<LoggerView>, ViewerError> {
     let Some(body) = management_get("loggers").await? else {
         return Ok(None);
     };
-    let value = serde_json::from_str::<serde_json::Value>(&body).map_err(|e| {
-        ViewerError::Internal(tr_served_with(
-            Msg::LoggersJson,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
+    let value = serde_json::from_str::<serde_json::Value>(&body)
+        .map_err(|e| ViewerError::failed(tr_served(Msg::LoggersJson), e))?;
     Ok(Some(logger_view(&value)))
 }
 
@@ -598,12 +577,8 @@ pub async fn set_log_filter(
         .ok()
         .await?
         .body;
-    let value = serde_json::from_str::<serde_json::Value>(&body).map_err(|e| {
-        ViewerError::Internal(tr_served_with(
-            Msg::LoggersJson2,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
+    let value = serde_json::from_str::<serde_json::Value>(&body)
+        .map_err(|e| ViewerError::failed(tr_served(Msg::LoggersJson2), e))?;
     Ok(logger_view(&value))
 }
 
@@ -615,12 +590,8 @@ pub async fn reset_log_filter() -> Result<LoggerView, ViewerError> {
     let cdr = crate::bff::cdr()?;
     let url = cdr.management_url("loggers");
     let body = cdr.delete(&url).ok().await?.body;
-    let value = serde_json::from_str::<serde_json::Value>(&body).map_err(|e| {
-        ViewerError::Internal(tr_served_with(
-            Msg::LoggersJson3,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
+    let value = serde_json::from_str::<serde_json::Value>(&body)
+        .map_err(|e| ViewerError::failed(tr_served(Msg::LoggersJson3), e))?;
     Ok(logger_view(&value))
 }
 
@@ -689,8 +660,8 @@ mod tests {
             ManagementAvailability::Disabled
         )));
         assert!(!renders_management_ops(&Err(ViewerError::Unauthenticated)));
-        assert!(!renders_management_ops(&Err(ViewerError::CdrUnreachable(
-            "connection refused".to_owned()
+        assert!(!renders_management_ops(&Err(ViewerError::unreachable(
+            std::io::Error::other("connection refused")
         ))));
         assert!(ManagementAvailability::Available.usable());
         assert!(!ManagementAvailability::Disabled.usable());

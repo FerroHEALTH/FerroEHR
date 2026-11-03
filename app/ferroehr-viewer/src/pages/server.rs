@@ -816,10 +816,6 @@ struct Api {
 }
 
 /// What the page reads, on the server.
-#[expect(
-    clippy::disallowed_types,
-    reason = "the viewer reads the CDR's OpenAPI JSON document to list it"
-)]
 async fn read_api() -> Tabbed<Api> {
     load_tab(ServerTab::Api, || async {
         let family = crate::request::query("family")
@@ -829,16 +825,13 @@ async fn read_api() -> Tabbed<Api> {
             .map(|(key, words)| (key.to_owned(), words))
             .collect();
         let refused = |error| Refused::new(tr(ConsoleMsg::ServerApiRefused), error);
-        let listed = match crate::bff::system::fetch_openapi(family.clone()).await {
-            Ok(body) => match serde_json::from_str::<serde_json::Value>(&body) {
-                Ok(document) => Ok(Document {
-                    groups: crate::bff::system::group_openapi_paths(&document),
-                    text: crate::bff::pretty_body(&body, crate::format::ReprFormat::CanonicalJson),
-                }),
-                Err(error) => Err(refused(ViewerError::Internal(error.to_string()))),
-            },
-            Err(error) => Err(refused(error)),
-        };
+        let listed = crate::bff::system::read_openapi(family.clone())
+            .await
+            .map(|(body, document)| Document {
+                groups: crate::bff::system::group_openapi_paths(&document),
+                text: crate::bff::pretty_body(&body, crate::format::ReprFormat::CanonicalJson),
+            })
+            .map_err(refused);
         Api {
             family,
             families,
@@ -978,8 +971,9 @@ async fn read_smart() -> Tabbed<Result<Option<Smart>, Refused>> {
         else {
             return Ok(None);
         };
-        let document: Value = serde_json::from_str(&body)
-            .map_err(|error| refused(ViewerError::Internal(error.to_string())))?;
+        let document: Value = serde_json::from_str(&body).map_err(|error| {
+            refused(ViewerError::failed(tr(Msg::SmartConfigurationJson), error))
+        })?;
         let list = |key: &str| -> Vec<String> {
             document
                 .get(key)

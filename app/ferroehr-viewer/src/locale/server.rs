@@ -47,27 +47,27 @@ crate::locale::messages! {
         Column2 = "column-2",
         /// export failed: `$e`
         ExportFailed = "export-failed",
-        /// parameters must be a JSON object: `$e`
+        /// `parameters must be a JSON object`
         ParametersMustJsonObject2 = "parameters-must-json-object-2",
         /// unknown export format ``$other`` (csv | json)
         UnknownExportFormatCsvJson = "unknown-export-format-csv-json",
-        /// `unparseable RESULT_SET: '$e'`
+        /// `unparseable RESULT_SET`
         UnparseableResultSet = "unparseable-result-set",
         /// column `$value0`
         Column3 = "column-3",
         /// attachment; filename="`$filename`"
         AttachmentFilename = "attachment-filename",
-        /// parameters must be a JSON object: `$e`
+        /// `parameters must be a JSON object`
         ParametersMustJsonObject3 = "parameters-must-json-object-3",
-        /// stored-query list JSON: `$e`
+        /// `stored-query list JSON`
         StoredQueryListJson = "stored-query-list-json",
-        /// stored query JSON: `$e`
+        /// `stored query JSON`
         StoredQueryJson = "stored-query-json",
-        /// parameters must be a JSON object: `$e`
+        /// `parameters must be a JSON object`
         ParametersMustJsonObject4 = "parameters-must-json-object-4",
-        /// stored-query result JSON: `$e`
+        /// `stored-query result JSON`
         StoredQueryResultJson = "stored-query-result-json",
-        /// conformance manifest JSON: `$e`
+        /// `conformance manifest JSON`
         ConformanceManifestJson = "conformance-manifest-json",
         /// `no subject pseudonym namespace is declared, so an EHR subject may carry a real identifier`
         NoSubjectPseudonymNamespaceDeclaredSo = "no-subject-pseudonym-namespace-declared-so",
