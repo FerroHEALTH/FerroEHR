@@ -64,6 +64,7 @@ pub(crate) mod item_tags;
 pub mod message;
 pub(crate) mod operation;
 pub mod query;
+pub(crate) mod read_request;
 pub(crate) mod refusals;
 pub(crate) mod served;
 pub mod system;
@@ -72,12 +73,11 @@ use std::borrow::Cow;
 use std::future::Future;
 
 use axum::Router;
-use axum::extract::{FromRequestParts, RawPathParams};
 use axum::response::{IntoResponse, Response};
 use bytes::Bytes;
 use http::{HeaderMap, Method};
 use indexmap::IndexMap;
-use openehr_its::rest::routes::{Lookup, Param, ParamLocation, PathParam, RouteMatch, lookup};
+use openehr_its::rest::routes::{Param, ParamLocation, PathParam, RouteMatch};
 use openehr_its::rest::runtime::ApiError;
 use utoipa_axum::router::OpenApiRouter;
 
@@ -149,46 +149,6 @@ impl RequestParts {
             params,
             request_media: &[],
         })
-    }
-}
-
-/// Decompose a whole axum [`Request`](axum::extract::Request) into the
-/// [`RequestParts`] snapshot an operation handler consumes.
-///
-/// Every native `utoipa-axum` handler takes `State` + the whole `Request` and
-/// funnels through here: taking the entire request (rather than the individual
-/// `RawPathParams`/`RawQuery`/`HeaderMap`/`Bytes` extractors) is what keeps the
-/// `#[utoipa::path]` argument introspection happy — `bytes::Bytes` has no
-/// `ToSchema`, so a bare body extractor cannot appear in a documented handler
-/// signature. The upstream `RequestBodyLimitLayer` has already bounded the body,
-/// so the `to_bytes` limit here is only a backstop.
-pub(crate) async fn into_parts(request: axum::extract::Request) -> RequestParts {
-    let (mut parts, body) = request.into_parts();
-    let path: IndexMap<String, String> = RawPathParams::from_request_parts(&mut parts, &())
-        .await
-        .map(|raw| {
-            raw.iter()
-                .map(|(k, v)| (k.to_owned(), v.to_owned()))
-                .collect()
-        })
-        .unwrap_or_default();
-    let query = parts.uri.query().map(str::to_owned);
-    // The router nests this API under the base path, so `parts.uri` is already
-    // group-relative, which is the path `lookup` matches.
-    let route = match lookup(&parts.method, parts.uri.path()) {
-        Lookup::Matched(route) => Some(route),
-        Lookup::MethodNotAllowed { .. } | Lookup::NotFound => None,
-    };
-    let headers = parts.headers;
-    let body = axum::body::to_bytes(body, usize::MAX)
-        .await
-        .unwrap_or_default();
-    RequestParts {
-        path,
-        query,
-        headers,
-        body,
-        route,
     }
 }
 
@@ -440,7 +400,7 @@ where
 }
 
 /// Declares one guarded REST handler: the `#[utoipa::path]` function that
-/// snapshots the request with [`into_parts`] and runs one operation through
+/// snapshots the request with [`read_request::into_parts`] and runs one operation through
 /// [`guarded_dispatch`].
 ///
 /// The handler's attributes (its doc comment and `#[utoipa::path]`) come
@@ -457,8 +417,10 @@ macro_rules! guarded_handler {
             axum::extract::State(state): axum::extract::State<$crate::state::AppState>,
             request: axum::extract::Request,
         ) -> axum::response::Response {
-            let parts = $crate::api::into_parts(request).await;
-            $crate::api::guarded_dispatch(state, $op, parts, $handler).await
+            match $crate::api::read_request::into_parts(request).await {
+                Ok(parts) => $crate::api::guarded_dispatch(state, $op, parts, $handler).await,
+                Err(unreadable) => axum::response::IntoResponse::into_response(unreadable),
+            }
         }
     };
 }

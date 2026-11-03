@@ -101,7 +101,10 @@ pub(crate) async fn message_export_ehrs(
     State(state): State<AppState>,
     request: axum::extract::Request,
 ) -> Response {
-    let parts = crate::api::into_parts(request).await;
+    let parts = match crate::api::read_request::into_parts(request).await {
+        Ok(parts) => parts,
+        Err(unreadable) => return axum::response::IntoResponse::into_response(unreadable),
+    };
     guarded_dispatch(state, "message_export_ehrs", parts, export_ehrs).await
 }
 
@@ -191,7 +194,10 @@ pub(crate) async fn message_export_ehr_extracts(
     State(state): State<AppState>,
     request: axum::extract::Request,
 ) -> Response {
-    let parts = crate::api::into_parts(request).await;
+    let parts = match crate::api::read_request::into_parts(request).await {
+        Ok(parts) => parts,
+        Err(unreadable) => return axum::response::IntoResponse::into_response(unreadable),
+    };
     guarded_dispatch(
         state,
         "message_export_ehr_extracts",
@@ -255,7 +261,10 @@ pub(crate) async fn message_import_ehr(
     State(state): State<AppState>,
     request: axum::extract::Request,
 ) -> Response {
-    let parts = crate::api::into_parts(request).await;
+    let parts = match crate::api::read_request::into_parts(request).await {
+        Ok(parts) => parts,
+        Err(unreadable) => return axum::response::IntoResponse::into_response(unreadable),
+    };
     guarded_dispatch(state, "message_import_ehr", parts, import_ehr).await
 }
 
@@ -311,7 +320,10 @@ pub(crate) async fn message_import_ehr_extract(
     State(state): State<AppState>,
     request: axum::extract::Request,
 ) -> Response {
-    let parts = crate::api::into_parts(request).await;
+    let parts = match crate::api::read_request::into_parts(request).await {
+        Ok(parts) => parts,
+        Err(unreadable) => return axum::response::IntoResponse::into_response(unreadable),
+    };
     guarded_dispatch(
         state,
         "message_import_ehr_extract",

@@ -85,13 +85,38 @@ pub(crate) async fn middleware(
     }
 
     let (parts, body) = request.into_parts();
-    match axum::body::to_bytes(body, limit).await {
+    match buffer(body, limit).await {
         Ok(bytes) => {
             next.run(Request::from_parts(parts, Body::from(bytes)))
                 .await
         }
-        Err(_) => too_large(limit),
+        Err(refusal) => *refusal,
     }
+}
+
+/// Collects `body` under `limit`: over it is the `413`, any other read failure
+/// the `400` (RFC 9110 §15.5.1), never an empty or truncated body.
+async fn buffer(body: Body, limit: usize) -> Result<bytes::Bytes, Box<Response>> {
+    axum::body::to_bytes(body, limit).await.map_err(|error| {
+        Box::new(if exceeds_limit(&error) {
+            too_large(limit)
+        } else {
+            status_error_response(StatusCode::BAD_REQUEST, "request body cannot be read")
+        })
+    })
+}
+
+/// Whether a body read failed because the body is over its limit: an
+/// [`http_body_util::LengthLimitError`] anywhere in the cause chain.
+pub(crate) fn exceeds_limit(error: &axum::Error) -> bool {
+    let mut cause: Option<&(dyn std::error::Error + 'static)> = Some(error);
+    while let Some(current) = cause {
+        if current.is::<http_body_util::LengthLimitError>() {
+            return true;
+        }
+        cause = current.source();
+    }
+    false
 }
 
 /// The `413` refusal as problem details.
@@ -112,6 +137,38 @@ fn too_large(limit: usize) -> Response {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A body whose stream fails after `prefix` bytes.
+    fn failing_body(prefix: &'static [u8]) -> Body {
+        Body::from_stream(futures::stream::iter([
+            Ok(bytes::Bytes::from_static(prefix)),
+            Err(std::io::Error::other("connection reset")),
+        ]))
+    }
+
+    #[tokio::test]
+    async fn a_body_over_the_limit_is_a_413() {
+        let refusal = buffer(Body::from(vec![0_u8; CEILING + 1]), CEILING)
+            .await
+            .expect_err("over the limit");
+        assert_eq!(refusal.status(), StatusCode::PAYLOAD_TOO_LARGE);
+    }
+
+    #[tokio::test]
+    async fn a_body_that_fails_to_read_is_a_400_not_a_413() {
+        let refusal = buffer(failing_body(b"{"), CEILING)
+            .await
+            .expect_err("the read fails");
+        assert_eq!(refusal.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn a_body_within_the_limit_is_kept_whole() {
+        let bytes = buffer(Body::from("{}"), CEILING)
+            .await
+            .expect("within the limit");
+        assert_eq!(bytes.as_ref(), b"{}");
+    }
 
     const CLINICAL: usize = 16;
     const CEILING: usize = 64;
