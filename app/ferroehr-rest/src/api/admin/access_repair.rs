@@ -51,15 +51,8 @@ guarded_handler! {
         request_body(content = serde_json::Value,
                      description = "`{ \"ehr_id\": …, \"settings\": … }`: the EHR and \
                                     the whole new `EHR_ACCESS.settings` object, of the \
-                                    `ferroehr.access_control.v1` scheme.",
-                     example = json!({
-                         "ehr_id": "7d44b88c-4199-4bad-97dc-d78268e01398",
-                         "settings": {
-                             "_type": "FERROEHR_ACCESS_CONTROL_V1",
-                             "default_access": "restricted",
-                             "access_list": [{ "principal": "user:dr-jansen", "access": "full" }]
-                         }
-                     })),
+                                    `ferroehr.access_control.v1` scheme, whose \
+                                    `_type` is `FERROEHR_ACCESS_CONTROL_V1`."),
         responses(
             (status = 200, description = "`{ \"ehr_id\": …, \"version_uid\": … }`: the \
                                           `EHR_ACCESS` version the repair committed. The \
