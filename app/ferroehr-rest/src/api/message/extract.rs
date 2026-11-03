@@ -47,6 +47,7 @@ use openehr_rm::v1_2::ehr_extract::common::extract_spec::ExtractSpec;
 use ferroehr::ids::EhrId;
 
 use crate::api::{BoxResponse, RequestParts, guarded_dispatch};
+use crate::extensions::access::ehr_access;
 use crate::negotiate;
 use crate::overview::error::RestError;
 use crate::params;
@@ -164,6 +165,13 @@ pub(crate) async fn message_export_ehrs(
                                       `commit_time_interval`).",
          body = serde_json::Value),
         (status = 401, description = "Unauthenticated.", body = serde_json::Value),
+        (status = 403, description = "The `EHR_ACCESS` settings of an EHR the \
+                                      manifest names refuse the caller. Every \
+                                      named EHR passes the gate a read of it \
+                                      passes before any content is read, so \
+                                      one refused EHR refuses the whole \
+                                      export.",
+         body = serde_json::Value),
         (status = 404, description = "An entity's `ehr_id`/`subject_id` \
                                       resolves to no EHR, or an \
                                       `item_list` entry names no version \
@@ -171,6 +179,11 @@ pub(crate) async fn message_export_ehrs(
          body = serde_json::Value),
         (status = 415, description = "The request `Content-Type` is neither \
                                       `application/json` nor `application/xml`.",
+         body = serde_json::Value),
+        (status = 500, description = "The `EHR_ACCESS` settings of an EHR the \
+                                      manifest names cannot be read, so the \
+                                      EHR is held closed and the export is \
+                                      refused.",
          body = serde_json::Value)
     )
 )]
@@ -322,6 +335,10 @@ async fn run(
         }
         "message_export_ehr_extracts" => {
             let spec = negotiate::decode::rm_value::<ExtractSpec>(h, &parts.body)?;
+            let ehr_ids = state.backend().manifest_ehr_ids(&spec).await?;
+            if let Err(refusal) = ehr_access::enforce_each(&state, &ehr_ids).await {
+                return Ok(*refusal);
+            }
             let extracts = state.backend().export_ehr_extracts(spec).await?;
             Ok(negotiate::body::respond(h, StatusCode::OK, &extracts))
         }
