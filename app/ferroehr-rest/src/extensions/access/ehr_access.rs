@@ -16,7 +16,7 @@
 //!
 //! There are three evaluation points: the per-EHR gate on every authenticated
 //! request to an `/ehr/{ehr_id}`-scoped route and on every EHR a manifest
-//! export names ([`enforce_each`]) (`master07` access list), the
+//! export names (`enforce_each`) (`master07` access list), the
 //! composition privacy ceiling on Composition reads (`master07` privacy levels),
 //! and the gate-keeper preflight on CONTRIBUTION commits carrying an
 //! `EHR_ACCESS` version (`master07` gate-keeper; RM ehr
