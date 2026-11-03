@@ -12,11 +12,10 @@
               operational JSON, not RM content"
 )]
 
-use axum::extract::Request;
 use axum::response::Response;
 use openehr_its::rest::runtime::ApiError;
 
-use crate::api::{RequestParts, guarded_dispatch};
+use crate::api::RequestParts;
 use crate::overview::error::RestError;
 use crate::state::AppState;
 
@@ -59,24 +58,6 @@ pub(super) fn required_query(parts: &RequestParts, name: &str) -> Result<String,
             "the `{name}` query parameter is required"
         )))
     })
-}
-
-/// Run `op` of an admin register route through the uniform per-request stack.
-pub(super) async fn handle<H, F>(
-    state: AppState,
-    request: Request,
-    op: &'static str,
-    handler: H,
-) -> Response
-where
-    H: FnOnce(AppState, RequestParts) -> F + Send,
-    F: Future<Output = Result<Response, RestError>> + Send,
-{
-    let parts = match crate::api::read_request::into_parts(request).await {
-        Ok(parts) => parts,
-        Err(unreadable) => return axum::response::IntoResponse::into_response(unreadable),
-    };
-    guarded_dispatch(state, op, parts, handler).await
 }
 
 /// One admin register operation behind the admin group gate.

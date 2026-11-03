@@ -25,7 +25,6 @@
               operational JSON, not RM content"
 )]
 
-use axum::extract::{Request, State};
 use axum::response::Response;
 use http::StatusCode;
 use openehr_its::rest::runtime::ApiError;
@@ -34,6 +33,7 @@ use utoipa_axum::routes;
 
 use super::body::{AdminRefusal, RegisterReadRefusal, optional_str, required_query, required_str};
 use crate::api::RequestParts;
+use crate::api::guarded_handler;
 use crate::negotiate;
 use crate::overview::error::RestError;
 use crate::overview::version_id::parse_ehr_id;
@@ -47,111 +47,89 @@ pub(crate) fn opt_out_routes() -> OpenApiRouter<AppState> {
         .routes(routes!(admin_reverse_access_opt_out))
 }
 
-/// Record the person's opt-out from access through the access services
-/// (`POST /admin/access-opt-out`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module docs).
-#[utoipa::path(
-    post, path = "/admin/access-opt-out", tag = "admin-marks",
-    request_body(content = serde_json::Value,
-                 description = "`{ \"ehr_id\": …, \"note\": …? }`, recorded on the \
-                                person's instruction (EHDS Art. 10(1)). The \
-                                opt-out covers the whole EHR.",
-                 example = json!({
-                     "ehr_id": "7d44b88c-4199-4bad-97dc-d78268e01398",
-                     "note": "opt-out received through the national access service on 2026-11-01"
-                 })),
-    responses(
-        (status = 204, description = "The opt-out is recorded. A caller holding \
-                                      one of `authz.rbac.access_service_roles` \
-                                      then reads the EHR as absent at every \
-                                      route, query and export, unless it \
-                                      declares an emergency purpose and acts \
-                                      for no person (EHDS Art. 10(2)); every \
-                                      other caller reads it as before."),
-        (status = 400, description = "The body is not the object above, or the \
-                                      deployment declares no access-service \
-                                      caller (`authz.rbac.access_service_roles` \
-                                      is empty).",
-         body = serde_json::Value),
-        (status = 404, description = "No such EHR; nothing is recorded.",
-         body = serde_json::Value),
-        (status = 415, description = "The body is not `application/json`.",
-         body = serde_json::Value),
-        AdminRefusal
-    )
-)]
-pub(crate) async fn admin_access_opt_out(
-    State(state): State<AppState>,
-    request: Request,
-) -> Response {
-    super::body::handle(state, request, "admin_access_opt_out", |state, parts| {
-        super::body::gated(state, parts, opt_out)
-    })
-    .await
+guarded_handler! {
+    /// Record the person's opt-out from access through the access services
+    /// (`POST /admin/access-opt-out`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module docs).
+    #[utoipa::path(
+        post, path = "/admin/access-opt-out", tag = "admin-marks",
+        request_body(content = serde_json::Value,
+                     description = "`{ \"ehr_id\": …, \"note\": …? }`, recorded on the \
+                                    person's instruction (EHDS Art. 10(1)). The \
+                                    opt-out covers the whole EHR.",
+                     example = json!({
+                         "ehr_id": "7d44b88c-4199-4bad-97dc-d78268e01398",
+                         "note": "opt-out received through the national access service on 2026-11-01"
+                     })),
+        responses(
+            (status = 204, description = "The opt-out is recorded. A caller holding \
+                                          one of `authz.rbac.access_service_roles` \
+                                          then reads the EHR as absent at every \
+                                          route, query and export, unless it \
+                                          declares an emergency purpose and acts \
+                                          for no person (EHDS Art. 10(2)); every \
+                                          other caller reads it as before."),
+            (status = 400, description = "The body is not the object above, or the \
+                                          deployment declares no access-service \
+                                          caller (`authz.rbac.access_service_roles` \
+                                          is empty).",
+             body = serde_json::Value),
+            (status = 404, description = "No such EHR; nothing is recorded.",
+             body = serde_json::Value),
+            (status = 415, description = "The body is not `application/json`.",
+             body = serde_json::Value),
+            AdminRefusal
+        )
+    )]
+    admin_access_opt_out => |state, parts| {
+            super::body::gated(state, parts, opt_out)
+        }
 }
 
-/// Read one EHR's opt-out register (`GET /admin/access-opt-out`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module docs).
-#[utoipa::path(
-    get, path = "/admin/access-opt-out", tag = "admin-marks",
-    params(("ehr_id" = String, Query, description = "The EHR whose register to read.")),
-    responses(
-        (status = 200, description = "The register rows, newest first; a \
-                                      reversal is a row with `reversed_at` set.",
-         body = serde_json::Value),
-        RegisterReadRefusal,
-        AdminRefusal
-    )
-)]
-pub(crate) async fn admin_access_opt_out_register(
-    State(state): State<AppState>,
-    request: Request,
-) -> Response {
-    super::body::handle(
-        state,
-        request,
-        "admin_access_opt_out_register",
-        |state, parts| super::body::gated(state, parts, register),
-    )
-    .await
+guarded_handler! {
+    /// Read one EHR's opt-out register (`GET /admin/access-opt-out`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module docs).
+    #[utoipa::path(
+        get, path = "/admin/access-opt-out", tag = "admin-marks",
+        params(("ehr_id" = String, Query, description = "The EHR whose register to read.")),
+        responses(
+            (status = 200, description = "The register rows, newest first; a \
+                                          reversal is a row with `reversed_at` set.",
+             body = serde_json::Value),
+            RegisterReadRefusal,
+            AdminRefusal
+        )
+    )]
+    admin_access_opt_out_register => |state, parts| super::body::gated(state, parts, register)
 }
 
-/// Reverse the person's opt-out (`POST /admin/access-opt-out/reverse`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module docs).
-#[utoipa::path(
-    post, path = "/admin/access-opt-out/reverse", tag = "admin-marks",
-    request_body(content = serde_json::Value,
-                 description = "`{ \"ehr_id\": … }`, on the person's instruction \
-                                (EHDS Art. 10(1): the exercise of the right is \
-                                reversible).",
-                 example = json!({ "ehr_id": "7d44b88c-4199-4bad-97dc-d78268e01398" })),
-    responses(
-        (status = 204, description = "Every opt-out that stood carries a \
-                                      reversal instant, and the access services \
-                                      read the EHR again. Reversing nothing \
-                                      succeeds."),
-        (status = 400, description = "The body does not name the EHR.",
-         body = serde_json::Value),
-        (status = 404, description = "No such EHR.", body = serde_json::Value),
-        (status = 415, description = "The body is not `application/json`.",
-         body = serde_json::Value),
-        AdminRefusal
-    )
-)]
-pub(crate) async fn admin_reverse_access_opt_out(
-    State(state): State<AppState>,
-    request: Request,
-) -> Response {
-    super::body::handle(
-        state,
-        request,
-        "admin_reverse_access_opt_out",
-        |state, parts| super::body::gated(state, parts, reverse),
-    )
-    .await
+guarded_handler! {
+    /// Reverse the person's opt-out (`POST /admin/access-opt-out/reverse`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module docs).
+    #[utoipa::path(
+        post, path = "/admin/access-opt-out/reverse", tag = "admin-marks",
+        request_body(content = serde_json::Value,
+                     description = "`{ \"ehr_id\": … }`, on the person's instruction \
+                                    (EHDS Art. 10(1): the exercise of the right is \
+                                    reversible).",
+                     example = json!({ "ehr_id": "7d44b88c-4199-4bad-97dc-d78268e01398" })),
+        responses(
+            (status = 204, description = "Every opt-out that stood carries a \
+                                          reversal instant, and the access services \
+                                          read the EHR again. Reversing nothing \
+                                          succeeds."),
+            (status = 400, description = "The body does not name the EHR.",
+             body = serde_json::Value),
+            (status = 404, description = "No such EHR.", body = serde_json::Value),
+            (status = 415, description = "The body is not `application/json`.",
+             body = serde_json::Value),
+            AdminRefusal
+        )
+    )]
+    admin_reverse_access_opt_out => |state, parts| super::body::gated(state, parts, reverse)
 }
 
 /// The `admin_access_opt_out_register` operation.
