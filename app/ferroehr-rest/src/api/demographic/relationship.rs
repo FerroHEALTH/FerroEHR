@@ -52,9 +52,7 @@ use ferroehr::versioning::object_version_id::parse_uid_based_id;
 /// (see the module docs).
 ///
 /// Paths are group-relative, and every operation runs through
-/// [`guarded_dispatch`] with the demographic group
-/// [`dispatch`](super::dispatch::dispatch), which routes relationship ops back
-/// into [`run`].
+/// [`guarded_dispatch`] onto its operation's handler in this module.
 pub(crate) fn relationship_routes() -> OpenApiRouter<AppState> {
     // One `routes!` per PATH (the macro composes one method-router — handlers
     // in a single call must share the path; mixing paths panics at build with
@@ -69,8 +67,8 @@ pub(crate) fn relationship_routes() -> OpenApiRouter<AppState> {
 }
 
 // ── Handlers (our own wire; no ITS-REST operation governs these) ──────────────
-// Each snapshots the request and runs it through the demographic group
-// dispatcher (`super::dispatch::dispatch`), which routes relationship ops into [`run`].
+// Each snapshots the request and runs it through `guarded_dispatch` onto its
+// operation's handler below.
 
 /// Create a `PARTY_RELATIONSHIP` (`POST /demographic/party_relationship`).
 ///
@@ -258,13 +256,7 @@ pub(crate) async fn party_relationship_create(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "party_relationship_create",
-        parts,
-        super::dispatch::dispatch,
-    )
-    .await
+    guarded_dispatch(state, "party_relationship_create", parts, create).await
 }
 
 /// Retrieve a `PARTY_RELATIONSHIP` by uid-based id
@@ -378,13 +370,7 @@ pub(crate) async fn party_relationship_get(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "party_relationship_get",
-        parts,
-        super::dispatch::dispatch,
-    )
-    .await
+    guarded_dispatch(state, "party_relationship_get", parts, get).await
 }
 
 /// Update a `PARTY_RELATIONSHIP`
@@ -577,13 +563,7 @@ pub(crate) async fn party_relationship_update(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "party_relationship_update",
-        parts,
-        super::dispatch::dispatch,
-    )
-    .await
+    guarded_dispatch(state, "party_relationship_update", parts, update).await
 }
 
 /// Delete a `PARTY_RELATIONSHIP`
@@ -703,162 +683,158 @@ pub(crate) async fn party_relationship_delete(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "party_relationship_delete",
-        parts,
-        super::dispatch::dispatch,
-    )
-    .await
+    guarded_dispatch(state, "party_relationship_delete", parts, delete).await
 }
 
 /// `PARTY_RELATIONSHIP` operations — same envelope/header rules as the party
 /// routes, one fixed `party_relationship` segment (our own wire; no ITS-REST
 /// operation governs it — see the module docs).
-#[expect(
-    clippy::too_many_lines,
-    reason = "one arm per PARTY_RELATIONSHIP operation, like `party::run`: a flat \
-              match keeps every operation's wire behaviour readable in one place"
-)]
-pub(super) async fn run(
-    state: AppState,
-    op: &'static str,
-    parts: RequestParts,
-) -> Result<Response, RestError> {
+/// The `party_relationship_create` operation.
+pub(crate) async fn create(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
     const SEG: &str = "party_relationship";
     let h = &parts.headers;
     // NOTE: our own design (#4330): PARTY_RELATIONSHIP is an extension, served beside the
     // openEHR base path, so its `Location` names the extensions root.
     let base = state.config().rest.extensions_path();
-
     // PARTY_RELATIONSHIP is not templated → no Simplified-Formats mapping;
     // reject a simplified Content-Type/Accept uniformly.
     crate::formats::dispatch::guard_non_templated(h)?;
+    let _p = parts.decode(AgentCreateParams::from_request, AgentCreateParams::PARAMS)?;
+    let body = negotiate::decode::rm_value::<PartyRelationship>(h, &parts.body)?;
+    let resp = state
+        .backend()
+        .party_relationship_create(crate::overview::committal::write_request(
+            h,
+            ferroehr::versioning::committer::request_committer(),
+            body,
+            None,
+        )?)
+        .await?;
+    Ok(write_relationship(
+        h,
+        &base,
+        SEG,
+        StatusCode::CREATED,
+        StatusCode::CREATED,
+        &resp,
+    ))
+}
 
-    match op {
-        "party_relationship_create" => {
-            let _p = parts.decode(AgentCreateParams::from_request, AgentCreateParams::PARAMS)?;
-            let body = negotiate::decode::rm_value::<PartyRelationship>(h, &parts.body)?;
-            let resp = state
+/// The `party_relationship_get` operation.
+pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    // PARTY_RELATIONSHIP is not templated → no Simplified-Formats mapping;
+    // reject a simplified Content-Type/Accept uniformly.
+    crate::formats::dispatch::guard_non_templated(h)?;
+    let p = parts.decode(AgentGetParams::from_request, AgentGetParams::PARAMS)?;
+    let resp = state
+        .backend()
+        .party_relationship_get(parse_uid_based_id(&p.uid_based_id)?, p.version_at_time)
+        .await?;
+    if resp.is_empty() {
+        return Ok(negotiate::body::empty(StatusCode::NO_CONTENT));
+    }
+    Ok(read_relationship(h, &resp))
+}
+
+/// The `party_relationship_update` operation.
+pub(crate) async fn update(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+    const SEG: &str = "party_relationship";
+    let h = &parts.headers;
+    // NOTE: our own design (#4330): PARTY_RELATIONSHIP is an extension, served beside the
+    // openEHR base path, so its `Location` names the extensions root.
+    let base = state.config().rest.extensions_path();
+    // PARTY_RELATIONSHIP is not templated → no Simplified-Formats mapping;
+    // reject a simplified Content-Type/Accept uniformly.
+    crate::formats::dispatch::guard_non_templated(h)?;
+    let p = parts.decode(AgentUpdateParams::from_request, AgentUpdateParams::PARAMS)?;
+    let body = negotiate::decode::rm_value::<PartyRelationship>(h, &parts.body)?;
+    let request = crate::overview::committal::write_request(
+        h,
+        ferroehr::versioning::committer::request_committer(),
+        body,
+        None,
+    )?;
+    let (vo_id, precondition) = super::update_target(&p.uid_based_id, &p.if_match)?;
+    match state
+        .backend()
+        .party_relationship_update(vo_id, precondition, request)
+        .await
+    {
+        Ok(resp) => Ok(write_relationship(
+            h,
+            &base,
+            SEG,
+            StatusCode::NO_CONTENT,
+            StatusCode::OK,
+            &resp,
+        )),
+        Err(e) if super::is_precondition(&e) => {
+            let meta = state
                 .backend()
-                .party_relationship_create(crate::overview::committal::write_request(
-                    h,
-                    ferroehr::versioning::committer::request_committer(),
-                    body,
-                    None,
-                )?)
-                .await?;
-            Ok(write_relationship(
-                h,
-                &base,
-                SEG,
-                StatusCode::CREATED,
-                StatusCode::CREATED,
-                &resp,
+                .party_relationship_latest_meta(vo_id)
+                .await
+                .ok()
+                .flatten();
+            Ok(negotiate::resource::error_with_meta(
+                crate::overview::service_error::api_error(e),
+                meta.as_ref(),
+                Tree::Demographic,
             ))
         }
-        "party_relationship_get" => {
-            let p = parts.decode(AgentGetParams::from_request, AgentGetParams::PARAMS)?;
-            let resp = state
-                .backend()
-                .party_relationship_get(parse_uid_based_id(&p.uid_based_id)?, p.version_at_time)
-                .await?;
-            if resp.is_empty() {
-                return Ok(negotiate::body::empty(StatusCode::NO_CONTENT));
+        Err(e) => Err(RestError::from(e)),
+    }
+}
+
+/// The `party_relationship_delete` operation.
+///
+/// A stale `uid_based_id` answers `409` AND echoes the latest `version_uid` in
+/// `ETag`, matching the party delete this extension mirrors
+/// (`409_PERSON_with_uid_based_id.yaml`'s convention).
+pub(crate) async fn delete(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    // PARTY_RELATIONSHIP is not templated → no Simplified-Formats mapping;
+    // reject a simplified Content-Type/Accept uniformly.
+    crate::formats::dispatch::guard_non_templated(h)?;
+    let p = parts.decode(AgentGetParams::from_request, AgentGetParams::PARAMS)?;
+    let request = crate::overview::committal::delete_request(
+        h,
+        ferroehr::versioning::committer::request_committer(),
+        None,
+    )?;
+    // NOTE: no openEHR spec defines this route (our own extension); it takes the
+    // party delete operations' rule that the path is a version uid, so a container id is a 400.
+    let (vo_id, precondition) = super::delete_target(
+        &p.uid_based_id,
+        "PARTY_RELATIONSHIP",
+        crate::overview::version_id::if_match(h).as_deref(),
+    )?;
+    match state
+        .backend()
+        .party_relationship_delete(vo_id, precondition, request)
+        .await
+    {
+        Ok(resp) => {
+            let mut out = negotiate::body::empty(StatusCode::NO_CONTENT);
+            if let Some(meta) = resp.meta.as_ref() {
+                negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Demographic);
             }
-            Ok(read_relationship(h, &resp))
+            Ok(out)
         }
-        "party_relationship_update" => {
-            let p = parts.decode(AgentUpdateParams::from_request, AgentUpdateParams::PARAMS)?;
-            let body = negotiate::decode::rm_value::<PartyRelationship>(h, &parts.body)?;
-            let request = crate::overview::committal::write_request(
-                h,
-                ferroehr::versioning::committer::request_committer(),
-                body,
-                None,
-            )?;
-            let (vo_id, precondition) = super::update_target(&p.uid_based_id, &p.if_match)?;
-            match state
+        Err(e) if super::is_precondition(&e) => {
+            let meta = state
                 .backend()
-                .party_relationship_update(vo_id, precondition, request)
+                .party_relationship_latest_meta(vo_id)
                 .await
-            {
-                Ok(resp) => Ok(write_relationship(
-                    h,
-                    &base,
-                    SEG,
-                    StatusCode::NO_CONTENT,
-                    StatusCode::OK,
-                    &resp,
-                )),
-                Err(e) if super::is_precondition(&e) => {
-                    let meta = state
-                        .backend()
-                        .party_relationship_latest_meta(vo_id)
-                        .await
-                        .ok()
-                        .flatten();
-                    Ok(negotiate::resource::error_with_meta(
-                        crate::overview::service_error::api_error(e),
-                        meta.as_ref(),
-                        Tree::Demographic,
-                    ))
-                }
-                Err(e) => Err(RestError::from(e)),
-            }
+                .ok()
+                .flatten();
+            Ok(negotiate::resource::error_with_meta(
+                ApiError::Conflict(e.message()),
+                meta.as_ref(),
+                Tree::Demographic,
+            ))
         }
-        // A stale `uid_based_id` answers `409` AND echoes the latest
-        // `version_uid` in `ETag`, matching the party delete this extension
-        // mirrors (`409_PERSON_with_uid_based_id.yaml`'s convention).
-        "party_relationship_delete" => {
-            let p = parts.decode(AgentGetParams::from_request, AgentGetParams::PARAMS)?;
-            let request = crate::overview::committal::delete_request(
-                h,
-                ferroehr::versioning::committer::request_committer(),
-                None,
-            )?;
-            // NOTE: no openEHR spec defines this route (our own extension); it takes the
-            // party delete operations' rule that the path is a version uid, so a container id is a 400.
-            let (vo_id, precondition) = super::delete_target(
-                &p.uid_based_id,
-                "PARTY_RELATIONSHIP",
-                crate::overview::version_id::if_match(h).as_deref(),
-            )?;
-            match state
-                .backend()
-                .party_relationship_delete(vo_id, precondition, request)
-                .await
-            {
-                Ok(resp) => {
-                    let mut out = negotiate::body::empty(StatusCode::NO_CONTENT);
-                    if let Some(meta) = resp.meta.as_ref() {
-                        negotiate::resource::set_versioning_headers(
-                            &mut out,
-                            meta,
-                            Tree::Demographic,
-                        );
-                    }
-                    Ok(out)
-                }
-                Err(e) if super::is_precondition(&e) => {
-                    let meta = state
-                        .backend()
-                        .party_relationship_latest_meta(vo_id)
-                        .await
-                        .ok()
-                        .flatten();
-                    Ok(negotiate::resource::error_with_meta(
-                        ApiError::Conflict(e.message()),
-                        meta.as_ref(),
-                        Tree::Demographic,
-                    ))
-                }
-                Err(e) => Err(RestError::from(e)),
-            }
-        }
-        other => Err(RestError::from(ApiError::Internal(format!(
-            "unrouted demographic relationship operation: {other}"
-        )))),
+        Err(e) => Err(RestError::from(e)),
     }
 }
 

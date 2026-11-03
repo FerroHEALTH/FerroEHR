@@ -33,7 +33,7 @@
 )]
 
 use axum::extract::State;
-use axum::response::{IntoResponse, Response};
+use axum::response::Response;
 use http::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -43,7 +43,7 @@ use openehr_its::rest::runtime::ApiError;
 
 use super::body::{optional_str, required_query, required_str};
 use crate::api::refusals::JsonBodyRequired;
-use crate::api::{BoxResponse, RequestParts, guarded_dispatch};
+use crate::api::{RequestParts, guarded_dispatch};
 use crate::overview::error::RestError;
 use crate::overview::version_id::{parse_ehr_id, parse_vo_id};
 use crate::state::AppState;
@@ -111,7 +111,10 @@ pub(crate) async fn admin_restrict_processing(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_restrict_processing", parts, dispatch).await
+    guarded_dispatch(state, "admin_restrict_processing", parts, |state, parts| {
+        super::body::gated(state, parts, restrict_processing)
+    })
+    .await
 }
 
 /// Read one EHR's restriction register (`GET /admin/restriction`).
@@ -140,7 +143,13 @@ pub(crate) async fn admin_restriction_register(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_restriction_register", parts, dispatch).await
+    guarded_dispatch(
+        state,
+        "admin_restriction_register",
+        parts,
+        |state, parts| super::body::gated(state, parts, restriction_register),
+    )
+    .await
 }
 
 /// Lift a restriction (`POST /admin/restriction/lift`).
@@ -178,7 +187,10 @@ pub(crate) async fn admin_lift_restriction(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_lift_restriction", parts, dispatch).await
+    guarded_dispatch(state, "admin_lift_restriction", parts, |state, parts| {
+        super::body::gated(state, parts, lift_restriction)
+    })
+    .await
 }
 
 /// Record, override or withdraw the research objection
@@ -224,7 +236,10 @@ pub(crate) async fn admin_research_objection(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_research_objection", parts, dispatch).await
+    guarded_dispatch(state, "admin_research_objection", parts, |state, parts| {
+        super::body::gated(state, parts, research_objection)
+    })
+    .await
 }
 
 /// Read the retention register (`GET /admin/retention/policy`).
@@ -254,7 +269,10 @@ pub(crate) async fn admin_retention_policies(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_retention_policies", parts, dispatch).await
+    guarded_dispatch(state, "admin_retention_policies", parts, |state, parts| {
+        super::body::gated(state, parts, retention_policies)
+    })
+    .await
 }
 
 /// Declare a retention period (`PUT /admin/retention/policy`).
@@ -315,7 +333,13 @@ pub(crate) async fn admin_put_retention_policy(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_put_retention_policy", parts, dispatch).await
+    guarded_dispatch(
+        state,
+        "admin_put_retention_policy",
+        parts,
+        |state, parts| super::body::gated(state, parts, put_retention_policy),
+    )
+    .await
 }
 
 /// Record an EHR's retention anchor and any EHR-wide hold
@@ -357,7 +381,10 @@ pub(crate) async fn admin_retention_anchor(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_retention_anchor", parts, dispatch).await
+    guarded_dispatch(state, "admin_retention_anchor", parts, |state, parts| {
+        super::body::gated(state, parts, retention_anchor)
+    })
+    .await
 }
 
 /// Place or release a per-object retention hold
@@ -395,7 +422,10 @@ pub(crate) async fn admin_retention_hold(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_retention_hold", parts, dispatch).await
+    guarded_dispatch(state, "admin_retention_hold", parts, |state, parts| {
+        super::body::gated(state, parts, retention_hold)
+    })
+    .await
 }
 
 /// What has fallen due (`GET /admin/retention/due`).
@@ -434,221 +464,247 @@ pub(crate) async fn admin_retention_due(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_retention_due", parts, dispatch).await
-}
-
-// ── dispatch ─────────────────────────────────────────────────────────────────
-
-pub(crate) fn dispatch(state: AppState, op: &'static str, parts: RequestParts) -> BoxResponse {
-    Box::pin(async move {
-        run(state, op, parts)
-            .await
-            .unwrap_or_else(IntoResponse::into_response)
+    guarded_dispatch(state, "admin_retention_due", parts, |state, parts| {
+        super::body::gated(state, parts, retention_due)
     })
+    .await
 }
 
-#[expect(
-    clippy::too_many_lines,
-    reason = "one arm per operation, each three lines; splitting the table \
-              would hide that the routes share one gate and one body reader"
-)]
-async fn run(
+// ── operations ────────────────────────────────────────────────────────────────
+
+/// The `admin_restrict_processing` operation.
+pub(crate) async fn restrict_processing(
     state: AppState,
-    op: &'static str,
     parts: RequestParts,
 ) -> Result<Response, RestError> {
-    if let Some(refusal) = super::dispatch::admin_group_gate(&state) {
-        return Ok(refusal);
-    }
     let h = &parts.headers;
+    let body = negotiate::decode::json_value(h, &parts.body)?;
+    let ehr_id = required_str(&body, "ehr_id")?;
+    let vo_id = optional_str(&body, "vo_id")?;
+    let ground = required_str(&body, "ground")?;
+    let note = optional_str(&body, "note")?;
+    state
+        .backend()
+        .restrict_processing(
+            parse_ehr_id(ehr_id)?,
+            vo_id.map(parse_vo_id).transpose()?,
+            ground,
+            note,
+        )
+        .await?;
+    Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
+}
 
-    match op {
-        "admin_restrict_processing" => {
-            let body = negotiate::decode::json_value(h, &parts.body)?;
-            let ehr_id = required_str(&body, "ehr_id")?;
-            let vo_id = optional_str(&body, "vo_id")?;
-            let ground = required_str(&body, "ground")?;
-            let note = optional_str(&body, "note")?;
-            state
-                .backend()
-                .restrict_processing(
-                    parse_ehr_id(ehr_id)?,
-                    vo_id.map(parse_vo_id).transpose()?,
-                    ground,
-                    note,
-                )
-                .await?;
-            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
-        }
-        "admin_restriction_register" => {
-            let ehr_id = required_query(&parts, "ehr_id")?;
-            let rows = state
-                .backend()
-                .restriction_register(parse_ehr_id(&ehr_id)?)
-                .await?;
-            let body: Vec<serde_json::Value> = rows
-                .iter()
-                .map(|row| {
-                    serde_json::json!({
-                        "id": row.id,
-                        "ehr_id": row.ehr_id.to_string(),
-                        "vo_id": row.vo_id.map(|id| id.to_string()),
-                        "ground": row.ground,
-                        "requested_at": row.requested_at.to_string(),
-                        "lifted_at": row.lifted_at.map(|at| at.to_string()),
-                        "note": row.note,
-                    })
-                })
-                .collect();
-            Ok(negotiate::body::respond(
-                h,
-                StatusCode::OK,
-                &serde_json::json!({ "restrictions": body }),
+/// The `admin_restriction_register` operation.
+pub(crate) async fn restriction_register(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let ehr_id = required_query(&parts, "ehr_id")?;
+    let rows = state
+        .backend()
+        .restriction_register(parse_ehr_id(&ehr_id)?)
+        .await?;
+    let body: Vec<serde_json::Value> = rows
+        .iter()
+        .map(|row| {
+            serde_json::json!({
+                "id": row.id,
+                "ehr_id": row.ehr_id.to_string(),
+                "vo_id": row.vo_id.map(|id| id.to_string()),
+                "ground": row.ground,
+                "requested_at": row.requested_at.to_string(),
+                "lifted_at": row.lifted_at.map(|at| at.to_string()),
+                "note": row.note,
+            })
+        })
+        .collect();
+    Ok(negotiate::body::respond(
+        h,
+        StatusCode::OK,
+        &serde_json::json!({ "restrictions": body }),
+    ))
+}
+
+/// The `admin_lift_restriction` operation.
+pub(crate) async fn lift_restriction(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let body = negotiate::decode::json_value(h, &parts.body)?;
+    let ehr_id = required_str(&body, "ehr_id")?;
+    let vo_id = optional_str(&body, "vo_id")?;
+    state
+        .backend()
+        .lift_restriction(parse_ehr_id(ehr_id)?, vo_id.map(parse_vo_id).transpose()?)
+        .await?;
+    Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
+}
+
+/// The `admin_research_objection` operation.
+pub(crate) async fn research_objection(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let body = negotiate::decode::json_value(h, &parts.body)?;
+    let objected = body
+        .get("objected")
+        .and_then(serde_json::Value::as_bool)
+        .ok_or_else(|| {
+            RestError::from(ApiError::BadRequest(
+                "`objected` must be a boolean: true records the objection, false withdraws it"
+                    .to_owned(),
             ))
+        })?;
+    let ehr_id = required_str(&body, "ehr_id")?;
+    let ground = optional_str(&body, "ground")?;
+    state
+        .backend()
+        .set_research_objection(parse_ehr_id(ehr_id)?, objected, ground)
+        .await?;
+    Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
+}
+
+/// The `admin_retention_policies` operation.
+pub(crate) async fn retention_policies(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let rows = state.backend().retention_policies().await?;
+    let body: Vec<serde_json::Value> = rows
+        .iter()
+        .map(|row| {
+            serde_json::json!({
+                "kind": row.kind,
+                "jurisdiction": row.jurisdiction,
+                "period": row.period,
+                "anchor": row.anchor,
+                "source": row.source,
+                "category": row.category,
+                "origin": row.origin,
+            })
+        })
+        .collect();
+    Ok(negotiate::body::respond(
+        h,
+        StatusCode::OK,
+        &serde_json::json!({ "policies": body }),
+    ))
+}
+
+/// The `admin_put_retention_policy` operation.
+pub(crate) async fn put_retention_policy(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let body = negotiate::decode::json_value(h, &parts.body)?;
+    state
+        .backend()
+        .put_retention_policy(RetentionPeriod {
+            kind: required_str(&body, "kind")?,
+            jurisdiction: required_str(&body, "jurisdiction")?,
+            category: optional_str(&body, "category")?,
+            origin: optional_str(&body, "origin")?,
+            period: required_str(&body, "period")?,
+            anchor: required_str(&body, "anchor")?,
+            source: required_str(&body, "source")?,
+        })
+        .await?;
+    Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
+}
+
+/// The `admin_retention_anchor` operation.
+pub(crate) async fn retention_anchor(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let body = negotiate::decode::json_value(h, &parts.body)?;
+    let hold = match (
+        optional_str(&body, "hold_at")?,
+        optional_str(&body, "hold_ground")?,
+    ) {
+        (Some(at), Some(ground)) => Some((at, ground)),
+        (None, None) => None,
+        _ => {
+            return Err(RestError::from(ApiError::BadRequest(
+                "a retention hold needs both `hold_at` and `hold_ground`: a hold with \
+                     no stated reason is not a record of anything"
+                    .to_owned(),
+            )));
         }
-        "admin_lift_restriction" => {
-            let body = negotiate::decode::json_value(h, &parts.body)?;
-            let ehr_id = required_str(&body, "ehr_id")?;
-            let vo_id = optional_str(&body, "vo_id")?;
-            state
-                .backend()
-                .lift_restriction(parse_ehr_id(ehr_id)?, vo_id.map(parse_vo_id).transpose()?)
-                .await?;
-            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
-        }
-        "admin_research_objection" => {
-            let body = negotiate::decode::json_value(h, &parts.body)?;
-            let objected = body
-                .get("objected")
-                .and_then(serde_json::Value::as_bool)
-                .ok_or_else(|| {
-                    RestError::from(ApiError::BadRequest(
-                    "`objected` must be a boolean: true records the objection, false withdraws it"
-                        .to_owned(),
-                ))
-                })?;
-            let ehr_id = required_str(&body, "ehr_id")?;
-            let ground = optional_str(&body, "ground")?;
-            state
-                .backend()
-                .set_research_objection(parse_ehr_id(ehr_id)?, objected, ground)
-                .await?;
-            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
-        }
-        "admin_retention_policies" => {
-            let rows = state.backend().retention_policies().await?;
-            let body: Vec<serde_json::Value> = rows
-                .iter()
-                .map(|row| {
-                    serde_json::json!({
-                        "kind": row.kind,
-                        "jurisdiction": row.jurisdiction,
-                        "period": row.period,
-                        "anchor": row.anchor,
-                        "source": row.source,
-                        "category": row.category,
-                        "origin": row.origin,
-                    })
-                })
-                .collect();
-            Ok(negotiate::body::respond(
-                h,
-                StatusCode::OK,
-                &serde_json::json!({ "policies": body }),
+    };
+    let ehr_id = required_str(&body, "ehr_id")?;
+    let jurisdiction = required_str(&body, "jurisdiction")?;
+    let anchored_at = optional_str(&body, "anchored_at")?;
+    state
+        .backend()
+        .put_retention_anchor(parse_ehr_id(ehr_id)?, jurisdiction, anchored_at, hold)
+        .await?;
+    Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
+}
+
+/// The `admin_retention_hold` operation.
+pub(crate) async fn retention_hold(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let body = negotiate::decode::json_value(h, &parts.body)?;
+    let held = body
+        .get("held")
+        .and_then(serde_json::Value::as_bool)
+        .ok_or_else(|| {
+            RestError::from(ApiError::BadRequest(
+                "`held` must be a boolean: true places the hold, false releases it".to_owned(),
             ))
-        }
-        "admin_put_retention_policy" => {
-            let body = negotiate::decode::json_value(h, &parts.body)?;
-            state
-                .backend()
-                .put_retention_policy(RetentionPeriod {
-                    kind: required_str(&body, "kind")?,
-                    jurisdiction: required_str(&body, "jurisdiction")?,
-                    category: optional_str(&body, "category")?,
-                    origin: optional_str(&body, "origin")?,
-                    period: required_str(&body, "period")?,
-                    anchor: required_str(&body, "anchor")?,
-                    source: required_str(&body, "source")?,
-                })
-                .await?;
-            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
-        }
-        "admin_retention_anchor" => {
-            let body = negotiate::decode::json_value(h, &parts.body)?;
-            let hold = match (
-                optional_str(&body, "hold_at")?,
-                optional_str(&body, "hold_ground")?,
-            ) {
-                (Some(at), Some(ground)) => Some((at, ground)),
-                (None, None) => None,
-                _ => {
-                    return Err(RestError::from(ApiError::BadRequest(
-                        "a retention hold needs both `hold_at` and `hold_ground`: a hold with \
-                         no stated reason is not a record of anything"
-                            .to_owned(),
-                    )));
-                }
-            };
-            let ehr_id = required_str(&body, "ehr_id")?;
-            let jurisdiction = required_str(&body, "jurisdiction")?;
-            let anchored_at = optional_str(&body, "anchored_at")?;
-            state
-                .backend()
-                .put_retention_anchor(parse_ehr_id(ehr_id)?, jurisdiction, anchored_at, hold)
-                .await?;
-            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
-        }
-        "admin_retention_hold" => {
-            let body = negotiate::decode::json_value(h, &parts.body)?;
-            let held = body
-                .get("held")
-                .and_then(serde_json::Value::as_bool)
-                .ok_or_else(|| {
-                    RestError::from(ApiError::BadRequest(
-                        "`held` must be a boolean: true places the hold, false releases it"
-                            .to_owned(),
-                    ))
-                })?;
-            state
-                .backend()
-                .set_retention_hold(parse_vo_id(required_str(&body, "vo_id")?)?, held)
-                .await?;
-            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
-        }
-        "admin_retention_due" => {
-            let limit = match params::query_param(parts.query.as_deref(), "limit") {
-                Some(raw) => raw.parse::<i64>().map_err(|_e| {
-                    RestError::from(ApiError::BadRequest(format!(
-                        "`limit` must be a positive whole number, got {raw:?}"
-                    )))
-                })?,
-                None => 100,
-            };
-            let rows = state.backend().retention_due(limit).await?;
-            let body: Vec<serde_json::Value> = rows
-                .iter()
-                .map(|row| {
-                    serde_json::json!({
-                        "ehr_id": row.ehr_id.to_string(),
-                        "jurisdiction": row.jurisdiction,
-                        "kind": row.kind,
-                        "source": row.source,
-                        "due_at": row.due_at.to_string(),
-                        "objects_due": row.objects_due,
-                        "objects_held": row.objects_held,
-                        "category": row.category,
-                        "origin": row.origin,
-                    })
-                })
-                .collect();
-            Ok(negotiate::body::respond(
-                h,
-                StatusCode::OK,
-                &serde_json::json!({ "due": body }),
-            ))
-        }
-        other => Err(RestError::from(ApiError::Internal(format!(
-            "unrouted admin marks operation: {other}"
-        )))),
-    }
+        })?;
+    state
+        .backend()
+        .set_retention_hold(parse_vo_id(required_str(&body, "vo_id")?)?, held)
+        .await?;
+    Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
+}
+
+/// The `admin_retention_due` operation.
+pub(crate) async fn retention_due(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let limit = match params::query_param(parts.query.as_deref(), "limit") {
+        Some(raw) => raw.parse::<i64>().map_err(|_e| {
+            RestError::from(ApiError::BadRequest(format!(
+                "`limit` must be a positive whole number, got {raw:?}"
+            )))
+        })?,
+        None => 100,
+    };
+    let rows = state.backend().retention_due(limit).await?;
+    let body: Vec<serde_json::Value> = rows
+        .iter()
+        .map(|row| {
+            serde_json::json!({
+                "ehr_id": row.ehr_id.to_string(),
+                "jurisdiction": row.jurisdiction,
+                "kind": row.kind,
+                "source": row.source,
+                "due_at": row.due_at.to_string(),
+                "objects_due": row.objects_due,
+                "objects_held": row.objects_held,
+                "category": row.category,
+                "origin": row.origin,
+            })
+        })
+        .collect();
+    Ok(negotiate::body::respond(
+        h,
+        StatusCode::OK,
+        &serde_json::json!({ "due": body }),
+    ))
 }

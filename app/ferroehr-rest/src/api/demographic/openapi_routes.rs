@@ -7,8 +7,7 @@
 //! sub-resources (`demographic_tags_get` + the per-party `*_tags_*`).
 //!
 //! Each `#[utoipa::path]` handler single-sources its route and its `OpenAPI`
-//! path, then forwards to the demographic group dispatcher
-//! ([`super::dispatch::dispatch`]) through [`guarded_dispatch`], so the
+//! path, then calls its operation's handler through [`guarded_dispatch`], so the
 //! `EHR_ACCESS` gate, the ABAC PEP and the ATNA audit tagging apply uniformly.
 //!
 //! The Demographic API is `DEVELOPMENT`-state within ITS-REST Release-1.1.0
@@ -61,12 +60,11 @@ use utoipa_axum::routes;
 use crate::api::guarded_dispatch;
 use crate::api::refusals::SpecProfileConflict;
 use crate::state::AppState;
+use ferroehr::service::demographic::types::PartyKind;
 
 /// The standard Demographic API group as a native `utoipa-axum` router.
 ///
-/// Paths are group-relative, nested under the configured `base_path`, and every
-/// operation runs through [`guarded_dispatch`] with the demographic group
-/// [`dispatch`](super::dispatch::dispatch).
+/// Paths are group-relative, nested under the configured `base_path`.
 pub(crate) fn routes() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .routes(routes!(agent_create))
@@ -102,12 +100,6 @@ pub(crate) fn routes() -> OpenApiRouter<AppState> {
         .routes(routes!(role_tags_delete))
 }
 
-// ── Handlers ──────────────────────────────────────────────────────────────
-// Each snapshots the request into `RequestParts` (identical to the generated-
-// group `mount` adapter) and runs it through the demographic group dispatcher
-// (`super::dispatch::dispatch`), so the EHR_ACCESS gate, ABAC PEP, and ATNA audit tagging
-// apply uniformly.
-
 // ── PARTY kinds ─────────────────────────────────────────────────────────────
 
 /// Declares one PARTY kind's CRUD handlers (`{kind}_{create,get,update,delete}`)
@@ -123,7 +115,7 @@ pub(crate) fn routes() -> OpenApiRouter<AppState> {
 /// `#[utoipa::path]` takes only a string literal and no `concat!`.
 macro_rules! party_kind_handlers {
     (
-        kind: $lower:literal, $upper:literal, $schema:literal, $article:literal,
+        kind: $lower:literal, $upper:literal, $schema:literal, $article:literal, party: $party:ident,
         names: $name:literal, $renamed:literal,
         handlers: $create:ident, $get:ident, $update:ident, $delete:ident,
             $tags_get:ident, $tags_update:ident, $tags_delete:ident,
@@ -462,7 +454,8 @@ macro_rules! party_kind_handlers {
             request: axum::extract::Request,
         ) -> Response {
             let parts = crate::api::into_parts(request).await;
-            guarded_dispatch(state, stringify!($create), parts, super::dispatch::dispatch).await
+            let handler = |state, parts| super::party::create(state, PartyKind::$party, parts);
+            guarded_dispatch(state, stringify!($create), parts, handler).await
         }
 
         #[utoipa::path(
@@ -652,7 +645,8 @@ macro_rules! party_kind_handlers {
             request: axum::extract::Request,
         ) -> Response {
             let parts = crate::api::into_parts(request).await;
-            guarded_dispatch(state, stringify!($get), parts, super::dispatch::dispatch).await
+            let handler = |state, parts| super::party::get(state, PartyKind::$party, parts);
+            guarded_dispatch(state, stringify!($get), parts, handler).await
         }
 
         #[utoipa::path(
@@ -1020,7 +1014,8 @@ macro_rules! party_kind_handlers {
             request: axum::extract::Request,
         ) -> Response {
             let parts = crate::api::into_parts(request).await;
-            guarded_dispatch(state, stringify!($update), parts, super::dispatch::dispatch).await
+            let handler = |state, parts| super::party::update(state, PartyKind::$party, parts);
+            guarded_dispatch(state, stringify!($update), parts, handler).await
         }
 
         #[utoipa::path(
@@ -1180,7 +1175,8 @@ macro_rules! party_kind_handlers {
             request: axum::extract::Request,
         ) -> Response {
             let parts = crate::api::into_parts(request).await;
-            guarded_dispatch(state, stringify!($delete), parts, super::dispatch::dispatch).await
+            let handler = |state, parts| super::party::delete(state, PartyKind::$party, parts);
+            guarded_dispatch(state, stringify!($delete), parts, handler).await
         }
 
         #[utoipa::path(
@@ -1365,7 +1361,8 @@ macro_rules! party_kind_handlers {
             request: axum::extract::Request,
         ) -> Response {
             let parts = crate::api::into_parts(request).await;
-            guarded_dispatch(state, stringify!($tags_get), parts, super::dispatch::dispatch).await
+            let handler = |state, parts| super::tags::get(state, PartyKind::$party, parts);
+            guarded_dispatch(state, stringify!($tags_get), parts, handler).await
         }
 
         #[utoipa::path(
@@ -1686,7 +1683,8 @@ macro_rules! party_kind_handlers {
             request: axum::extract::Request,
         ) -> Response {
             let parts = crate::api::into_parts(request).await;
-            guarded_dispatch(state, stringify!($tags_update), parts, super::dispatch::dispatch).await
+            let handler = |state, parts| super::tags::update(state, PartyKind::$party, parts);
+            guarded_dispatch(state, stringify!($tags_update), parts, handler).await
         }
 
         #[utoipa::path(
@@ -1817,13 +1815,14 @@ macro_rules! party_kind_handlers {
             request: axum::extract::Request,
         ) -> Response {
             let parts = crate::api::into_parts(request).await;
-            guarded_dispatch(state, stringify!($tags_delete), parts, super::dispatch::dispatch).await
+            let handler = |state, parts| super::tags::delete(state, PartyKind::$party, parts);
+            guarded_dispatch(state, stringify!($tags_delete), parts, handler).await
         }
     };
 }
 
 party_kind_handlers! {
-    kind: "agent", "AGENT", "Agent", "an",
+    kind: "agent", "AGENT", "Agent", "an", party: Agent,
     names: "Triage Assistant v2", "Triage Assistant v3",
     handlers: agent_create, agent_get, agent_update, agent_delete,
         agent_tags_get, agent_tags_update, agent_tags_delete,
@@ -1895,7 +1894,7 @@ party_kind_handlers! {
 }
 
 party_kind_handlers! {
-    kind: "group", "GROUP", "Group", "a",
+    kind: "group", "GROUP", "Group", "a", party: Group,
     names: "Cardiology on-call rota", "Cardiology on-call rota (2026)",
     handlers: group_create, group_get, group_update, group_delete,
         group_tags_get, group_tags_update, group_tags_delete,
@@ -1967,7 +1966,7 @@ party_kind_handlers! {
 }
 
 party_kind_handlers! {
-    kind: "organisation", "ORGANISATION", "Organisation", "an",
+    kind: "organisation", "ORGANISATION", "Organisation", "an", party: Organisation,
     names: "St Elsewhere Hospital", "St Elsewhere Hospital NHS Trust",
     handlers: organisation_create, organisation_get, organisation_update, organisation_delete,
         organisation_tags_get, organisation_tags_update, organisation_tags_delete,
@@ -2040,7 +2039,7 @@ party_kind_handlers! {
 }
 
 party_kind_handlers! {
-    kind: "person", "PERSON", "Person", "a",
+    kind: "person", "PERSON", "Person", "a", party: Person,
     names: "Jane Doe", "Jane Doe (married name)",
     handlers: person_create, person_get, person_update, person_delete,
         person_tags_get, person_tags_update, person_tags_delete,
@@ -2112,7 +2111,7 @@ party_kind_handlers! {
 }
 
 party_kind_handlers! {
-    kind: "role", "ROLE", "Role", "a",
+    kind: "role", "ROLE", "Role", "a", party: Role,
     names: "General practitioner", "Senior general practitioner",
     handlers: role_create, role_get, role_update, role_delete,
         role_tags_get, role_tags_update, role_tags_delete,
@@ -2303,7 +2302,7 @@ pub(crate) async fn versioned_party_get(
         state,
         "versioned_party_get",
         parts,
-        super::dispatch::dispatch,
+        super::versioned_party::get,
     )
     .await
 }
@@ -2400,7 +2399,7 @@ pub(crate) async fn versioned_party_revision_history(
         state,
         "versioned_party_revision_history",
         parts,
-        super::dispatch::dispatch,
+        super::versioned_party::revision_history,
     )
     .await
 }
@@ -2504,7 +2503,7 @@ pub(crate) async fn versioned_party_version_get_at_time(
         state,
         "versioned_party_version_get_at_time",
         parts,
-        super::dispatch::dispatch,
+        super::versioned_party::version_get_at_time,
     )
     .await
 }
@@ -2611,7 +2610,7 @@ pub(crate) async fn versioned_party_version_get_by_id(
         state,
         "versioned_party_version_get_by_id",
         parts,
-        super::dispatch::dispatch,
+        super::versioned_party::version_get_by_id,
     )
     .await
 }
@@ -2958,7 +2957,7 @@ pub(crate) async fn contribution_create(
         state,
         "contribution_create",
         parts,
-        super::dispatch::dispatch,
+        super::contribution::create,
     )
     .await
 }
@@ -3087,7 +3086,7 @@ pub(crate) async fn contribution_get(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "contribution_get", parts, super::dispatch::dispatch).await
+    guarded_dispatch(state, "contribution_get", parts, super::contribution::get).await
 }
 // ── ITEM_TAG sub-resources ───────────────────────────────────────────────────
 // Sixteen released operations: five byte-identical typed quintets
@@ -3292,7 +3291,7 @@ pub(crate) async fn demographic_tags_get(
         state,
         "demographic_tags_get",
         parts,
-        super::dispatch::dispatch,
+        super::tags::collection,
     )
     .await
 }

@@ -5,7 +5,7 @@
 //! `docs/specs/openehr/ITS-REST/specifications/docs/query/` + the
 //! `query-*.openapi.yaml` OAS group (generated into `openehr_its::rest`).
 //!
-//! The `dispatch` module is the operation match implementing the generated
+//! The `execute` module is the frame every operation runs in, implementing the generated
 //! operation contract over the `ferroehr-sm` native API; it splits along the
 //! spec's query-type axis — `adhoc` (`/query/aql`) and `stored`
 //! (`/query/{qualified_query_name}[/{version}]`) — over shared request-decoding
@@ -17,7 +17,7 @@
 
 mod adhoc;
 mod cohort;
-pub(crate) mod dispatch;
+pub(crate) mod execute;
 pub(crate) mod openapi_routes;
 mod response;
 mod stored;

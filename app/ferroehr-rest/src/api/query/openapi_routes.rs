@@ -4,8 +4,8 @@
 //! Native `utoipa-axum` routing for the Query API group (ad-hoc + stored AQL).
 //!
 //! Operation semantics are the ITS-REST Query API (`docs/specs/openehr/ITS-REST`;
-//! AQL 1.1); no openEHR spec governs the OAS layout. Each handler forwards to the
-//! group dispatcher through [`guarded_dispatch`].
+//! AQL 1.1); no openEHR spec governs the OAS layout. Each handler runs its
+//! operation through [`guarded_dispatch`] in the frame of `query::execute`.
 //!
 //! The Query API is one of the few groups with dedicated released prose
 //! (`docs/query/Request.md`, `Response.md`, `Query_types.md`,
@@ -66,6 +66,7 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use crate::api::guarded_dispatch;
+use crate::api::query::execute::{Execution, serve};
 use crate::state::AppState;
 
 /// The Query API group as a native `utoipa-axum` router (group-relative paths).
@@ -381,12 +382,9 @@ pub(crate) async fn query_execute_adhoc_query(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "query_execute_adhoc_query",
-        parts,
-        super::dispatch::dispatch,
-    )
+    guarded_dispatch(state, "query_execute_adhoc_query", parts, |state, parts| {
+        serve(state, parts, Execution::Adhoc)
+    })
     .await
 }
 
@@ -648,7 +646,7 @@ pub(crate) async fn query_execute_adhoc_query_body(
         state,
         "query_execute_adhoc_query_body",
         parts,
-        super::dispatch::dispatch,
+        |state, parts| serve(state, parts, Execution::AdhocBody),
     )
     .await
 }
@@ -895,7 +893,7 @@ pub(crate) async fn query_execute_stored_query(
         state,
         "query_execute_stored_query",
         parts,
-        super::dispatch::dispatch,
+        |state, parts| serve(state, parts, Execution::Stored),
     )
     .await
 }
@@ -1174,7 +1172,7 @@ pub(crate) async fn query_execute_stored_query_body(
         state,
         "query_execute_stored_query_body",
         parts,
-        super::dispatch::dispatch,
+        |state, parts| serve(state, parts, Execution::StoredBody),
     )
     .await
 }
@@ -1430,7 +1428,7 @@ pub(crate) async fn query_execute_stored_query_version(
         state,
         "query_execute_stored_query_version",
         parts,
-        super::dispatch::dispatch,
+        |state, parts| serve(state, parts, Execution::StoredVersion),
     )
     .await
 }
@@ -1727,7 +1725,7 @@ pub(crate) async fn query_execute_stored_query_version_body(
         state,
         "query_execute_stored_query_version_body",
         parts,
-        super::dispatch::dispatch,
+        |state, parts| serve(state, parts, Execution::StoredVersionBody),
     )
     .await
 }
@@ -1843,12 +1841,9 @@ pub(crate) async fn query_execute_cohort(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "query_execute_cohort",
-        parts,
-        super::dispatch::dispatch,
-    )
+    guarded_dispatch(state, "query_execute_cohort", parts, |state, parts| {
+        serve(state, parts, Execution::Cohort)
+    })
     .await
 }
 

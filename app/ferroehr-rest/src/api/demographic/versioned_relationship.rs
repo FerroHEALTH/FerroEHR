@@ -20,7 +20,6 @@ use openehr_its::rest::generated::demographic::{
     VersionedPartyGetParams, VersionedPartyVersionGetAtTimeParams,
     VersionedPartyVersionGetByIdParams,
 };
-use openehr_its::rest::runtime::ApiError;
 
 use crate::api::{RequestParts, guarded_dispatch};
 use crate::negotiate;
@@ -32,15 +31,6 @@ use ferroehr::versioning::object_version_id::parse_version_uid;
 // The handlers' docs, which the served OpenAPI descriptions carry, link the create route.
 #[cfg(doc)]
 use super::relationship::party_relationship_create;
-
-/// The operation ids this module answers, which the demographic group
-/// dispatcher routes into [`run`].
-pub(super) const OPS: [&str; 4] = [
-    "versioned_party_relationship_get",
-    "party_relationship_revision_history",
-    "party_relationship_version_get_at_time",
-    "party_relationship_version_get_by_id",
-];
 
 /// The `VERSIONED_PARTY_RELATIONSHIP` read routes as a native `utoipa-axum`
 /// router, one `routes!` per path (see the module docs).
@@ -119,13 +109,7 @@ pub(crate) async fn versioned_party_relationship_get(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "versioned_party_relationship_get",
-        parts,
-        super::dispatch::dispatch,
-    )
-    .await
+    guarded_dispatch(state, "versioned_party_relationship_get", parts, get).await
 }
 
 /// Retrieve the relationship's `REVISION_HISTORY`
@@ -197,7 +181,7 @@ pub(crate) async fn party_relationship_revision_history(
         state,
         "party_relationship_revision_history",
         parts,
-        super::dispatch::dispatch,
+        revision_history,
     )
     .await
 }
@@ -275,7 +259,7 @@ pub(crate) async fn party_relationship_version_get_at_time(
         state,
         "party_relationship_version_get_at_time",
         parts,
-        super::dispatch::dispatch,
+        version_get_at_time,
     )
     .await
 }
@@ -352,82 +336,90 @@ pub(crate) async fn party_relationship_version_get_by_id(
         state,
         "party_relationship_version_get_by_id",
         parts,
-        super::dispatch::dispatch,
+        version_get_by_id,
     )
     .await
 }
 
-/// The `VERSIONED_PARTY_RELATIONSHIP` reads.
-pub(super) async fn run(
+/// The `versioned_party_relationship_get` operation.
+///
+/// The versioned reads carry the weak `ETag` (+ `Last-Modified` where the
+/// served body exposes a commit audit) the overview §"`ETag` and
+/// Last-Modified" asks of `VERSION` / `VERSIONED_OBJECT` responses, and no
+/// `Location` (§Location — creation/redirect only).
+pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let p = parts.decode(
+        VersionedPartyGetParams::from_request,
+        VersionedPartyGetParams::PARAMS,
+    )?;
+    let vo = p.versioned_object_uid.clone();
+    let resp = state
+        .backend()
+        .versioned_party_relationship_get(super::object_of(&vo)?)
+        .await?;
+    Ok(super::read_versioned(h, &vo, &resp.body))
+}
+
+/// The `party_relationship_revision_history` operation.
+pub(crate) async fn revision_history(
     state: AppState,
-    op: &'static str,
     parts: RequestParts,
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
-    match op {
-        // The versioned reads carry the weak `ETag` (+ `Last-Modified` where the
-        // served body exposes a commit audit) the overview §"`ETag` and
-        // Last-Modified" asks of VERSION / VERSIONED_OBJECT responses, and no
-        // `Location` (§Location — creation/redirect only).
-        "versioned_party_relationship_get" => {
-            let p = parts.decode(
-                VersionedPartyGetParams::from_request,
-                VersionedPartyGetParams::PARAMS,
-            )?;
-            let vo = p.versioned_object_uid.clone();
-            let resp = state
-                .backend()
-                .versioned_party_relationship_get(super::object_of(&vo)?)
-                .await?;
-            Ok(super::read_versioned(h, &vo, &resp.body))
-        }
-        "party_relationship_revision_history" => {
-            let p = parts.decode(
-                VersionedPartyGetParams::from_request,
-                VersionedPartyGetParams::PARAMS,
-            )?;
-            let vo = p.versioned_object_uid.clone();
-            let resp = state
-                .backend()
-                .party_relationship_revision_history(super::object_of(&vo)?)
-                .await?;
-            Ok(super::read_versioned(h, &vo, &resp.body))
-        }
-        "party_relationship_version_get_at_time" => {
-            let p = parts.decode(
-                VersionedPartyVersionGetAtTimeParams::from_request,
-                VersionedPartyVersionGetAtTimeParams::PARAMS,
-            )?;
-            let resp = state
-                .backend()
-                .party_relationship_version_get_at_time(
-                    super::object_of(&p.versioned_object_uid)?,
-                    p.version_at_time,
-                )
-                .await?;
-            let mut out = negotiate::body::respond(h, StatusCode::OK, &resp.body);
-            if let Some(meta) = resp.meta.as_ref() {
-                negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Demographic);
-            }
-            Ok(out)
-        }
-        "party_relationship_version_get_by_id" => {
-            let p = parts.decode(
-                VersionedPartyVersionGetByIdParams::from_request,
-                VersionedPartyVersionGetByIdParams::PARAMS,
-            )?;
-            let vo = p.versioned_object_uid.clone();
-            let resp = state
-                .backend()
-                .party_relationship_version_get_by_id(
-                    super::object_of(&vo)?,
-                    parse_version_uid(&p.version_uid)?.1,
-                )
-                .await?;
-            Ok(super::read_versioned(h, &vo, &resp.body))
-        }
-        other => Err(RestError::from(ApiError::Internal(format!(
-            "unrouted demographic relationship operation: {other}"
-        )))),
+    let p = parts.decode(
+        VersionedPartyGetParams::from_request,
+        VersionedPartyGetParams::PARAMS,
+    )?;
+    let vo = p.versioned_object_uid.clone();
+    let resp = state
+        .backend()
+        .party_relationship_revision_history(super::object_of(&vo)?)
+        .await?;
+    Ok(super::read_versioned(h, &vo, &resp.body))
+}
+
+/// The `party_relationship_version_get_at_time` operation.
+pub(crate) async fn version_get_at_time(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let p = parts.decode(
+        VersionedPartyVersionGetAtTimeParams::from_request,
+        VersionedPartyVersionGetAtTimeParams::PARAMS,
+    )?;
+    let resp = state
+        .backend()
+        .party_relationship_version_get_at_time(
+            super::object_of(&p.versioned_object_uid)?,
+            p.version_at_time,
+        )
+        .await?;
+    let mut out = negotiate::body::respond(h, StatusCode::OK, &resp.body);
+    if let Some(meta) = resp.meta.as_ref() {
+        negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Demographic);
     }
+    Ok(out)
+}
+
+/// The `party_relationship_version_get_by_id` operation.
+pub(crate) async fn version_get_by_id(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let p = parts.decode(
+        VersionedPartyVersionGetByIdParams::from_request,
+        VersionedPartyVersionGetByIdParams::PARAMS,
+    )?;
+    let vo = p.versioned_object_uid.clone();
+    let resp = state
+        .backend()
+        .party_relationship_version_get_by_id(
+            super::object_of(&vo)?,
+            parse_version_uid(&p.version_uid)?.1,
+        )
+        .await?;
+    Ok(super::read_versioned(h, &vo, &resp.body))
 }

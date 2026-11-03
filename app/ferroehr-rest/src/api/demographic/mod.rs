@@ -18,11 +18,11 @@
 //! own extension and are excluded from
 //! conformance-profile claims.
 //!
-//! The five per-kind operation families collapse by mapping the operation-id
-//! prefix to a [`PartyKind`] (`parse_party_op`), the generated per-kind
+//! The five per-kind operation families collapse into one handler per operation
+//! that takes its `PartyKind` from the route, the generated per-kind
 //! `*Params` structs being field-identical. The file layout mirrors the spec
-//! resources: `party`, `tags`, `versioned_party`, `contribution`,
-//! `relationship`, and `dispatch` as the operation-id match.
+//! resources: `party`, `tags`, `versioned_party`, `contribution` and
+//! `relationship`.
 
 #![expect(
     clippy::disallowed_types,
@@ -40,12 +40,10 @@ use crate::overview::negotiate::resource::{Tree, set_versioning_headers};
 use ferroehr::error::ServiceError;
 use ferroehr::ids::VoId;
 use ferroehr::service::demographic::precondition::Precondition;
-use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::response::{ResourceMeta, ServiceResponse};
 use ferroehr::versioning::object_version_id::parse_uid_based_id;
 
 mod contribution;
-pub(crate) mod dispatch;
 pub(crate) mod openapi_routes;
 mod party;
 pub(crate) mod relationship;
@@ -53,31 +51,10 @@ mod tags;
 mod versioned_party;
 pub(crate) mod versioned_relationship;
 
-// The two symbols `app/ferroehr-rest/src/api/mod.rs` mounts: the group
-// dispatcher (`demographic::dispatch`) and the native `utoipa-axum` router for
-// the own-design PARTY_RELATIONSHIP extension (`demographic::relationship_routes`,
-// which single-sources those routes + their OpenAPI paths and dispatches back
-// through the group dispatcher).
-
-/// Map an operation id to `(PartyKind, action)` where `action` is the suffix
-/// after the kind prefix (e.g. `person_tags_update` → `(Person, "tags_update")`).
-/// `None` for the kind-agnostic operations (`versioned_party_*`,
-/// `contribution_*`, `demographic_tags_get`).
-fn parse_party_op(op: &str) -> Option<(PartyKind, &str)> {
-    const KINDS: &[(&str, PartyKind)] = &[
-        ("agent", PartyKind::Agent),
-        ("group", PartyKind::Group),
-        ("organisation", PartyKind::Organisation),
-        ("person", PartyKind::Person),
-        ("role", PartyKind::Role),
-    ];
-    for (prefix, kind) in KINDS {
-        if let Some(rest) = op.strip_prefix(prefix).and_then(|r| r.strip_prefix('_')) {
-            return Some((*kind, rest));
-        }
-    }
-    None
-}
+// `app/ferroehr-rest/src/api/mod.rs` mounts the generated-contract routes of
+// `openapi_routes` and the native `utoipa-axum` router for the own-design
+// PARTY_RELATIONSHIP extension (`demographic::relationship_routes`); each route
+// calls its operation's handler directly.
 
 /// The versioned object a demographic `uid_based_id` or
 /// `versioned_object_uid` names, a `400` when malformed.

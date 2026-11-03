@@ -6,7 +6,7 @@
 //! Governing spec: `docs/specs/openehr/ITS-REST/specifications/docs/ehr/` and
 //! the `ehr-*.openapi.yaml` OAS group generated into `openehr_its::rest`.
 //!
-//! [`dispatch`] routes an operation id to one of seven resource modules, one per
+//! Each operation's handler lives in one of seven resource modules, one per
 //! spec resource boundary: [`ehr_resource`], [`ehr_status`],
 //! [`versioned_ehr_status`], [`composition`], [`versioned_composition`],
 //! [`directory`] and [`contribution`].
@@ -32,7 +32,6 @@ pub mod access_delay;
 pub mod composition;
 pub mod contribution;
 pub mod directory;
-pub mod dispatch;
 pub mod ehr_resource;
 pub mod ehr_status;
 pub mod openapi_routes;

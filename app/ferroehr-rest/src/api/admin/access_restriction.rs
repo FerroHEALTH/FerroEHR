@@ -21,7 +21,6 @@
 use axum::extract::{Request, State};
 use axum::response::Response;
 use http::StatusCode;
-use openehr_its::rest::runtime::ApiError;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -84,12 +83,9 @@ pub(crate) async fn admin_restrict_access(
     State(state): State<AppState>,
     request: Request,
 ) -> Response {
-    super::body::handle(
-        state,
-        request,
-        "admin_restrict_access",
-        super::body::dispatch::<AccessRestrictionRoutes>,
-    )
+    super::body::handle(state, request, "admin_restrict_access", |state, parts| {
+        super::body::gated(state, parts, restrict_access)
+    })
     .await
 }
 
@@ -121,7 +117,7 @@ pub(crate) async fn admin_access_restriction_register(
         state,
         request,
         "admin_access_restriction_register",
-        super::body::dispatch::<AccessRestrictionRoutes>,
+        |state, parts| super::body::gated(state, parts, register),
     )
     .await
 }
@@ -162,74 +158,66 @@ pub(crate) async fn admin_lift_access_restriction(
         state,
         request,
         "admin_lift_access_restriction",
-        super::body::dispatch::<AccessRestrictionRoutes>,
+        |state, parts| super::body::gated(state, parts, lift),
     )
     .await
 }
 
-/// The access-restriction routes' operations.
-struct AccessRestrictionRoutes;
+/// The `admin_restrict_access` operation.
+async fn restrict_access(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let body = negotiate::decode::json_value(h, &parts.body)?;
+    let ehr_id = required_str(&body, "ehr_id")?;
+    let vo_id = optional_str(&body, "vo_id")?;
+    let note = optional_str(&body, "note")?;
+    state
+        .backend()
+        .restrict_access(
+            parse_ehr_id(ehr_id)?,
+            vo_id.map(parse_vo_id).transpose()?,
+            note,
+        )
+        .await?;
+    Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
+}
 
-impl super::body::RegisterRoutes for AccessRestrictionRoutes {
-    async fn run(state: &AppState, op: &str, parts: &RequestParts) -> Result<Response, RestError> {
-        let h = &parts.headers;
-        match op {
-            "admin_restrict_access" => {
-                let body = negotiate::decode::json_value(h, &parts.body)?;
-                let ehr_id = required_str(&body, "ehr_id")?;
-                let vo_id = optional_str(&body, "vo_id")?;
-                let note = optional_str(&body, "note")?;
-                state
-                    .backend()
-                    .restrict_access(
-                        parse_ehr_id(ehr_id)?,
-                        vo_id.map(parse_vo_id).transpose()?,
-                        note,
-                    )
-                    .await?;
-                Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
-            }
-            "admin_access_restriction_register" => {
-                let ehr_id = required_query(parts, "ehr_id")?;
-                let rows = state
-                    .backend()
-                    .access_restriction_register(parse_ehr_id(&ehr_id)?)
-                    .await?;
-                let body: Vec<serde_json::Value> = rows
-                    .iter()
-                    .map(|row| {
-                        serde_json::json!({
-                            "id": row.id,
-                            "ehr_id": row.ehr_id.to_string(),
-                            "vo_id": row.vo_id.map(|id| id.to_string()),
-                            "requested_at": row.requested_at.to_string(),
-                            "lifted_at": row.lifted_at.map(|at| at.to_string()),
-                            "note": row.note,
-                        })
-                    })
-                    .collect();
-                Ok(negotiate::body::respond(
-                    h,
-                    StatusCode::OK,
-                    &serde_json::json!({ "access_restrictions": body }),
-                ))
-            }
-            "admin_lift_access_restriction" => {
-                let body = negotiate::decode::json_value(h, &parts.body)?;
-                let ehr_id = required_str(&body, "ehr_id")?;
-                let vo_id = optional_str(&body, "vo_id")?;
-                state
-                    .backend()
-                    .lift_access_restriction(
-                        parse_ehr_id(ehr_id)?,
-                        vo_id.map(parse_vo_id).transpose()?,
-                    )
-                    .await?;
-                Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
-            }
-            other => Err(RestError::from(ApiError::Internal(format!(
-                "unrouted admin access-restriction operation: {other}"
-            )))),
-        }
-    }
+/// The `admin_access_restriction_register` operation.
+async fn register(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let ehr_id = required_query(&parts, "ehr_id")?;
+    let rows = state
+        .backend()
+        .access_restriction_register(parse_ehr_id(&ehr_id)?)
+        .await?;
+    let body: Vec<serde_json::Value> = rows
+        .iter()
+        .map(|row| {
+            serde_json::json!({
+                "id": row.id,
+                "ehr_id": row.ehr_id.to_string(),
+                "vo_id": row.vo_id.map(|id| id.to_string()),
+                "requested_at": row.requested_at.to_string(),
+                "lifted_at": row.lifted_at.map(|at| at.to_string()),
+                "note": row.note,
+            })
+        })
+        .collect();
+    Ok(negotiate::body::respond(
+        h,
+        StatusCode::OK,
+        &serde_json::json!({ "access_restrictions": body }),
+    ))
+}
+
+/// The `admin_lift_access_restriction` operation.
+async fn lift(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let body = negotiate::decode::json_value(h, &parts.body)?;
+    let ehr_id = required_str(&body, "ehr_id")?;
+    let vo_id = optional_str(&body, "vo_id")?;
+    state
+        .backend()
+        .lift_access_restriction(parse_ehr_id(ehr_id)?, vo_id.map(parse_vo_id).transpose()?)
+        .await?;
+    Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
 }

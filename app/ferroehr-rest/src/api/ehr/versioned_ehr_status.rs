@@ -21,7 +21,6 @@ use openehr_its::rest::generated::ehr::{
     VersionedEhrStatusGetParams, VersionedEhrStatusRevisionHistoryParams,
     VersionedEhrStatusVersionGetAtTimeParams, VersionedEhrStatusVersionGetByIdParams,
 };
-use openehr_its::rest::runtime::ApiError;
 use openehr_rm::prelude::{EhrStatus, RevisionHistory, Version, VersionedEhrStatus};
 
 use crate::api::RequestParts;
@@ -31,85 +30,93 @@ use crate::overview::error::RestError;
 use crate::overview::version_id::{parse_ehr_id, parse_version_uid};
 use crate::state::AppState;
 
-pub(super) async fn run(
+/// The `versioned_ehr_status_get` operation.
+pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let p = parts.decode(
+        VersionedEhrStatusGetParams::from_request,
+        VersionedEhrStatusGetParams::PARAMS,
+    )?;
+    let ehr_id = parse_ehr_id(&p.ehr_id)?;
+    let resp = state.backend().versioned_ehr_status(ehr_id).await?;
+    Ok(negotiate::resource::read_rm::<VersionedEhrStatus>(
+        h,
+        &resp,
+        VERSIONED_EHR_STATUS_ROOT_TAG,
+    ))
+}
+
+/// The `versioned_ehr_status_revision_history` operation.
+pub(crate) async fn revision_history(
     state: AppState,
-    op: &'static str,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let p = parts.decode(
+        VersionedEhrStatusRevisionHistoryParams::from_request,
+        VersionedEhrStatusRevisionHistoryParams::PARAMS,
+    )?;
+    let ehr_id = parse_ehr_id(&p.ehr_id)?;
+    let resp = state.backend().ehr_status_revision_history(ehr_id).await?;
+    Ok(negotiate::resource::read_rm::<RevisionHistory>(
+        h,
+        &resp,
+        REVISION_HISTORY_ROOT_TAG,
+    ))
+}
+
+/// The `versioned_ehr_status_version_get_at_time` operation.
+pub(crate) async fn version_get_at_time(
+    state: AppState,
     parts: RequestParts,
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
     let q = parts.query.as_deref();
+    let p = parts.decode(
+        VersionedEhrStatusVersionGetAtTimeParams::from_request,
+        VersionedEhrStatusVersionGetAtTimeParams::PARAMS,
+    )?;
+    let ehr_id = parse_ehr_id(&p.ehr_id)?;
+    let mut resp = state
+        .backend()
+        .ehr_status_version_at_time(ehr_id, p.version_at_time)
+        .await?;
+    // The envelope carries the same externalized media the bare
+    // resource does, so it re-inlines on the same request.
+    resp.body = super::expand_multimedia_if_requested(&state, q, resp.body).await?;
+    Ok(negotiate::resource::read_rm::<Version<EhrStatus>>(
+        h,
+        &resp,
+        VERSION_ROOT_TAG,
+    ))
+}
 
-    match op {
-        "versioned_ehr_status_get" => {
-            let p = parts.decode(
-                VersionedEhrStatusGetParams::from_request,
-                VersionedEhrStatusGetParams::PARAMS,
-            )?;
-            let ehr_id = parse_ehr_id(&p.ehr_id)?;
-            let resp = state.backend().versioned_ehr_status(ehr_id).await?;
-            Ok(negotiate::resource::read_rm::<VersionedEhrStatus>(
-                h,
-                &resp,
-                VERSIONED_EHR_STATUS_ROOT_TAG,
-            ))
-        }
-        "versioned_ehr_status_revision_history" => {
-            let p = parts.decode(
-                VersionedEhrStatusRevisionHistoryParams::from_request,
-                VersionedEhrStatusRevisionHistoryParams::PARAMS,
-            )?;
-            let ehr_id = parse_ehr_id(&p.ehr_id)?;
-            let resp = state.backend().ehr_status_revision_history(ehr_id).await?;
-            Ok(negotiate::resource::read_rm::<RevisionHistory>(
-                h,
-                &resp,
-                REVISION_HISTORY_ROOT_TAG,
-            ))
-        }
-        "versioned_ehr_status_version_get_at_time" => {
-            let p = parts.decode(
-                VersionedEhrStatusVersionGetAtTimeParams::from_request,
-                VersionedEhrStatusVersionGetAtTimeParams::PARAMS,
-            )?;
-            let ehr_id = parse_ehr_id(&p.ehr_id)?;
-            let mut resp = state
-                .backend()
-                .ehr_status_version_at_time(ehr_id, p.version_at_time)
-                .await?;
-            // The envelope carries the same externalized media the bare
-            // resource does, so it re-inlines on the same request.
-            resp.body = super::expand_multimedia_if_requested(&state, q, resp.body).await?;
-            Ok(negotiate::resource::read_rm::<Version<EhrStatus>>(
-                h,
-                &resp,
-                VERSION_ROOT_TAG,
-            ))
-        }
-        "versioned_ehr_status_version_get_by_id" => {
-            let p = parts.decode(
-                VersionedEhrStatusVersionGetByIdParams::from_request,
-                VersionedEhrStatusVersionGetByIdParams::PARAMS,
-            )?;
-            let ehr_id = parse_ehr_id(&p.ehr_id)?;
-            let (vo_id, version) = super::version_components(&parse_version_uid(&p.version_uid)?)?;
-            let mut resp = state
-                .backend()
-                .ehr_status_version_envelope(ehr_id, ferroehr::ids::VoId(vo_id), &version)
-                .await?;
-            // Full-identity check as on the ehr_status by-version read
-            // (`Resources.md` §Identifier types; BASE master05 case rule).
-            super::ensure_served_version(&p.version_uid, &resp.body)?;
-            // The VERSION envelope carries the same externalized media the bare
-            // resource does, so it re-inlines on the same request.
-            resp.body = super::expand_multimedia_if_requested(&state, q, resp.body).await?;
-            Ok(negotiate::resource::read_rm::<Version<EhrStatus>>(
-                h,
-                &resp,
-                VERSION_ROOT_TAG,
-            ))
-        }
-        other => Err(RestError::from(ApiError::Internal(format!(
-            "unrouted ehr operation: {other}"
-        )))),
-    }
+/// The `versioned_ehr_status_version_get_by_id` operation.
+pub(crate) async fn version_get_by_id(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let q = parts.query.as_deref();
+    let p = parts.decode(
+        VersionedEhrStatusVersionGetByIdParams::from_request,
+        VersionedEhrStatusVersionGetByIdParams::PARAMS,
+    )?;
+    let ehr_id = parse_ehr_id(&p.ehr_id)?;
+    let (vo_id, version) = super::version_components(&parse_version_uid(&p.version_uid)?)?;
+    let mut resp = state
+        .backend()
+        .ehr_status_version_envelope(ehr_id, ferroehr::ids::VoId(vo_id), &version)
+        .await?;
+    // Full-identity check as on the ehr_status by-version read
+    // (`Resources.md` §Identifier types; BASE master05 case rule).
+    super::ensure_served_version(&p.version_uid, &resp.body)?;
+    // The VERSION envelope carries the same externalized media the bare
+    // resource does, so it re-inlines on the same request.
+    resp.body = super::expand_multimedia_if_requested(&state, q, resp.body).await?;
+    Ok(negotiate::resource::read_rm::<Version<EhrStatus>>(
+        h,
+        &resp,
+        VERSION_ROOT_TAG,
+    ))
 }

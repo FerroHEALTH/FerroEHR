@@ -4,8 +4,8 @@
 //! Native utoipa-axum routing for the EHR API group.
 //!
 //! No openEHR spec governs an OAS layout; the operation semantics are the
-//! ITS-REST EHR API (`docs/specs/openehr/ITS-REST`). Each handler forwards to
-//! the group dispatcher through `guarded_dispatch`.
+//! ITS-REST EHR API (`docs/specs/openehr/ITS-REST`). Each handler calls its
+//! operation's handler through `guarded_dispatch`.
 
 #![expect(
     clippy::disallowed_types,
@@ -26,8 +26,8 @@ use crate::state::AppState;
 /// `#[utoipa::path]` handler single-sourcing its route and its `OpenAPI` path.
 ///
 /// Paths are group-relative, nested under the configured `base_path`, and every
-/// operation is served through [`guarded_dispatch`] onto
-/// [`crate::api::ehr::dispatch::dispatch`].
+/// operation is served through [`guarded_dispatch`] by the handler of its
+/// resource module.
 pub(crate) fn routes() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .routes(routes!(ehr_get_by_subject, ehr_create))
@@ -71,7 +71,7 @@ pub(crate) fn extension_routes() -> OpenApiRouter<AppState> {
 }
 
 // Every handler snapshots the request into `RequestParts` and runs it through
-// the shared guarded dispatch onto the EHR-group dispatcher, so the EHR_ACCESS
+// the shared guarded dispatch onto its operation's handler, so the EHR_ACCESS
 // gate, the ABAC PEP and the ATNA audit tagging apply uniformly.
 
 // ── EHR ───────────────────────────────────────────────────────────────────────
@@ -170,7 +170,7 @@ pub(crate) async fn ehr_get_by_subject(
         state,
         "ehr_get_by_subject",
         parts,
-        crate::api::ehr::dispatch::dispatch,
+        super::ehr_resource::get_by_subject,
     )
     .await
 }
@@ -349,13 +349,7 @@ pub(crate) async fn ehr_create(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "ehr_create",
-        parts,
-        crate::api::ehr::dispatch::dispatch,
-    )
-    .await
+    guarded_dispatch(state, "ehr_create", parts, super::ehr_resource::create).await
 }
 
 /// Retrieve an EHR by id (`GET /ehr/{ehr_id}`).
@@ -426,7 +420,7 @@ pub(crate) async fn ehr_get_by_id(
         state,
         "ehr_get_by_id",
         parts,
-        crate::api::ehr::dispatch::dispatch,
+        super::ehr_resource::get_by_id,
     )
     .await
 }
@@ -619,7 +613,7 @@ pub(crate) async fn ehr_create_with_id(
         state,
         "ehr_create_with_id",
         parts,
-        crate::api::ehr::dispatch::dispatch,
+        super::ehr_resource::create_with_id,
     )
     .await
 }
@@ -735,7 +729,7 @@ pub(crate) async fn ehr_status_get_by_version_id(
         state,
         "ehr_status_get_by_version_id",
         parts,
-        crate::api::ehr::dispatch::dispatch,
+        super::ehr_status::get_by_version_id,
     )
     .await
 }
@@ -844,7 +838,7 @@ pub(crate) async fn ehr_status_get_at_time(
         state,
         "ehr_status_get_at_time",
         parts,
-        crate::api::ehr::dispatch::dispatch,
+        super::ehr_status::get_at_time,
     )
     .await
 }
@@ -1121,13 +1115,7 @@ pub(crate) async fn ehr_status_update(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "ehr_status_update",
-        parts,
-        crate::api::ehr::dispatch::dispatch,
-    )
-    .await
+    guarded_dispatch(state, "ehr_status_update", parts, super::ehr_status::update).await
 }
 
 // ── VERSIONED_EHR_STATUS ──────────────────────────────────────────────────────
@@ -1205,7 +1193,7 @@ pub(crate) async fn versioned_ehr_status_get(
         state,
         "versioned_ehr_status_get",
         parts,
-        crate::api::ehr::dispatch::dispatch,
+        super::versioned_ehr_status::get,
     )
     .await
 }
@@ -1317,7 +1305,7 @@ pub(crate) async fn versioned_ehr_status_revision_history(
         state,
         "versioned_ehr_status_revision_history",
         parts,
-        crate::api::ehr::dispatch::dispatch,
+        super::versioned_ehr_status::revision_history,
     )
     .await
 }
@@ -1475,7 +1463,7 @@ pub(crate) async fn versioned_ehr_status_version_get_at_time(
         state,
         "versioned_ehr_status_version_get_at_time",
         parts,
-        crate::api::ehr::dispatch::dispatch,
+        super::versioned_ehr_status::version_get_at_time,
     )
     .await
 }
@@ -1632,7 +1620,7 @@ pub(crate) async fn versioned_ehr_status_version_get_by_id(
         state,
         "versioned_ehr_status_version_get_by_id",
         parts,
-        crate::api::ehr::dispatch::dispatch,
+        super::versioned_ehr_status::version_get_by_id,
     )
     .await
 }
@@ -1995,7 +1983,7 @@ pub(crate) async fn composition_create(
         state,
         "composition_create",
         parts,
-        crate::api::ehr::dispatch::dispatch,
+        super::composition::create,
     )
     .await
 }
@@ -2218,13 +2206,7 @@ pub(crate) async fn composition_get(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "composition_get",
-        parts,
-        crate::api::ehr::dispatch::dispatch,
-    )
-    .await
+    guarded_dispatch(state, "composition_get", parts, super::composition::get).await
 }
 
 /// Update a COMPOSITION
@@ -2665,7 +2647,7 @@ pub(crate) async fn composition_update(
         state,
         "composition_update",
         parts,
-        crate::api::ehr::dispatch::dispatch,
+        super::composition::update,
     )
     .await
 }
@@ -2818,7 +2800,7 @@ pub(crate) async fn composition_delete(
         state,
         "composition_delete",
         parts,
-        crate::api::ehr::dispatch::dispatch,
+        super::composition::delete,
     )
     .await
 }
@@ -2919,7 +2901,7 @@ pub(crate) async fn versioned_composition_get(
         state,
         "versioned_composition_get",
         parts,
-        crate::api::ehr::dispatch::dispatch,
+        super::versioned_composition::get,
     )
     .await
 }
@@ -3046,7 +3028,7 @@ pub(crate) async fn versioned_composition_revision_history(
         state,
         "versioned_composition_revision_history",
         parts,
-        crate::api::ehr::dispatch::dispatch,
+        super::versioned_composition::revision_history,
     )
     .await
 }
@@ -3243,7 +3225,7 @@ pub(crate) async fn versioned_composition_version_get_at_time(
         state,
         "versioned_composition_version_get_at_time",
         parts,
-        crate::api::ehr::dispatch::dispatch,
+        super::versioned_composition::version_get_at_time,
     )
     .await
 }
@@ -3457,7 +3439,7 @@ pub(crate) async fn versioned_composition_version_get_by_id(
         state,
         "versioned_composition_version_get_by_id",
         parts,
-        crate::api::ehr::dispatch::dispatch,
+        super::versioned_composition::version_get_by_id,
     )
     .await
 }
@@ -3650,7 +3632,7 @@ pub(crate) async fn directory_get_at_time(
         state,
         "directory_get_at_time",
         parts,
-        crate::api::ehr::dispatch::dispatch,
+        super::directory::get_at_time,
     )
     .await
 }
@@ -4017,13 +3999,7 @@ pub(crate) async fn directory_update(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "directory_update",
-        parts,
-        crate::api::ehr::dispatch::dispatch,
-    )
-    .await
+    guarded_dispatch(state, "directory_update", parts, super::directory::update).await
 }
 
 /// Create the directory (FOLDER) (`POST /ehr/{ehr_id}/directory`).
@@ -4302,13 +4278,7 @@ pub(crate) async fn directory_create(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "directory_create",
-        parts,
-        crate::api::ehr::dispatch::dispatch,
-    )
-    .await
+    guarded_dispatch(state, "directory_create", parts, super::directory::create).await
 }
 
 /// Delete the directory (FOLDER) (`DELETE /ehr/{ehr_id}/directory`).
@@ -4495,13 +4465,7 @@ pub(crate) async fn directory_delete(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "directory_delete",
-        parts,
-        crate::api::ehr::dispatch::dispatch,
-    )
-    .await
+    guarded_dispatch(state, "directory_delete", parts, super::directory::delete).await
 }
 
 /// Retrieve the directory (FOLDER) by version id
@@ -4680,7 +4644,7 @@ pub(crate) async fn directory_get_by_version_id(
         state,
         "directory_get_by_version_id",
         parts,
-        crate::api::ehr::dispatch::dispatch,
+        super::directory::get_by_version_id,
     )
     .await
 }
@@ -5243,7 +5207,7 @@ pub(crate) async fn contribution_create(
         state,
         "contribution_create",
         parts,
-        crate::api::ehr::dispatch::dispatch,
+        super::contribution::create,
     )
     .await
 }
@@ -5334,13 +5298,7 @@ pub(crate) async fn contribution_list(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "contribution_list",
-        parts,
-        crate::api::ehr::dispatch::dispatch,
-    )
-    .await
+    guarded_dispatch(state, "contribution_list", parts, super::contribution::list).await
 }
 
 /// Retrieve a CONTRIBUTION
@@ -5538,13 +5496,7 @@ pub(crate) async fn contribution_get(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "contribution_get",
-        parts,
-        crate::api::ehr::dispatch::dispatch,
-    )
-    .await
+    guarded_dispatch(state, "contribution_get", parts, super::contribution::get).await
 }
 
 // ── Item tags ─────────────────────────────────────────────────────────────────
@@ -5686,13 +5638,7 @@ pub(crate) async fn ehr_tags_get(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "ehr_tags_get",
-        parts,
-        crate::api::ehr::dispatch::dispatch,
-    )
-    .await
+    guarded_dispatch(state, "ehr_tags_get", parts, super::ehr_resource::tags_get).await
 }
 
 /// Retrieve a COMPOSITION's item tags
@@ -5825,7 +5771,7 @@ pub(crate) async fn composition_tags_get(
         state,
         "composition_tags_get",
         parts,
-        crate::api::ehr::dispatch::dispatch,
+        super::composition::tags_get,
     )
     .await
 }
@@ -6077,7 +6023,7 @@ pub(crate) async fn composition_tags_update(
         state,
         "composition_tags_update",
         parts,
-        crate::api::ehr::dispatch::dispatch,
+        super::composition::tags_update,
     )
     .await
 }
@@ -6189,7 +6135,7 @@ pub(crate) async fn composition_tags_delete(
         state,
         "composition_tags_delete",
         parts,
-        crate::api::ehr::dispatch::dispatch,
+        super::composition::tags_delete,
     )
     .await
 }
@@ -6316,7 +6262,7 @@ pub(crate) async fn ehr_status_tags_get(
         state,
         "ehr_status_tags_get",
         parts,
-        crate::api::ehr::dispatch::dispatch,
+        super::ehr_status::tags_get,
     )
     .await
 }
@@ -6568,7 +6514,7 @@ pub(crate) async fn ehr_status_tags_update(
         state,
         "ehr_status_tags_update",
         parts,
-        crate::api::ehr::dispatch::dispatch,
+        super::ehr_status::tags_update,
     )
     .await
 }
@@ -6680,7 +6626,7 @@ pub(crate) async fn ehr_status_tags_delete(
         state,
         "ehr_status_tags_delete",
         parts,
-        crate::api::ehr::dispatch::dispatch,
+        super::ehr_status::tags_delete,
     )
     .await
 }

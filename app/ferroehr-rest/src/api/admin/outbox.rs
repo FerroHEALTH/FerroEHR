@@ -23,7 +23,7 @@
 )]
 
 use axum::extract::State;
-use axum::response::{IntoResponse, Response};
+use axum::response::Response;
 use http::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -31,7 +31,7 @@ use utoipa_axum::routes;
 use ferroehr::extensions::outbox::{FeedEvent, OutboxDomain};
 use openehr_its::rest::runtime::ApiError;
 
-use crate::api::{BoxResponse, RequestParts, guarded_dispatch};
+use crate::api::{RequestParts, guarded_dispatch};
 use crate::overview::error::RestError;
 use crate::state::AppState;
 use crate::{negotiate, params};
@@ -122,7 +122,7 @@ pub(crate) async fn admin_outbox_read(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, READ, parts, dispatch).await
+    guarded_dispatch(state, READ, parts, read).await
 }
 
 /// Acknowledge the events up to a `seq`, moving the reader's cursor
@@ -163,50 +163,40 @@ pub(crate) async fn admin_outbox_ack(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, ACK, parts, dispatch).await
+    guarded_dispatch(state, ACK, parts, ack).await
 }
 
-pub(crate) fn dispatch(state: AppState, op: &'static str, parts: RequestParts) -> BoxResponse {
-    Box::pin(async move {
-        run(state, op, parts)
-            .await
-            .unwrap_or_else(IntoResponse::into_response)
-    })
-}
-
-async fn run(
-    state: AppState,
-    op: &'static str,
-    parts: RequestParts,
-) -> Result<Response, RestError> {
+/// The `admin_outbox_read` operation.
+pub(crate) async fn read(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
     let reader = parts.path.get("reader").ok_or_else(|| {
         RestError::from(ApiError::Internal(
             "missing path parameter `reader`".to_owned(),
         ))
     })?;
     let domain = domain(parts.query.as_deref())?;
-    match op {
-        READ => {
-            let limit = limit(parts.query.as_deref())?;
-            let events = state.backend().outbox_events(domain, reader, limit).await?;
-            Ok(negotiate::body::respond(
-                &parts.headers,
-                StatusCode::OK,
-                &FeedPage { reader, events },
-            ))
-        }
-        ACK => {
-            let ack: Ack = negotiate::decode::typed_json(&parts.headers, &parts.body, "JSON body")?;
-            state
-                .backend()
-                .outbox_acknowledge(domain, reader, ack.last_seq)
-                .await?;
-            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
-        }
-        other => Err(RestError::from(ApiError::Internal(format!(
-            "unrouted outbox operation: {other}"
-        )))),
-    }
+    let limit = limit(parts.query.as_deref())?;
+    let events = state.backend().outbox_events(domain, reader, limit).await?;
+    Ok(negotiate::body::respond(
+        &parts.headers,
+        StatusCode::OK,
+        &FeedPage { reader, events },
+    ))
+}
+
+/// The `admin_outbox_ack` operation.
+pub(crate) async fn ack(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+    let reader = parts.path.get("reader").ok_or_else(|| {
+        RestError::from(ApiError::Internal(
+            "missing path parameter `reader`".to_owned(),
+        ))
+    })?;
+    let domain = domain(parts.query.as_deref())?;
+    let ack: Ack = negotiate::decode::typed_json(&parts.headers, &parts.body, "JSON body")?;
+    state
+        .backend()
+        .outbox_acknowledge(domain, reader, ack.last_seq)
+        .await?;
+    Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
 }
 
 /// The `domain` query parameter, the clinical outbox when absent.

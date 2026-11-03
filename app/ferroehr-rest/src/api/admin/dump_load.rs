@@ -40,7 +40,7 @@
 )]
 
 use axum::extract::State;
-use axum::response::{IntoResponse, Response};
+use axum::response::Response;
 use http::StatusCode;
 use serde_json::{Value, json};
 use utoipa_axum::router::OpenApiRouter;
@@ -54,15 +54,15 @@ use ferroehr::service::admin::types::{
 
 use super::body::{AdminDisabled, NotAdminClass};
 use crate::api::refusals::JsonBodyRequired;
-use crate::api::{BoxResponse, RequestParts, guarded_dispatch};
+use crate::api::{RequestParts, guarded_dispatch};
 use crate::negotiate;
 use crate::overview::error::RestError;
 use crate::state::AppState;
 
 /// The dump/load extension routes as a native `utoipa-axum` router — **no
 /// ITS-REST contract** (see the module docs). Group-relative paths (nested
-/// under the extensions root); every operation runs through [`guarded_dispatch`] with
-/// [`dispatch`].
+/// under the extensions root); every operation runs through [`guarded_dispatch`] onto
+/// its handler.
 pub(crate) fn dump_load_routes() -> OpenApiRouter<AppState> {
     // One `routes!` per PATH (handlers in a single call must share the path).
     OpenApiRouter::new()
@@ -132,7 +132,10 @@ pub(crate) async fn admin_dump(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_dump", parts, dispatch).await
+    guarded_dispatch(state, "admin_dump", parts, |state, parts| {
+        super::body::gated(state, parts, dump)
+    })
+    .await
 }
 
 /// Populate the repository from a file-system archive (`POST /admin/load`).
@@ -200,55 +203,37 @@ pub(crate) async fn admin_load(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_load", parts, dispatch).await
-}
-
-// ── dispatch ─────────────────────────────────────────────────────────────────
-
-pub(crate) fn dispatch(state: AppState, op: &'static str, parts: RequestParts) -> BoxResponse {
-    Box::pin(async move {
-        run(state, op, parts)
-            .await
-            .unwrap_or_else(IntoResponse::into_response)
+    guarded_dispatch(state, "admin_load", parts, |state, parts| {
+        super::body::gated(state, parts, load)
     })
+    .await
 }
 
-async fn run(
-    state: AppState,
-    op: &'static str,
-    parts: RequestParts,
-) -> Result<Response, RestError> {
-    // The whole ADMIN group is opt-in; the gate and its two grounds are stated
-    // once, in the group dispatcher.
-    if let Some(refusal) = super::dispatch::admin_group_gate(&state) {
-        return Ok(refusal);
-    }
+/// The `admin_dump` operation.
+pub(crate) async fn dump(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
     let body = negotiate::decode::json_value(h, &parts.body)?;
     let file_sys_loc = file_sys_loc(&body)?;
+    let spec = export_spec(&body)?;
+    let reports = state.backend().export_ehrs(file_sys_loc, spec).await?;
+    Ok(negotiate::body::respond(
+        h,
+        StatusCode::OK,
+        &fail_reports(&reports),
+    ))
+}
 
-    match op {
-        "admin_dump" => {
-            let spec = export_spec(&body)?;
-            let reports = state.backend().export_ehrs(file_sys_loc, spec).await?;
-            Ok(negotiate::body::respond(
-                h,
-                StatusCode::OK,
-                &fail_reports(&reports),
-            ))
-        }
-        "admin_load" => {
-            let reports = state.backend().load_ehrs(file_sys_loc).await?;
-            Ok(negotiate::body::respond(
-                h,
-                StatusCode::OK,
-                &fail_reports(&reports),
-            ))
-        }
-        other => Err(RestError::from(ApiError::Internal(format!(
-            "unrouted admin dump/load operation: {other}"
-        )))),
-    }
+/// The `admin_load` operation.
+pub(crate) async fn load(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let body = negotiate::decode::json_value(h, &parts.body)?;
+    let file_sys_loc = file_sys_loc(&body)?;
+    let reports = state.backend().load_ehrs(file_sys_loc).await?;
+    Ok(negotiate::body::respond(
+        h,
+        StatusCode::OK,
+        &fail_reports(&reports),
+    ))
 }
 
 /// Read the mandatory `file_sys_loc` that both operations take. An absent or

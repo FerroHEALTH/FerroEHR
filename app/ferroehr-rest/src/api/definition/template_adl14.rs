@@ -36,7 +36,7 @@ use crate::negotiate::prefer::AppliedPreference;
 use crate::overview::error::RestError;
 use crate::state::AppState;
 
-use super::dispatch::list_filter_and_page;
+use super::list_filter_and_page;
 
 /// The four `Accept_LOCATABLE` representations of a generated example
 /// COMPOSITION: canonical JSON/XML + FLAT/STRUCTURED.

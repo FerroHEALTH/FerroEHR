@@ -25,7 +25,7 @@
 //! code" — `docs/overview/Requests_and_responses.md` §"HTTP Methods").
 
 use axum::extract::State;
-use axum::response::{IntoResponse, Response};
+use axum::response::Response;
 use http::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -37,7 +37,7 @@ use ferroehr::service::platform_service::PlatformService;
 use ferroehr::storage::statistics::CompositionCount;
 
 use super::body::{AdminDisabled, AdminUnauthenticated, NotAdminClass};
-use crate::api::{BoxResponse, RequestParts, guarded_dispatch};
+use crate::api::{RequestParts, guarded_dispatch};
 use crate::overview::error::RestError;
 use crate::state::AppState;
 use crate::{negotiate, params};
@@ -45,7 +45,7 @@ use crate::{negotiate, params};
 /// The activity-report extension routes as a native `utoipa-axum` router —
 /// **no ITS-REST contract** (see the module docs). Group-relative paths
 /// (nested under the extensions root); every operation runs through
-/// [`guarded_dispatch`] with [`dispatch`].
+/// [`guarded_dispatch`] onto its handler.
 pub(crate) fn report_routes() -> OpenApiRouter<AppState> {
     // One `routes!` per PATH (handlers in a single call must share the path).
     OpenApiRouter::new()
@@ -108,7 +108,13 @@ pub(crate) async fn admin_report_contributions(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_report_contributions", parts, dispatch).await
+    guarded_dispatch(
+        state,
+        "admin_report_contributions",
+        parts,
+        |state, parts| super::body::gated(state, parts, contributions),
+    )
+    .await
 }
 
 /// Count the CONTRIBUTIONs of one platform service
@@ -163,7 +169,13 @@ pub(crate) async fn admin_report_contribution_count(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_report_contribution_count", parts, dispatch).await
+    guarded_dispatch(
+        state,
+        "admin_report_contribution_count",
+        parts,
+        |state, parts| super::body::gated(state, parts, contribution_count),
+    )
+    .await
 }
 
 /// Count the `VERSIONED_COMPOSITION`s of one platform service
@@ -224,7 +236,7 @@ pub(crate) async fn admin_report_versioned_composition_count(
         state,
         "admin_report_versioned_composition_count",
         parts,
-        dispatch,
+        |state, parts| super::body::gated(state, parts, versioned_composition_count),
     )
     .await
 }
@@ -286,69 +298,75 @@ pub(crate) async fn admin_report_composition_version_count(
         state,
         "admin_report_composition_version_count",
         parts,
-        dispatch,
+        |state, parts| super::body::gated(state, parts, composition_version_count),
     )
     .await
 }
 
-// ── dispatch ─────────────────────────────────────────────────────────────────
+// ── operations ────────────────────────────────────────────────────────────────
 
-pub(crate) fn dispatch(state: AppState, op: &'static str, parts: RequestParts) -> BoxResponse {
-    Box::pin(async move {
-        run(state, op, parts)
-            .await
-            .unwrap_or_else(IntoResponse::into_response)
-    })
-}
-
-async fn run(
+/// The `admin_report_contributions` operation.
+pub(crate) async fn contributions(
     state: AppState,
-    op: &'static str,
     parts: RequestParts,
 ) -> Result<Response, RestError> {
-    // The whole ADMIN group is opt-in; the gate and its two grounds are stated
-    // once, in the group dispatcher.
-    if let Some(refusal) = super::dispatch::admin_group_gate(&state) {
-        return Ok(refusal);
-    }
     let h = &parts.headers;
     let q = parts.query.as_deref();
     let a_service = platform_service(q)?;
     let range = time_interval(q)?;
+    let ids = state
+        .backend()
+        .admin_list_contributions(a_service, range)
+        .await?;
+    Ok(negotiate::body::respond(h, StatusCode::OK, &ids))
+}
 
-    match op {
-        "admin_report_contributions" => {
-            let ids = state
-                .backend()
-                .admin_list_contributions(a_service, range)
-                .await?;
-            Ok(negotiate::body::respond(h, StatusCode::OK, &ids))
-        }
-        "admin_report_contribution_count" => {
-            let count = state
-                .backend()
-                .admin_contribution_count(a_service, range)
-                .await?;
-            Ok(negotiate::body::respond(h, StatusCode::OK, &count))
-        }
-        "admin_report_versioned_composition_count" => {
-            let count = state
-                .backend()
-                .composition_count(a_service, range, CompositionCount::VersionedObjects)
-                .await?;
-            Ok(negotiate::body::respond(h, StatusCode::OK, &count))
-        }
-        "admin_report_composition_version_count" => {
-            let count = state
-                .backend()
-                .composition_count(a_service, range, CompositionCount::Versions)
-                .await?;
-            Ok(negotiate::body::respond(h, StatusCode::OK, &count))
-        }
-        other => Err(RestError::from(ApiError::Internal(format!(
-            "unrouted admin report operation: {other}"
-        )))),
-    }
+/// The `admin_report_contribution_count` operation.
+pub(crate) async fn contribution_count(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let q = parts.query.as_deref();
+    let a_service = platform_service(q)?;
+    let range = time_interval(q)?;
+    let count = state
+        .backend()
+        .admin_contribution_count(a_service, range)
+        .await?;
+    Ok(negotiate::body::respond(h, StatusCode::OK, &count))
+}
+
+/// The `admin_report_versioned_composition_count` operation.
+pub(crate) async fn versioned_composition_count(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let q = parts.query.as_deref();
+    let a_service = platform_service(q)?;
+    let range = time_interval(q)?;
+    let count = state
+        .backend()
+        .composition_count(a_service, range, CompositionCount::VersionedObjects)
+        .await?;
+    Ok(negotiate::body::respond(h, StatusCode::OK, &count))
+}
+
+/// The `admin_report_composition_version_count` operation.
+pub(crate) async fn composition_version_count(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let q = parts.query.as_deref();
+    let a_service = platform_service(q)?;
+    let range = time_interval(q)?;
+    let count = state
+        .backend()
+        .composition_count(a_service, range, CompositionCount::Versions)
+        .await?;
+    Ok(negotiate::body::respond(h, StatusCode::OK, &count))
 }
 
 /// Read the mandatory `a_service` query parameter as a [`PlatformService`];

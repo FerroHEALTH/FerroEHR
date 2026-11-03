@@ -5,7 +5,7 @@
 //! `docs/specs/openehr/ITS-REST/specifications/docs/admin/` + the
 //! `admin-*.openapi.yaml` OAS group (generated into `openehr_its::rest`).
 //!
-//! [`dispatch`] implements the generated operation contract over the
+//! `operations` implements the generated operation contract over the
 //! `ferroehr-sm` native API.
 //!
 //! Four further groups sit beside it under the same `/admin/` prefix and the
@@ -26,12 +26,12 @@ pub mod access_delay;
 pub mod access_restriction;
 pub mod archive;
 mod body;
-pub mod dispatch;
 pub mod dump_load;
 pub mod identifiers;
 pub mod integrity;
 pub mod marks;
 pub(crate) mod openapi_routes;
+pub(crate) mod operations;
 pub mod opt_out;
 pub mod outbox;
 pub mod report;
