@@ -39,9 +39,6 @@ pub struct LoginScreen {
     pub links: Vec<LoginLink>,
 }
 
-/// The shell root, and the destination every refused `next` falls back to.
-const DEFAULT_NEXT: &str = "/";
-
 /// Returns the post-login destination a `next` value is allowed to name.
 ///
 /// Only a page of this viewer is honoured, as
@@ -53,8 +50,9 @@ const DEFAULT_NEXT: &str = "/";
 /// OIDC) are held to the same rule.
 #[must_use]
 pub(crate) fn same_origin_next(raw: Option<&str>) -> String {
+    // The shell root is where every refused `next` falls back to.
     raw.and_then(|raw| ReturnPath::parse(raw, crate::session::SIGN_IN_PAGE))
-        .map_or_else(|| DEFAULT_NEXT.to_owned(), |path| path.as_str().to_owned())
+        .map_or_else(|| "/".to_owned(), |path| path.as_str().to_owned())
 }
 
 /// What a Basic sign-in came to.
