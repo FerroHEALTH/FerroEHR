@@ -93,6 +93,10 @@ pub fn router(app_state: AppState) -> axum::Router {
         )
         .route(crate::shell::SIGN_OUT_ROUTE, axum::routing::post(sign_out))
         .route(
+            crate::shell::SESSION_ROUTE,
+            axum::routing::get(session_left).post(session_left),
+        )
+        .route(
             crate::paging::PAGING_ROUTE,
             axum::routing::post(crate::paging::choose_paging),
         )
@@ -330,8 +334,7 @@ async fn sign_out(Extension(state): Extension<AppState>) -> axum::response::Resp
     match crate::session::set_cookie(
         &state.session_keys,
         &crate::session::CookieSession::default(),
-        state.config.session.cookie_secure,
-        state.config.session.idle_minutes,
+        &state.config.session,
     ) {
         Ok(cookie) => {
             response
@@ -341,6 +344,41 @@ async fn sign_out(Extension(state): Extension<AppState>) -> axum::response::Resp
         }
         Err(_failed) => http::StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
+}
+
+/// Answers the session watch (FerroUI `docs/consoles.md`, "The session's
+/// end"): what the session has left as JSON, `401` once it is gone.
+///
+/// A `GET` reads without sliding the idle anchor, which the guard leaves
+/// alone on this route; a `POST` is the user's activity and slides it, never
+/// past the absolute lifetime.
+async fn session_left(
+    Extension(state): Extension<AppState>,
+    method: http::Method,
+    headers: http::HeaderMap,
+) -> axum::response::Response {
+    use axum::response::IntoResponse as _;
+    let config = &state.config.session;
+    let mut session = crate::session::unseal(&state.session_keys, &headers, config);
+    let extend = method == http::Method::POST;
+    if extend {
+        session.touch();
+    }
+    let Some(left) = session.left(config) else {
+        return http::StatusCode::UNAUTHORIZED.into_response();
+    };
+    let mut response = axum::Json(left).into_response();
+    if extend {
+        match crate::session::set_cookie(&state.session_keys, &session, config) {
+            Ok(cookie) => {
+                response
+                    .headers_mut()
+                    .append(http::header::SET_COOKIE, cookie);
+            }
+            Err(_failed) => return http::StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        }
+    }
+    response
 }
 
 /// The path a browser requests the tab icon from when a page links none.
@@ -377,19 +415,16 @@ fn icon(content_type: &'static str, bytes: &'static [u8]) -> axum::response::Res
 /// so no handler runs a post without a session. An authenticated request
 /// carries its [`ViewerSession`] as an extension, which a route handler takes
 /// as `Extension<ViewerSession>`. An authenticated response leaves with the
-/// sliding idle anchor moved, unless the handler wrote the session itself.
+/// sliding idle anchor moved, unless the handler wrote the session itself or
+/// the request is the session watch's own ([`crate::shell::SESSION_ROUTE`]).
 pub async fn login_guard(
     mut request: axum::extract::Request,
     next: axum::middleware::Next,
 ) -> axum::response::Response {
     let state = request.extensions().get::<AppState>().cloned();
-    let session = state.as_ref().map(|s| {
-        crate::session::unseal(
-            &s.session_keys,
-            request.headers(),
-            s.config.session.idle_minutes,
-        )
-    });
+    let session = state
+        .as_ref()
+        .map(|s| crate::session::unseal(&s.session_keys, request.headers(), &s.config.session));
     let viewer = session
         .as_ref()
         .and_then(|s| s.get::<ViewerSession>(SESSION_KEY));
@@ -436,16 +471,14 @@ pub async fn login_guard(
     if let Some(viewer) = viewer {
         request.extensions_mut().insert(viewer);
     }
+    let watch_read = request.uri().path() == crate::shell::SESSION_ROUTE;
     let mut response = next.run(request).await;
     if authenticated
+        && !watch_read
         && !sets_session_cookie(response.headers())
         && let (Some(state), Some(session)) = (state, session)
-        && let Ok(refreshed) = crate::session::set_cookie(
-            &state.session_keys,
-            &session,
-            state.config.session.cookie_secure,
-            state.config.session.idle_minutes,
-        )
+        && let Ok(refreshed) =
+            crate::session::set_cookie(&state.session_keys, &session, &state.config.session)
     {
         response
             .headers_mut()

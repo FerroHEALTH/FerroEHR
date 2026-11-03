@@ -126,19 +126,30 @@ grant it; the CDR remains the enforcer.
 ### When your session ends
 
 A session ends when you sign out, when its idle window
-(`session.idle_minutes`) passes with no request from your browser, or when
-the CDR stops accepting the credential behind it (an expired or revoked
-token). Every page is drawn on the server, so the next page you ask for is
-where the viewer notices: it answers with the sign-in page, which says the
-session ended, and signing in again (Basic or OIDC) returns you to the page you
-asked for.
+(`session.idle_minutes`, 60 minutes by default) passes with no request from
+your browser, when its lifetime (`session.absolute_minutes`, 12 hours after
+you signed in by default) runs out whatever you do, or when the CDR stops
+accepting the credential behind it (an expired or revoked token). The pairing
+of an idle timeout with an absolute one follows the OWASP Session Management
+Cheat Sheet.
+
+Each signed-in page watches its session. Two minutes before the idle window
+ends, a dialog says when the session ends and offers **Stay signed in** or
+**Sign out**; typing or clicking on the page also keeps the session going, at
+most once a minute. Nothing extends the lifetime, so near its end the page
+gives no warning and leaves when it runs out. When the session has ended, the
+page leaves for the sign-in page, which says the session ended, and signing in
+again (Basic or OIDC) returns you to the page you were on. Every other tab of
+the viewer in the same browser leaves with it, and signing out in one tab ends
+the others.
 
 ![Session ended](img/login/login-expired.png)
 
-The idle window slides on each request your browser makes. The viewer polls
-nothing in the background, so a tab left open and untouched idles out after
-`session.idle_minutes` like a closed one, and the page it shows stays as it
-was drawn until you ask for another.
+The idle window slides on each request your browser makes for a page or a
+post. The watch's own reads of the session do not slide it, so a tab left
+open and untouched idles out after `session.idle_minutes` like a closed one.
+With FerroUI's scripts refused, the next page you ask for is where the viewer
+notices.
 
 ## The deployment profile
 
@@ -187,7 +198,8 @@ override, because the viewer's variables share its prefix:
 | `auth.oidc.resolve` | — | A `host=ip:port` override for the issuer host, for split-horizon DNS: the viewer reaches an issuer whose canonical name only resolves inside the container network, while browsers and tokens keep the canonical URL. |
 | `login.notice` | empty | Informational text on the sign-in card, line breaks preserved. A demo or evaluation deployment states its public credentials and usage expectations here. |
 | `login.links` | empty | Links under the sign-in card, each `{ label, href }` — an API reference, a documentation page. |
-| `session.idle_minutes` | `60` | Session idle expiry: the window slides on each request the browser makes, and the viewer polls nothing in the background (carried inside the sealed cookie). |
+| `session.idle_minutes` | `60` | Session idle expiry: the window slides on each page or post the browser asks for and on **Stay signed in**, never on the session watch's own reads (carried inside the sealed cookie). |
+| `session.absolute_minutes` | `720` | The session's lifetime from sign-in, which no activity extends (carried inside the sealed cookie). Zero, or a value below `session.idle_minutes`, is a startup error. |
 | `session.cookie_secure` | `true` | On by default; set `false` only for plain-HTTP local development. |
 | `session.secret` | empty | The session-cookie sealing key: base64 of at least 64 bytes (`openssl rand -base64 64`). Every replica of a scaled deployment must hold the same value. Empty = an ephemeral per-instance key, fine for exactly one replica. |
 | `session.secret_file` | — | Path to a file holding the sealing key; wins over `session.secret`. |

@@ -234,8 +234,11 @@ pub struct OidcConfig {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct SessionConfig {
-    /// Idle expiry, minutes.
+    /// Idle expiry, minutes: the user's requests slide it.
     pub idle_minutes: u64,
+    /// The session's absolute lifetime, minutes from sign-in, which nothing
+    /// extends; at least `idle_minutes`.
+    pub absolute_minutes: u64,
     /// Set the `Secure` cookie flag. On by default (fail closed): a
     /// plain-HTTP context (local development, the e2e harness) opts OUT
     /// explicitly, production behind TLS needs nothing.
@@ -254,6 +257,7 @@ impl Default for SessionConfig {
     fn default() -> Self {
         Self {
             idle_minutes: 60,
+            absolute_minutes: 720,
             cookie_secure: true,
             secret: String::new(),
             secret_file: String::new(),
@@ -377,6 +381,16 @@ fn finish(mut cfg: ViewerConfig) -> Result<ViewerConfig, ConfigError> {
     if !cfg.session.secret_file.is_empty() {
         let secret = read_secret_file("session.secret", Path::new(&cfg.session.secret_file))?;
         secret.expose_secret().clone_into(&mut cfg.session.secret);
+    }
+
+    // NOTE: no specification governs this: our own design; the OWASP Session Management
+    // Cheat Sheet pairs an idle timeout with an absolute one that bounds it.
+    if cfg.session.absolute_minutes == 0 || cfg.session.absolute_minutes < cfg.session.idle_minutes
+    {
+        return Err(ConfigError::Invalid(format!(
+            "session.absolute_minutes must be at least 1 and at least session.idle_minutes (got {} and {})",
+            cfg.session.absolute_minutes, cfg.session.idle_minutes
+        )));
     }
 
     if ferrohealth_ui::i18n::Locale::parse(&cfg.ui.locale).is_err() {
@@ -542,6 +556,29 @@ mod tests {
         let defaults = ViewerConfig::default();
         assert_eq!(defaults.login.notice, "");
         assert_eq!(defaults.login.links, Vec::<crate::auth::LoginLink>::new());
+    }
+
+    /// The absolute lifetime defaults to twelve hours, and a lifetime of zero
+    /// or one shorter than the idle window refuses the start.
+    #[test]
+    fn the_absolute_lifetime_bounds_the_idle_window() {
+        let defaults = load_sources(None, &BTreeMap::new()).unwrap();
+        assert_eq!(720, defaults.session.absolute_minutes);
+        for refused in [
+            "[session]\nabsolute_minutes = 0\n",
+            "[session]\nidle_minutes = 90\nabsolute_minutes = 60\n",
+        ] {
+            let err = load_sources(Some(refused), &BTreeMap::new())
+                .unwrap_err()
+                .to_string();
+            assert!(err.contains("session.absolute_minutes"), "{err}");
+        }
+        let equal = load_sources(
+            Some("[session]\nidle_minutes = 60\nabsolute_minutes = 60\n"),
+            &BTreeMap::new(),
+        )
+        .unwrap();
+        assert_eq!(60, equal.session.absolute_minutes);
     }
 
     #[test]

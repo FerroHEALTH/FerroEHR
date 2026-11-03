@@ -209,11 +209,7 @@ pub async fn login(
         nonce: nonce.secret().clone(),
         next: crate::auth::same_origin_next(params.next.as_deref()),
     };
-    let mut session = crate::session::unseal(
-        &state.session_keys,
-        &headers,
-        state.config.session.idle_minutes,
-    );
+    let mut session = crate::session::unseal(&state.session_keys, &headers, &state.config.session);
     if let Err(e) = session.insert(FLOW_KEY, &flow) {
         return error_page(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string());
     }
@@ -226,15 +222,11 @@ fn with_session_cookie(
     session: &crate::session::CookieSession,
     response: impl IntoResponse,
 ) -> Response {
-    let sealed = match crate::session::set_cookie(
-        &state.session_keys,
-        session,
-        state.config.session.cookie_secure,
-        state.config.session.idle_minutes,
-    ) {
-        Ok(sealed) => sealed,
-        Err(e) => return error_page(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
-    };
+    let sealed =
+        match crate::session::set_cookie(&state.session_keys, session, &state.config.session) {
+            Ok(sealed) => sealed,
+            Err(e) => return error_page(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+        };
     let mut response = response.into_response();
     response
         .headers_mut()
@@ -270,11 +262,7 @@ pub async fn callback(
     let (Some(code), Some(state_param)) = (params.code, params.state) else {
         return error_page(StatusCode::BAD_REQUEST, "missing code/state");
     };
-    let mut session = crate::session::unseal(
-        &state.session_keys,
-        &headers,
-        state.config.session.idle_minutes,
-    );
+    let mut session = crate::session::unseal(&state.session_keys, &headers, &state.config.session);
     let Some(flow): Option<FlowState> = session.remove(FLOW_KEY) else {
         return error_page(StatusCode::BAD_REQUEST, "no login in progress");
     };
@@ -321,7 +309,7 @@ pub async fn callback(
         },
         scopes,
     };
-    if let Err(e) = session.insert(crate::session::SESSION_KEY, &admin) {
+    if let Err(e) = session.sign_in(&admin) {
         return error_page(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string());
     }
     // Re-validated at the point of use: the destination rode a sealed,

@@ -1001,6 +1001,129 @@ async fn a_preference_is_kept_in_its_own_cookie() {
     );
 }
 
+/// A signed-in page carries FerroUI's session watch over the viewer's
+/// session route, with what the session has left once the page re-seals it:
+/// the whole idle hour, inside the twelve-hour lifetime.
+#[tokio::test]
+async fn a_signed_in_page_carries_the_session_watch() {
+    let viewer = Viewer::start().await;
+    let cookie = viewer.sign_in().await;
+    let page = viewer.page(&cookie, "/").await;
+    assert_eq!(page.status, http::StatusCode::OK, "{}", page.body);
+    for drawn in [
+        r#"data-fui="session""#,
+        r#"data-fui-status="/api/session""#,
+        r#"data-fui-sign-in="/login?expired=1""#,
+        r#"data-fui-idle="3600""#,
+    ] {
+        assert!(page.body.contains(drawn), "{drawn} missing: {}", page.body);
+    }
+    let absolute = page
+        .body
+        .split(r#"data-fui-absolute=""#)
+        .nth(1)
+        .and_then(|rest| rest.split('"').next())
+        .and_then(|seconds| seconds.parse::<u32>().ok())
+        .expect("the watch carries the lifetime left");
+    assert!(
+        (43_190..=43_200).contains(&absolute),
+        "the lifetime counts from the sign-in: {absolute}"
+    );
+    let login = viewer.send(http::Method::GET, "/login", None, None).await;
+    assert!(
+        !login.body.contains(r#"data-fui="session""#),
+        "the sign-in page carries no watch"
+    );
+}
+
+/// The session route reads what is left without sliding the idle window,
+/// extends it on a `POST`, and answers `401` once the session is gone.
+#[tokio::test]
+async fn the_session_route_reads_extends_and_refuses() {
+    let viewer = Viewer::start().await;
+    let cookie = viewer.sign_in().await;
+    let route = ferroehr_viewer::shell::SESSION_ROUTE;
+    let read = viewer
+        .send_accepting(
+            http::Method::GET,
+            route,
+            Some(&cookie),
+            None,
+            "application/json",
+        )
+        .await;
+    assert_eq!(read.status, http::StatusCode::OK, "{}", read.body);
+    let left: ferrohealth_ui::view::session::Left =
+        serde_json::from_str(&read.body).expect("the route answers what is left");
+    assert!(left.idle <= 3600 && left.idle <= left.absolute, "{left:?}");
+    assert!(
+        read.cookies().is_empty(),
+        "a read never re-seals the session: {:?}",
+        read.cookies()
+    );
+
+    let extended = viewer
+        .send_accepting(
+            http::Method::POST,
+            route,
+            Some(&cookie),
+            Some(&[]),
+            "application/json",
+        )
+        .await;
+    assert_eq!(extended.status, http::StatusCode::OK, "{}", extended.body);
+    let left: ferrohealth_ui::view::session::Left =
+        serde_json::from_str(&extended.body).expect("the route answers what is left");
+    assert_eq!(3600, left.idle, "an extend starts the idle window again");
+    assert!(
+        extended
+            .cookies()
+            .iter()
+            .any(|cookie| cookie.starts_with(ferroehr_viewer::session::SESSION_COOKIE)),
+        "an extend re-seals the session"
+    );
+
+    for method in [http::Method::GET, http::Method::POST] {
+        let form = (method == http::Method::POST).then_some(&[][..]);
+        let gone = viewer
+            .send_accepting(method.clone(), route, None, form, "application/json")
+            .await;
+        assert_eq!(
+            gone.status,
+            http::StatusCode::UNAUTHORIZED,
+            "{method} with no session: {}",
+            gone.body
+        );
+    }
+}
+
+/// The sign-in page the watch leaves for returns to the page left, which
+/// the watch names as FerroUI's `return`, and tells the other tabs the
+/// session ended.
+#[tokio::test]
+async fn the_sign_in_page_after_the_watch_returns_to_the_page_left() {
+    let viewer = Viewer::start().await;
+    let page = viewer
+        .send(
+            http::Method::GET,
+            "/login?expired=1&return=/templates%3Fpage%3D2",
+            None,
+            None,
+        )
+        .await;
+    assert_eq!(page.status, http::StatusCode::OK, "{}", page.body);
+    assert!(
+        page.body.contains(r#"value="/templates?page=2""#),
+        "the form carries the page left: {}",
+        page.body
+    );
+    assert!(
+        page.body.contains("data-fui-ended"),
+        "the page tells the other tabs: {}",
+        page.body
+    );
+}
+
 #[tokio::test]
 async fn sign_out_ends_the_session_and_says_so() {
     let viewer = Viewer::start().await;

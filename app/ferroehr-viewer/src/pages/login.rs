@@ -48,7 +48,11 @@ fn oidc_login_href(next: &str) -> String {
 /// What the address says about the sign-in: where to go next and the state
 /// the page opens in.
 fn arrival() -> (String, State) {
-    let next = crate::request::query("next").unwrap_or_else(|| "/".to_owned());
+    // NOTE: FerroUI `docs/consoles.md`, "The session's end": the session watch
+    // names the page it left as `return`.
+    let next = crate::request::query("next")
+        .or_else(|| crate::request::query(ferrohealth_ui::view::session::RETURN))
+        .unwrap_or_else(|| "/".to_owned());
     let state = if crate::request::query("expired").is_some() {
         State::Expired(Notice::new(tr(SignInMsg::Expired)))
     } else if crate::request::query("signed-out").is_some() {
@@ -194,9 +198,12 @@ async fn read_login() -> LoginModel {
     }
 }
 
-/// The sign-in page, drawn centred with no shell.
+/// The sign-in page, drawn centred with no shell; a page that says the
+/// session ended or was signed out tells every other tab of the viewer, whose
+/// session watch then leaves for sign-in too.
 pub async fn login_page() -> Drawn {
     let (next, state) = arrival();
+    let ended = matches!(state, State::Expired(_) | State::SignedOut(_));
     let body = match read_login().await {
         LoginModel::Card {
             screen,
@@ -204,6 +211,11 @@ pub async fn login_page() -> Drawn {
             error,
         } => card(screen, state, &next, username, error),
         LoginModel::Left => Html::empty(),
+    };
+    let body = if ended {
+        body.then(ferrohealth_ui::view::session::session_ended())
+    } else {
+        body
     };
     Drawn::bare(tr(SignInMsg::Title), body)
 }

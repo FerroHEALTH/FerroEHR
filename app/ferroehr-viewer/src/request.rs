@@ -180,7 +180,7 @@ pub fn session() -> Option<crate::session::ViewerSession> {
         crate::session::unseal(
             &scope.state.session_keys,
             &scope.parts.headers,
-            scope.state.config.session.idle_minutes,
+            &scope.state.config.session,
         )
         .get::<crate::session::ViewerSession>(crate::session::SESSION_KEY)
     })

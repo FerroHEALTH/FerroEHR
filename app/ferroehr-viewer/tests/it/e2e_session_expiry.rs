@@ -22,7 +22,9 @@
 //! while waiting out the configured idle window is not. Every page is drawn on
 //! the server, so the next request is where the viewer notices: it answers
 //! with the sign-in page at `/login?expired=1&next=…`, which says the session
-//! ended and returns to `next` once signed in again.
+//! ended and returns to `next` once signed in again. FerroUI's session watch
+//! on every signed-in page notices without a request: it warns before the idle
+//! timeout and leaves for the same sign-in page, naming the page as `return`.
 
 use crate::common;
 
@@ -206,5 +208,39 @@ async fn returning_through_oidc_from_the_expired_card_renders_the_chrome() {
     assert_signed_in_again(&h).await;
     h.shot(2, "signed-in-again").await;
     h.assert_console_clean(&[]).await;
+    h.finish().await;
+}
+
+/// The session watch: told by another tab that the session has 30 seconds
+/// left, the page opens the warning; Stay signed in finds the session gone,
+/// so the page leaves for the sign-in page saying the session ended, which
+/// returns to the page once signed in again.
+#[tokio::test]
+async fn the_session_watch_warns_then_leaves_for_sign_in_when_the_session_ends() {
+    let Some(h) = Harness::start("session-watch").await else {
+        return;
+    };
+    login_basic(&h).await;
+    h.goto("/templates").await;
+    revoke_session(&h).await;
+    h.run_script(
+        "const tab = new BroadcastChannel('ferroui-session'); \
+         tab.postMessage('extended 30 3600'); tab.close();",
+    )
+    .await;
+    h.wait_css("#ferroui-session-warning[open]").await;
+    h.shot(1, "warning").await;
+    h.wait_css("#ferroui-session-warning [data-fui-stay]")
+        .await
+        .click()
+        .await;
+    h.wait_url_contains("return=/templates").await;
+    assert_signed_out(&h).await;
+    h.shot(2, "left-for-sign-in").await;
+    sign_in_on_this_page(&h).await;
+    h.wait_url_contains("/templates").await;
+    assert_signed_in_again(&h).await;
+    // The session route's `401` is the browser's own resource error.
+    h.assert_console_clean(&["status of 401"]).await;
     h.finish().await;
 }

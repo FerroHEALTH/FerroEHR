@@ -28,6 +28,7 @@ use ferrohealth_ui::view::dock::{DecisionBar, decision_bar};
 use ferrohealth_ui::view::menu::{ThemeChoice, UserLink, UserMenu, user_menu};
 use ferrohealth_ui::view::nav::{Entry, Group, Rail, Sidebar, sidebar};
 use ferrohealth_ui::view::search::{SearchBox, search_box};
+use ferrohealth_ui::view::session::{Watch, session_watch};
 use ferrohealth_ui::view::shell::{
     Footer, Shell, TopBar, brand_mark, centred, lockup, shell, topbar,
 };
@@ -44,6 +45,10 @@ const USER_MENU_ID: &str = "user-menu";
 
 /// The route Sign out posts to.
 pub const SIGN_OUT_ROUTE: &str = "/logout";
+
+/// The session route the session watch asks (FerroUI `docs/consoles.md`,
+/// "The session's end"): `GET` reads what is left, `POST` extends it.
+pub const SESSION_ROUTE: &str = "/api/session";
 
 /// The path the FerroEHR icon is served at for the lockup.
 pub const MARK_PATH: &str = "/ferroehr-icon.svg";
@@ -396,8 +401,34 @@ fn toasts() -> Html {
     toast_region(&crate::locale::current(), crate::flash::take())
 }
 
+/// The sign-in page the session watch leaves for, saying the session ended;
+/// the watch adds the page left as FerroUI's return address.
+const SESSION_ENDED_SIGN_IN: &str = "/login?expired=1";
+
+/// The session watch over the signed-in page's session, from what it has
+/// left once this answer re-seals it (FerroUI `docs/consoles.md`, "The
+/// session's end"); nothing when no session is signed in.
+fn watch(locale: &ferrohealth_ui::i18n::Locale) -> Html {
+    let left = crate::request::state().and_then(|state| {
+        let mut session = crate::session::http_session().ok()?;
+        session.touch();
+        session.left(&state.config.session)
+    });
+    left.map(|left| {
+        session_watch(&Watch::new(
+            locale,
+            SESSION_ROUTE,
+            SESSION_ENDED_SIGN_IN,
+            SIGN_OUT_ROUTE,
+            left,
+        ))
+    })
+    .unwrap_or_default()
+}
+
 /// The page `content` inside the shell of a signed-in page, with the page
-/// at the request's path marked and the bar the page docked at its foot.
+/// at the request's path marked, the bar the page docked at its foot and the
+/// session watch.
 pub async fn framed(content: Html) -> Html {
     let current = crate::request::path();
     let reading = shell_reading().await;
@@ -425,7 +456,7 @@ pub async fn framed(content: Html) -> Html {
             sidebar: navigation(&current),
             content,
             dock,
-            toasts: toasts(),
+            toasts: toasts().then(watch(&locale)),
             footer: footer(),
         },
     )

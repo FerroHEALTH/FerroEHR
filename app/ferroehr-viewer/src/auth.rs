@@ -119,14 +119,11 @@ pub async fn sign_in_basic(
     }
 
     let mut session = crate::session::http_session()?;
-    session.insert(
-        crate::session::SESSION_KEY,
-        &crate::session::ViewerSession {
-            identity: username,
-            credential,
-            scopes: Vec::new(),
-        },
-    )?;
+    session.sign_in(&crate::session::ViewerSession {
+        identity: username,
+        credential,
+        scopes: Vec::new(),
+    })?;
     crate::session::commit(&session)?;
     Ok(SignedIn::Accepted(same_origin_next(next.as_deref())))
 }
