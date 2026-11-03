@@ -235,6 +235,7 @@ anything.
 | `POST {ext}/admin/access-opt-out` | `{"ehr_id": "…", "note": "…"?}` | **204**: the person's EHDS Art. 10 opt-out from the access services is recorded for the whole EHR; **400** while `authz.rbac.access_service_roles` is empty |
 | `GET {ext}/admin/access-opt-out` | `?ehr_id=…` | **200**: the opt-out register, newest first, reversals included |
 | `POST {ext}/admin/access-opt-out/reverse` | `{"ehr_id": "…"}` | **204**: every opt-out of the EHR that stands is reversed, and the access services read it again |
+| `POST {ext}/admin/ehr-access/repair` | `{"ehr_id": "…", "settings": {…}}` | **200** `{"ehr_id", "version_uid"}`: the `EHR_ACCESS` of an EHR held closed by settings that do not parse is committed again with these settings, which must parse; **409** for an EHR that is not held |
 
 A body of the wrong shape or a malformed id is **400**, an id that names nothing
 is **404**, and a body without `Content-Type: application/json` is **415**, in

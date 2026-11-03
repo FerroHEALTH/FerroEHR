@@ -1388,6 +1388,105 @@
         }
       }
     },
+    "/ferroehr/rest/extensions/v1/admin/ehr-access/repair": {
+      "post": {
+        "tags": [
+          "admin-marks"
+        ],
+        "summary": "Replace the settings of an EHR held closed by `EHR_ACCESS` settings\nthat do not parse (`POST /admin/ehr-access/repair`).",
+        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
+        "operationId": "admin_ehr_access_repair",
+        "requestBody": {
+          "description": "`{ \"ehr_id\": …, \"settings\": … }`: the EHR and the whole new `EHR_ACCESS.settings` object, of the `ferroehr.access_control.v1` scheme, whose `_type` is `FERROEHR_ACCESS_CONTROL_V1`.",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "`{ \"ehr_id\": …, \"version_uid\": … }`: the `EHR_ACCESS` version the repair committed. The EHR is served again under the new settings.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "The body does not name the EHR, or the settings are not settings of the `ferroehr.access_control.v1` scheme that parse.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such EHR.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The EHR's settings parse, so it is not held: a CONTRIBUTION changes them.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "The body is not `application/json`.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/ferroehr/rest/extensions/v1/admin/integrity/rebuild-nodes": {
       "post": {
         "tags": [

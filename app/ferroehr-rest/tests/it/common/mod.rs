@@ -49,6 +49,7 @@ const EXTENSION_ROOTS: &[&str] = &[
     "/admin/archive",
     "/admin/config",
     "/admin/dump",
+    "/admin/ehr-access",
     "/admin/integrity",
     "/admin/load",
     "/admin/outbox",

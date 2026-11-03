@@ -439,6 +439,9 @@ const ADMIN_WRITE: &[(&str, &str)] = &[
     // recorded and reversed on the person's instruction (#4516).
     ("POST", "/admin/access-opt-out"),
     ("POST", "/admin/access-opt-out/reverse"),
+    // The repair of an EHR held closed by access settings that do not parse
+    // commits a new EHR_ACCESS version (#4853).
+    ("POST", "/admin/ehr-access/repair"),
     // The repair the parity sweep is the diagnosis for. Unlike the sweep it
     // REPLACES stored rows, so it stays out of EXTENSION_READ_ROUTES and a
     // read-only server refuses it (#3143).
