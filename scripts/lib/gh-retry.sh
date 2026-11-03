@@ -7,8 +7,9 @@
 # three times in one day on a 502 from the jobs listing after a five-minute
 # window. A read is therefore retried with a doubling backoff, capped at two
 # minutes, for fifteen minutes. Only an answer that cannot pass by waiting
-# fails at once: an HTTP 4xx other than 429. A read that gives up says it was
-# the API, so nobody reads the failure as a guard's verdict. No openEHR spec
+# fails at once: an HTTP 4xx other than 429, and a GraphQL error in a request
+# GitHub did answer (an unknown issue, a bad field). A read that gives up says
+# it was the API, so nobody reads the failure as a guard's verdict. No openEHR spec
 # governs this: our own design.
 #
 # Source it from a script or a workflow step as:
@@ -36,7 +37,8 @@ gh_retry() {
       return 0
     fi
     err="$(tail -n 5 "$errfile" | tr '\n' ' ')"
-    if grep -qE 'HTTP 4[0-9]{2}' <<<"$err" && ! grep -q 'HTTP 429' <<<"$err"; then
+    if { grep -qE 'HTTP 4[0-9]{2}' <<<"$err" && ! grep -q 'HTTP 429' <<<"$err"; } ||
+      grep -q 'GraphQL: ' <<<"$err"; then
       rm -f "$errfile"
       echo "::error::the GitHub API refused '$*', and waiting cannot change that answer: ${err}" >&2
       return 1
@@ -91,8 +93,10 @@ _gh_retry_self_test() {
   check "a lasting 5xx gives up and blames the API" 1 "The API failed, not a guard" 5 99 "gh: HTTP 502: Bad Gateway" || return 1
   check "a 404 fails at once" 1 "waiting cannot change that answer" 1 99 "gh: Not Found (HTTP 404)" || return 1
   check "a 403 fails at once" 1 "waiting cannot change that answer" 1 99 "gh: Resource not accessible by integration (HTTP 403)" || return 1
+  check "a GraphQL 504 is ridden out" 0 "ok" 2 1 "HTTP 504: 504 Gateway Timeout (https://api.github.com/graphql)" || return 1
+  check "a GraphQL error answer fails at once" 1 "waiting cannot change that answer" 1 99 "GraphQL: Could not resolve to an Issue with the number of 9. (repository.issue)" || return 1
   rm -rf "$tmp"
-  echo "gh-retry: self-test OK (5xx, 429 and a dropped connection retried; a lasting 5xx blamed on the API; a 4xx refused at once)."
+  echo "gh-retry: self-test OK (5xx, 429 and a dropped connection retried; a lasting 5xx blamed on the API; a 4xx and a GraphQL error refused at once)."
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
