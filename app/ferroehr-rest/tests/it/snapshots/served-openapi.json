@@ -5664,6 +5664,16 @@
               }
             }
           },
+          "403": {
+            "description": "The `EHR_ACCESS` settings of an EHR the manifest names refuse the caller. Every named EHR passes the gate a read of it passes before any content is read, so one refused EHR refuses the whole export.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
           "404": {
             "description": "An entity's `ehr_id`/`subject_id` resolves to no EHR, or an `item_list` entry names no version container in that EHR.",
             "content": {
@@ -5676,6 +5686,16 @@
           },
           "415": {
             "description": "The request `Content-Type` is neither `application/json` nor `application/xml`.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The `EHR_ACCESS` settings of an EHR the manifest names cannot be read, so the EHR is held closed and the export is refused.",
             "content": {
               "application/problem+json": {
                 "schema": {

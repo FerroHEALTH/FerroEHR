@@ -280,7 +280,9 @@ server default**, in both directions:
 - **Access list:** with `default_access: "restricted"`, only listed
   principals may touch the EHR: `user:<login or OIDC subject>` or
   `role:<role>` (matched against the caller's roles). Everyone else gets
-  `403`.
+  `403`. An EHR Extract export by manifest (`POST /message/export`) passes
+  this gate for every EHR the manifest names before it reads any content,
+  so one EHR the caller may not reach refuses the whole export.
 - **Privacy levels:** integer sensitivity levels with meanings you define
   for your jurisdiction. A composition's level is its override entry or the
   default, and a caller may read it only when its level is *strictly below*
