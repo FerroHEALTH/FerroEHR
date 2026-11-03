@@ -180,12 +180,20 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+    env:
+      # The one Trivy version the release record and the image scans run.
+      TRIVY_VERSION: "0.73.0"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # trivy-action would install Trivy through setup-trivy, whose download
+      # host no longer resolves (#4913), so every scan step skips it.
+      - name: Install Trivy from its GitHub release, checked by sha256
+        run: bash scripts/security/install-trivy.sh "$TRIVY_VERSION" "$RUNNER_TEMP/trivy-bin"
       - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
+          skip-setup-trivy: true
           scan-type: fs
           scan-ref: .
           scanners: secret,misconfig
