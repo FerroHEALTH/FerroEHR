@@ -633,7 +633,7 @@ async fn write_contribution(
             ..
         } = change
         {
-            crate::service::ehr::validation::check_versioned_composition_invariants(
+            crate::validation::versioned::check_versioned_composition_invariants(
                 &mut tx, *vo_id, canonical,
             )
             .await
@@ -653,7 +653,7 @@ async fn write_contribution(
     .map_err(body_target_not_found_is_bad_request)?;
     if let Some(ehr_id) = ehr_id {
         for folder in &write.folder_commits {
-            crate::service::ehr::validation::check_folder_item_refs(
+            crate::validation::versioned::check_folder_item_refs(
                 &mut *tx,
                 ehr_id,
                 &cx.effective_system_id(),
@@ -988,7 +988,7 @@ async fn accept_content(
         .await
         .map_err(|e| e.for_version_member(index))?;
     Ok((kind == Kind::Composition)
-        .then(|| crate::service::ehr::validation::composition_template_id(data).map(str::to_owned))
+        .then(|| crate::validation::versioned::composition_template_id(data).map(str::to_owned))
         .flatten())
 }
 

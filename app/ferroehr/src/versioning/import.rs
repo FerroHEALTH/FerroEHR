@@ -556,11 +556,7 @@ async fn import_one_version(
     // out of the clinical side; the demographic kinds are the domain that
     // holds identity and take no scan (#3237).
     if !cursor.kind.is_demographic() && !version.data.is_null() {
-        crate::service::ehr::validation::enforce_privacy(
-            act.privacy,
-            cursor.kind.as_str(),
-            &version.data,
-        )?;
+        act.privacy.enforce(cursor.kind.as_str(), &version.data)?;
     }
     refuse_unsealed_identifiers(tx, act, cursor, &version.data).await?;
     // The content, decomposed once: the node rows to write AND — through

@@ -40,7 +40,6 @@
 //! spec governs the schema — our own design.
 
 pub(in crate::service) mod access;
-pub(in crate::service) mod category;
 mod composition;
 mod contributions;
 mod directory;

@@ -4,7 +4,8 @@
 //! Archetype / template artefact validation (the ingestion surface).
 //!
 //! The platform crate has three validation surfaces; this module owns the
-//! artefact validators and names the seams to the other two.
+//! artefact validators and the commit-time rules over stored state, and names
+//! the seams to the other two surfaces.
 //!
 //! - Surface A, artefact validity (owned here): the AOM 1.4/2.4 constraint
 //!   catalogue applied to an uploaded artefact before it becomes an operational
@@ -25,6 +26,11 @@
 //!   `EHR_ACCESS`, `FOLDER`, party roots) live with their kinds under
 //!   `service/`, routed by `service::ehr`'s `validate_for_commit` so no commit
 //!   path bypasses validation.
+//! - The RM rules a commit judges against stored state (owned here):
+//!   `versioned` holds the `VERSIONED_COMPOSITION` cross-version invariants,
+//!   the `FOLDER` local item-reference check and the declared template id,
+//!   which the service and the CONTRIBUTION path in `versioning` both run;
+//!   `category` names the `composition_category` codes they read.
 //!
 //! The files under `opt` follow the AM constraint taxonomy (structural
 //! invariant, RM conformance, primitive, terminology, interval), the axis the
@@ -45,8 +51,10 @@
 //! Value-sets to Archetypes"), needs the external terminology query server and
 //! is resolved at commit by `service::terminology::binding`.
 
+pub(crate) mod category;
 mod opt;
 pub(crate) mod structure;
+pub(crate) mod versioned;
 
 use openehr_its::opt14::types::OperationalTemplate;
 
