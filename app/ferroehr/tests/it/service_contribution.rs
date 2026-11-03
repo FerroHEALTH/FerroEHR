@@ -15,6 +15,7 @@
 
 use ferroehr::error::ServiceError;
 use ferroehr::error::refusal::{Clash, Invalid, Malformed, Missing, Refusal};
+use ferroehr::ids::EhrId;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::version_update::WriteRequest;
 
@@ -38,20 +39,17 @@ fn attestation(reason: &str, is_pending: bool) -> Value {
 }
 
 /// Read the served `ORIGINAL_VERSION` of a composition version.
-async fn read_version(svc: &FerroEhrService, ehr_id: &str, _vo: &str, ovid: &str) -> Value {
-    svc.composition_version_envelope(
-        ehr_id.parse().expect("ehr uuid"),
-        ovid.parse().expect("ovid"),
-    )
-    .await
-    .expect("versioned composition version")
-    .body
+async fn read_version(svc: &FerroEhrService, ehr_id: EhrId, _vo: &str, ovid: &str) -> Value {
+    svc.composition_version_envelope(ehr_id, ovid.parse().expect("ovid"))
+        .await
+        .expect("versioned composition version")
+        .body
 }
 
 #[tokio::test]
 async fn accompanying_attestation_then_standalone_666_attestation() {
     let (_db, svc) = crate::fixtures::service().await;
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
 
     // (1) A CONTRIBUTION that creates a COMPOSITION carrying an attestation
     // committed with the version (UPDATE_VERSION.attestations).
@@ -67,14 +65,14 @@ async fn accompanying_attestation_then_standalone_666_attestation() {
         "audit": commit_audit("251", "modification", "author")
     });
     let created = svc
-        .create_ehr_contribution(ehr_id.parse().expect("ehr uuid"), contribution)
+        .create_ehr_contribution(ehr_id, contribution)
         .await
         .expect("contribution_create with accompanying attestation → 201");
     let ovid_v1 = first_version_uid(&created.body);
     let vo_id = vo_of(&ovid_v1);
 
     // Reading the ORIGINAL_VERSION exposes the completed ATTESTATION.
-    let ov = read_version(&svc, &ehr_id, vo_id, &ovid_v1).await;
+    let ov = read_version(&svc, ehr_id, vo_id, &ovid_v1).await;
     let atts = ov["attestations"].as_array().expect("attestations array");
     assert_eq!(atts.len(), 1, "one attestation after step 1");
     let att = &atts[0];
@@ -105,7 +103,7 @@ async fn accompanying_attestation_then_standalone_666_attestation() {
         "audit": commit_audit("666", "attestation", "senior reviewer")
     });
     let attest_created = svc
-        .create_ehr_contribution(ehr_id.parse().expect("ehr uuid"), attest_contribution)
+        .create_ehr_contribution(ehr_id, attest_contribution)
         .await
         .expect("666-only contribution → 201");
 
@@ -125,7 +123,7 @@ async fn accompanying_attestation_then_standalone_666_attestation() {
     );
 
     // The ORIGINAL_VERSION now lists both attestations.
-    let ov = read_version(&svc, &ehr_id, vo_id, &ovid_v1).await;
+    let ov = read_version(&svc, ehr_id, vo_id, &ovid_v1).await;
     assert_eq!(
         ov["attestations"].as_array().map(Vec::len),
         Some(2),
@@ -136,10 +134,7 @@ async fn accompanying_attestation_then_standalone_666_attestation() {
     // attestations (revision_history_item.adoc "there may also be further
     // attestations").
     let rh = svc
-        .composition_revision_history(
-            ehr_id.parse().expect("ehr uuid"),
-            vo_id.parse().expect("vo uuid"),
-        )
+        .composition_revision_history(ehr_id, vo_id.parse().expect("vo uuid"))
         .await
         .map(|r| r.body)
         .expect("revision history");
@@ -155,14 +150,11 @@ async fn accompanying_attestation_then_standalone_666_attestation() {
 #[tokio::test]
 async fn attestation_error_cases() {
     let (_db, svc) = crate::fixtures::service().await;
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
 
     // A real composition to attest.
     let v1 = svc
-        .create_composition(
-            ehr_id.parse().expect("ehr uuid"),
-            uv(&composition("v1"), "249", None),
-        )
+        .create_composition(ehr_id, uv(&composition("v1"), "249", None))
         .await
         .expect("composition_create")
         .version_uid();
@@ -170,11 +162,7 @@ async fn attestation_error_cases() {
 
     let attempt = |body: Value| {
         let svc = svc.clone();
-        let ehr = ehr_id.clone();
-        async move {
-            svc.create_ehr_contribution(ehr.parse().expect("ehr uuid"), body)
-                .await
-        }
+        async move { svc.create_ehr_contribution(ehr_id, body).await }
     };
 
     // 666 without preceding_version_uid → 400 (cannot name its target).
@@ -315,10 +303,9 @@ async fn attestation_error_cases() {
 #[tokio::test]
 async fn attestation_member_without_lifecycle_state_is_refused() {
     let (_db, svc) = crate::fixtures::service().await;
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
-    let ehr_uuid: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
     let ovid = svc
-        .create_composition(ehr_uuid, uv(&composition("attested"), "249", None))
+        .create_composition(ehr_id, uv(&composition("attested"), "249", None))
         .await
         .expect("composition_create")
         .version_uid();
@@ -339,7 +326,7 @@ async fn attestation_member_without_lifecycle_state_is_refused() {
     };
 
     let err = svc
-        .create_ehr_contribution(ehr_uuid, attest(None))
+        .create_ehr_contribution(ehr_id, attest(None))
         .await
         .expect_err("an attestation member without lifecycle_state is refused");
     assert!(
@@ -359,7 +346,7 @@ async fn attestation_member_without_lifecycle_state_is_refused() {
     );
 
     let err = svc
-        .create_ehr_contribution(ehr_uuid, attest(Some(change_type("999", "nonsense"))))
+        .create_ehr_contribution(ehr_id, attest(Some(change_type("999", "nonsense"))))
         .await
         .expect_err("an out-of-group lifecycle_state is refused");
     assert!(
@@ -379,7 +366,7 @@ async fn attestation_member_without_lifecycle_state_is_refused() {
     );
 
     let created = svc
-        .create_ehr_contribution(ehr_uuid, attest(Some(change_type("532", "complete"))))
+        .create_ehr_contribution(ehr_id, attest(Some(change_type("532", "complete"))))
         .await
         .expect("the attestation member stating its lifecycle_state commits");
     assert_eq!(
@@ -398,10 +385,9 @@ async fn attestation_member_without_lifecycle_state_is_refused() {
 #[tokio::test]
 async fn attestation_without_committer_is_refused() {
     let (_db, svc) = crate::fixtures::service().await;
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
-    let ehr_uuid: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
     let ovid = svc
-        .create_composition(ehr_uuid, uv(&composition("attested"), "249", None))
+        .create_composition(ehr_id, uv(&composition("attested"), "249", None))
         .await
         .expect("composition_create")
         .version_uid();
@@ -410,7 +396,7 @@ async fn attestation_without_committer_is_refused() {
     // The 666 member's own audit without a committer.
     let err = svc
         .create_ehr_contribution(
-            ehr_uuid,
+            ehr_id,
             json!({
                 "versions": [{
                     "preceding_version_uid": { "value": ovid.clone() },
@@ -453,7 +439,7 @@ async fn attestation_without_committer_is_refused() {
         .remove("committer");
     let err = svc
         .create_ehr_contribution(
-            ehr_uuid,
+            ehr_id,
             json!({
                 "versions": [{
                     "commit_audit": commit_audit("249", "creation", "author"),
@@ -491,8 +477,7 @@ async fn attestation_without_committer_is_refused() {
 #[tokio::test]
 async fn non_canonical_committer_is_refused_with_400() {
     let (_db, svc) = crate::fixtures::service().await;
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
-    let ehr_uuid: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
 
     let body = |audit_committer: Value, member_committer: Value| {
         json!({
@@ -513,7 +498,7 @@ async fn non_canonical_committer_is_refused_with_400() {
 
     for bad in [json!("Dr Jones"), json!({})] {
         let err = svc
-            .create_ehr_contribution(ehr_uuid, body(bad.clone(), committer("author")))
+            .create_ehr_contribution(ehr_id, body(bad.clone(), committer("author")))
             .await
             .expect_err("a non-canonical CONTRIBUTION committer is refused");
         assert!(
@@ -529,7 +514,7 @@ async fn non_canonical_committer_is_refused_with_400() {
         assert!(err.message().contains("(at $.audit)"), "{bad}: got {err:?}");
 
         let err = svc
-            .create_ehr_contribution(ehr_uuid, body(committer("author"), bad.clone()))
+            .create_ehr_contribution(ehr_id, body(committer("author"), bad.clone()))
             .await
             .expect_err("a non-canonical member committer is refused");
         assert!(
@@ -553,7 +538,7 @@ async fn non_canonical_committer_is_refused_with_400() {
     // semantic 422.
     let err = svc
         .create_ehr_contribution(
-            ehr_uuid,
+            ehr_id,
             body(committer("author"), json!({ "_type": "PARTY_IDENTIFIED" })),
         )
         .await
@@ -578,17 +563,16 @@ async fn non_canonical_committer_is_refused_with_400() {
 #[tokio::test]
 async fn attestation_member_refusal_names_its_index() {
     let (_db, svc) = crate::fixtures::service().await;
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
-    let ehr_uuid: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
     let ovid = svc
-        .create_composition(ehr_uuid, uv(&composition("attested"), "249", None))
+        .create_composition(ehr_id, uv(&composition("attested"), "249", None))
         .await
         .expect("composition_create")
         .version_uid();
 
     let err = svc
         .create_ehr_contribution(
-            ehr_uuid,
+            ehr_id,
             json!({
                 "versions": [
                     {
@@ -667,29 +651,27 @@ async fn ehr_read_with_its_counts() {
 
     // Seed: (1) EHR creation, (2) an EHR_STATUS update, (3) a composition — three
     // CONTRIBUTIONs, one of them a COMPOSITION.
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string(); // contribution #1
-
-    let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
+    let ehr_id = crate::fixtures::create_ehr(&svc).await; // contribution #1
     let status_uid = svc
-        .ehr_status(ehr_uuid, None)
+        .ehr_status(ehr_id, None)
         .await
         .map(|r| r.body)
         .expect("get current EHR_STATUS")["uid"]["value"]
         .as_str()
         .expect("status uid")
         .to_owned();
-    Box::pin(svc.replace_ehr_status(ehr_uuid, uv(&ehr_status(false), "251", Some(&status_uid))))
+    Box::pin(svc.replace_ehr_status(ehr_id, uv(&ehr_status(false), "251", Some(&status_uid))))
         .await
         .map(|m| m.uid)
         .expect("EHR_STATUS update"); // contribution #2
 
-    svc.create_composition(ehr_uuid, uv(&composition("obs"), "249", None))
+    svc.create_composition(ehr_id, uv(&composition("obs"), "249", None))
         .await
         .expect("composition_create"); // contribution #3
 
     // The EHR as the wire reads it: mandatory fields + the counts.
-    let ehr = svc.ehr_read(ehr_uuid).await.expect("ehr_read").body;
-    assert_eq!(ehr["ehr_id"]["value"], ehr_id);
+    let ehr = svc.ehr_read(ehr_id).await.expect("ehr_read").body;
+    assert_eq!(ehr["ehr_id"]["value"], ehr_id.to_string());
     assert!(
         ehr["system_id"]["value"]
             .as_str()
@@ -697,7 +679,7 @@ async fn ehr_read_with_its_counts() {
         "system_id (EHR.system_id)"
     );
     let status = svc
-        .ehr_status(ehr_uuid, None)
+        .ehr_status(ehr_id, None)
         .await
         .expect("the current EHR_STATUS")
         .body;
@@ -709,7 +691,7 @@ async fn ehr_read_with_its_counts() {
         "time_created is ISO 8601"
     );
     let listed = svc
-        .ehr_contribution_list_page(ehr_uuid, 0, 10)
+        .ehr_contribution_list_page(ehr_id, 0, 10)
         .await
         .expect("ehr_contribution_list_page");
     assert_eq!(listed["total"], json!(3));
@@ -718,7 +700,7 @@ async fn ehr_read_with_its_counts() {
             "SELECT COUNT(*) FROM EHR e CONTAINS COMPOSITION c",
             None,
             &ferroehr::service::query::request::AqlQueryRequest {
-                ehr_ids: vec![crate::fixtures::ehr(&ehr_id)],
+                ehr_ids: vec![ehr_id],
                 ..ferroehr::service::query::request::AqlQueryRequest::default()
             },
         )
@@ -754,27 +736,26 @@ async fn ehr_contribution_list_page_extension() {
     ));
 
     // Seed three contributions: EHR create, an EHR_STATUS update, a composition.
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
-    let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
     let status_uid = svc
-        .ehr_status(ehr_uuid, None)
+        .ehr_status(ehr_id, None)
         .await
         .map(|r| r.body)
         .expect("get current EHR_STATUS")["uid"]["value"]
         .as_str()
         .expect("status uid")
         .to_owned();
-    Box::pin(svc.replace_ehr_status(ehr_uuid, uv(&ehr_status(false), "251", Some(&status_uid))))
+    Box::pin(svc.replace_ehr_status(ehr_id, uv(&ehr_status(false), "251", Some(&status_uid))))
         .await
         .map(|m| m.uid)
         .expect("EHR_STATUS update");
-    svc.create_composition(ehr_uuid, uv(&composition("obs"), "249", None))
+    svc.create_composition(ehr_id, uv(&composition("obs"), "249", None))
         .await
         .expect("composition_create");
 
     // Full page: total = 3, three rows, newest first (the composition last).
     let page = svc
-        .ehr_contribution_list_page(ehr_uuid, 0, 20)
+        .ehr_contribution_list_page(ehr_id, 0, 20)
         .await
         .expect("list page");
     assert_eq!(page["total"], 3);
@@ -821,7 +802,7 @@ async fn ehr_contribution_list_page_extension() {
 
     // Pagination: offset 1 / fetch 1 → exactly the second row; total unchanged.
     let paged = svc
-        .ehr_contribution_list_page(ehr_uuid, 1, 1)
+        .ehr_contribution_list_page(ehr_id, 1, 1)
         .await
         .expect("paged list");
     assert_eq!(paged["total"], 3);
@@ -843,7 +824,7 @@ fn lifecycle(code: &str) -> Value {
 
 /// Read the `lifecycle_state.defining_code.code_string` of a served
 /// `ORIGINAL_VERSION`.
-async fn lifecycle_code_of(svc: &FerroEhrService, ehr_id: &str, vo: &str, ovid: &str) -> String {
+async fn lifecycle_code_of(svc: &FerroEhrService, ehr_id: EhrId, vo: &str, ovid: &str) -> String {
     let ov = read_version(svc, ehr_id, vo, ovid).await;
     ov["lifecycle_state"]["defining_code"]["code_string"]
         .as_str()
@@ -858,12 +839,12 @@ async fn contribution_honors_the_five_lifecycle_states() {
     // normative code; only the delete path is forced to 523. 553/800/801 are
     // NOT deletions — the version is readable with its data.
     let (_db, svc) = crate::fixtures::service().await;
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
 
     // (1) Create v1 as incomplete (553).
     let created = svc
         .create_ehr_contribution(
-            ehr_id.parse().expect("ehr uuid"),
+            ehr_id,
             json!({
                 "versions": [{
                     "commit_audit": commit_audit("249", "creation", "author"),
@@ -878,7 +859,7 @@ async fn contribution_honors_the_five_lifecycle_states() {
     let ovid_v1 = first_version_uid(&created.body);
     let vo_id = vo_of(&ovid_v1).to_owned();
 
-    let ov1 = read_version(&svc, &ehr_id, &vo_id, &ovid_v1).await;
+    let ov1 = read_version(&svc, ehr_id, &vo_id, &ovid_v1).await;
     assert_eq!(
         ov1["lifecycle_state"]["defining_code"]["code_string"],
         "553"
@@ -888,11 +869,7 @@ async fn contribution_honors_the_five_lifecycle_states() {
     assert_eq!(ov1["data"]["_type"], "COMPOSITION");
     // The latest read returns 200 with data (not the deleted 204 path).
     let latest = svc
-        .read_composition_raw(
-            ehr_id.parse().expect("ehr uuid"),
-            vo_id.parse().expect("vo uuid"),
-            None,
-        )
+        .read_composition_raw(ehr_id, vo_id.parse().expect("vo uuid"), None)
         .await
         .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("composition_get incomplete");
@@ -904,7 +881,7 @@ async fn contribution_honors_the_five_lifecycle_states() {
     let mut current = ovid_v1;
     let illegal = svc
         .create_ehr_contribution(
-            ehr_id.parse().expect("ehr uuid"),
+            ehr_id,
             json!({
                 "versions": [{
                     "commit_audit": commit_audit("251", "modification", "author"),
@@ -934,7 +911,7 @@ async fn contribution_honors_the_five_lifecycle_states() {
     for (n, code) in [(2, "532"), (3, "800"), (4, "553"), (5, "801")] {
         let modified = svc
             .create_ehr_contribution(
-                ehr_id.parse().expect("ehr uuid"),
+                ehr_id,
                 json!({
                     "versions": [{
                         "commit_audit": commit_audit("251", "modification", "author"),
@@ -950,7 +927,7 @@ async fn contribution_honors_the_five_lifecycle_states() {
         current = first_version_uid(&modified.body);
         assert!(current.ends_with(&format!("::{n}")), "version {n}");
         assert_eq!(
-            lifecycle_code_of(&svc, &ehr_id, &vo_id, &current).await,
+            lifecycle_code_of(&svc, ehr_id, &vo_id, &current).await,
             code,
             "served lifecycle_state must be {code}"
         );
@@ -959,7 +936,7 @@ async fn contribution_honors_the_five_lifecycle_states() {
     // (3) An out-of-group lifecycle code is a 422 naming the group.
     let err = svc
         .create_ehr_contribution(
-            ehr_id.parse().expect("ehr uuid"),
+            ehr_id,
             json!({
                 "versions": [{
                     "commit_audit": commit_audit("251", "modification", "author"),
@@ -987,7 +964,7 @@ async fn contribution_honors_the_five_lifecycle_states() {
     // the only one it may — and the latest read is then the deleted (204/null)
     // path.
     svc.create_ehr_contribution(
-        ehr_id.parse().expect("ehr uuid"),
+        ehr_id,
         json!({
             "versions": [{
                 "commit_audit": commit_audit("523", "deleted", "author"),
@@ -1001,11 +978,7 @@ async fn contribution_honors_the_five_lifecycle_states() {
     .expect("delete (523) → 201");
     // The now-current version is a deletion: lifecycle 523.
     let del = svc
-        .read_composition_raw(
-            ehr_id.parse().expect("ehr uuid"),
-            vo_id.parse().expect("vo uuid"),
-            None,
-        )
+        .read_composition_raw(ehr_id, vo_id.parse().expect("vo uuid"), None)
         .await
         .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("composition_get deleted");
@@ -1031,19 +1004,17 @@ async fn contribution_honors_the_five_lifecycle_states() {
 #[tokio::test]
 async fn member_commit_audit_keeps_its_committer_and_shares_the_commit_instant() {
     let (_db, svc) = crate::fixtures::service().await;
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
-    let ehr_uuid: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
 
     // The served commit_audits of every version a CONTRIBUTION lists, as
     // (system_id, committer name, time_committed).
     let audits_of = |contribution: Value| {
         let svc = svc.clone();
-        let ehr_id = ehr_id.clone();
         async move {
             let mut seen: Vec<(String, String, String)> = Vec::new();
             for v in contribution["versions"].as_array().expect("versions") {
                 let ovid = v["id"]["value"].as_str().expect("ovid").to_owned();
-                let ov = read_version(&svc, &ehr_id, vo_of(&ovid), &ovid).await;
+                let ov = read_version(&svc, ehr_id, vo_of(&ovid), &ovid).await;
                 let audit = &ov["commit_audit"];
                 seen.push((
                     audit["system_id"].as_str().expect("system_id").to_owned(),
@@ -1064,7 +1035,7 @@ async fn member_commit_audit_keeps_its_committer_and_shares_the_commit_instant()
 
     let created = svc
         .create_ehr_contribution(
-            ehr_uuid,
+            ehr_id,
             json!({
                 "versions": [
                     // (A) states its committer, omits system_id.
@@ -1119,7 +1090,7 @@ async fn member_commit_audit_keeps_its_committer_and_shares_the_commit_instant()
     // the server's own.
     let created = svc
         .create_ehr_contribution(
-            ehr_uuid,
+            ehr_id,
             json!({
                 "versions": [{
                     "lifecycle_state": change_type("532", "complete"),
@@ -1161,8 +1132,7 @@ async fn member_commit_audit_keeps_its_committer_and_shares_the_commit_instant()
 #[tokio::test]
 async fn member_commit_audit_without_committer_is_refused() {
     let (_db, svc) = crate::fixtures::service().await;
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
-    let ehr_uuid: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
 
     let body = |member_audit: Value| {
         json!({
@@ -1187,7 +1157,7 @@ async fn member_commit_audit_without_committer_is_refused() {
         json!({ "change_type": change_type("249", "creation"), "committer": null }),
     ] {
         let err = svc
-            .create_ehr_contribution(ehr_uuid, body(commit_audit.clone()))
+            .create_ehr_contribution(ehr_id, body(commit_audit.clone()))
             .await
             .expect_err("a member commit_audit without a committer is refused");
         assert!(
@@ -1207,7 +1177,7 @@ async fn member_commit_audit_without_committer_is_refused() {
     }
 
     svc.create_ehr_contribution(
-        ehr_uuid,
+        ehr_id,
         body(commit_audit("249", "creation", "second author")),
     )
     .await
@@ -1221,16 +1191,15 @@ async fn member_commit_audit_without_committer_is_refused() {
 async fn contribution_resolve_refs() {
     let (_db, svc) = crate::fixtures::service().await;
 
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
-    let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
     let comp_uid = svc
-        .create_composition(ehr_uuid, uv(&composition("obs"), "249", None))
+        .create_composition(ehr_id, uv(&composition("obs"), "249", None))
         .await
         .expect("composition_create")
         .version_uid();
 
     let newest = svc
-        .ehr_contribution_list_page(ehr_uuid, 0, 1)
+        .ehr_contribution_list_page(ehr_id, 0, 1)
         .await
         .expect("list");
     let cid = newest["rows"][0]["uid"]
@@ -1240,7 +1209,7 @@ async fn contribution_resolve_refs() {
         .expect("contribution uuid");
 
     let plain = svc
-        .ehr_contribution(ehr_uuid, cid, false)
+        .ehr_contribution(ehr_id, cid, false)
         .await
         .expect("plain");
     assert_eq!(
@@ -1249,7 +1218,7 @@ async fn contribution_resolve_refs() {
     );
 
     let resolved = svc
-        .ehr_contribution(ehr_uuid, cid, true)
+        .ehr_contribution(ehr_id, cid, true)
         .await
         .expect("resolved");
     let v = &resolved["versions"][0];
@@ -1275,8 +1244,7 @@ async fn contribution_resolve_refs() {
 async fn contribution_supplied_uid() {
     let (_db, svc) = crate::fixtures::service().await;
 
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
-    let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
 
     let wanted = uuid::Uuid::now_v7();
     let mut body = serde_json::json!({
@@ -1291,7 +1259,7 @@ async fn contribution_supplied_uid() {
         "audit": commit_audit("251", "modification", "T")
     });
     let resp = svc
-        .create_ehr_contribution(ehr_uuid, body.clone())
+        .create_ehr_contribution(ehr_id, body.clone())
         .await
         .expect("supplied uid accepted");
     assert_eq!(
@@ -1303,7 +1271,7 @@ async fn contribution_supplied_uid() {
     // Re-using the uid conflicts.
     body["versions"][0]["data"] = composition("obs2");
     let dup = svc
-        .create_ehr_contribution(ehr_uuid, body)
+        .create_ehr_contribution(ehr_id, body)
         .await
         .expect_err("duplicate uid rejected");
     assert!(dup.message().contains("already in use"), "got {dup:?}");
@@ -1323,7 +1291,7 @@ async fn create_composition_gate_error_surface_survives_the_writability_fold() {
     // (1) Unknown EHR → 404 `ehr_id_does_not_exist` (the existence signal of
     // the folded query), never a conflict and never a driver error.
     let ghost = "00000000-0000-7000-8000-0000000000fe"
-        .parse::<ferroehr::ids::EhrId>()
+        .parse::<EhrId>()
         .expect("uuid");
     let missing = svc
         .create_composition(ghost, uv(&composition("obs"), "249", None))
@@ -1336,9 +1304,8 @@ async fn create_composition_gate_error_surface_survives_the_writability_fold() {
 
     // A live, modifiable EHR accepts a composition (the fold does not falsely
     // block — is_modifiable = None/true → writable).
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
-    let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
-    svc.create_composition(ehr_uuid, uv(&composition("obs"), "249", None))
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
+    svc.create_composition(ehr_id, uv(&composition("obs"), "249", None))
         .await
         .expect("modifiable EHR accepts a composition");
 
@@ -1346,7 +1313,7 @@ async fn create_composition_gate_error_surface_survives_the_writability_fold() {
     // content write is refused with a conflict (the modifiability signal of the
     // folded query, checked after existence).
     let status_uid = svc
-        .ehr_status(ehr_uuid, None)
+        .ehr_status(ehr_id, None)
         .await
         .map(|r| r.body)
         .expect("current EHR_STATUS")["uid"]["value"]
@@ -1367,13 +1334,13 @@ async fn create_composition_gate_error_surface_survives_the_writability_fold() {
         "is_queryable": true,
         "is_modifiable": false
     });
-    Box::pin(svc.replace_ehr_status(ehr_uuid, uv(&deactivated, "251", Some(&status_uid))))
+    Box::pin(svc.replace_ehr_status(ehr_id, uv(&deactivated, "251", Some(&status_uid))))
         .await
         .map(|m| m.uid)
         .expect("EHR_STATUS deactivation");
 
     let blocked = svc
-        .create_composition(ehr_uuid, uv(&composition("obs2"), "249", None))
+        .create_composition(ehr_id, uv(&composition("obs2"), "249", None))
         .await
         .expect_err("non-modifiable EHR blocks content writes");
     let ServiceError::Conflict(err) = &blocked else {
@@ -1398,10 +1365,9 @@ async fn one_version_of_a_lineage_is_in_force_at_any_instant() {
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
 
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
-    let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
     let created = svc
-        .create_composition(ehr_uuid, uv(&composition("obs"), "249", None))
+        .create_composition(ehr_id, uv(&composition("obs"), "249", None))
         .await
         .expect("create")
         .version_uid();
@@ -1409,7 +1375,7 @@ async fn one_version_of_a_lineage_is_in_force_at_any_instant() {
     for i in 0..8 {
         preceding = svc
             .update_composition(
-                ehr_uuid,
+                ehr_id,
                 preceding
                     .split("::")
                     .next()
@@ -1426,7 +1392,7 @@ async fn one_version_of_a_lineage_is_in_force_at_any_instant() {
     let heads: i64 = sqlx::query_scalar(
         "SELECT count(*) FROM vo_head WHERE ehr_id = $1 AND kind = 'COMPOSITION'",
     )
-    .bind(ehr_uuid)
+    .bind(ehr_id)
     .fetch_one(&pool)
     .await
     .expect("head-row count");
@@ -1449,7 +1415,7 @@ async fn one_version_of_a_lineage_is_in_force_at_any_instant() {
                  AND a.committed_at = b.committed_at \
              WHERE a.ehr_id = $1)",
     )
-    .bind(ehr_uuid)
+    .bind(ehr_id)
     .fetch_one(&pool)
     .await
     .expect("ambiguity audit");
@@ -1466,11 +1432,10 @@ async fn one_version_of_a_lineage_is_in_force_at_any_instant() {
 async fn contribution_cannot_delete_the_ehr_status() {
     let (_db, svc) = crate::fixtures::service().await;
 
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
-    let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
 
     let status_uid = svc
-        .ehr_status(ehr_uuid, None)
+        .ehr_status(ehr_id, None)
         .await
         .map(|r| r.body)
         .expect("status read")["uid"]["value"]
@@ -1480,7 +1445,7 @@ async fn contribution_cannot_delete_the_ehr_status() {
 
     let err = svc
         .create_ehr_contribution(
-            ehr_uuid,
+            ehr_id,
             serde_json::json!({
                 "versions": [{
                     "commit_audit": commit_audit("523", "deleted", "author"),
@@ -1499,7 +1464,7 @@ async fn contribution_cannot_delete_the_ehr_status() {
 
     // the status is still there
     let still = svc
-        .ehr_status(ehr_uuid, None)
+        .ehr_status(ehr_id, None)
         .await
         .map(|r| r.body)
         .expect("status still present");
@@ -1522,11 +1487,10 @@ async fn contribution_cannot_delete_the_ehr_status() {
 #[tokio::test]
 async fn data_carrying_deleted_lifecycle_is_refused_on_both_routes() {
     let (_db, svc) = crate::fixtures::service().await;
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
-    let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
 
     let v1 = svc
-        .create_composition(ehr_uuid, uv(&composition("v1"), "249", None))
+        .create_composition(ehr_id, uv(&composition("v1"), "249", None))
         .await
         .expect("create")
         .version_uid();
@@ -1541,7 +1505,7 @@ async fn data_carrying_deleted_lifecycle_is_refused_on_both_routes() {
     // deleted state.
     let err = svc
         .create_ehr_contribution(
-            ehr_uuid,
+            ehr_id,
             json!({
                 "versions": [{
                     "commit_audit": commit_audit("251", "modification", "author"),
@@ -1570,7 +1534,7 @@ async fn data_carrying_deleted_lifecycle_is_refused_on_both_routes() {
     let mut direct: WriteRequest<_> = uv(&composition("deleted but full"), "251", Some(&v1));
     direct.lifecycle_state = Some("523".to_owned());
     let err = svc
-        .update_composition(ehr_uuid, vo_uuid, direct)
+        .update_composition(ehr_id, vo_uuid, direct)
         .await
         .expect_err("a data-carrying 523 header is refused");
     let err = err.flattened();
@@ -1588,7 +1552,7 @@ async fn data_carrying_deleted_lifecycle_is_refused_on_both_routes() {
     // Neither refusal wrote anything: the composition is still at version 1
     // and still readable (no 523 row with node rows behind it).
     let live = svc
-        .read_composition_raw(ehr_uuid, vo_uuid, None)
+        .read_composition_raw(ehr_id, vo_uuid, None)
         .await
         .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("still live");
@@ -1597,7 +1561,7 @@ async fn data_carrying_deleted_lifecycle_is_refused_on_both_routes() {
     // (3) The accepting twin: the identical content under 532|complete|.
     let v2 = svc
         .update_composition(
-            ehr_uuid,
+            ehr_id,
             vo_uuid,
             uv(&composition("deleted but full"), "251", Some(&v1)),
         )
@@ -1626,11 +1590,10 @@ async fn data_carrying_deleted_lifecycle_is_refused_on_both_routes() {
 #[tokio::test]
 async fn a_delete_member_with_a_contradictory_lifecycle_state_is_refused() {
     let (_db, svc) = crate::fixtures::service().await;
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
-    let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
 
     let v1 = svc
-        .create_composition(ehr_uuid, uv(&composition("v1"), "249", None))
+        .create_composition(ehr_id, uv(&composition("v1"), "249", None))
         .await
         .expect("create")
         .version_uid();
@@ -1655,7 +1618,7 @@ async fn a_delete_member_with_a_contradictory_lifecycle_state_is_refused() {
 
     // (1) The contradiction: a deletion claiming the complete state.
     let err = svc
-        .create_ehr_contribution(ehr_uuid, delete_member(lifecycle("532")))
+        .create_ehr_contribution(ehr_id, delete_member(lifecycle("532")))
         .await
         .expect_err("a delete member declaring 532|complete| is refused");
     assert!(
@@ -1672,7 +1635,7 @@ async fn a_delete_member_with_a_contradictory_lifecycle_state_is_refused() {
 
     // (2) An out-of-group state on the same member: the invariant 422.
     let err = svc
-        .create_ehr_contribution(ehr_uuid, delete_member(lifecycle("999")))
+        .create_ehr_contribution(ehr_id, delete_member(lifecycle("999")))
         .await
         .expect_err("a delete member declaring an out-of-group state is refused");
     assert!(
@@ -1688,7 +1651,7 @@ async fn a_delete_member_with_a_contradictory_lifecycle_state_is_refused() {
 
     // Neither refusal committed anything: the composition is still live at v1.
     let live = svc
-        .read_composition_raw(ehr_uuid, vo_uuid, None)
+        .read_composition_raw(ehr_id, vo_uuid, None)
         .await
         .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("still live");
@@ -1696,11 +1659,11 @@ async fn a_delete_member_with_a_contradictory_lifecycle_state_is_refused() {
 
     // (3) The accepting twin: the same member declaring 523|deleted| commits,
     // and the latest read is then the deleted (204/null) path.
-    svc.create_ehr_contribution(ehr_uuid, delete_member(lifecycle("523")))
+    svc.create_ehr_contribution(ehr_id, delete_member(lifecycle("523")))
         .await
         .expect("the 523-declaring delete member commits");
     let del = svc
-        .read_composition_raw(ehr_uuid, vo_uuid, None)
+        .read_composition_raw(ehr_id, vo_uuid, None)
         .await
         .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("composition_get deleted");
@@ -1720,11 +1683,10 @@ async fn a_delete_member_with_a_contradictory_lifecycle_state_is_refused() {
 #[tokio::test]
 async fn deleting_an_already_deleted_composition_is_refused_on_both_routes() {
     let (_db, svc) = crate::fixtures::service().await;
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
-    let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
 
     let v1 = svc
-        .create_composition(ehr_uuid, uv(&composition("v1"), "249", None))
+        .create_composition(ehr_id, uv(&composition("v1"), "249", None))
         .await
         .expect("create")
         .version_uid();
@@ -1741,15 +1703,15 @@ async fn deleting_an_already_deleted_composition_is_refused_on_both_routes() {
     };
 
     let deleted = svc
-        .create_ehr_contribution(ehr_uuid, delete_member(&v1))
+        .create_ehr_contribution(ehr_id, delete_member(&v1))
         .await
         .expect("the first deletion commits");
     let v2 = first_version_uid(&deleted.body);
-    assert_eq!(lifecycle_code_of(&svc, &ehr_id, &vo_id, &v2).await, "523");
+    assert_eq!(lifecycle_code_of(&svc, ehr_id, &vo_id, &v2).await, "523");
 
     // The repeated deletion through a CONTRIBUTION: 400, nothing committed.
     let err = svc
-        .create_ehr_contribution(ehr_uuid, delete_member(&v2))
+        .create_ehr_contribution(ehr_id, delete_member(&v2))
         .await
         .expect_err("deleting a deleted composition is refused");
     assert!(
@@ -1766,7 +1728,7 @@ async fn deleting_an_already_deleted_composition_is_refused_on_both_routes() {
     // The same deletion through the DELETE route: the same refusal.
     let deleted_uid: openehr_base::prelude::ObjectVersionId = v2.parse().expect("ovid");
     let direct = svc
-        .delete_composition(ehr_uuid, &deleted_uid, WriteRequest::new(()))
+        .delete_composition(ehr_id, &deleted_uid, WriteRequest::new(()))
         .await
         .expect_err("the DELETE route refuses it too");
     assert!(
@@ -1777,7 +1739,7 @@ async fn deleting_an_already_deleted_composition_is_refused_on_both_routes() {
     // The refused deletions committed no version: the revert lands as v3.
     let reverted = svc
         .create_ehr_contribution(
-            ehr_uuid,
+            ehr_id,
             json!({
                 "versions": [{
                     "commit_audit": commit_audit("251", "modification", "author"),
@@ -1795,7 +1757,7 @@ async fn deleting_an_already_deleted_composition_is_refused_on_both_routes() {
         v3.ends_with("::3"),
         "the revert is the third version, got {v3}"
     );
-    assert_eq!(lifecycle_code_of(&svc, &ehr_id, &vo_id, &v3).await, "532");
+    assert_eq!(lifecycle_code_of(&svc, ehr_id, &vo_id, &v3).await, "532");
 }
 
 /// A `553|incomplete|` COMPOSITION missing mandatory data commits; the
@@ -1812,8 +1774,7 @@ async fn deleting_an_already_deleted_composition_is_refused_on_both_routes() {
 #[tokio::test]
 async fn incomplete_admits_missing_composition_data_but_never_wrong_data() {
     let (_db, svc) = crate::fixtures::service().await;
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
-    let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
 
     // `COMPOSITION.composer` is 1..1 (absent here); the ADMIN_ENTRY below omits
     // its own mandatory `language`/`encoding`/`subject`; and `CLUSTER.items` is
@@ -1856,12 +1817,12 @@ async fn incomplete_admits_missing_composition_data_but_never_wrong_data() {
 
     // (1) 553 accepts it.
     let created = svc
-        .create_ehr_contribution(ehr_uuid, member(&missing, "553"))
+        .create_ehr_contribution(ehr_id, member(&missing, "553"))
         .await
         .expect("a 553 commit accepts absent mandatory data (master06 §Incomplete Content)");
     let ovid = first_version_uid(&created.body);
     assert_eq!(
-        lifecycle_code_of(&svc, &ehr_id, vo_of(&ovid), &ovid).await,
+        lifecycle_code_of(&svc, ehr_id, vo_of(&ovid), &ovid).await,
         "553"
     );
 
@@ -1871,7 +1832,7 @@ async fn incomplete_admits_missing_composition_data_but_never_wrong_data() {
     // released `responses/422.yaml` scopes 422 to content that "could be
     // converted to a resource".
     let err = svc
-        .create_ehr_contribution(ehr_uuid, member(&missing, "532"))
+        .create_ehr_contribution(ehr_id, member(&missing, "532"))
         .await
         .expect_err("the complete twin of incomplete content is refused");
     assert!(
@@ -1891,7 +1852,7 @@ async fn incomplete_admits_missing_composition_data_but_never_wrong_data() {
     let mut wrong_type = missing.clone();
     wrong_type["language"]["code_string"] = json!(42);
     let err = svc
-        .create_ehr_contribution(ehr_uuid, member(&wrong_type, "553"))
+        .create_ehr_contribution(ehr_id, member(&wrong_type, "553"))
         .await
         .expect_err("a 553 commit still refuses a wrongly-typed value");
     assert!(
@@ -1908,7 +1869,7 @@ async fn incomplete_admits_missing_composition_data_but_never_wrong_data() {
     let mut wrong_code = missing.clone();
     wrong_code["category"]["defining_code"]["code_string"] = json!("999");
     let err = svc
-        .create_ehr_contribution(ehr_uuid, member(&wrong_code, "553"))
+        .create_ehr_contribution(ehr_id, member(&wrong_code, "553"))
         .await
         .expect_err("a 553 commit still refuses an out-of-group code");
     assert!(
@@ -1932,8 +1893,7 @@ async fn incomplete_admits_missing_composition_data_but_never_wrong_data() {
 #[tokio::test]
 async fn incomplete_relaxes_the_folder_kind_too() {
     let (_db, svc) = crate::fixtures::service().await;
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
-    let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
 
     // `LOCATABLE.name` is 1..1 — absent here.
     let nameless = json!({
@@ -1956,14 +1916,14 @@ async fn incomplete_relaxes_the_folder_kind_too() {
         })
     };
 
-    svc.create_ehr_contribution(ehr_uuid, body("553"))
+    svc.create_ehr_contribution(ehr_id, body("553"))
         .await
         .expect("a 553 FOLDER may omit its mandatory name");
 
     // The complete twin's class is the 400 row — the strict typed door, per
     // the released `responses/422.yaml` scope ("could be converted").
     let err = svc
-        .create_ehr_contribution(ehr_uuid, body("532"))
+        .create_ehr_contribution(ehr_id, body("532"))
         .await
         .expect_err("the complete twin is refused");
     assert!(
@@ -1984,12 +1944,11 @@ async fn incomplete_relaxes_the_folder_kind_too() {
 #[tokio::test]
 async fn contribution_member_without_lifecycle_state_is_refused() {
     let (_db, svc) = crate::fixtures::service().await;
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
-    let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
 
     let err = svc
         .create_ehr_contribution(
-            ehr_uuid,
+            ehr_id,
             json!({
                 "versions": [{
                     "commit_audit": commit_audit("249", "creation", "author"),
@@ -2013,7 +1972,7 @@ async fn contribution_member_without_lifecycle_state_is_refused() {
 
     // The accepting twin: the same member stating its lifecycle.
     svc.create_ehr_contribution(
-        ehr_uuid,
+        ehr_id,
         json!({
             "versions": [{
                 "commit_audit": commit_audit("249", "creation", "author"),
@@ -2038,11 +1997,10 @@ async fn contribution_member_without_lifecycle_state_is_refused() {
 #[tokio::test]
 async fn merge_provenance_on_a_member_is_recorded_and_served() {
     let (_db, svc) = crate::fixtures::service().await;
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
-    let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
 
     let v1 = svc
-        .create_composition(ehr_uuid, uv(&composition("v1"), "249", None))
+        .create_composition(ehr_id, uv(&composition("v1"), "249", None))
         .await
         .expect("create")
         .version_uid();
@@ -2069,7 +2027,7 @@ async fn merge_provenance_on_a_member_is_recorded_and_served() {
     ];
     let merged = svc
         .create_ehr_contribution(
-            ehr_uuid,
+            ehr_id,
             member(
                 &v1,
                 Some(json!([
@@ -2081,7 +2039,7 @@ async fn merge_provenance_on_a_member_is_recorded_and_served() {
         .await
         .expect("a member naming its merge inputs commits");
     let v2 = first_version_uid(&merged.body);
-    let ov = read_version(&svc, &ehr_id, vo_of(&v2), &v2).await;
+    let ov = read_version(&svc, ehr_id, vo_of(&v2), &v2).await;
     let served: Vec<&str> = ov["other_input_version_uids"]
         .as_array()
         .unwrap_or_else(|| panic!("the merge provenance is served, got {ov:?}"))
@@ -2092,7 +2050,7 @@ async fn merge_provenance_on_a_member_is_recorded_and_served() {
 
     // A malformed input is the 422 at its member path, and nothing commits.
     let err = svc
-        .create_ehr_contribution(ehr_uuid, member(&v2, Some(json!([{ "value": "sysB::2" }]))))
+        .create_ehr_contribution(ehr_id, member(&v2, Some(json!([{ "value": "sysB::2" }]))))
         .await
         .expect_err("a malformed merge input is refused");
     assert!(
@@ -2112,11 +2070,11 @@ async fn merge_provenance_on_a_member_is_recorded_and_served() {
 
     // The twin without the key commits on top and serves none.
     let committed = svc
-        .create_ehr_contribution(ehr_uuid, member(&v2, None))
+        .create_ehr_contribution(ehr_id, member(&v2, None))
         .await
         .expect("the same member without merge inputs commits");
     let v3 = first_version_uid(&committed.body);
-    let ov = read_version(&svc, &ehr_id, vo_of(&v3), &v3).await;
+    let ov = read_version(&svc, ehr_id, vo_of(&v3), &v3).await;
     assert!(
         ov.get("other_input_version_uids").is_none(),
         "a version that merges nothing carries no merge provenance, got {ov:?}"
@@ -2142,11 +2100,10 @@ async fn merge_provenance_on_a_member_is_recorded_and_served() {
 #[tokio::test]
 async fn foreign_version_identity_is_refused_on_the_commit_wire() {
     let (_db, svc) = crate::fixtures::service().await;
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
-    let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
 
     let v1 = svc
-        .create_composition(ehr_uuid, uv(&composition("v1"), "249", None))
+        .create_composition(ehr_id, uv(&composition("v1"), "249", None))
         .await
         .expect("create")
         .version_uid();
@@ -2181,7 +2138,7 @@ async fn foreign_version_identity_is_refused_on_the_commit_wire() {
         ("_type", vec![("_type", json!("IMPORTED_VERSION"))]),
     ] {
         let err = svc
-            .create_ehr_contribution(ehr_uuid, member(&v1, &extra))
+            .create_ehr_contribution(ehr_id, member(&v1, &extra))
             .await
             .expect_err("a member declaring a foreign version identity is refused");
         assert!(
@@ -2204,11 +2161,11 @@ async fn foreign_version_identity_is_refused_on_the_commit_wire() {
         "data": composition("foreign")
     });
     let committed = svc
-        .create_ehr_contribution(ehr_uuid, member(&v1, &[("item", item)]))
+        .create_ehr_contribution(ehr_id, member(&v1, &[("item", item)]))
         .await
         .expect("an undeclared item member of the open UPDATE_VERSION commits");
     let v2 = first_version_uid(&committed.body);
-    let ov = read_version(&svc, &ehr_id, vo_of(&v2), &v2).await;
+    let ov = read_version(&svc, ehr_id, vo_of(&v2), &v2).await;
     assert_eq!(
         ov["_type"], "ORIGINAL_VERSION",
         "a locally committed version is an ORIGINAL_VERSION, got {ov:?}"
@@ -2228,19 +2185,16 @@ async fn foreign_version_identity_is_refused_on_the_commit_wire() {
 
     // Twin 2: the same member with none of the keys commits.
     let committed = svc
-        .create_ehr_contribution(ehr_uuid, member(&v2, &[]))
+        .create_ehr_contribution(ehr_id, member(&v2, &[]))
         .await
         .expect("the same member without the undeclared keys commits");
     let v3 = first_version_uid(&committed.body);
 
     // Twin 3: the LEGAL self-tag, `_type: ORIGINAL_VERSION`, names the class
     // this wire commits, so it is accepted.
-    svc.create_ehr_contribution(
-        ehr_uuid,
-        member(&v3, &[("_type", json!("ORIGINAL_VERSION"))]),
-    )
-    .await
-    .expect("a member self-tagged as the class this wire commits is accepted");
+    svc.create_ehr_contribution(ehr_id, member(&v3, &[("_type", json!("ORIGINAL_VERSION"))]))
+        .await
+        .expect("a member self-tagged as the class this wire commits is accepted");
 }
 
 /// THE OPEN MEMBER READ (#4577): ITS-REST `UpdateVersion.yaml` declares six
@@ -2254,8 +2208,7 @@ async fn foreign_version_identity_is_refused_on_the_commit_wire() {
 #[tokio::test]
 async fn an_undeclared_contribution_member_key_is_accepted_and_assigned_ones_refused() {
     let (_db, svc) = crate::fixtures::service().await;
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
-    let ehr_uuid: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
 
     let mut member = json!({
         "commit_audit": commit_audit("249", "creation", "author"),
@@ -2269,7 +2222,7 @@ async fn an_undeclared_contribution_member_key_is_accepted_and_assigned_ones_ref
 
     let committed = svc
         .create_ehr_contribution(
-            ehr_uuid,
+            ehr_id,
             json!({
                 "versions": [member.clone()],
                 "audit": commit_audit("249", "creation", "author")
@@ -2282,7 +2235,7 @@ async fn an_undeclared_contribution_member_key_is_accepted_and_assigned_ones_ref
         .expect("the CONTRIBUTION uid")
         .to_owned();
     let version_uid = first_version_uid(&committed.body);
-    let ov = read_version(&svc, &ehr_id, vo_of(&version_uid), &version_uid).await;
+    let ov = read_version(&svc, ehr_id, vo_of(&version_uid), &version_uid).await;
     assert_eq!(
         ov["contribution"]["id"]["value"], contribution_uid,
         "the served version references the committing CONTRIBUTION, got {ov:?}"
@@ -2303,7 +2256,7 @@ async fn an_undeclared_contribution_member_key_is_accepted_and_assigned_ones_ref
         assigned[key] = value;
         let err = svc
             .create_ehr_contribution(
-                ehr_uuid,
+                ehr_id,
                 json!({
                     "versions": [assigned],
                     "audit": commit_audit("249", "creation", "author")
@@ -2337,8 +2290,7 @@ async fn an_undeclared_contribution_member_key_is_accepted_and_assigned_ones_ref
 #[tokio::test]
 async fn contribution_audit_change_type_is_required_not_derived() {
     let (_db, svc) = crate::fixtures::service().await;
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
-    let ehr_uuid: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
 
     let member = || {
         json!({
@@ -2351,7 +2303,7 @@ async fn contribution_audit_change_type_is_required_not_derived() {
     // The invalid twin: an audit that names a committer but no change type.
     let err = svc
         .create_ehr_contribution(
-            ehr_uuid,
+            ehr_id,
             json!({
                 "versions": [member()],
                 "audit": { "committer": committer("author") }
@@ -2382,7 +2334,7 @@ async fn contribution_audit_change_type_is_required_not_derived() {
     // invalid content (`responses/400_CONTRIBUTION.yaml`).
     let err = svc
         .create_ehr_contribution(
-            ehr_uuid,
+            ehr_id,
             json!({
                 "versions": [member()],
                 "audit": { "change_type": change_type("249", "creation") }
@@ -2409,7 +2361,7 @@ async fn contribution_audit_change_type_is_required_not_derived() {
     // …and an entirely absent audit is the same 400, `NewContribution.yaml`
     // listing `audit` under `required`.
     let err = svc
-        .create_ehr_contribution(ehr_uuid, json!({ "versions": [member()] }))
+        .create_ehr_contribution(ehr_id, json!({ "versions": [member()] }))
         .await
         .expect_err("a CONTRIBUTION with no audit at all must be refused");
     assert!(
@@ -2431,7 +2383,7 @@ async fn contribution_audit_change_type_is_required_not_derived() {
     // succeeds, storing that code verbatim.
     let created = svc
         .create_ehr_contribution(
-            ehr_uuid,
+            ehr_id,
             json!({
                 "versions": [member()],
                 "audit": commit_audit("249", "creation", "author")
@@ -2452,8 +2404,7 @@ async fn contribution_audit_change_type_is_required_not_derived() {
 #[tokio::test]
 async fn member_scoped_refusals_name_the_offending_version_index() {
     let (_db, svc) = crate::fixtures::service().await;
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
-    let ehr = ehr_id.parse().expect("ehr uuid");
+    let ehr = crate::fixtures::create_ehr(&svc).await;
 
     let good = json!({
         "data": composition("attributed-good"),
@@ -2560,7 +2511,7 @@ fn member(data: Value, change: (&str, &str), preceding: Option<&str>) -> Value {
 }
 
 /// The current `EHR_STATUS` version uid of an EHR.
-async fn current_status_uid(svc: &FerroEhrService, ehr: ferroehr::ids::EhrId) -> String {
+async fn current_status_uid(svc: &FerroEhrService, ehr: EhrId) -> String {
     svc.ehr_status(ehr, None)
         .await
         .map(|r| r.body)
@@ -2579,9 +2530,8 @@ async fn current_status_uid(svc: &FerroEhrService, ehr: ferroehr::ids::EhrId) ->
 #[tokio::test]
 async fn deactivating_contribution_carries_its_final_content() {
     let (_db, svc) = crate::fixtures::service().await;
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
-    let ehr_uuid: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
-    let status_uid = current_status_uid(&svc, ehr_uuid).await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
+    let status_uid = current_status_uid(&svc, ehr_id).await;
 
     let mixed = json!({
         "versions": [
@@ -2590,13 +2540,13 @@ async fn deactivating_contribution_carries_its_final_content() {
         ],
         "audit": commit_audit("251", "modification", "author")
     });
-    svc.create_ehr_contribution(ehr_uuid, mixed)
+    svc.create_ehr_contribution(ehr_id, mixed)
         .await
         .expect("write-then-deactivate in one CONTRIBUTION is accepted");
 
     // The deactivation holds from the next act on.
     let blocked = svc
-        .create_composition(ehr_uuid, uv(&composition("too late"), "249", None))
+        .create_composition(ehr_id, uv(&composition("too late"), "249", None))
         .await
         .expect_err("the EHR is deactivated after the mixed commit");
     assert!(
@@ -2612,13 +2562,12 @@ async fn deactivating_contribution_carries_its_final_content() {
 #[tokio::test]
 async fn reactivating_contribution_unlocks_its_own_content() {
     let (_db, svc) = crate::fixtures::service().await;
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
-    let ehr_uuid: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
 
     // Deactivate up front.
-    let status_uid = current_status_uid(&svc, ehr_uuid).await;
+    let status_uid = current_status_uid(&svc, ehr_id).await;
     Box::pin(svc.replace_ehr_status(
-        ehr_uuid,
+        ehr_id,
         uv(&ehr_status_modifiable(false), "251", Some(&status_uid)),
     ))
     .await
@@ -2631,7 +2580,7 @@ async fn reactivating_contribution_unlocks_its_own_content() {
         "audit": commit_audit("249", "creation", "author")
     });
     let blocked = svc
-        .create_ehr_contribution(ehr_uuid, content_only)
+        .create_ehr_contribution(ehr_id, content_only)
         .await
         .expect_err("content against a deactivated EHR is refused");
     assert!(
@@ -2641,7 +2590,7 @@ async fn reactivating_contribution_unlocks_its_own_content() {
 
     // (2) Content beside a status member that KEEPS is_modifiable = false →
     // still refused (no reactivation happens).
-    let status_uid = current_status_uid(&svc, ehr_uuid).await;
+    let status_uid = current_status_uid(&svc, ehr_id).await;
     let still_off = json!({
         "versions": [
             member(composition("still blocked"), ("249", "creation"), None),
@@ -2649,13 +2598,13 @@ async fn reactivating_contribution_unlocks_its_own_content() {
         ],
         "audit": commit_audit("251", "modification", "author")
     });
-    svc.create_ehr_contribution(ehr_uuid, still_off)
+    svc.create_ehr_contribution(ehr_id, still_off)
         .await
         .expect_err("a non-reactivating mixed CONTRIBUTION stays refused");
 
     // (3) Content FIRST, the reactivating status member SECOND → accepted:
     // the rule reads the atomic change set, not the list order.
-    let status_uid = current_status_uid(&svc, ehr_uuid).await;
+    let status_uid = current_status_uid(&svc, ehr_id).await;
     let reactivating = json!({
         "versions": [
             member(composition("welcome back"), ("249", "creation"), None),
@@ -2663,12 +2612,12 @@ async fn reactivating_contribution_unlocks_its_own_content() {
         ],
         "audit": commit_audit("251", "modification", "author")
     });
-    svc.create_ehr_contribution(ehr_uuid, reactivating)
+    svc.create_ehr_contribution(ehr_id, reactivating)
         .await
         .expect("a reactivating mixed CONTRIBUTION is accepted");
 
     // The EHR is active again: a plain content write goes through.
-    svc.create_composition(ehr_uuid, uv(&composition("active again"), "249", None))
+    svc.create_composition(ehr_id, uv(&composition("active again"), "249", None))
         .await
         .expect("content write after the reactivating commit");
 }
@@ -2684,13 +2633,12 @@ async fn reactivating_contribution_unlocks_its_own_content() {
 #[tokio::test]
 async fn concurrent_deactivation_is_seen_by_the_content_commit() {
     let (db, svc) = crate::fixtures::service().await;
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
-    let ehr_uuid: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
 
     // An open transaction flips the flag and HOLDS the row lock.
     let mut flip = db.pool().begin().await.expect("begin the flip tx");
     sqlx::query("UPDATE ehr SET is_modifiable = false WHERE id = $1")
-        .bind(ehr_uuid)
+        .bind(ehr_id)
         .execute(&mut *flip)
         .await
         .expect("uncommitted deactivation");
@@ -2700,12 +2648,11 @@ async fn concurrent_deactivation_is_seen_by_the_content_commit() {
     let pool = db.pool();
     let racing = tokio::spawn(async move {
         let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
-        let ehr_uuid: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
         let content = json!({
             "versions": [ member(composition("raced"), ("249", "creation"), None) ],
             "audit": commit_audit("249", "creation", "author")
         });
-        svc.create_ehr_contribution(ehr_uuid, content).await
+        svc.create_ehr_contribution(ehr_id, content).await
     });
     // Give the racing commit time to reach the in-transaction gate and block.
     tokio::time::sleep(std::time::Duration::from_millis(300)).await;
@@ -2732,8 +2679,7 @@ async fn concurrent_deactivation_is_seen_by_the_content_commit() {
 #[tokio::test]
 async fn create_body_uid_is_replaced_by_the_minted_identity() {
     let (_db, svc) = crate::fixtures::service().await;
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
-    let ehr_uuid: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
 
     let mut body = composition("client uid");
     body["uid"] = json!({
@@ -2741,7 +2687,7 @@ async fn create_body_uid_is_replaced_by_the_minted_identity() {
         "value": "11111111-1111-1111-1111-111111111111::client.example::7"
     });
     let committed = svc
-        .create_composition(ehr_uuid, uv(&body, "249", None))
+        .create_composition(ehr_id, uv(&body, "249", None))
         .await
         .expect("a schema-valid body uid never refuses the create");
     let minted = committed.version_uid();
@@ -2751,7 +2697,7 @@ async fn create_body_uid_is_replaced_by_the_minted_identity() {
     );
 
     let served = svc
-        .composition_at_version(ehr_uuid, minted.parse().expect("OBJECT_VERSION_ID"))
+        .composition_at_version(ehr_id, minted.parse().expect("OBJECT_VERSION_ID"))
         .await
         .expect("the committed version exists")
         .body
@@ -2773,11 +2719,10 @@ async fn create_body_uid_is_replaced_by_the_minted_identity() {
 #[tokio::test]
 async fn a_deactivated_ehr_reports_the_state_conflict_before_a_content_defect() {
     let (_db, svc) = crate::fixtures::service().await;
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
-    let ehr_uuid: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
-    let status_uid = current_status_uid(&svc, ehr_uuid).await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
+    let status_uid = current_status_uid(&svc, ehr_id).await;
     Box::pin(svc.replace_ehr_status(
-        ehr_uuid,
+        ehr_id,
         uv(&ehr_status_modifiable(false), "251", Some(&status_uid)),
     ))
     .await
@@ -2795,7 +2740,7 @@ async fn a_deactivated_ehr_reports_the_state_conflict_before_a_content_defect() 
         "audit": commit_audit("249", "creation", "author")
     });
     let refused = svc
-        .create_ehr_contribution(ehr_uuid, set)
+        .create_ehr_contribution(ehr_id, set)
         .await
         .expect_err("content into a deactivated EHR is refused");
     assert!(
@@ -2814,7 +2759,7 @@ async fn a_deactivated_ehr_reports_the_state_conflict_before_a_content_defect() 
     );
 
     // The same defect on a REACTIVATING set reaches content validation.
-    let status_uid = current_status_uid(&svc, ehr_uuid).await;
+    let status_uid = current_status_uid(&svc, ehr_id).await;
     let mut defective = composition("broken");
     defective
         .as_object_mut()
@@ -2828,7 +2773,7 @@ async fn a_deactivated_ehr_reports_the_state_conflict_before_a_content_defect() 
         "audit": commit_audit("251", "modification", "author")
     });
     let refused = svc
-        .create_ehr_contribution(ehr_uuid, reactivating)
+        .create_ehr_contribution(ehr_id, reactivating)
         .await
         .expect_err("the defective body is refused");
     assert!(
@@ -2865,7 +2810,7 @@ fn creation_audit(tag: Option<&str>) -> Value {
 }
 
 /// Assert the body is refused with the 400 of syntactically invalid content.
-async fn assert_shape_refused(svc: &FerroEhrService, ehr: ferroehr::ids::EhrId, body: Value) {
+async fn assert_shape_refused(svc: &FerroEhrService, ehr: EhrId, body: Value) {
     let err = svc
         .create_ehr_contribution(ehr, body.clone())
         .await
@@ -2890,8 +2835,8 @@ async fn assert_shape_refused(svc: &FerroEhrService, ehr: ferroehr::ids::EhrId, 
 #[tokio::test]
 async fn code_phrase_lifecycle_spellings_are_refused() {
     let (_db, svc) = crate::fixtures::service().await;
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
-    let ehr: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
+    let ehr: EhrId = ehr_id;
     for refused in [
         json!({ "terminology_id": "openehr", "code_string": "532" }),
         json!({ "terminology_id": { "value": "openehr" }, "code_string": "532" }),
@@ -2915,7 +2860,7 @@ async fn code_phrase_lifecycle_spellings_are_refused() {
         .expect("a DV_CODED_TEXT lifecycle_state commits");
     let ovid = first_version_uid(&created.body);
     assert_eq!(
-        lifecycle_code_of(&svc, &ehr_id, vo_of(&ovid), &ovid).await,
+        lifecycle_code_of(&svc, ehr_id, vo_of(&ovid), &ovid).await,
         "532"
     );
 }
@@ -2928,8 +2873,8 @@ async fn code_phrase_lifecycle_spellings_are_refused() {
 #[tokio::test]
 async fn a_plain_string_description_is_refused() {
     let (_db, svc) = crate::fixtures::service().await;
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
-    let ehr: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
+    let ehr: EhrId = ehr_id;
     let mut described = creation_audit(None);
     described["description"] = json!("free text");
     assert_shape_refused(
@@ -2964,7 +2909,7 @@ async fn a_plain_string_description_is_refused() {
         .expect("both DV_TEXT spellings commit");
     assert_eq!(created.body["audit"]["description"]["value"], "free text");
     let ovid = first_version_uid(&created.body);
-    let ov = read_version(&svc, &ehr_id, vo_of(&ovid), &ovid).await;
+    let ov = read_version(&svc, ehr_id, vo_of(&ovid), &ovid).await;
     assert_eq!(
         ov["commit_audit"]["description"]["defining_code"]["code_string"],
         "at0007"
@@ -2980,11 +2925,7 @@ async fn a_plain_string_description_is_refused() {
 #[tokio::test]
 async fn a_missing_change_type_or_audit_is_the_400() {
     let (_db, svc) = crate::fixtures::service().await;
-    let ehr: ferroehr::ids::EhrId = crate::fixtures::create_ehr(&svc)
-        .await
-        .to_string()
-        .parse()
-        .expect("ehr uuid");
+    let ehr = crate::fixtures::create_ehr(&svc).await;
     let without = json!({ "committer": committer("author") });
     assert_shape_refused(
         &svc,
@@ -3014,11 +2955,7 @@ async fn a_missing_change_type_or_audit_is_the_400() {
 #[tokio::test]
 async fn an_attestation_audit_is_refused_and_the_three_audit_spellings_commit() {
     let (_db, svc) = crate::fixtures::service().await;
-    let ehr: ferroehr::ids::EhrId = crate::fixtures::create_ehr(&svc)
-        .await
-        .to_string()
-        .parse()
-        .expect("ehr uuid");
+    let ehr = crate::fixtures::create_ehr(&svc).await;
     for tag in ["ATTESTATION", "UPDATE_ATTESTATION"] {
         let mut audit = creation_audit(Some(tag));
         audit["reason"] = json!({ "_type": "DV_TEXT", "value": "witnessed" });
@@ -3057,11 +2994,7 @@ async fn an_attestation_audit_is_refused_and_the_three_audit_spellings_commit() 
 #[tokio::test]
 async fn audit_refusals_agree_on_both_audits_and_undeclared_members_commit() {
     let (_db, svc) = crate::fixtures::service().await;
-    let ehr: ferroehr::ids::EhrId = crate::fixtures::create_ehr(&svc)
-        .await
-        .to_string()
-        .parse()
-        .expect("ehr uuid");
+    let ehr = crate::fixtures::create_ehr(&svc).await;
     let with = |member: &str, value: Value| {
         let mut audit = creation_audit(None);
         audit[member] = value;
@@ -3126,8 +3059,8 @@ async fn audit_refusals_agree_on_both_audits_and_undeclared_members_commit() {
 #[tokio::test]
 async fn an_attestation_member_carries_its_attestations() {
     let (_db, svc) = crate::fixtures::service().await;
-    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
-    let ehr: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
+    let ehr: EhrId = ehr_id;
     let ovid = svc
         .create_composition(ehr, uv(&composition("attested"), "249", None))
         .await
@@ -3169,7 +3102,7 @@ async fn an_attestation_member_carries_its_attestations() {
     svc.create_ehr_contribution(ehr, attest(json!([stated, attestation("witnessed", true)])))
         .await
         .expect("a 666 member with two attestations commits");
-    let ov = read_version(&svc, &ehr_id, vo_of(&ovid), &ovid).await;
+    let ov = read_version(&svc, ehr_id, vo_of(&ovid), &ovid).await;
     let atts = ov["attestations"].as_array().expect("attestations");
     let systems: Vec<&str> = atts
         .iter()
