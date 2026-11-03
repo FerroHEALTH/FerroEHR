@@ -128,8 +128,8 @@ management_loggers_set	false	-	None	None	-	Skip	Some(Audited { action: Update, o
 management_metrics	false	-	None	None	-	Skip	Some(Audited { action: Execute, object: ApplicationActivity })	-	false	false	false
 management_prometheus	false	-	None	None	-	Skip	Some(Audited { action: Execute, object: ApplicationActivity })	-	false	false	false
 management_status	false	-	None	None	-	Skip	Some(Audited { action: Execute, object: ApplicationActivity })	-	false	false	false
-message_export_ehr_extracts	false	-	None	None	-	Skip	None	-	false	false	false
-message_export_ehrs	false	-	None	None	-	Skip	None	-	false	false	false
+message_export_ehr_extracts	false	-	Some(Ehr)	Some(Read)	-	Pre	None	-	false	false	false
+message_export_ehrs	false	-	Some(Ehr)	Some(Read)	-	Pre	None	-	false	false	false
 message_import_ehr	false	-	None	None	-	Skip	None	-	false	false	false
 message_import_ehr_extract	false	-	None	None	-	Skip	None	-	false	false	false
 metrics_detail	false	-	None	None	-	Skip	None	-	false	false	false

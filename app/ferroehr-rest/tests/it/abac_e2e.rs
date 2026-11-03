@@ -1503,3 +1503,85 @@ async fn a_template_scoped_rule_binds_on_a_composition_tag_as_on_the_composition
         }
     }
 }
+
+/// A `POST /message/export` manifest naming `ehr_ids`, for a caller whose
+/// token carries `patient`.
+fn manifest_export(ehr_ids: &[&str], patient: &str) -> Request<Body> {
+    let entities: Vec<Value> = ehr_ids
+        .iter()
+        .map(|id| json!({ "_type": "EXTRACT_ENTITY_MANIFEST", "extract_id_key": id, "ehr_id": id }))
+        .collect();
+    let spec = json!({
+        "_type": "EXTRACT_SPEC",
+        "extract_type": {
+            "_type": "DV_CODED_TEXT", "value": "openEHR EHR",
+            "defining_code": {
+                "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+                "code_string": "803"
+            }
+        },
+        "include_multimedia": false,
+        "priority": 0,
+        "link_depth": 0,
+        "manifest": { "_type": "EXTRACT_MANIFEST", "entities": entities }
+    });
+    Request::builder()
+        .method("POST")
+        .uri(common::full("/message/export"))
+        .header("authorization", bearer(Some(patient)))
+        .header("content-type", "application/json")
+        .header("x-forwarded-for", "203.0.113.9")
+        .body(Body::from(spec.to_string()))
+        .expect("request")
+}
+
+/// Both EHR Extract export routes pass the patient gate a direct EHR read
+/// passes: an export of another patient's EHR is refused with `403`, through
+/// its path or through a manifest that also names the caller's own EHR.
+/// Before, neither route reached the ABAC policy-enforcement point.
+#[tokio::test]
+async fn an_export_of_another_patients_ehr_is_forbidden() {
+    let (_pg, svc) = service(None).await;
+    let app = abac_app(svc, true).await;
+
+    assert_eq!(
+        probe(
+            &app,
+            "GET",
+            &format!("/message/export/{EHR_OTHER}"),
+            Some(PATIENT_OWN)
+        )
+        .await,
+        StatusCode::FORBIDDEN,
+        "the path export of another patient's EHR is refused"
+    );
+    assert_eq!(
+        status(&app, manifest_export(&[EHR_OWN, EHR_OTHER], PATIENT_OWN)).await,
+        StatusCode::FORBIDDEN,
+        "a manifest naming another patient's EHR is refused whole"
+    );
+}
+
+/// An export of the caller's own EHR clears the patient gate on both routes.
+#[tokio::test]
+async fn an_export_of_the_own_patients_ehr_is_served() {
+    let (_pg, svc, seed) = service_and_seed_app().await;
+    seed_ehr(&seed, EHR_OWN).await;
+    let app = abac_app(svc, true).await;
+
+    assert_eq!(
+        probe(
+            &app,
+            "GET",
+            &format!("/message/export/{EHR_OWN}"),
+            Some(PATIENT_OWN)
+        )
+        .await,
+        StatusCode::OK,
+        "the path export of the own EHR is served"
+    );
+    let (code, extracts) = common::send_json(&app, manifest_export(&[EHR_OWN], PATIENT_OWN)).await;
+    assert_eq!(code, StatusCode::OK, "{extracts}");
+    assert_eq!(extracts.as_array().map(Vec::len), Some(1));
+}
