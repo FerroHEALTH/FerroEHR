@@ -23,7 +23,7 @@ use serde::Deserialize;
 
 use crate::error::ViewerError;
 use crate::locale::server::ServerMsg;
-use crate::locale::tr_served_with;
+use crate::locale::tr_served;
 
 /// The System API conformance manifest — the `Options` schema, field for field.
 ///
@@ -79,12 +79,8 @@ pub async fn fetch_conformance_manifest() -> Result<ConformanceManifest, ViewerE
     let cdr = crate::bff::cdr()?;
     let url = cdr.rest_v1_root();
     let body = cdr.public(http::Method::OPTIONS, &url).ok().await?.body;
-    serde_json::from_str::<ConformanceManifest>(&body).map_err(|e| {
-        ViewerError::Internal(tr_served_with(
-            ServerMsg::ConformanceManifestJson,
-            &[("e", (e).to_string().into())],
-        ))
-    })
+    serde_json::from_str::<ConformanceManifest>(&body)
+        .map_err(|e| ViewerError::failed(tr_served(ServerMsg::ConformanceManifestJson), e))
 }
 
 /// The conformance manifest as the CDR answers it, raw, for About's

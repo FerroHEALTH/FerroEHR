@@ -307,7 +307,7 @@ impl CdrClient {
             .header(http::header::ACCEPT, "application/json")
             .send()
             .await
-            .map_err(|e| ViewerError::CdrUnreachable(e.to_string()))?;
+            .map_err(ViewerError::unreachable)?;
         if response.status() != http::StatusCode::UNAUTHORIZED {
             return Ok((true, true));
         }
@@ -403,16 +403,10 @@ impl CdrCall {
             Some(Credential::Bearer { access_token }) => request.bearer_auth(access_token),
             None => request,
         };
-        let response = request
-            .send()
-            .await
-            .map_err(|e| ViewerError::CdrUnreachable(e.to_string()))?;
+        let response = request.send().await.map_err(ViewerError::unreachable)?;
         let status = response.status();
         let headers = response.headers().clone();
-        let body = response
-            .text()
-            .await
-            .map_err(|e| ViewerError::CdrUnreachable(format!("reading body: {e}")))?;
+        let body = response.text().await.map_err(ViewerError::unreachable)?;
         Ok(CdrResponse::from_parts(status, &headers, body))
     }
 

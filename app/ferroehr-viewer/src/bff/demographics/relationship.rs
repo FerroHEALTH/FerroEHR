@@ -42,8 +42,7 @@ use serde_json::Value;
 use crate::bff::demographics::PartyKind;
 use crate::error::ViewerError;
 use crate::locale::records::RecordsMsg;
-use crate::locale::tr_served;
-use crate::locale::{tr, tr_with};
+use crate::locale::{tr, tr_served, tr_with};
 use crate::uid::container_uid_of;
 
 /// The `PARTY_REF` namespace the viewer writes.
@@ -453,10 +452,7 @@ fn apply_relationship_edits(base: &str, name: &str, details: &str) -> Result<Str
         ));
     }
     let mut doc: Value = serde_json::from_str(base).map_err(|e| {
-        ViewerError::Invalid(tr_with(
-            RecordsMsg::LoadedRelationshipDocumentNotValidJson,
-            &[("e", (e).to_string().into())],
-        ))
+        ViewerError::rejected(tr(RecordsMsg::LoadedRelationshipDocumentNotValidJson), e)
     })?;
     let details = parse_details_draft(details).map_err(ViewerError::Invalid)?;
     let object = doc.as_object_mut().ok_or_else(|| {
@@ -467,12 +463,8 @@ fn apply_relationship_edits(base: &str, name: &str, details: &str) -> Result<Str
         Some(details) => drop(object.insert("details".to_owned(), details)),
         None => drop(object.remove("details")),
     }
-    serde_json::to_string(&doc).map_err(|e| {
-        ViewerError::Invalid(tr_with(
-            RecordsMsg::EditedRelationshipCouldNotSerialized,
-            &[("e", (e).to_string().into())],
-        ))
-    })
+    serde_json::to_string(&doc)
+        .map_err(|e| ViewerError::rejected(tr(RecordsMsg::EditedRelationshipCouldNotSerialized), e))
 }
 
 /// Flatten a canonical `PARTY_RELATIONSHIP` body into a [`RelationshipState`],
@@ -484,17 +476,13 @@ fn apply_relationship_edits(base: &str, name: &str, details: &str) -> Result<Str
 /// server offers for the conditional round-trip. `None` falls back to the body.
 ///
 /// # Errors
-/// [`ViewerError::Internal`] when the body is not valid JSON.
+/// [`ViewerError::Failed`] when the body is not valid JSON.
 fn parse_relationship_state(
     body: &str,
     served_etag: Option<&str>,
 ) -> Result<RelationshipState, ViewerError> {
-    let doc: Value = serde_json::from_str(body).map_err(|e| {
-        ViewerError::Internal(tr_with(
-            RecordsMsg::PartyRelationshipJson,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
+    let doc: Value = serde_json::from_str(body)
+        .map_err(|e| ViewerError::failed(tr(RecordsMsg::PartyRelationshipJson), e))?;
     let version_uid =
         served_etag.map_or_else(|| crate::uid::uid_value_of_document(&doc), str::to_owned);
     Ok(RelationshipState {

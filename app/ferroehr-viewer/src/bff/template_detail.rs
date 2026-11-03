@@ -23,7 +23,7 @@ use crate::builder::catalog::CatalogNode;
 use crate::error::ViewerError;
 use crate::example_options::{ExampleDetail, ExampleType};
 use crate::format::ReprFormat;
-use crate::locale::{Msg, tr_with};
+use crate::locale::{Msg, tr, tr_with};
 
 /// Template identity + language metadata for the detail header card,
 /// combined from the typed OPT (uid, concept, original language) and its
@@ -71,12 +71,11 @@ pub struct TemplateDetail {
 /// [`crate::builder::catalog::from_web_template`] the slim serializable tree.
 ///
 /// # Errors
-/// [`ViewerError::Internal`] when the OPT fails to parse or the Web Template
+/// [`ViewerError::Failed`] when the OPT fails to parse or the Web Template
 /// fails to build (the diagnostic named, never a panic).
 pub fn template_detail_from_opt(source: String) -> Result<TemplateDetail, ViewerError> {
-    let opt = openehr_its::opt14::from_xml(&source).map_err(|e| {
-        ViewerError::Internal(tr_with(Msg::Opt14Parse, &[("e", (e).to_string().into())]))
-    })?;
+    let opt = openehr_its::opt14::from_xml(&source)
+        .map_err(|e| ViewerError::failed(tr(Msg::Opt14Parse), e))?;
     let web_template =
         openehr_sdt::flat::webtemplate::builder::build_web_template(&opt).map_err(|e| {
             ViewerError::Internal(tr_with(
@@ -114,7 +113,7 @@ pub fn template_detail_from_opt(source: String) -> Result<TemplateDetail, Viewer
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr)); [`ViewerError::Cdr`]
 /// (e.g. `404` for an unknown template) / [`ViewerError::CdrUnauthorized`] /
 /// [`ViewerError::Forbidden`] / [`ViewerError::CdrUnreachable`] from the CDR;
-/// [`ViewerError::Internal`] when the OPT fails to parse or the Web Template
+/// [`ViewerError::Failed`] when the OPT fails to parse or the Web Template
 /// fails to build.
 pub async fn fetch_template_detail(
     // The template whose OPT to read.

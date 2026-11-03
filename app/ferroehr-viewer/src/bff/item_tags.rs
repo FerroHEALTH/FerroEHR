@@ -44,8 +44,7 @@ use std::collections::BTreeMap;
 use serde_json::Value;
 
 use crate::error::ViewerError;
-use crate::locale::Msg;
-use crate::locale::{tr_served, tr_with};
+use crate::locale::{Msg, tr, tr_served};
 
 /// One `ITEM_TAG` as the tag routes serve it.
 ///
@@ -136,7 +135,7 @@ pub async fn read_tags(path: &str) -> Result<Vec<ItemTagRow>, ViewerError> {
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr)), the `422` of a tag
 /// that breaks an `ITEM_TAG` invariant included; [`ViewerError::Invalid`] on
-/// a blank key; [`ViewerError::Internal`] when the current list is not valid
+/// a blank key; [`ViewerError::Failed`] when the current list is not valid
 /// JSON.
 pub async fn set_tag(
     path: &str,
@@ -242,14 +241,10 @@ fn update_tag(key: &str, value: &str, target_path: &str) -> Value {
 /// an absent optional attribute reads as empty rather than failing the panel.
 ///
 /// # Errors
-/// [`ViewerError::Internal`] when the body is not valid JSON.
+/// [`ViewerError::Failed`] when the body is not valid JSON.
 pub fn parse_item_tags(body: &str) -> Result<Vec<ItemTagRow>, ViewerError> {
-    let doc: Value = serde_json::from_str(body).map_err(|e| {
-        ViewerError::Internal(tr_with(
-            Msg::ItemTagListJson,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
+    let doc: Value =
+        serde_json::from_str(body).map_err(|e| ViewerError::failed(tr(Msg::ItemTagListJson), e))?;
     let items = doc.as_array().cloned().unwrap_or_default();
     Ok(items
         .iter()

@@ -58,36 +58,20 @@ impl Refused {
 /// happen and the request it answered, when known.
 #[must_use]
 pub fn refused(summary: String, error: &ViewerError, request: Option<String>) -> Html {
-    let (status, issues) = match error {
-        ViewerError::Cdr { status, message } => (
-            Some(*status),
-            vec![Issue::new(Severity::Error, status_words(*status)).text(message.clone())],
-        ),
-        ViewerError::CdrUnauthorized(message) => (
-            Some(401),
-            vec![Issue::new(Severity::Error, status_words(401)).text(message.clone())],
-        ),
-        ViewerError::Forbidden(message) => (
-            Some(403),
-            vec![Issue::new(Severity::Error, status_words(403)).text(message.clone())],
-        ),
-        ViewerError::CdrUnreachable(message) => (
-            None,
-            vec![Issue::new(Severity::Error, tr(Msg::CdrUnreachableCode)).text(message.clone())],
-        ),
-        ViewerError::Invalid(message) => (
-            None,
-            vec![Issue::new(Severity::Error, tr(Msg::InvalidCode)).text(message.clone())],
-        ),
-        ViewerError::Unauthenticated => (
-            None,
-            vec![Issue::new(Severity::Error, tr(Msg::SessionEndedCode))],
-        ),
-        ViewerError::Internal(message) => (
-            None,
-            vec![Issue::new(Severity::Error, tr(Msg::InternalCode)).text(message.clone())],
-        ),
+    let (status, code) = match error {
+        ViewerError::Cdr { status, .. } => (Some(*status), status_words(*status)),
+        ViewerError::CdrUnauthorized(_) => (Some(401), status_words(401)),
+        ViewerError::Forbidden(_) => (Some(403), status_words(403)),
+        ViewerError::CdrUnreachable(_) => (None, tr(Msg::CdrUnreachableCode)),
+        ViewerError::Invalid(_) | ViewerError::Rejected { .. } => (None, tr(Msg::InvalidCode)),
+        ViewerError::Unauthenticated => (None, tr(Msg::SessionEndedCode)),
+        ViewerError::Internal(_) | ViewerError::Failed { .. } => (None, tr(Msg::InternalCode)),
     };
+    let issue = Issue::new(Severity::Error, code);
+    let issues = vec![match error.detail() {
+        Some(text) => issue.text(text),
+        None => issue,
+    }];
     refusal(
         &current(),
         &Refusal {

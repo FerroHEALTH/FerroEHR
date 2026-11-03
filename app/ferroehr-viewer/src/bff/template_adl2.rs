@@ -32,7 +32,7 @@ use crate::error::ViewerError;
 use crate::example_options::{ExampleDetail, ExampleType};
 use crate::format::ReprFormat;
 use crate::locale::definitions::DefinitionsMsg;
-use crate::locale::tr_with;
+use crate::locale::{tr, tr_with};
 
 /// Fetch the stored ADL2 operational-template SOURCE.
 ///
@@ -162,18 +162,13 @@ pub async fn fetch_adl2_compiled(
 /// produces the Web Template and [`crate::builder::catalog::from_web_template`]
 /// the slim tree the views render. Both stages are named in the error.
 /// # Errors
-/// [`ViewerError::Internal`] when the AOM2 JSON fails to parse or the Web
+/// [`ViewerError::Failed`] when the AOM2 JSON fails to parse or the Web
 /// Template fails to build (the diagnostic named, never a panic).
 pub fn adl2_catalog_from_json(json: &str) -> Result<CatalogNode, ViewerError> {
     let opt = openehr_its::json::from_canonical_json::<
         openehr_am::v2_4::aom2::archetype::operational_template::OperationalTemplate,
     >(json)
-    .map_err(|e| {
-        ViewerError::Internal(tr_with(
-            DefinitionsMsg::Operationaltemplatev2Parse,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
+    .map_err(|e| ViewerError::failed(tr(DefinitionsMsg::Operationaltemplatev2Parse), e))?;
     let web_template = openehr_sdt::flat::webtemplate::builder_v2_4::build_web_template_v2_4(&opt)
         .map_err(|e| {
             ViewerError::Internal(tr_with(

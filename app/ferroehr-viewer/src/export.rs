@@ -57,7 +57,10 @@ pub async fn export_aql(
         Ok(response) => response,
         Err(e) => plain(
             StatusCode::BAD_GATEWAY,
-            &tr_with(ServerMsg::ExportFailed, &[("e", (e).to_string().into())]),
+            &tr_with(
+                ServerMsg::ExportFailed,
+                &[("e", crate::error::error_chain(&e).into())],
+            ),
         ),
     }
 }
@@ -71,12 +74,8 @@ async fn run(
     let parameters: serde_json::Value = if form.parameters_json.trim().is_empty() {
         serde_json::json!({})
     } else {
-        serde_json::from_str(&form.parameters_json).map_err(|e| {
-            ViewerError::Invalid(tr_with(
-                ServerMsg::ParametersMustJsonObject2,
-                &[("e", (e).to_string().into())],
-            ))
-        })?
+        serde_json::from_str(&form.parameters_json)
+            .map_err(|e| ViewerError::rejected(tr(ServerMsg::ParametersMustJsonObject2), e))?
     };
     if !parameters.is_object() {
         return Err(ViewerError::Invalid(tr(
@@ -125,12 +124,8 @@ fn pretty_json(body: &str) -> Vec<u8> {
 /// column path, then to a 1-based position) as the header row, scalar
 /// cells verbatim, null as empty, and structured cells as compact JSON.
 fn result_set_to_csv(body: &str) -> Result<Vec<u8>, ViewerError> {
-    let doc: serde_json::Value = serde_json::from_str(body).map_err(|e| {
-        ViewerError::Internal(tr_with(
-            ServerMsg::UnparseableResultSet,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
+    let doc: serde_json::Value = serde_json::from_str(body)
+        .map_err(|e| ViewerError::failed(tr(ServerMsg::UnparseableResultSet), e))?;
     let columns = doc
         .get("columns")
         .and_then(serde_json::Value::as_array)
@@ -159,7 +154,7 @@ fn result_set_to_csv(body: &str) -> Result<Vec<u8>, ViewerError> {
     if !header.is_empty() {
         writer
             .write_record(&header)
-            .map_err(|e| ViewerError::Internal(format!("csv: {e}")))?;
+            .map_err(|e| ViewerError::failed("csv", e))?;
     }
     let empty = Vec::new();
     let rows = doc
@@ -171,11 +166,11 @@ fn result_set_to_csv(body: &str) -> Result<Vec<u8>, ViewerError> {
         let record: Vec<String> = cells.iter().map(cell_text).collect();
         writer
             .write_record(&record)
-            .map_err(|e| ViewerError::Internal(format!("csv: {e}")))?;
+            .map_err(|e| ViewerError::failed("csv", e))?;
     }
     writer
         .into_inner()
-        .map_err(|e| ViewerError::Internal(format!("csv: {e}")))
+        .map_err(|e| ViewerError::failed("csv", e.into_error()))
 }
 
 /// One CSV cell: scalars verbatim, null empty, structures as compact JSON.

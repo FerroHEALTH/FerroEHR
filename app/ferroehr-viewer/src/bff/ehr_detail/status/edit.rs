@@ -17,8 +17,7 @@ use serde_json::Value;
 
 use crate::error::ViewerError;
 use crate::locale::records::RecordsMsg;
-use crate::locale::tr;
-use crate::locale::tr_with;
+use crate::locale::{tr, tr_with};
 
 /// Read an `other_details` draft: `None` for a blank draft (the attribute is
 /// removed), `Some(value)` for a JSON object.
@@ -74,12 +73,8 @@ pub fn apply_status_edits(
     is_modifiable: bool,
     other_details: &str,
 ) -> Result<String, ViewerError> {
-    let mut doc: Value = serde_json::from_str(base).map_err(|e| {
-        ViewerError::Invalid(tr_with(
-            RecordsMsg::LoadedEhrStatusDocumentNotValid,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
+    let mut doc: Value = serde_json::from_str(base)
+        .map_err(|e| ViewerError::rejected(tr(RecordsMsg::LoadedEhrStatusDocumentNotValid), e))?;
     let details = parse_other_details(other_details).map_err(ViewerError::Invalid)?;
     let object = doc.as_object_mut().ok_or_else(|| {
         ViewerError::Invalid({ tr(RecordsMsg::LoadedEhrStatusDocumentNotJson) }.clone())
@@ -90,12 +85,8 @@ pub fn apply_status_edits(
         Some(details) => drop(object.insert("other_details".to_owned(), details)),
         None => drop(object.remove("other_details")),
     }
-    serde_json::to_string(&doc).map_err(|e| {
-        ViewerError::Invalid(tr_with(
-            RecordsMsg::EditedEhrStatusCouldNotSerialized,
-            &[("e", (e).to_string().into())],
-        ))
-    })
+    serde_json::to_string(&doc)
+        .map_err(|e| ViewerError::rejected(tr(RecordsMsg::EditedEhrStatusCouldNotSerialized), e))
 }
 
 #[cfg(test)]

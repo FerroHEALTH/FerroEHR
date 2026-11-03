@@ -29,8 +29,7 @@ use serde_json::Value;
 
 use crate::error::ViewerError;
 use crate::locale::records::RecordsMsg;
-use crate::locale::tr_served;
-use crate::locale::tr_with;
+use crate::locale::{tr, tr_served};
 
 /// One version a CONTRIBUTION changed, as its `OBJECT_REF` carries it.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -67,7 +66,7 @@ pub struct ContributionState {
 /// [`ViewerError::Invalid`] on an empty uid; a non-2xx CDR answer (the `404`
 /// for an unknown contribution, or for an EHR-scoped one, included) normalizes
 /// via [`CdrResponse::ok`](crate::cdr::CdrResponse::ok);
-/// [`ViewerError::Internal`] when the body is not valid JSON.
+/// [`ViewerError::Failed`] when the body is not valid JSON.
 pub async fn fetch_demographic_contribution(
     // The CONTRIBUTION uid to read.
     contribution_uid: String,
@@ -92,14 +91,10 @@ pub async fn fetch_demographic_contribution(
 /// screen.
 ///
 /// # Errors
-/// [`ViewerError::Internal`] when the body is not valid JSON.
+/// [`ViewerError::Failed`] when the body is not valid JSON.
 fn parse_contribution(body: &str) -> Result<ContributionState, ViewerError> {
-    let doc: Value = serde_json::from_str(body).map_err(|e| {
-        ViewerError::Internal(tr_with(
-            RecordsMsg::ContributionJson,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
+    let doc: Value = serde_json::from_str(body)
+        .map_err(|e| ViewerError::failed(tr(RecordsMsg::ContributionJson), e))?;
     let versions = doc
         .get("versions")
         .and_then(Value::as_array)

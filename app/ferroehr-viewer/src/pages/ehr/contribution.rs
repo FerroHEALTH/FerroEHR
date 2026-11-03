@@ -382,10 +382,7 @@ async fn read_contribution(ehr_id: String, uid: String) -> ContributionModel {
         ),
         Err(error) => ContributionModel::Refused(Refused::new(
             tr(RecordsMsg::ContributionRefused),
-            ViewerError::Internal(tr_with(
-                RecordsMsg::ContributionsJson,
-                &[("e", error.to_string().into())],
-            )),
+            ViewerError::failed(tr(RecordsMsg::ContributionsJson), error),
         )),
     }
 }

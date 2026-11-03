@@ -45,7 +45,7 @@ pub struct StoredQueryRow {
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
-/// [`ViewerError::Invalid`] when `parameters_json` is not a JSON object.
+/// [`ViewerError::Rejected`] when `parameters_json` is not a JSON object.
 pub async fn run_aql(
     // The AQL to execute.
     aql: String,
@@ -59,10 +59,7 @@ pub async fn run_aql(
         serde_json::json!({})
     } else {
         serde_json::from_str(&parameters_json).map_err(|e| {
-            ViewerError::Invalid(tr_served_with(
-                ServerMsg::ParametersMustJsonObject3,
-                &[("e", (e).to_string().into())],
-            ))
+            ViewerError::rejected(tr_served(ServerMsg::ParametersMustJsonObject3), e)
         })?
     };
     if !parameters.is_object() {
@@ -94,7 +91,7 @@ pub async fn run_aql(
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
-/// [`ViewerError::Internal`] on an unparseable body.
+/// [`ViewerError::Failed`] on an unparseable body.
 pub async fn list_stored_queries() -> Result<Vec<StoredQueryRow>, ViewerError> {
     let cdr = crate::bff::cdr()?;
     let url = cdr.rest_v1("definition/query");
@@ -104,12 +101,8 @@ pub async fn list_stored_queries() -> Result<Vec<StoredQueryRow>, ViewerError> {
         return Ok(Vec::new());
     }
     let body = response.ok()?.body;
-    let doc: serde_json::Value = serde_json::from_str(&body).map_err(|e| {
-        ViewerError::Internal(tr_served_with(
-            ServerMsg::StoredQueryListJson,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
+    let doc: serde_json::Value = serde_json::from_str(&body)
+        .map_err(|e| ViewerError::failed(tr_served(ServerMsg::StoredQueryListJson), e))?;
     // The list shape nests under "versions" per the Definition API; parse
     // defensively (array at root or under "versions").
     let items = doc
@@ -154,12 +147,8 @@ pub async fn fetch_stored_query(
         urlencoding::encode(&version)
     ));
     let body = cdr.get(&url).ok().await?.body;
-    let doc: serde_json::Value = serde_json::from_str(&body).map_err(|e| {
-        ViewerError::Internal(tr_served_with(
-            ServerMsg::StoredQueryJson,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
+    let doc: serde_json::Value = serde_json::from_str(&body)
+        .map_err(|e| ViewerError::failed(tr_served(ServerMsg::StoredQueryJson), e))?;
     Ok(doc
         .get("query")
         .or_else(|| doc.get("q"))
@@ -275,10 +264,10 @@ pub async fn store_query(
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
-/// [`ViewerError::Invalid`] when `parameters_json` is not a JSON object; CDR
+/// [`ViewerError::Rejected`] when `parameters_json` is not a JSON object; CDR
 /// errors normalized via [`CdrResponse::ok`](crate::cdr::CdrResponse::ok)
 /// (notably `404` when no stored version matches the resolution form);
-/// [`ViewerError::Internal`] when the result set is not valid JSON.
+/// [`ViewerError::Failed`] when the result set is not valid JSON.
 pub async fn run_stored_query(
     // The qualified stored-query name.
     name: String,
@@ -301,10 +290,7 @@ pub async fn run_stored_query(
         serde_json::json!({})
     } else {
         serde_json::from_str(&parameters_json).map_err(|e| {
-            ViewerError::Invalid(tr_served_with(
-                ServerMsg::ParametersMustJsonObject4,
-                &[("e", (e).to_string().into())],
-            ))
+            ViewerError::rejected(tr_served(ServerMsg::ParametersMustJsonObject4), e)
         })?
     };
     if !parameters.is_object() {
@@ -356,7 +342,7 @@ pub async fn run_stored_query(
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
-/// [`ViewerError::Internal`] on an unparseable result.
+/// [`ViewerError::Failed`] on an unparseable result.
 pub async fn run_stored_count(
     // The qualified stored-query name.
     name: String,
@@ -370,12 +356,8 @@ pub async fn run_stored_count(
         urlencoding::encode(&version)
     ));
     let body = cdr.get(&url).ok().await?.body;
-    let doc: serde_json::Value = serde_json::from_str(&body).map_err(|e| {
-        ViewerError::Internal(tr_served_with(
-            ServerMsg::StoredQueryResultJson,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
+    let doc: serde_json::Value = serde_json::from_str(&body)
+        .map_err(|e| ViewerError::failed(tr_served(ServerMsg::StoredQueryResultJson), e))?;
     let rows = doc
         .get("rows")
         .and_then(serde_json::Value::as_array)

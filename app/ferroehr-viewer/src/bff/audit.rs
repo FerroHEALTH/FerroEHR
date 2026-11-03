@@ -23,7 +23,7 @@
 use crate::bff::PAGE_SIZE;
 use crate::error::ViewerError;
 use crate::locale::console::ConsoleMsg;
-use crate::locale::{tr, tr_with};
+use crate::locale::tr;
 
 /// One distilled audit record: the promoted facts the table shows plus the
 /// full stored `AuditEvent` JSON for the raw view. Client-safe fields only
@@ -158,12 +158,8 @@ fn window_start() -> String {
 
 /// Distil the ITI-81 `searchset` Bundle into an [`AuditPage`].
 fn parse_bundle(body: &str, offset: u32) -> Result<AuditPage, ViewerError> {
-    let bundle = serde_json::from_str::<serde_json::Value>(body).map_err(|e| {
-        ViewerError::Internal(tr_with(
-            ConsoleMsg::AuditeventBundleJson,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
+    let bundle = serde_json::from_str::<serde_json::Value>(body)
+        .map_err(|e| ViewerError::failed(tr(ConsoleMsg::AuditeventBundleJson), e))?;
     let total = bundle
         .get("total")
         .and_then(serde_json::Value::as_u64)

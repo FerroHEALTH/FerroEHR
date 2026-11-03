@@ -297,7 +297,11 @@ async fn find_answer(
             Err(crate::error::ViewerError::Unauthenticated) => {
                 http::StatusCode::UNAUTHORIZED.into_response()
             }
-            Err(error) => (http::StatusCode::BAD_GATEWAY, error.to_string()).into_response(),
+            Err(error) => (
+                http::StatusCode::BAD_GATEWAY,
+                crate::error::error_chain(&error),
+            )
+                .into_response(),
         }
     })
     .await
@@ -322,7 +326,11 @@ async fn download_manifest(Extension(state): Extension<AppState>) -> axum::respo
             body,
         )
             .into_response(),
-        Err(error) => (http::StatusCode::BAD_GATEWAY, error.to_string()).into_response(),
+        Err(error) => (
+            http::StatusCode::BAD_GATEWAY,
+            crate::error::error_chain(&error),
+        )
+            .into_response(),
     }
 }
 
