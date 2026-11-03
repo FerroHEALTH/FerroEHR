@@ -28,6 +28,7 @@ use crate::aom::build::ObjectNode;
 /// The decomposition state over one operational template.
 pub(super) struct Decomposer<'a> {
     language: String,
+    template_id: &'a str,
     root_ontology: Option<&'a opt14::types::FlatArchetypeOntology>,
     component_ontologies: &'a [opt14::types::FlatArchetypeOntology],
     units: Vec<RawUnit>,
@@ -39,6 +40,7 @@ impl<'a> Decomposer<'a> {
     pub(super) fn new(opt: &'a opt14::types::OperationalTemplate) -> Self {
         Self {
             language: opt.language.code_string.clone(),
+            template_id: &opt.template_id.value,
             root_ontology: opt.ontology.as_ref(),
             component_ontologies: &opt.component_ontologies,
             units: Vec::new(),
@@ -352,6 +354,7 @@ impl Decomposer<'_> {
         }
 
         drop_out_of_scope_bindings(&term_definitions, &mut term_bindings, cx);
+        self.note_extra_languages(&term_definitions, cx);
 
         ArchetypeTerminology {
             is_differential: false,
@@ -361,6 +364,37 @@ impl Decomposer<'_> {
             term_bindings: (!term_bindings.is_empty()).then_some(term_bindings),
             value_sets: None,
             terminology_extracts: None,
+        }
+    }
+}
+
+impl Decomposer<'_> {
+    /// Records each language the root's terminology carries beside the OPT's
+    /// own as a `conversion_details` entry naming the source OPT.
+    ///
+    /// ADL 2 asks for a `translations` entry per further language
+    /// (`ADL2/master07.07-adl_language.adoc`), but an OPT 1.4 carries no
+    /// translation record, and a `TRANSLATION_DETAILS` would have to make up
+    /// its author and accreditation, so none is written. No openEHR spec
+    /// governs 1.4 to 2 conversion: our own design.
+    fn note_extra_languages(
+        &self,
+        term_definitions: &BTreeMap<String, BTreeMap<String, ArchetypeTerm>>,
+        cx: &mut RootCx,
+    ) {
+        for language in term_definitions.keys() {
+            if *language == self.language {
+                continue;
+            }
+            cx.note(
+                format!("translation.{language}"),
+                format!(
+                    "the term definitions in language {language} come from the flattened \
+                     ontology of the operational template {}, which records no translation \
+                     for them; no TRANSLATION_DETAILS is written",
+                    self.template_id
+                ),
+            );
         }
     }
 }

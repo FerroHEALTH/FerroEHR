@@ -163,3 +163,80 @@ fn roots_come_in_document_order() {
         ]
     );
 }
+
+/// A Better OPT whose flattened ontologies carry `en` and `sl` term
+/// definitions, vendored beside the `openehr-sdt` suites.
+const DEMO_VITALS: &str = "../openehr-sdt/tests/fixtures/better/Demo Vitals.opt";
+
+/// Each language a converted root carries beside the OPT's own has a
+/// `conversion_details` entry naming the source OPT, and no translation record
+/// is written for it, and the converted archetype raises no language issue
+/// (VOTM, VTLC) without one.
+#[test]
+fn extra_languages_are_recorded_in_conversion_details() {
+    let path = format!("{}/{DEMO_VITALS}", env!("CARGO_MANIFEST_DIR"));
+    let xml = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {path}: {e}"));
+    let opt = opt14::from_xml(&xml).unwrap_or_else(|e| panic!("parse OPT {path}: {e:?}"));
+    let conversion = convert_opt_to_adl2(&opt).expect("convert Demo Vitals");
+    let mut recorded = 0;
+    for root in &conversion.roots {
+        let artefact = openehr_adl::assemble::parse_artefact(&root.adl2, Dialect::Adl2)
+            .unwrap_or_else(|e| panic!("{}: re-parse: {e:?}", root.archetype_id));
+        let openehr_am::v2_4::aom2::archetype::archetype::Archetype::AuthoredArchetype(authored) =
+            &artefact
+        else {
+            panic!("{}: an authored archetype", root.archetype_id);
+        };
+        let openehr_am::v2_4::aom2::archetype::authored_archetype::AuthoredArchetype::AuthoredArchetype(
+            data,
+        ) = authored.as_ref()
+        else {
+            panic!("{}: a plain authored archetype", root.archetype_id);
+        };
+        assert!(
+            data.translations.is_none(),
+            "{}: no translation record is invented",
+            root.archetype_id
+        );
+        for language in artefact.terminology().term_definitions.keys() {
+            if language == "en" {
+                continue;
+            }
+            let entry = root
+                .conversion_details
+                .get(&format!("translation.{language}"))
+                .unwrap_or_else(|| {
+                    panic!(
+                        "{}: language {language} has no conversion_details entry: {:?}",
+                        root.archetype_id, root.conversion_details
+                    )
+                });
+            assert!(
+                entry.contains("Demo Vitals"),
+                "{}: the entry names the source OPT: {entry}",
+                root.archetype_id
+            );
+            recorded += 1;
+        }
+        let issues = openehr_adl::validate::validate_source(
+            &root.adl2,
+            None,
+            &openehr_adl::validate::rm::ProductionRmModel,
+            &openehr_adl::validate::bindings::NoTerminologyResolver,
+        )
+        .unwrap_or_else(|e| panic!("{}: validate: {e:?}", root.archetype_id));
+        assert!(
+            !issues.iter().any(|issue| matches!(
+                issue.code,
+                openehr_adl::validate::catalogue::ValidationCode::Votm
+                    | openehr_adl::validate::catalogue::ValidationCode::Vtlc
+            )),
+            "{}: every language validates without a translation record: {issues:?}",
+            root.archetype_id
+        );
+    }
+    assert!(
+        recorded > 0,
+        "the OPT's sl term definitions reach a converted root"
+    );
+}
