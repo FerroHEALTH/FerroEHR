@@ -207,8 +207,7 @@ pub(crate) struct SigningCtx<'a> {
     /// the body before it is decomposed and signed, so the stored, signed and
     /// served form is the same one — the invariant the multimedia offload
     /// above already keeps.
-    pub(crate) identifiers:
-        Option<&'a crate::service::demographic::identifier::engine::IdentifierProtection>,
+    pub(crate) identifiers: Option<&'a crate::identifier_protection::engine::IdentifierProtection>,
     /// Whether to write the transactional event outbox on this commit. `false`
     /// when no outbox reader is configured, so the per-commit `event_outbox`
     /// INSERT + envelope serialization is skipped entirely. No openEHR spec
@@ -216,8 +215,7 @@ pub(crate) struct SigningCtx<'a> {
     pub(crate) outbox_enabled: bool,
     /// The `[access_delay]` policy a new COMPOSITION is held under (EHDS Art.
     /// 3(3), [`crate::versioning::access_delay`]); `None` holds nothing.
-    pub(crate) access_delay:
-        Option<&'a crate::service::admin::access_delay::config::AccessDelayPolicy>,
+    pub(crate) access_delay: Option<&'a crate::config::access_delay::AccessDelayPolicy>,
     /// The origin a body with no `FEEDER_AUDIT` is stamped with
     /// (`version.origins`): the committing client's registered origin, or
     /// [`Self::system_id`] (EHDS Annex II 3.4, [`crate::origins`]).

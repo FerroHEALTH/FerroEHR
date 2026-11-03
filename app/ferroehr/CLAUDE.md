@@ -6,7 +6,9 @@ engine), `versioning` (change control + VERSION `signature` signing),
 `validation`, `templates`, `db` (sqlx pools + migrations), `config` (the full
 `ferroehr.toml` tree), `telemetry`, `system_log` (IHE ATNA, including the
 scheduled hash-chain check `chain_check`), `support` (the release's support
-period, embedded from the changelog by `build.rs`), `privacy`, `origins` (the
+period, embedded from the changelog by `build.rs`), `privacy`,
+`identifier_protection` (national identifiers sealed out of party bodies and
+expanded for an authorised reader), `origins` (the
 `[origins]` register of recognised data origins, EHDS Annex II 3.4),
 `licence`, `ids`, `extensions`, `banner`, `decommission` (the `ferroehr db
 erase` operation: blobs first, then `db::erase_schema` drops every schema,

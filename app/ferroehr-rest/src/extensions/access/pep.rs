@@ -327,7 +327,7 @@ async fn abac_post(state: &AppState, op: &'static str, resp: Response) -> Respon
 ///
 /// A configured-but-missing claim is a 403, not a 500: the server is working
 /// and the caller's token is what is insufficient.
-fn resolve_patient_claim(
+pub(super) fn resolve_patient_claim(
     abac: &AbacGate,
     principal: &Principal,
 ) -> Result<Option<String>, Response> {
@@ -391,7 +391,7 @@ async fn patient_gate(
 /// # Errors
 /// A ready `403` on a refusal, a `503` when the subject lookup cannot obtain a
 /// database connection, or a `500` when it fails otherwise.
-async fn subject_gate(
+pub(super) async fn subject_gate(
     abac: &AbacGate,
     principal: &Principal,
     patient: Option<&str>,
@@ -763,7 +763,7 @@ fn forbidden(principal: &Principal, detail: &str) -> Response {
 /// to attribute: attributing a denial to an identity that never authenticated
 /// would write a false subject into the audit trail, so the ATNA layer records
 /// the denial from the request itself.
-fn forbidden_unauthenticated(detail: &str) -> Response {
+pub(super) fn forbidden_unauthenticated(detail: &str) -> Response {
     RestError::from(ApiError::Forbidden(format!("access denied: {detail}"))).into_response()
 }
 

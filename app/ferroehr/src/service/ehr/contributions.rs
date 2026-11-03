@@ -5,10 +5,10 @@
 //! plus the ITS-REST raw-wire commit seam (`create_ehr_contribution`).
 //!
 //! Spec: RM common `master06-change_control_package.adoc` §Contributions /
-//! §Committal and Audits. The change-set engine itself (classify, atomic
-//! multi-version commit, retrieval assembly) is versioning law and lives in
-//! [`crate::versioning`] (`commit_version_set` / `get_contribution` /
-//! `count_contributions`); this file keeps only the
+//! §Committal and Audits. The version set is parsed in
+//! [`crate::versioning::contribution`], which also assembles a stored one
+//! (`get_contribution`), and committed by [`crate::service::contribution`]
+//! (`commit_version_set`); this file keeps only the
 //! CONTRIBUTION surface and the wire glue. The EHR-existence guard
 //! is enforced inside `commit_version_set`, which calls
 //! `storage::ehr_repo::require_ehr`.
@@ -25,11 +25,11 @@ use openehr_its::rest::generated::ehr::NewContribution;
 use serde_json::{Value, json};
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::error::ServiceError;
 use crate::service::FerroEhrService;
-use crate::versioning::contribution::{
-    commit_version_set, count_contributions, decode_new_contribution, get_contribution,
-};
+use crate::service::contribution::commit_version_set;
+use crate::versioning::contribution::{decode_new_contribution, get_contribution};
 
 impl FerroEhrService {
     /// `POST /ehr/{ehr_id}/contribution` — commit a raw wire CONTRIBUTION body
@@ -38,7 +38,7 @@ impl FerroEhrService {
     ///
     /// The body is the wire CONTRIBUTION, decoded through the generated
     /// `NewContribution` (ITS-REST `schemas/ehr/NewContribution.yaml`) and then
-    /// committed by `crate::versioning::contribution::commit_version_set`,
+    /// committed by `crate::service::contribution::commit_version_set`,
     /// where all RM `change_control` semantics stay.
     ///
     /// # Errors
@@ -139,7 +139,11 @@ impl FerroEhrService {
         fetch: i64,
     ) -> Result<Value, ServiceError> {
         // Existence (the EHR-existence check → 404) + the unwindowed total in one call.
-        let total = count_contributions(&self.pool, an_ehr_id, None).await?;
+        crate::storage::ehr_repo::require_ehr(&mut *acquire(&self.pool).await?, an_ehr_id).await?;
+        let total = crate::storage::version_repo::contribution::count_contributions(
+            &self.pool, an_ehr_id, None, None,
+        )
+        .await?;
         let rows = crate::storage::version_repo::contribution::list_contribution_summaries(
             &self.pool, an_ehr_id, offset, fetch,
         )

@@ -21,9 +21,9 @@ use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 use crate::fixtures::{composition, uv};
+use ferroehr::config::access_delay::{AccessDelayConfig, AccessDelayPolicy};
 use ferroehr::extensions::outbox::{OutboxDomain, reconcile};
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::admin::access_delay::config::{AccessDelayConfig, AccessDelayPolicy};
 use ferroehr::system_log::categories::CategoryMapConfig;
 use ferroehr::system_log::config::{AuditConfig, FhirFeedConfig, StoreConfig, SyslogConfig};
 use ferroehr::system_log::event::{

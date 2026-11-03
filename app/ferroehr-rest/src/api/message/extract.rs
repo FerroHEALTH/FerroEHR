@@ -47,7 +47,7 @@ use openehr_rm::v1_2::ehr_extract::common::extract_spec::ExtractSpec;
 use ferroehr::ids::EhrId;
 
 use crate::api::{RequestParts, guarded_dispatch};
-use crate::extensions::access::ehr_access;
+use crate::extensions::access::{ehr_access, patient_scope};
 use crate::negotiate;
 use crate::overview::error::RestError;
 use crate::params;
@@ -343,6 +343,9 @@ pub(crate) async fn export_ehr_extracts(
     let spec = negotiate::decode::rm_value::<ExtractSpec>(h, &parts.body)?;
     let ehr_ids = state.backend().manifest_ehr_ids(&spec).await?;
     if let Err(refusal) = ehr_access::enforce_each(&state, &ehr_ids).await {
+        return Ok(*refusal);
+    }
+    if let Err(refusal) = patient_scope::each(&state, &ehr_ids).await {
         return Ok(*refusal);
     }
     let extracts = state.backend().export_ehr_extracts(spec).await?;

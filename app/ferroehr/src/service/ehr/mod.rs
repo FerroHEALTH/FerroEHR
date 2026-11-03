@@ -29,7 +29,7 @@
 //!
 //! # Integration seams
 //!
-//! The CONTRIBUTION commit engine (`crate::versioning::contribution`) calls
+//! The CONTRIBUTION commit (`crate::service::contribution`) calls
 //! this chapter and storage directly: the EHR-existence gate is
 //! `storage::ehr_repo::require_ehr`, `current_vo` and `invalidate_ehr_access`
 //! are `FerroEhrService` methods here, and in the commit

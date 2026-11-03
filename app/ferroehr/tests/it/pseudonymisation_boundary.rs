@@ -561,8 +561,8 @@ const SYNTHETIC_BSN: &str = "111222333"; // privacy-allow: synthetic
 /// credential: it protects one ephemeral clone for the length of one test.
 const TEST_ROOT_KEY: &str = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f";
 
-fn test_keys() -> ferroehr::service::demographic::identifier::crypto::DomainKeys {
-    use ferroehr::service::demographic::identifier::crypto::{DomainKeys, KeyDomain, RootKey};
+fn test_keys() -> ferroehr::identifier_protection::crypto::DomainKeys {
+    use ferroehr::identifier_protection::crypto::{DomainKeys, KeyDomain, RootKey};
     let root = RootKey::from_hex(&secrecy::SecretString::from(TEST_ROOT_KEY.to_owned()))
         .expect("a 32-byte root key");
     DomainKeys::derive(&root, KeyDomain::Demographic)
@@ -593,7 +593,7 @@ async fn live_holder(party_pool: &PgPool, scheme: &str, value: &str) -> Option<U
 /// the value. Neither answers the other's question.
 #[tokio::test]
 async fn a_sealed_identifier_round_trips_and_resolves_to_its_party() {
-    use ferroehr::service::demographic::identifier::store::IdentifierStore;
+    use ferroehr::identifier_protection::store::IdentifierStore;
 
     let db = testkit::db().await.expect("testkit database");
     let party_pool =
@@ -648,7 +648,7 @@ async fn a_sealed_identifier_round_trips_and_resolves_to_its_party() {
 /// An unregistered scheme is refused rather than stored unprotected.
 #[tokio::test]
 async fn an_unregistered_scheme_is_refused() {
-    use ferroehr::service::demographic::identifier::store::{IdentifierStore, StoreError};
+    use ferroehr::identifier_protection::store::{IdentifierStore, StoreError};
     use ferroehr::storage::identifier_repo::IdentifierRepoError;
 
     let db = testkit::db().await.expect("testkit database");
@@ -740,12 +740,12 @@ async fn only_the_demographic_writer_reaches_the_sealed_value() {
 /// second copy of the same content.
 #[tokio::test]
 async fn a_protected_identifier_never_reaches_the_versioned_body() {
-    use ferroehr::service::demographic::identifier::engine::IdentifierProtection;
+    use ferroehr::identifier_protection::engine::IdentifierProtection;
 
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let engine = IdentifierProtection::from_config(
-        &ferroehr::service::demographic::identifier::config::IdentifierProtectionConfig {
+        &ferroehr::identifier_protection::config::IdentifierProtectionConfig {
             enabled: true,
             schemes: vec!["nl-bsn".to_owned()],
             key: Some(ferrohealth_secret::secret::Secret::new(TEST_ROOT_KEY)),
@@ -828,9 +828,9 @@ async fn a_protected_identifier_never_reaches_the_versioned_body() {
 /// The protection engine over `party_pool`, sealing `nl-bsn` under the test key.
 fn protection_engine(
     party_pool: PgPool,
-) -> ferroehr::service::demographic::identifier::engine::IdentifierProtection {
-    use ferroehr::service::demographic::identifier::config::IdentifierProtectionConfig;
-    use ferroehr::service::demographic::identifier::engine::IdentifierProtection;
+) -> ferroehr::identifier_protection::engine::IdentifierProtection {
+    use ferroehr::identifier_protection::config::IdentifierProtectionConfig;
+    use ferroehr::identifier_protection::engine::IdentifierProtection;
 
     IdentifierProtection::from_config(
         &IdentifierProtectionConfig {
@@ -1023,7 +1023,7 @@ fn protected_service(
     db: &testkit::TestDb,
 ) -> (
     FerroEhrService,
-    std::sync::Arc<ferroehr::service::demographic::identifier::engine::IdentifierProtection>,
+    std::sync::Arc<ferroehr::identifier_protection::engine::IdentifierProtection>,
     PgPool,
 ) {
     let pool = db.pool();
@@ -1052,7 +1052,7 @@ fn committed_ids(body: &serde_json::Value) -> (String, String) {
 /// Every stored version body of `vo`, oldest first, each expanded back to the
 /// values its own identifier rows hold.
 async fn expanded_versions(
-    engine: &ferroehr::service::demographic::identifier::engine::IdentifierProtection,
+    engine: &ferroehr::identifier_protection::engine::IdentifierProtection,
     pool: &PgPool,
     vo: &str,
 ) -> Vec<serde_json::Value> {
@@ -1331,8 +1331,8 @@ async fn two_values_in_one_scheme_are_refused() {
 /// nothing, rather than storing the identifier unprotected.
 #[tokio::test]
 async fn an_unregistered_configured_scheme_is_a_configuration_fault() {
-    use ferroehr::service::demographic::identifier::config::IdentifierProtectionConfig;
-    use ferroehr::service::demographic::identifier::engine::IdentifierProtection;
+    use ferroehr::identifier_protection::config::IdentifierProtectionConfig;
+    use ferroehr::identifier_protection::engine::IdentifierProtection;
     use ferroehr::storage::identifier_repo::IdentifierRepoError;
 
     let db = testkit::db().await.expect("testkit database");
@@ -1811,7 +1811,7 @@ async fn erasing_a_party_removes_its_sealed_identifiers() {
 #[tokio::test]
 async fn a_sealed_identifier_resolves_on_the_separated_demographic_credential() {
     use ferroehr::db::DbConfig;
-    use ferroehr::service::demographic::identifier::store::IdentifierStore;
+    use ferroehr::identifier_protection::store::IdentifierStore;
 
     let db = testkit::db().await.expect("testkit database");
     let settings = DbConfig {
