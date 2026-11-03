@@ -56,7 +56,6 @@ pub mod config;
 pub mod download;
 pub mod export;
 pub mod flash;
-pub mod oidc;
 pub mod pages;
 pub mod paging;
 pub mod posted;

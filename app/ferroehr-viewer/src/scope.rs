@@ -130,13 +130,9 @@ mod tests {
     /// at `now`.
     fn scope(path_and_query: &str, posted: Option<Posted>, now: &str) -> Arc<Scope> {
         let config = crate::config::ViewerConfig::default();
-        let state = crate::state::AppState {
-            cdr: crate::cdr::CdrClient::new(&config.cdr).expect("the default CDR client builds"),
-            config: Arc::new(config),
-            oidc: None,
-            session_keys: crate::session::SessionKeys::from_secret("")
-                .expect("an empty secret always yields an ephemeral key"),
-        };
+        let cdr = crate::cdr::CdrClient::new(&config.cdr).expect("the default CDR client builds");
+        let state = crate::state::AppState::new(config, cdr, None)
+            .expect("the default session store builds");
         let (parts, ()) = http::Request::builder()
             .uri(path_and_query)
             .body(())

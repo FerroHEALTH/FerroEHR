@@ -124,25 +124,24 @@ spec:
               value: {{ . | quote }}
             {{- end }}
             {{- if .Values.viewer.auth.oidc.enabled }}
-            - name: FERROEHR_VIEWER__AUTH__OIDC__ENABLED
+            - name: FERROEHR_VIEWER__AUTH__OIDC_ENABLED
               value: "true"
-            - name: FERROEHR_VIEWER__AUTH__OIDC__ISSUER
+            - name: FERROEHR_VIEWER__OIDC__ISSUER
               value: {{ .Values.viewer.auth.oidc.issuer | quote }}
-            - name: FERROEHR_VIEWER__AUTH__OIDC__CLIENT_ID
+            - name: FERROEHR_VIEWER__OIDC__CLIENT_ID
               value: {{ .Values.viewer.auth.oidc.clientId | quote }}
-            - name: FERROEHR_VIEWER__AUTH__OIDC__PUBLIC_BASE_URL
+            - name: FERROEHR_VIEWER__AUTH__PUBLIC_BASE_URL
               value: {{ .Values.viewer.auth.oidc.publicBaseUrl | quote }}
             {{- if .Values.viewer.existingSecret }}
             # The client secret is a mounted FILE and only its path is
             # environment: an env VALUE is readable through /proc/<pid>/environ
             # and inherited by every child process.
-            - name: FERROEHR_VIEWER__AUTH__OIDC__CLIENT_SECRET_FILE
+            - name: FERROEHR_VIEWER__OIDC__CLIENT_SECRET_FILE
               value: /etc/ferroehr-viewer-secrets/client_secret
             {{- end }}
             {{- if .Values.viewer.auth.oidc.caExistingSecret }}
-            # The issuer's CA, beside the image's own roots
-            # (`[auth.oidc.tls] trust_roots_file`).
-            - name: FERROEHR_VIEWER__AUTH__OIDC__TLS__TRUST_ROOTS_FILE
+            # The provider's CA, beside the image's own roots (`[oidc] ca_file`).
+            - name: FERROEHR_VIEWER__OIDC__CA_FILE
               value: /etc/ferroehr-viewer-oidc-ca/ca.crt
             {{- end }}
             {{- end }}

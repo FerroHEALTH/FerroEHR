@@ -3,7 +3,7 @@
 
 //! The viewer as the binary serves it: the family stack's health routes
 //! answer the `healthcheck` subcommand, and the CDR and issuer clients trust
-//! a private CA named by `[cdr.tls]` and `[auth.oidc.tls]` beside the
+//! a private CA named by `[cdr.tls]` and `[oidc] ca_file` beside the
 //! platform's roots, on every platform.
 
 #![expect(
@@ -21,6 +21,7 @@ use ferrohealth_server::health::Health;
 use ferrohealth_server::healthcheck::Outcome;
 use ferrohealth_server::section::{ServerSection, TlsSection};
 use ferrohealth_server::tls_client::TlsClientSection;
+use ferrohealth_session::config::OidcSection;
 use rcgen::{BasicConstraints, CertificateParams, IsCa, Issuer, KeyPair};
 
 /// A directory of its own for `name` under the test target's scratch.
@@ -77,14 +78,10 @@ async fn serve(app: axum::Router, tls: Option<TlsSection>, lifecycle: Lifecycle)
 /// The viewer's state over its default configuration, its CDR never reached.
 fn app_state() -> ferroehr_viewer::state::AppState {
     let config = ferroehr_viewer::config::ViewerConfig::default();
-    ferroehr_viewer::state::AppState {
-        cdr: ferroehr_viewer::cdr::CdrClient::new(&config.cdr)
-            .expect("the default CDR client should build"),
-        config: std::sync::Arc::new(config),
-        oidc: None,
-        session_keys: ferroehr_viewer::session::SessionKeys::from_secret("")
-            .expect("an empty secret always yields an ephemeral key"),
-    }
+    let cdr = ferroehr_viewer::cdr::CdrClient::new(&config.cdr)
+        .expect("the default CDR client should build");
+    ferroehr_viewer::state::AppState::new(config, cdr, None)
+        .expect("the default session store should build")
 }
 
 /// The served viewer answers `healthcheck` healthy, and the drain withdraws
@@ -144,7 +141,7 @@ async fn an_unknown_address_without_a_session_meets_the_sign_in_through_the_stac
         .expect("an answer");
     assert_eq!(http::StatusCode::FOUND, answer.status());
     assert_eq!(
-        Some("/login?next=%2Fno-such-screen"),
+        Some("/sign-in?next=%2Fno-such-screen"),
         answer
             .headers()
             .get(http::header::LOCATION)
@@ -205,14 +202,28 @@ async fn the_cdr_client_trusts_the_ca_its_tls_table_names() {
     );
 }
 
-/// The issuer client takes `[auth.oidc.tls]` the same way.
+/// The provider client takes `[oidc] ca_file` the same way: the relying
+/// party discovers a provider behind the private CA it names, and not one
+/// the platform's roots alone cannot reach.
 #[tokio::test]
-async fn the_issuer_client_trusts_the_ca_its_tls_table_names() {
+async fn the_provider_client_trusts_the_ca_its_section_names() {
     let dir = scratch("issuer");
     private_pki(&dir);
+    let issuer = std::sync::Arc::new(std::sync::OnceLock::<String>::new());
+    let metadata = std::sync::Arc::clone(&issuer);
     let discovery = axum::Router::new().route(
-        "/.well-known/openid-configuration",
-        axum::routing::get(|| async { "{}" }),
+        "/.well-known/oauth-authorization-server",
+        axum::routing::get(move || {
+            let issuer = metadata.get().cloned().unwrap_or_default();
+            async move {
+                (
+                    [(http::header::CONTENT_TYPE, "application/json")],
+                    format!(
+                        r#"{{"issuer":"{issuer}","authorization_endpoint":"{issuer}/authorize","token_endpoint":"{issuer}/token","jwks_uri":"{issuer}/jwks","response_types_supported":["code"]}}"#
+                    ),
+                )
+            }
+        }),
     );
     let address = serve(
         discovery,
@@ -223,37 +234,36 @@ async fn the_issuer_client_trusts_the_ca_its_tls_table_names() {
         Lifecycle::default(),
     )
     .await;
-    let url = format!(
-        "https://localhost:{}/.well-known/openid-configuration",
-        address.port()
-    );
-    let config = |tls: TlsClientSection| ferroehr_viewer::config::OidcConfig {
-        tls,
-        ..ferroehr_viewer::config::OidcConfig::default()
+    let url = format!("https://localhost:{}", address.port());
+    issuer.set(url.clone()).expect("set once");
+    let section = |ca_file: Option<PathBuf>| OidcSection {
+        issuer: url.clone(),
+        client_id: "ferroehr-viewer".to_owned(),
+        redirect_uri: "http://localhost:3000/auth/callback".to_owned(),
+        ca_file,
+        ..OidcSection::default()
     };
 
-    let trusting = ferroehr_viewer::oidc::issuer_client(&config(TlsClientSection {
-        trust_roots_file: Some(dir.join("ca.pem")),
-        ..TlsClientSection::default()
-    }))
-    .expect("the client builds over the CA file");
-    let answered = trusting
-        .get(&url)
-        .send()
+    section(Some(dir.join("ca.pem")))
+        .check()
+        .expect("the section reads")
+        .relying_party()
         .await
-        .expect("the CA the table names is trusted");
-    assert_eq!(http::StatusCode::OK, answered.status());
-
-    let platform_only = ferroehr_viewer::oidc::issuer_client(&config(TlsClientSection::default()))
-        .expect("the client builds over the platform roots");
+        .expect("the CA the section names is trusted");
     assert!(
-        platform_only.get(&url).send().await.is_err(),
+        section(None)
+            .check()
+            .expect("the section reads")
+            .relying_party()
+            .await
+            .is_err(),
         "a private CA is not among the platform's roots"
     );
 }
 
 /// A trust roots file that does not read, or holds no certificate, refuses
-/// the client, naming the key.
+/// the CDR client, naming the key, and a provider roots file that does not
+/// read refuses `[oidc]`, naming its key.
 #[test]
 fn an_unreadable_or_empty_roots_file_refuses_the_client() {
     let dir = scratch("refused");
@@ -271,20 +281,18 @@ fn an_unreadable_or_empty_roots_file_refuses_the_client() {
         };
         let chain = ferroehr_viewer::error::error_chain(&error);
         assert!(chain.contains("cdr.tls.trust_roots_file"), "{chain}");
-
-        let refused = ferroehr_viewer::oidc::issuer_client(&ferroehr_viewer::config::OidcConfig {
-            tls: TlsClientSection {
-                trust_roots_file: Some(path.clone()),
-                ..TlsClientSection::default()
-            },
-            ..ferroehr_viewer::config::OidcConfig::default()
-        });
-        let Err(error) = refused else {
-            panic!("{} must refuse the issuer client", path.display());
-        };
-        assert!(
-            format!("{error:#}").contains("auth.oidc.tls.trust_roots_file"),
-            "{error:#}"
-        );
     }
+    let refused = OidcSection {
+        issuer: "https://idp.example.org".to_owned(),
+        client_id: "ferroehr-viewer".to_owned(),
+        redirect_uri: "http://localhost:3000/auth/callback".to_owned(),
+        ca_file: Some(dir.join("absent.pem")),
+        ..OidcSection::default()
+    }
+    .check();
+    let Err(error) = refused else {
+        panic!("an absent oidc.ca_file must refuse the section");
+    };
+    let chain = ferroehr_viewer::error::error_chain(&error);
+    assert!(chain.contains("oidc.ca_file"), "{chain}");
 }

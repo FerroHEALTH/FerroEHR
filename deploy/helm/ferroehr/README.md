@@ -2,7 +2,7 @@
 
 Pure-Rust, openEHR-conformant clinical data repository (ITS-REST 1.1.0 + AQL 1.1). A single static binary that runs as a non-root, read-only-rootfs workload and connects to an EXTERNAL PostgreSQL 18 as an unprivileged app role, with schema preparation on its own credential. The default NetworkPolicy narrows ingress to the serving ports but admits every source until networkPolicy.ingressFrom is set, and the default-deny egress policy is off (networkPolicy.egress.enabled). The chart refuses to render until config.deployment_profile names the posture: sandbox, which must not hold real patient data, or production (start from values-production.yaml).
 
-![Version: 21.0.0-rc9](https://img.shields.io/badge/Version-21.0.0--rc9-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.6.0-rc10](https://img.shields.io/badge/AppVersion-5.6.0--rc10-informational?style=flat-square)
+![Version: 21.0.0-rc10](https://img.shields.io/badge/Version-21.0.0--rc10-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.6.0-rc10](https://img.shields.io/badge/AppVersion-5.6.0--rc10-informational?style=flat-square)
 
 FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0 at the
 API, AQL 1.1 as the query language, PostgreSQL 18-native storage, shipped as a
@@ -44,7 +44,7 @@ to add; `helm repo add` does not apply to this chart:
 
 ```console
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 21.0.0-rc9 \
+  --version 21.0.0-rc10 \
   --namespace ferroehr --create-namespace \
   --set config.deployment_profile=sandbox \
   --set database.existingSecret=ferroehr-db \
@@ -62,7 +62,7 @@ They are independent SemVer lines and they move independently:
 
 | What | Set with | This release |
 |---|---|---|
-| the **chart** (templates, defaults, this document) | `--version` | `21.0.0-rc9` |
+| the **chart** (templates, defaults, this document) | `--version` | `21.0.0-rc10` |
 | the **server image** | `image.tag` | `5.6.0-rc10` |
 
 `appVersion` is the image the chart defaults to; pinning `image.tag` explicitly
@@ -74,7 +74,7 @@ The chart carries two keyless Sigstore artifacts, and they answer different
 questions. A **cosign signature:** who signed this:
 
 ```console
-cosign verify ghcr.io/ferrohealth/charts/ferroehr:21.0.0-rc9 \
+cosign verify ghcr.io/ferrohealth/charts/ferroehr:21.0.0-rc10 \
   --certificate-identity-regexp '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/publish-chart\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -82,7 +82,7 @@ cosign verify ghcr.io/ferrohealth/charts/ferroehr:21.0.0-rc9 \
 A **SLSA build provenance attestation:** what source it was built from, and how:
 
 ```console
-gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:21.0.0-rc9 \
+gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:21.0.0-rc10 \
   -R FerroHEALTH/FerroEHR
 gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:5.6.0-rc10 \
   -R FerroHEALTH/FerroEHR
@@ -467,7 +467,7 @@ Kubernetes: `>=1.36.0-0`
 | topologySpreadConstraints | list | `[]` | Spread replicas across nodes. Empty does NOT mean "no spreading": it means the chart's own default constraint applies — one soft `maxSkew: 1` over `kubernetes.io/hostname`, so two replicas prefer two nodes and a node failure does not take the whole CDR with it. It is `ScheduleAnyway`, not `DoNotSchedule`, so a single-node or capacity-constrained cluster still schedules rather than leaving a pod Pending forever.  A non-empty list REPLACES that default entirely — give the full constraint, including its own `labelSelector`. Add a `topology.kubernetes.io/zone` constraint here if your cluster spans zones; the chart does not assume one (https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/). |
 | usageReport.enabled | bool | `true` | Send the usage report (on by default). false sends nothing. |
 | viewer.affinity | object | `{}` | Affinity. |
-| viewer.auth.oidc.caExistingSecret | string | `""` | Name of an existing Secret holding a PEM bundle of the certificate authorities the viewer trusts for the issuer, beside the image's own roots: for an issuer behind a private PKI. The chart mounts the key as a file and points `[auth.oidc.tls] trust_roots_file` at it. Empty trusts the image's roots alone. |
+| viewer.auth.oidc.caExistingSecret | string | `""` | Name of an existing Secret holding a PEM bundle of the certificate authorities the viewer trusts for the issuer, beside the image's own roots: for an issuer behind a private PKI. The chart mounts the key as a file and points `[oidc] ca_file` at it. Empty trusts the image's roots alone. |
 | viewer.auth.oidc.caExistingSecretKey | string | `"ca.crt"` | Key within `caExistingSecret` carrying the PEM bundle. |
 | viewer.auth.oidc.clientId | string | `""` | OAuth2 client id. |
 | viewer.auth.oidc.enabled | bool | `false` | Authenticate viewer users through OIDC. Off means the viewer's own session auth is whatever its defaults provide — acceptable for a private cluster, not for anything reachable by a person who should not see PHI. |

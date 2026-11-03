@@ -537,10 +537,10 @@ async fn capture_documentation_screenshots() {
     .join("routes");
 
     // The sign-in page, before any session and after one ends.
-    h.goto("/login").await;
+    h.goto("/sign-in").await;
     h.wait_css("#sign-in-username").await;
-    shot_to(&h, &book, "login/login").await;
-    h.goto("/login?expired=1&next=%2Fehrs").await;
+    shot_to(&h, &book, "login/sign-in").await;
+    h.goto("/sign-in?expired=1&next=%2Fehrs").await;
     h.wait_css("#sign-in-username").await;
     shot_to(&h, &book, "login/login-expired").await;
 

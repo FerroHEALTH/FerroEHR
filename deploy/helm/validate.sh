@@ -1290,7 +1290,7 @@ viewer_management_gate
 
 # ── The viewer trusts a private issuer CA only when one is named ────────────
 # viewer.auth.oidc.caExistingSecret mounts the Secret's key as a file and names
-# it in `[auth.oidc.tls] trust_roots_file`; unset, neither the variable nor the
+# it in `[oidc] ca_file`; unset, neither the variable nor the
 # volume renders. Both halves are read from the render.
 viewer_oidc_ca_gate() {
   bold "── viewer: the issuer's CA when one is named ───────────"
@@ -1309,7 +1309,7 @@ viewer_oidc_ca_gate() {
       FAIL=1
       return
     fi
-    roots="$(printf '%s' "$render" | yq -r 'select(.kind == "Deployment") | .spec.template.spec.containers[0].env[] | select(.name == "FERROEHR_VIEWER__AUTH__OIDC__TLS__TRUST_ROOTS_FILE") | .value')"
+    roots="$(printf '%s' "$render" | yq -r 'select(.kind == "Deployment") | .spec.template.spec.containers[0].env[] | select(.name == "FERROEHR_VIEWER__OIDC__CA_FILE") | .value')"
     volume="$(printf '%s' "$render" | yq -r 'select(.kind == "Deployment") | .spec.template.spec.volumes[] | select(.name == "oidc-ca") | .secret.secretName')"
     if [[ -z "$secret" ]]; then
       [[ -z "$roots" && -z "$volume" ]] \

@@ -251,13 +251,14 @@ enum OwnSecret {
 
 impl OwnSecret {
     /// The secret read from `file` or set as `inline`.
-    fn of(file: &str, inline: &str) -> Self {
-        if !file.is_empty() {
-            Self::File(file.to_owned())
-        } else if !inline.is_empty() {
-            Self::Inline
-        } else {
-            Self::Unset
+    fn of(
+        file: Option<&std::path::Path>,
+        inline: Option<&ferrohealth_secret::secret::Secret>,
+    ) -> Self {
+        match (file, inline) {
+            (Some(file), _) => Self::File(file.display().to_string()),
+            (None, Some(inline)) if !inline.is_empty() => Self::Inline,
+            _ => Self::Unset,
         }
     }
 
@@ -283,15 +284,15 @@ struct Own {
     management_base_url: String,
     /// `auth.basic_enabled`.
     basic: bool,
-    /// `auth.oidc.issuer`, when OpenID Connect sign-in is on.
+    /// `oidc.issuer`, when OpenID Connect sign-in is on.
     oidc: Option<String>,
-    /// `auth.oidc.client_secret_file` or `client_secret`.
+    /// `oidc.client_secret_file` or `client_secret`.
     oidc_secret: OwnSecret,
-    /// `session.idle_minutes`.
+    /// `session.idle_timeout_s`, in whole minutes.
     idle_minutes: u64,
-    /// `session.absolute_minutes`.
+    /// `session.absolute_timeout_s`, in whole minutes.
     absolute_minutes: u64,
-    /// `session.secret_file` or `secret`.
+    /// `session.key_file` or `key`.
     session_secret: OwnSecret,
     /// `ui.locale`.
     locale: String,
@@ -306,18 +307,17 @@ fn read_own() -> Option<Own> {
         base_path: config.cdr.base_path.clone(),
         management_base_url: config.cdr.management_base_url.clone(),
         basic: config.auth.basic_enabled,
-        oidc: config
-            .auth
-            .oidc
-            .enabled
-            .then(|| config.auth.oidc.issuer.clone()),
+        oidc: config.auth.oidc_enabled.then(|| config.oidc.issuer.clone()),
         oidc_secret: OwnSecret::of(
-            &config.auth.oidc.client_secret_file,
-            &config.auth.oidc.client_secret,
+            config.oidc.client_secret_file.as_deref(),
+            config.oidc.client_secret.as_ref(),
         ),
-        idle_minutes: config.session.idle_minutes,
-        absolute_minutes: config.session.absolute_minutes,
-        session_secret: OwnSecret::of(&config.session.secret_file, &config.session.secret),
+        idle_minutes: config.session.idle_timeout_s.div_euclid(60),
+        absolute_minutes: config.session.absolute_timeout_s.div_euclid(60),
+        session_secret: OwnSecret::of(
+            config.session.key_file.as_deref(),
+            config.session.key.as_ref(),
+        ),
         locale: config.ui.locale.clone(),
     })
 }
@@ -357,19 +357,19 @@ fn viewer_settings(loaded: Option<Own>) -> Vec<Setting> {
         own(
             ConsoleMsg::ConfigOidcSignIn,
             ConsoleMsg::ConfigOidcSignInLine,
-            "auth.oidc.issuer",
+            "oidc.issuer",
             config.oidc.as_deref().map_or_else(|| on(false), code),
         ),
         own(
             ConsoleMsg::ConfigOidcSecret,
             ConsoleMsg::ConfigOidcSecretLine,
-            "auth.oidc.client_secret_file",
+            "oidc.client_secret_file",
             config.oidc_secret.view(),
         ),
         own(
             ConsoleMsg::ConfigIdle,
             ConsoleMsg::ConfigIdleLine,
-            "session.idle_minutes",
+            "session.idle_timeout_s",
             t(crate::locale::tr_with(
                 ConsoleMsg::ConfigMinutes,
                 &[("count", config.idle_minutes.into())],
@@ -378,7 +378,7 @@ fn viewer_settings(loaded: Option<Own>) -> Vec<Setting> {
         own(
             ConsoleMsg::ConfigLifetime,
             ConsoleMsg::ConfigLifetimeLine,
-            "session.absolute_minutes",
+            "session.absolute_timeout_s",
             t(crate::locale::tr_with(
                 ConsoleMsg::ConfigMinutes,
                 &[("count", config.absolute_minutes.into())],
@@ -387,7 +387,7 @@ fn viewer_settings(loaded: Option<Own>) -> Vec<Setting> {
         own(
             ConsoleMsg::ConfigSessionKey,
             ConsoleMsg::ConfigSessionKeyLine,
-            "session.secret_file",
+            "session.key_file",
             config.session_secret.view(),
         ),
         own(

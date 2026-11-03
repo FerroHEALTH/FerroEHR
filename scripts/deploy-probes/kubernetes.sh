@@ -266,7 +266,7 @@ k8s_ui_get() {
   local name="probe-ui-$$-$RANDOM" out phase _i
   kubectl -n "$K8S_NS" run "$name" --image=busybox:1.37 --restart=Never \
     --labels="$K8S_UI_CLIENT_LABEL" \
-    --command -- wget -q -O - "http://$K8S_UI:3000${1:-/login}" >/dev/null 2>&1
+    --command -- wget -q -O - "http://$K8S_UI:3000${1:-/sign-in}" >/dev/null 2>&1
   for _i in $(seq 1 30); do
     phase="$(kc get pod "$name" -o jsonpath="$K8S_PHASE_PATH" 2>/dev/null)"
     case "$phase" in Succeeded | Failed) break ;; *) ;; esac
@@ -767,9 +767,9 @@ probes_k8s_ui_serve() {
   probe "P-K8S-UI-SERVE" "working" "server" "-" \
     "the viewer serves its login page through its Service, to a client inside the cluster"
   local page
-  page="$(k8s_ui_get /login)"
+  page="$(k8s_ui_get /sign-in)"
   assert_contains "$page" 'name="username"' \
-    "the sign-in form must be in the first response: /login renders SsrMode::Async so it works without JavaScript"
+    "the sign-in form must be in the first response: /sign-in renders SsrMode::Async so it works without JavaScript"
   assert_contains "$page" "FerroEHR Viewer" \
     "the page served must be the viewer's own, not an error page from something else on that port"
   probe_done
@@ -811,7 +811,7 @@ YAML
             | jq -r --arg k "${K8S_UI_CLIENT_LABEL%=*}" '.spec.ingress[0].from[0].podSelector.matchLabels[$k] // ""')"
   assert_eq "${K8S_UI_CLIENT_LABEL#*=}" "$stored" \
     "the API server must have stored the from selector; a pruned field would leave the rule admitting everything"
-  assert_contains "$(k8s_ui_get /login)" 'name="username"' \
+  assert_contains "$(k8s_ui_get /sign-in)" 'name="username"' \
     "a narrowed policy that also stops the peer it names is a broken recipe, not a hardened one"
   probe_done
 }

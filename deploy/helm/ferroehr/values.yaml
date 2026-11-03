@@ -1261,7 +1261,7 @@ viewer:
       # -- Name of an existing Secret holding a PEM bundle of the certificate
       # authorities the viewer trusts for the issuer, beside the image's own
       # roots: for an issuer behind a private PKI. The chart mounts the key as
-      # a file and points `[auth.oidc.tls] trust_roots_file` at it. Empty
+      # a file and points `[oidc] ca_file` at it. Empty
       # trusts the image's roots alone.
       caExistingSecret: ""
       # -- Key within `caExistingSecret` carrying the PEM bundle.

@@ -31,6 +31,10 @@ openehr-query = { path = "../../crates/openehr-query" }
 # previewer share, so what the drawer explains can never drift from what the CDR
 # enforces.
 ferrohealth-smart = { workspace = true, features = ["openehr-scopes"] }
+# The console sign-in and session: the `[oidc]` and `[session]` sections, the
+# sealed store the multi-instance viewer runs on, and the four sign-in routes
+# with the middleware every page sits behind (`axum`).
+ferrohealth-session = { workspace = true, features = ["axum"] }
 # The full ITS surface (OPT parsing + WebTemplate building) and the Simplified
 # Formats (`openehr_sdt::flat`, the query-builder path catalog).
 openehr-its = { path = "../../crates/openehr-its", default-features = false, features = ["full"] }
@@ -77,14 +81,8 @@ ferrohealth-server = { workspace = true, features = ["console", "reqwest"] }
 clap.workspace = true
 # The public URL the same-origin check compares `Origin` with.
 url.workspace = true
-secrecy.workspace = true
-# The sealed session cookie (AES-256-GCM private jar, #2949): the whole
-# session rides one encrypted cookie so every instance can read it — the
-# viewer runs multi-instance on serverless platforms and keeps no store.
-cookie.workspace = true
 base64.workspace = true
 csv.workspace = true
-openidconnect.workspace = true
 
 [dev-dependencies]
 indexmap.workspace = true

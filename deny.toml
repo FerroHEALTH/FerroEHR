@@ -59,13 +59,13 @@ ignore = [
   # never restated here, where nothing checks it. DELETING EVENT: the rsa 0.10
   # release (upgrade the day it ships).
   # https://rustsec.org/advisories/RUSTSEC-2023-0071
-  { id = "RUSTSEC-2023-0071", reason = "no fix upstream; RSA verification only in the OIDC path, and the pgp signing path is off by default (digest mode) and key-algorithm-agnostic" },
+  { id = "RUSTSEC-2023-0071", reason = "no fix upstream; the pgp signing path is off by default (digest mode) and key-algorithm-agnostic" },
   # 2026-10-24 (#3965): crypto-bigint 0.5.5, timing variability in
   # operations meant to be constant-time; only 0.7.6 and later are fixed and
-  # no release of pgp, cx448 or openidconnect leaves 0.5. The path argument
-  # is the RUSTSEC-2026-0387 statement in security/vex/rust-advisories.toml.
-  # DELETING EVENT: pgp and openidconnect releases on crypto-bigint 0.7.6 or
-  # later (upgrade the day both ship).
+  # no release of pgp or cx448 leaves 0.5. The path argument is the
+  # RUSTSEC-2026-0387 statement in security/vex/rust-advisories.toml.
+  # DELETING EVENT: a pgp release on crypto-bigint 0.7.6 or later (upgrade the
+  # day it ships).
   # https://rustsec.org/advisories/RUSTSEC-2026-0387
   { id = "RUSTSEC-2026-0387", reason = "ECDSA and Ed448 signing keys are refused at boot (#3965), so crypto-bigint 0.5 runs only over public values in verification" },
 ]
@@ -137,6 +137,10 @@ exceptions = [
   # Cedar engine and remote decision point decide the ABAC tier (owner decision
   # 2026-10-25, #4038).
   { allow = ["BUSL-1.1"], crate = "ferrohealth-authz" },
+  # FerroAUTH's ferrohealth-session, the FerroHEALTH consoles' shared sign-in
+  # and session, is the same Licensor's code under the same licence, taken by
+  # the viewer alone (owner decision 2026-11-03, #4873).
+  { allow = ["BUSL-1.1"], crate = "ferrohealth-session" },
   # FerroSYS's ferrohealth-secret, the FerroHEALTH products' one secret mask,
   # is the same Licensor's code under the same licence (owner ruling
   # 2026-10-26).

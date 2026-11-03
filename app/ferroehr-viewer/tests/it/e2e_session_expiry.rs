@@ -21,7 +21,7 @@
 //! replaced by one the viewer cannot open, which is observable in seconds,
 //! while waiting out the configured idle window is not. Every page is drawn on
 //! the server, so the next request is where the viewer notices: it answers
-//! with the sign-in page at `/login?expired=1&next=…`, which says the session
+//! with the sign-in page at `/sign-in?expired=1&next=…`, which says the session
 //! ended and returns to `next` once signed in again. FerroUI's session watch
 //! on every signed-in page notices without a request: it warns before the idle
 //! timeout and leaves for the same sign-in page, naming the page as `return`.
@@ -30,8 +30,8 @@ use crate::common;
 
 use common::{Harness, env, login_basic, wait_css_absent};
 
-/// The sealed session cookie's name (`ferroehr_viewer::session::SESSION_COOKIE`,
-/// which is server-only and so cannot be imported here).
+/// The sealed session cookie's name (`ferroehr_viewer::session::cookie_names`, without
+/// the `__Host-` prefix a plain-HTTP harness leaves off).
 const SESSION_COOKIE: &str = "ferroehr_viewer_session";
 
 /// The signed-in chrome: the user menu's button and the shell's footer.
@@ -135,7 +135,7 @@ async fn signing_in_again_after_an_explicit_sign_out_renders_the_chrome() {
         .await
         .click()
         .await;
-    h.wait_url_contains("/login").await;
+    h.wait_url_contains("/sign-in").await;
     for chrome in AUTHED_CHROME {
         wait_css_absent(&h, chrome).await;
     }
@@ -164,8 +164,8 @@ async fn signing_in_from_the_expired_card_on_the_dashboard_renders_it_again() {
     sign_in_on_this_page(&h).await;
     assert_signed_in_again(&h).await;
     assert!(
-        !h.current_url().await.contains("/login"),
-        "the address bar left /login"
+        !h.current_url().await.contains("/sign-in"),
+        "the address bar left /sign-in"
     );
     h.wait_css("main a.fui-stat").await;
     h.shot(2, "signed-in-again").await;
@@ -187,8 +187,8 @@ async fn returning_through_oidc_from_the_expired_card_renders_the_chrome() {
         h.finish().await;
         return;
     };
-    h.goto("/login").await;
-    h.wait_css("a[href='/auth/oidc/login']").await.click().await;
+    h.goto("/sign-in").await;
+    h.wait_css("a[href='/login']").await.click().await;
     h.wait_url_contains("/auth/realms/ferroehr").await;
     h.wait_css("#username").await.send_keys(&user).await;
     h.wait_css("#password").await.send_keys(&pass).await;
@@ -200,10 +200,7 @@ async fn returning_through_oidc_from_the_expired_card_renders_the_chrome() {
     h.wait_url_contains("expired=1").await;
     assert_signed_out(&h).await;
     h.shot(1, "expired-card").await;
-    h.wait_css("a[href^='/auth/oidc/login']")
-        .await
-        .click()
-        .await;
+    h.wait_css("a[href^='/login']").await.click().await;
     h.wait_url_contains("/ehrs").await;
     assert_signed_in_again(&h).await;
     h.shot(2, "signed-in-again").await;

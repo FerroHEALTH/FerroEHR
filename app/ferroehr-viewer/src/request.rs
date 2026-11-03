@@ -145,12 +145,12 @@ pub fn kept_cookies() -> String {
 #[must_use]
 pub fn signed() -> Option<Signed> {
     session().map(|session| Signed {
-        identity: session.identity,
+        identity: crate::session::identity(&session),
         oidc: matches!(
-            session.credential,
-            crate::session::Credential::Bearer { .. }
+            session.credential(),
+            ferrohealth_session::record::Credential::Bearer(_)
         ),
-        scopes: session.scopes,
+        scopes: session.scopes().to_vec(),
     })
 }
 
@@ -160,8 +160,8 @@ pub fn settings() -> Settings {
     state()
         .map(|state| Settings {
             cdr_address: state.config.cdr.base_url.clone(),
-            idle_minutes: state.config.session.idle_minutes,
-            oidc_issuer: state.config.auth.oidc.issuer.clone(),
+            idle_minutes: state.config.session.idle_timeout_s.div_euclid(60),
+            oidc_issuer: state.config.oidc.issuer.clone(),
         })
         .unwrap_or_default()
 }
@@ -172,19 +172,13 @@ pub fn now() -> jiff::Timestamp {
     crate::scope::with(|scope| scope.now).unwrap_or_else(jiff::Timestamp::now)
 }
 
-/// The viewer session the request's sealed cookie carries, when it carries
-/// one that is still inside its idle window.
+/// The live session the request holds, when it holds one.
 #[must_use]
-pub fn session() -> Option<crate::session::ViewerSession> {
-    crate::scope::with(|scope| {
-        crate::session::unseal(
-            &scope.state.session_keys,
-            &scope.parts.headers,
-            &scope.state.config.session,
-        )
-        .get::<crate::session::ViewerSession>(crate::session::SESSION_KEY)
-    })
-    .flatten()
+pub fn session() -> Option<ferrohealth_session::record::Session> {
+    match crate::session::held() {
+        Ok(ferrohealth_session::record::Held::SignedIn(session)) => Some(session),
+        _ => None,
+    }
 }
 
 /// The viewer's state, when a request is in reach.

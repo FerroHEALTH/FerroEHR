@@ -33,8 +33,8 @@ async fn login_basic_authenticates_and_rejects_bad_credentials() {
     let Some(h) = Harness::start("login-basic").await else {
         return;
     };
-    // Wrong password first: error surface, still on /login.
-    h.goto("/login").await;
+    // Wrong password first: error surface, still on /sign-in.
+    h.goto("/sign-in").await;
     h.shot(1, "login-form").await;
     h.wait_css("#sign-in-username")
         .await
@@ -51,8 +51,8 @@ async fn login_basic_authenticates_and_rejects_bad_credentials() {
     h.wait_css("#sign-in-password-error").await;
     h.shot(2, "login-error").await;
     assert!(
-        h.current_url().await.contains("/login"),
-        "wrong credentials must stay on /login"
+        h.current_url().await.contains("/sign-in"),
+        "wrong credentials must stay on /sign-in"
     );
 
     // Right credentials: dashboard + chrome.
@@ -77,8 +77,8 @@ async fn login_oidc_round_trips_through_keycloak() {
         h.finish().await;
         return;
     };
-    h.goto("/login").await;
-    h.wait_css("a[href='/auth/oidc/login']").await.click().await;
+    h.goto("/sign-in").await;
+    h.wait_css("a[href='/login']").await.click().await;
     // Keycloak's login form.
     h.wait_url_contains("/auth/realms/ferroehr").await;
     h.shot(1, "keycloak-form").await;
@@ -90,8 +90,8 @@ async fn login_oidc_round_trips_through_keycloak() {
     h.shot(2, "viewer-after-oidc").await;
     let url = h.current_url().await;
     assert!(
-        !url.contains("/login"),
-        "OIDC flow must land on the viewer, not back at /login (got {url})"
+        !url.contains("/sign-in"),
+        "OIDC flow must land on the viewer, not back at /sign-in (got {url})"
     );
     // The CDR accepts the Keycloak token: the seeded EHR's status document
     // is read with it.
@@ -131,7 +131,7 @@ async fn the_modules_attach_interactivity() {
     h.finish().await;
 }
 
-/// An unauthenticated deep link redirects to `/login`; the login page
+/// An unauthenticated deep link redirects to `/sign-in`; the login page
 /// renders.
 #[tokio::test]
 async fn unauthenticated_deep_link_redirects_to_login() {
@@ -139,7 +139,7 @@ async fn unauthenticated_deep_link_redirects_to_login() {
         return;
     };
     h.goto("/system").await;
-    h.wait_url_contains("/login").await;
+    h.wait_url_contains("/sign-in").await;
     h.wait_css("#sign-in-username").await;
     h.shot(1, "redirected-to-login").await;
     h.assert_console_clean(&["401", "Failed to load resource"])

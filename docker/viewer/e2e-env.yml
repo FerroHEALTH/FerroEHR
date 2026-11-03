@@ -14,7 +14,7 @@
 # over TLS with the development CA `keycloak-tls` generates
 # (docker-compose.dev.yml), and the CDR and the viewer add that CA beside
 # their own trust store (the CDR through `[auth] ca_file`, the viewer through
-# `[auth.oidc.tls] trust_roots_file`). The CDR reads the issuer's metadata at
+# `[oidc] ca_file`). The CDR reads the issuer's metadata at
 # boot, so it waits for Keycloak. Keycloak's access tokens carry `typ: JWT`,
 # outside the RFC 9068 profile the CDR expects by default, hence
 # `token_profile = "jwt"`.
@@ -47,12 +47,12 @@ services:
       FERROEHR_VIEWER__CDR__BASE_URL: http://ferroehr:8080
       # The e2e stack serves plain HTTP, so the secure-by-default session
       # cookie flag opts out here (production behind TLS needs nothing).
-      FERROEHR_VIEWER__SESSION__COOKIE_SECURE: "false"
-      FERROEHR_VIEWER__AUTH__OIDC__ENABLED: "true"
-      FERROEHR_VIEWER__AUTH__OIDC__ISSUER: https://keycloak:8443/auth/realms/ferroehr
-      FERROEHR_VIEWER__AUTH__OIDC__CLIENT_ID: ferroehr-viewer
-      FERROEHR_VIEWER__AUTH__OIDC__CLIENT_SECRET: dev-viewer-Qm7xT2vK9pLw4sNc
-      FERROEHR_VIEWER__AUTH__OIDC__PUBLIC_BASE_URL: http://127.0.0.1:3000
-      FERROEHR_VIEWER__AUTH__OIDC__TLS__TRUST_ROOTS_FILE: /run/ferroehr-dev-tls/ca/ca.crt
+      FERROEHR_VIEWER__SESSION__SECURE_COOKIE: "false"
+      FERROEHR_VIEWER__AUTH__OIDC_ENABLED: "true"
+      FERROEHR_VIEWER__OIDC__ISSUER: https://keycloak:8443/auth/realms/ferroehr
+      FERROEHR_VIEWER__OIDC__CLIENT_ID: ferroehr-viewer
+      FERROEHR_VIEWER__OIDC__CLIENT_SECRET: dev-viewer-Qm7xT2vK9pLw4sNc
+      FERROEHR_VIEWER__AUTH__PUBLIC_BASE_URL: http://127.0.0.1:3000
+      FERROEHR_VIEWER__OIDC__CA_FILE: /run/ferroehr-dev-tls/ca/ca.crt
     volumes:
       - keycloak-tls:/run/ferroehr-dev-tls:ro

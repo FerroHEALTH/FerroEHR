@@ -174,7 +174,7 @@ wait_http "$CDR_URL/ferroehr/rest/status" 150
 wait_http "$KEYCLOAK_URL/auth/realms/ferroehr/.well-known/openid-configuration" 90
 
 # The development CA Keycloak's TLS certificate chains to (docker-compose.dev.yml
-# `keycloak-tls`), for the host-mode viewer: `[auth.oidc.tls] trust_roots_file`
+# `keycloak-tls`), for the host-mode viewer: `[oidc] ca_file`
 # adds it beside the platform's roots, on Linux and macOS alike. The composed
 # CDR and viewer mount the same CA (docker/viewer/e2e-env.yml).
 DEV_CA_DIR="$ROOT/target/ui-e2e/dev-ca"
@@ -319,18 +319,18 @@ else
   echo "── starting the viewer on $VIEWER_ADDR"
   FERROEHR_VIEWER__SERVER__LISTEN="$VIEWER_ADDR" \
   FERROEHR_VIEWER__CDR__BASE_URL="$CDR_URL" \
-  FERROEHR_VIEWER__SESSION__COOKIE_SECURE="false" \
-  FERROEHR_VIEWER__AUTH__OIDC__ENABLED="true" \
-  FERROEHR_VIEWER__AUTH__OIDC__ISSUER="https://keycloak:8443/auth/realms/ferroehr" \
-  FERROEHR_VIEWER__AUTH__OIDC__RESOLVE="keycloak=127.0.0.1:8443" \
-  FERROEHR_VIEWER__AUTH__OIDC__CLIENT_ID="ferroehr-viewer" \
-  FERROEHR_VIEWER__AUTH__OIDC__CLIENT_SECRET="dev-viewer-Qm7xT2vK9pLw4sNc" \
-  FERROEHR_VIEWER__AUTH__OIDC__PUBLIC_BASE_URL="$VIEWER_URL" \
-  FERROEHR_VIEWER__AUTH__OIDC__TLS__TRUST_ROOTS_FILE="$DEV_CA_DIR/ca.crt" \
+  FERROEHR_VIEWER__SESSION__SECURE_COOKIE="false" \
+  FERROEHR_VIEWER__AUTH__OIDC_ENABLED="true" \
+  FERROEHR_VIEWER__OIDC__ISSUER="https://keycloak:8443/auth/realms/ferroehr" \
+  FERROEHR_VIEWER__OIDC__RESOLVE="keycloak=127.0.0.1:8443" \
+  FERROEHR_VIEWER__OIDC__CLIENT_ID="ferroehr-viewer" \
+  FERROEHR_VIEWER__OIDC__CLIENT_SECRET="dev-viewer-Qm7xT2vK9pLw4sNc" \
+  FERROEHR_VIEWER__AUTH__PUBLIC_BASE_URL="$VIEWER_URL" \
+  FERROEHR_VIEWER__OIDC__CA_FILE="$DEV_CA_DIR/ca.crt" \
     "$ROOT/target/debug/ferroehr-viewer" &
   VIEWER_PID=$!
 fi
-wait_http "$VIEWER_URL/login"
+wait_http "$VIEWER_URL/sign-in"
 
 # ── 4. chromedriver ──────────────────────────────────────────────────────────
 # CHROMEWEBDRIVER is the GitHub runner images' own variable and the driver is

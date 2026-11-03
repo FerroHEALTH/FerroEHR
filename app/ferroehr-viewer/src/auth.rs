@@ -6,6 +6,8 @@
 //! Every route is a public HTTP endpoint, so each one enforces the session
 //! itself; the CDR credential never leaves the server.
 
+use ferrohealth_secret::secret::Secret;
+use ferrohealth_session::return_path::ReturnPath;
 use serde::Deserialize;
 
 use crate::error::ViewerError;
@@ -42,27 +44,17 @@ const DEFAULT_NEXT: &str = "/";
 
 /// Returns the post-login destination a `next` value is allowed to name.
 ///
-/// Only a same-origin relative path is honoured. The value must begin with a
-/// single `/` — never `//` or `/\`, which a browser reads as protocol-relative
-/// and would follow to another site — and carry only visible ASCII, so nothing
-/// can smuggle a control character into the `Location` header this ends up in.
-/// Everything else (an absolute URL, a `javascript:` payload, an empty value)
-/// falls back to the shell root, because an open redirect on a sign-in route
-/// is a phishing primitive: it lends this deployment's origin to someone
-/// else's page at the exact moment the user has just proved who they are.
-/// Both sign-in paths (Basic and OIDC) filter through here.
+/// Only a page of this viewer is honoured, as
+/// `ferrohealth_session::return_path::ReturnPath` reads one: a single leading
+/// `/` (never `//` or a `\`, which a browser follows to another site),
+/// visible ASCII only, and neither a sign-in route nor the sign-in page.
+/// Everything else falls back to the shell root, because an open redirect on
+/// a sign-in route is a phishing primitive. Both sign-in paths (Basic and
+/// OIDC) are held to the same rule.
 #[must_use]
 pub(crate) fn same_origin_next(raw: Option<&str>) -> String {
-    let candidate = raw.unwrap_or_default();
-    let mut bytes = candidate.bytes();
-    if bytes.next() != Some(b'/') || matches!(bytes.next(), Some(b'/' | b'\\')) {
-        return DEFAULT_NEXT.to_owned();
-    }
-    if candidate.bytes().all(|byte| byte.is_ascii_graphic()) {
-        candidate.to_owned()
-    } else {
-        DEFAULT_NEXT.to_owned()
-    }
+    raw.and_then(|raw| ReturnPath::parse(raw, crate::session::SIGN_IN_PAGE))
+        .map_or_else(|| DEFAULT_NEXT.to_owned(), |path| path.as_str().to_owned())
 }
 
 /// What a Basic sign-in came to.
@@ -76,7 +68,7 @@ pub enum SignedIn {
 }
 
 /// Basic sign-in: checks the credentials against the CDR with an
-/// authenticated ITS-REST read, then keeps them in the sealed session.
+/// authenticated ITS-REST read, then begins the session that carries them.
 ///
 /// Credentials the CDR refuses are not an error: the answer says so, and the
 /// sign-in page draws the refusal with the username kept. The session cookie
@@ -85,7 +77,8 @@ pub enum SignedIn {
 /// # Errors
 /// [`ViewerError::Invalid`] when Basic sign-in is off,
 /// [`ViewerError::Cdr`] / [`ViewerError::CdrUnreachable`] when the CDR
-/// misbehaves, [`ViewerError::Internal`] outside a request.
+/// misbehaves, [`ViewerError::Failed`] when the store refuses the session,
+/// [`ViewerError::Internal`] outside a request.
 pub async fn sign_in_basic(
     username: String,
     password: String,
@@ -95,9 +88,10 @@ pub async fn sign_in_basic(
     if !state.config.auth.basic_enabled {
         return Err(ViewerError::Invalid("Basic login is disabled".to_owned()));
     }
-    let credential = crate::session::Credential::Basic {
+    let password = Secret::new(password);
+    let credential = ferrohealth_session::record::Credential::Basic {
         username: username.clone(),
-        password,
+        password: password.clone(),
     };
     // An authenticated, cheap ITS-REST read: the ADL 1.4 template list
     // (Definition API). 401 = wrong credentials; with CDR auth disabled the
@@ -118,13 +112,9 @@ pub async fn sign_in_basic(
         });
     }
 
-    let mut session = crate::session::http_session()?;
-    session.sign_in(&crate::session::ViewerSession {
-        identity: username,
-        credential,
-        scopes: Vec::new(),
-    })?;
-    crate::session::commit(&session)?;
+    crate::session::begin(ferrohealth_session::record::SignedIn::basic(
+        username, password,
+    ))?;
     Ok(SignedIn::Accepted(same_origin_next(next.as_deref())))
 }
 
@@ -144,7 +134,7 @@ pub async fn fetch_login_screen() -> Result<LoginScreen, ViewerError> {
     let (cdr_basic, cdr_bearer) = state.cdr.advertised_schemes().await.unwrap_or((true, true));
     Ok(LoginScreen {
         basic: state.config.auth.basic_enabled && cdr_basic,
-        oidc: state.config.auth.oidc.enabled && cdr_bearer,
+        oidc: state.config.auth.oidc_enabled && cdr_bearer,
         notice: state.config.login.notice.clone(),
         links: state.config.login.links.clone(),
     })
@@ -192,5 +182,9 @@ mod tests {
         // Absent or empty.
         assert_eq!(same_origin_next(None), "/");
         assert_eq!(same_origin_next(Some("")), "/");
+        // The sign-in page and the sign-in routes are never a destination.
+        assert_eq!(same_origin_next(Some("/sign-in?expired=1")), "/");
+        assert_eq!(same_origin_next(Some("/login")), "/");
+        assert_eq!(same_origin_next(Some("/auth/callback?code=x")), "/");
     }
 }

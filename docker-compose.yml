@@ -561,7 +561,7 @@ services:
   # BFF that consumes the CDR strictly over ITS-REST — never the database.
   # Opt-in (`docker compose --profile viewer up`); Basic login proxies the
   # CDR's quickstart user (ferroehr/ferroehr). For OIDC set the
-  # FERROEHR_VIEWER__AUTH__OIDC__* variables at your identity provider.
+  # FERROEHR_VIEWER__OIDC__* and FERROEHR_VIEWER__AUTH__* variables at your identity provider.
   ferroehr-viewer:
     profiles: [viewer]
     image: ${FERROEHR_VIEWER_IMAGE:-ghcr.io/ferrohealth/ferroehr-viewer:5.6.0-rc10}
@@ -573,7 +573,7 @@ services:
       # The quickstart serves plain HTTP on localhost, so the secure-by-default
       # session cookie flag opts out here; a TLS-fronted deployment (the hosted
       # sandbox, the chart behind an ingress) keeps the default `true`.
-      FERROEHR_VIEWER__SESSION__COOKIE_SECURE: "false"
+      FERROEHR_VIEWER__SESSION__SECURE_COOKIE: "false"
       # The CDR's console in `docker compose logs`: the same section and the
       # same request line; `json` (or unset, `auto`) for a log collector.
       FERROEHR_VIEWER__TELEMETRY__FORMAT: ${FERROEHR_VIEWER__TELEMETRY__FORMAT:-pretty}

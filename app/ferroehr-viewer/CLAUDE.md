@@ -33,9 +33,20 @@ console headers (`console::headers` in the server-rendered mode, which
 writes the policy),
 `same_origin`, the stack with the health routes (`server::app`),
 `cli::Common` and the healthcheck (`src/cli.rs`), the bounded drain
-(`serve::run` over `[server]`), and the outbound TLS of the CDR and issuer
-clients (`tls_client`, `[cdr.tls]` and `[auth.oidc.tls]`). A habit the crate
-lacks is a FerroSYS issue, never a local copy.
+(`serve::run` over `[server]`), and the outbound TLS of the CDR client
+(`tls_client`, `[cdr.tls]`). A habit the crate lacks is a FerroSYS issue,
+never a local copy.
+
+## The sign-in and the session are the family's
+
+`ferrohealth-session` (`axum`, FerroAUTH) keeps them: the `[oidc]` and
+`[session]` sections, the `memory` or `sealed` store, the OpenID Connect
+sign-in over `ferrohealth-smart`'s relying party, and the routes `/login`,
+`/auth/callback`, `/logout` and `/session` with the `keep_session`
+middleware that hands every request its `record::Held`. `src/session.rs` is
+the viewer's side of that seam (the cookie names, `Pages`, `require_session`
+and the Basic sign-in's `begin`); the sign-in page is `/sign-in`. A habit the
+crate lacks is a FerroAUTH issue, never a local copy.
 
 ## How a page works (FerroUI's interaction contract)
 
@@ -126,7 +137,8 @@ that FerroUI lacks is filed on FerroUI and added there, never built here.
 ## No viewer-local domain state
 
 The viewer stores nothing of its own: no database, no file beside the
-binary. Its state is the sealed session cookie and the display cookies above.
+binary. Its state is the session `ferrohealth-session` keeps (in the process,
+or in one sealed cookie) and the display cookies above.
 Every fact a page shows is read from the CDR. Grouping derives from the wire
 (stored-query namespaces, `crate::query_namespace`), never from a local store.
 

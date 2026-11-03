@@ -12,7 +12,7 @@
 /// Every failure a read of the CDR can hand a page.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ViewerError {
-    /// No viewer session — the UI redirects to `/login`.
+    /// No viewer session — the UI redirects to `/sign-in`.
     #[error("not authenticated")]
     Unauthenticated,
     /// The CDR answered `401`: the credential this session carries is no

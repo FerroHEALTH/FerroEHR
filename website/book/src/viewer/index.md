@@ -66,11 +66,11 @@ and a Secret holding its client secret. **To turn the viewer off**, set
 CDR is untouched.
 
 > [!NOTE]
-> To scale the viewer past one replica, set the same `session.secret` on
-> every replica: the session is a sealed cookie any key-holding replica can
-> serve. Without a configured secret each replica seals with its own
-> ephemeral key, and visitors get signed out whenever a request lands on
-> another pod.
+> To scale the viewer past one replica, set `session.store = "sealed"` and the
+> same `session.key` (or `session.key_file`) on every replica: the session is
+> then a sealed cookie any key-holding replica can serve. The default `memory`
+> store keeps sessions in one process, which is right for exactly one
+> replica. A sealed store with no key refuses the start.
 
 ## Signing in
 
@@ -88,8 +88,8 @@ brings you back to the sign-in card with the refusal under the password.
 The viewer verifies the CDR and the OIDC issuer against the platform trust
 store and the extra certificate authorities its configuration names: a CDR or
 an identity provider whose certificate comes from a private CA is trusted once
-`cdr.tls.trust_roots_file` or `auth.oidc.tls.trust_roots_file` names a PEM
-bundle holding that CA, on Linux and macOS alike. A file that cannot be read,
+`cdr.tls.trust_roots_file` or `oidc.ca_file` names a PEM bundle holding that
+CA, on Linux and macOS alike. A file that cannot be read,
 or holds no certificate, refuses the start.
 
 The viewer manages no accounts of its own: it authenticates you against the
@@ -126,8 +126,8 @@ grant it; the CDR remains the enforcer.
 ### When your session ends
 
 A session ends when you sign out, when its idle window
-(`session.idle_minutes`, 60 minutes by default) passes with no request from
-your browser, when its lifetime (`session.absolute_minutes`, 12 hours after
+(`session.idle_timeout_s`, an hour by default) passes with no request from
+your browser, when its lifetime (`session.absolute_timeout_s`, 12 hours after
 you signed in by default) runs out whatever you do, or when the CDR stops
 accepting the credential behind it (an expired or revoked token). The pairing
 of an idle timeout with an absolute one follows the OWASP Session Management
@@ -147,7 +147,7 @@ the others.
 
 The idle window slides on each request your browser makes for a page or a
 post. The watch's own reads of the session do not slide it, so a tab left
-open and untouched idles out after `session.idle_minutes` like a closed one.
+open and untouched idles out after `session.idle_timeout_s` like a closed one.
 With FerroUI's scripts refused, the next page you ask for is where the viewer
 notices.
 
@@ -192,24 +192,27 @@ override, because the viewer's variables share its prefix:
 | `cdr.tls.min_version` | `"1.3"` | The oldest TLS version the CDR client speaks; `"1.2"` lowers it. |
 | `cdr.management_base_url` | derived from `cdr.base_url` | The CDR's management surface, base path included; set it when the CDR serves management on its own internal listener (`management.port`) or under a renamed base path. Drives Server's [management tabs](server.md#health-metrics-and-logging). |
 | `auth.basic_enabled` | `true` | Offer the username/password form (validated against the CDR; held server-side). |
-| `auth.oidc.enabled` | `false` | Offer OIDC login (authorization code + PKCE). |
-| `auth.oidc.issuer` / `client_id` / `client_secret` (`_file`) / `public_base_url` / `scopes` | — | The OIDC client registration; `public_base_url` is the viewer's externally visible origin for the redirect URI. Enabling OIDC without issuer, client id and public base URL is a startup error. |
-| `auth.oidc.tls.trust_roots_file` / `client_identity` (`_file`) / `min_version` | unset / unset / `"1.3"` | The issuer client's TLS, as `cdr.tls`: extra certificate authorities for an issuer behind a private PKI, a client identity, and the oldest TLS version. |
-| `auth.oidc.resolve` | — | A `host=ip:port` override for the issuer host, for split-horizon DNS: the viewer reaches an issuer whose canonical name only resolves inside the container network, while browsers and tokens keep the canonical URL. |
+| `auth.oidc_enabled` | `false` | Offer the OpenID Connect sign-in (authorization code + PKCE) at the provider `[oidc]` names. |
+| `auth.public_base_url` | — | The viewer's externally visible origin: the origin the same-origin check compares a post with, and the base of `oidc.redirect_uri` (`<public_base_url>/auth/callback`) when that is not set. |
+| `oidc.issuer` / `client_id` / `client_secret` (`_file`) / `redirect_uri` / `post_logout_redirect_uri` / `scopes` | — | The viewer's client at its OpenID Provider (`ferrohealth-session`'s `[oidc]`). The provider must allow the redirect URI `<public_base_url>/auth/callback`. With `auth.oidc_enabled`, an issuer that is not `https` off loopback, a missing client id or redirect URI, and `scopes` without `openid` are startup errors, and the provider's metadata is discovered at the start. |
+| `oidc.ca_file` | unset | A PEM bundle of certificate authorities trusted for the provider beside the platform's roots, for a provider behind a private PKI. |
+| `oidc.resolve` | empty | `host=ip:port` entries for split-horizon DNS: the viewer reaches each provider host at its address, while browsers and tokens keep the canonical URL. |
+| `oidc.tls.client_certificate` / `client_key` (`_file`) / `min_version` | unset / unset / `"1.3"` | Mutual TLS to the provider (RFC 8705 §2): the client certificate chain and its private key, set together, and the oldest TLS version of the provider connection (`"1.2"` lowers it). |
 | `login.notice` | empty | Informational text on the sign-in card, line breaks preserved. A demo or evaluation deployment states its public credentials and usage expectations here. |
 | `login.links` | empty | Links under the sign-in card, each `{ label, href }` — an API reference, a documentation page. |
-| `session.idle_minutes` | `60` | Session idle expiry: the window slides on each page or post the browser asks for and on **Stay signed in**, never on the session watch's own reads (carried inside the sealed cookie). |
-| `session.absolute_minutes` | `720` | The session's lifetime from sign-in, which no activity extends (carried inside the sealed cookie). Zero, or a value below `session.idle_minutes`, is a startup error. |
-| `session.cookie_secure` | `true` | On by default; set `false` only for plain-HTTP local development. |
-| `session.secret` | empty | The session-cookie sealing key: base64 of at least 64 bytes (`openssl rand -base64 64`). Every replica of a scaled deployment must hold the same value. Empty = an ephemeral per-instance key, fine for exactly one replica. |
-| `session.secret_file` | — | Path to a file holding the sealing key; wins over `session.secret`. |
+| `session.store` | `memory` | Where sessions are kept (`ferrohealth-session`'s `[session]`): `memory` in the one viewer process, or `sealed` in one AES-256-GCM cookie every replica holding the key opens. |
+| `session.idle_timeout_s` | `3600` | Session idle expiry: the window slides on each page or post the browser asks for and on **Stay signed in**, never on the session watch's own reads. |
+| `session.absolute_timeout_s` | `43200` | The session's lifetime from sign-in, which no activity extends. Zero, or a value below `session.idle_timeout_s`, is a startup error. |
+| `session.secure_cookie` | `true` | The cookies carry `Secure` and with it the `__Host-` prefix; set `false` only for plain-HTTP local development. |
+| `session.key` / `session.key_file` | unset | The sealing key of a `sealed` store: base64 of at least 64 bytes (`openssl rand -base64 64`), the same on every replica. A sealed store without one, or a key beside a `memory` store, is a startup error. |
 | `ui.locale` | `en` | The language a page renders in when the browser's `Accept-Language` names none the viewer ships. English is the one language that ships today. A language is added as a catalog file under `app/ferroehr-viewer/locales/<tag>/` (the viewer's words) beside FerroUI's (the components' words) with no code change; the catalogs are embedded when the viewer is built, so a new one reaches a deployment in a rebuilt image, never at run time. A value that is no BCP 47 language tag is a startup error. |
 
 ### Commands
 
 `ferroehr-viewer` (or `ferroehr-viewer serve`) serves until `SIGTERM` or
-`SIGINT`. `ferroehr-viewer config check` reads the configuration and builds
-the CDR and issuer clients, reading every TLS file, without reaching either.
+`SIGINT`. `ferroehr-viewer config check` reads the configuration, checks
+`[oidc]` and `[session]` and builds the CDR client and the session store,
+reading every TLS file, without reaching the CDR or the provider.
 `ferroehr-viewer healthcheck`, the image's `HEALTHCHECK`, asks the viewer
 beside it for `GET /health/readiness` over the loopback (over TLS when
 `server.tls` is set) and exits `0` only on `200`. The viewer serves the
@@ -227,19 +230,22 @@ scripts under `/ferrohealth-ui/<version>/` are `no-cache`, so a browser
 revalidates them. A request that is not a
 safe method (a form post, the search panel's answer) is refused `403` unless the
 browser's `Sec-Fetch-Site` says it came from the viewer's own pages; without
-that header its `Origin` or `Referer` must name `auth.oidc.public_base_url`.
+that header its `Origin` or `Referer` must name `auth.public_base_url`.
 
 The viewer is **stateless**: it has no database and keeps no local files of
 its own. Everything it shows, including how stored queries are grouped,
 which is derived from the namespace in each query's qualified name, lives in
 the CDR and is read over ITS-REST, so nothing here needs backing up and
-every replica shows the same repository. Sessions are a **sealed cookie**
-(AES-256-GCM, keyed by `session.secret`), so any replica holding the key can
-serve any signed-in visitor.
+every replica shows the same repository. The sign-in and the session are
+`ferrohealth-session`'s: with `session.store = "sealed"` the session is a
+**sealed cookie** (AES-256-GCM, keyed by `session.key`), so any replica holding
+the key can serve any signed-in visitor.
 
-Login and sessions live in the viewer's server; the browser stores only
-the encrypted session cookie: CDR credentials and bearer tokens never reach
-it in readable form.
+Sign-in and sessions live in the viewer's server; the browser stores only
+the session cookie, an opaque id or ciphertext: CDR credentials and bearer
+tokens never reach it in readable form. The sign-in page is `/sign-in`, and
+the sign-in routes are `/login` (which begins the OpenID Connect sign-in),
+`/auth/callback`, `/logout` and `/session`.
 
 ## How the pages work
 

@@ -5,20 +5,20 @@
 //! `FERROEHR_VIEWER__…` environment overrides, read by `ferrohealth-config`
 //! as the CDR's is.
 //!
-//! No openEHR spec governs configuration — our own design. The viewer is
-//! stateless: sessions ride a sealed cookie, and there is no database or local store
-//! of domain state either — every fact it shows lives in the CDR and is read
-//! over ITS-REST.
+//! No openEHR spec governs configuration — our own design. The sign-in and
+//! the session are `ferrohealth-session`'s `[oidc]` and `[session]` sections,
+//! and there is no database or local store of domain state — every fact the
+//! viewer shows lives in the CDR and is read over ITS-REST.
 
 use std::collections::BTreeMap;
 use std::path::Path;
 
 use ferrohealth_config::loader::Loader;
-use ferrohealth_secret::file::read_secret_file;
 use ferrohealth_server::section::ServerSection;
 use ferrohealth_server::tls_client::TlsClientSection;
+use ferrohealth_session::config::{OidcSection, OidcTlsSection, SessionSection};
+use ferrohealth_smart::client::TlsVersion;
 use ferrohealth_telemetry::section::TelemetrySection;
-use secrecy::ExposeSecret;
 use serde::Deserialize;
 
 /// The single configuration root for the viewer.
@@ -30,12 +30,16 @@ pub struct ViewerConfig {
     pub server: ServerSection,
     /// The CDR connection.
     pub cdr: CdrConfig,
-    /// Viewer login modes.
+    /// Viewer login modes and the viewer's public URL.
     pub auth: AuthConfig,
+    /// The viewer's client at its OpenID Provider: `ferrohealth-session`'s
+    /// `[oidc]`, read when `auth.oidc_enabled` is set.
+    pub oidc: OidcSection,
     /// Login-screen presentation.
     pub login: LoginConfig,
-    /// Session behaviour.
-    pub session: SessionConfig,
+    /// The session store and its lifetimes: `ferrohealth-session`'s
+    /// `[session]`.
+    pub session: SessionSection,
     /// The language the viewer renders in.
     pub ui: UiConfig,
     /// The console, the request log and the OpenTelemetry export: the
@@ -56,8 +60,23 @@ impl Default for ViewerConfig {
             },
             cdr: CdrConfig::default(),
             auth: AuthConfig::default(),
+            // NOTE: no specification governs this: our own design; the provider connection
+            // keeps the TLS 1.3 floor the viewer's issuer client had before ferrohealth-session.
+            oidc: OidcSection {
+                tls: OidcTlsSection {
+                    min_version: TlsVersion::Tls13,
+                    ..OidcTlsSection::default()
+                },
+                ..OidcSection::default()
+            },
             login: LoginConfig::default(),
-            session: SessionConfig::default(),
+            // NOTE: no specification governs this: our own design; the viewer keeps the hour
+            // idle and twelve hours absolute it ran on before ferrohealth-session.
+            session: SessionSection {
+                idle_timeout_s: 3600,
+                absolute_timeout_s: 43_200,
+                ..SessionSection::default()
+            },
             ui: UiConfig::default(),
             telemetry: TelemetrySection::default(),
         }
@@ -181,86 +200,27 @@ pub struct LoginConfig {
     pub links: Vec<crate::auth::LoginLink>,
 }
 
-/// Which login modes the viewer offers (design: both ship in v1).
+/// Which login modes the viewer offers, and its public URL.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct AuthConfig {
     /// Offer the Basic (username/password) form; credentials are validated
     /// against the CDR and held server-side in the session.
     pub basic_enabled: bool,
-    /// OIDC authorization-code login.
-    pub oidc: OidcConfig,
+    /// Offer the OpenID Connect sign-in at the provider `[oidc]` names.
+    pub oidc_enabled: bool,
+    /// The externally visible base URL of the viewer, e.g.
+    /// `http://localhost:3000`: the origin the same-origin check compares a
+    /// post with, and the base of `oidc.redirect_uri` when that is not set.
+    pub public_base_url: String,
 }
 
 impl Default for AuthConfig {
     fn default() -> Self {
         Self {
             basic_enabled: true,
-            oidc: OidcConfig::default(),
-        }
-    }
-}
-
-/// OIDC (Keycloak-style) settings for the viewer's own login.
-#[derive(Debug, Clone, Deserialize, Default)]
-#[serde(default, deny_unknown_fields)]
-pub struct OidcConfig {
-    /// Enable the OIDC login button + routes.
-    pub enabled: bool,
-    /// Issuer URL (discovery is derived from it).
-    pub issuer: String,
-    /// The `OAuth2` client id registered for the viewer.
-    pub client_id: String,
-    /// The `OAuth2` client secret (prefer `client_secret_file` in deployments).
-    pub client_secret: String,
-    /// Path to a file holding the client secret; wins over `client_secret`.
-    pub client_secret_file: String,
-    /// Externally visible base URL of the viewer (for the redirect URI),
-    /// e.g. `http://localhost:3000`.
-    pub public_base_url: String,
-    /// Split-horizon DNS override for the issuer host, `host=ip:port`
-    /// (e.g. `keycloak=127.0.0.1:8081`). Lets the viewer reach an issuer
-    /// whose canonical hostname only resolves inside a container network
-    /// while browsers and tokens keep the canonical URL. Empty = none.
-    pub resolve: String,
-    /// Additional scopes requested beyond `openid`.
-    pub scopes: Vec<String>,
-    /// The trust roots beside the platform's and the client identity the
-    /// issuer client presents (`[auth.oidc.tls]`).
-    pub tls: TlsClientSection,
-}
-
-/// Session behaviour (a sealed cookie — no server-side store).
-#[derive(Debug, Clone, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-pub struct SessionConfig {
-    /// Idle expiry, minutes: the user's requests slide it.
-    pub idle_minutes: u64,
-    /// The session's absolute lifetime, minutes from sign-in, which nothing
-    /// extends; at least `idle_minutes`.
-    pub absolute_minutes: u64,
-    /// Set the `Secure` cookie flag. On by default (fail closed): a
-    /// plain-HTTP context (local development, the e2e harness) opts OUT
-    /// explicitly, production behind TLS needs nothing.
-    pub cookie_secure: bool,
-    /// The cookie-sealing secret, base64 of at least 64 bytes. Every
-    /// instance of a scaled deployment must hold the same value — the
-    /// session is an encrypted cookie any instance can open. Empty = an
-    /// ephemeral per-instance key (single-replica only), with a startup
-    /// warning.
-    pub secret: String,
-    /// Path to a file holding the sealing secret; wins over `secret`.
-    pub secret_file: String,
-}
-
-impl Default for SessionConfig {
-    fn default() -> Self {
-        Self {
-            idle_minutes: 60,
-            absolute_minutes: 720,
-            cookie_secure: true,
-            secret: String::new(),
-            secret_file: String::new(),
+            oidc_enabled: false,
+            public_base_url: String::new(),
         }
     }
 }
@@ -277,6 +237,15 @@ pub enum ConfigError {
     /// The tree read but one of its values is refused.
     #[error("{0}")]
     Invalid(String),
+    /// `[oidc]` or `[session]` is refused.
+    #[error(transparent)]
+    Session(Box<ferrohealth_session::config::ConfigError>),
+}
+
+impl From<ferrohealth_session::config::ConfigError> for ConfigError {
+    fn from(error: ferrohealth_session::config::ConfigError) -> Self {
+        Self::Session(Box::new(error))
+    }
 }
 
 /// The loader of the `FERROEHR_VIEWER` namespace, with the viewer's own
@@ -291,6 +260,8 @@ pub enum ConfigError {
 pub fn loader() -> Result<Loader, ConfigError> {
     Ok(Loader::new("FERROEHR_VIEWER")?
         .defaults("server", &ViewerConfig::default().server)?
+        .defaults("session", &ViewerConfig::default().session)?
+        .defaults("oidc", &ViewerConfig::default().oidc)?
         .fallback("RUST_LOG", "telemetry.filter", None)
         .reserve("FERROEHR_VIEWER_PORT")
         .reserve("FERROEHR_VIEWER_IMAGE"))
@@ -368,31 +339,6 @@ fn finish(mut cfg: ViewerConfig) -> Result<ViewerConfig, ConfigError> {
         ));
     }
 
-    if !cfg.auth.oidc.client_secret_file.is_empty() {
-        let secret = read_secret_file(
-            "auth.oidc.client_secret",
-            Path::new(&cfg.auth.oidc.client_secret_file),
-        )?;
-        secret
-            .expose_secret()
-            .clone_into(&mut cfg.auth.oidc.client_secret);
-    }
-
-    if !cfg.session.secret_file.is_empty() {
-        let secret = read_secret_file("session.secret", Path::new(&cfg.session.secret_file))?;
-        secret.expose_secret().clone_into(&mut cfg.session.secret);
-    }
-
-    // NOTE: no specification governs this: our own design; the OWASP Session Management
-    // Cheat Sheet pairs an idle timeout with an absolute one that bounds it.
-    if cfg.session.absolute_minutes == 0 || cfg.session.absolute_minutes < cfg.session.idle_minutes
-    {
-        return Err(ConfigError::Invalid(format!(
-            "session.absolute_minutes must be at least 1 and at least session.idle_minutes (got {} and {})",
-            cfg.session.absolute_minutes, cfg.session.idle_minutes
-        )));
-    }
-
     if ferrohealth_ui::i18n::Locale::parse(&cfg.ui.locale).is_err() {
         return Err(ConfigError::Invalid(format!(
             "ui.locale `{}` is not a language tag",
@@ -400,27 +346,27 @@ fn finish(mut cfg: ViewerConfig) -> Result<ViewerConfig, ConfigError> {
         )));
     }
 
-    if cfg.auth.oidc.enabled {
-        let mut missing = Vec::new();
-        for (key, value) in [
-            ("auth.oidc.issuer", &cfg.auth.oidc.issuer),
-            ("auth.oidc.client_id", &cfg.auth.oidc.client_id),
-            ("auth.oidc.public_base_url", &cfg.auth.oidc.public_base_url),
-        ] {
-            if value.is_empty() {
-                missing.push(key);
-            }
-        }
-        if !missing.is_empty() {
-            return Err(ConfigError::Invalid(format!(
-                "auth.oidc.enabled = true requires: {}",
-                missing.join(", ")
-            )));
+    if !cfg.auth.public_base_url.is_empty() {
+        let public = public_origin(&cfg.auth.public_base_url)?;
+        if cfg.oidc.redirect_uri.is_empty() {
+            cfg.oidc.redirect_uri = public
+                .join(ferrohealth_session::paths::CALLBACK)
+                .map_err(|_unjoined| {
+                    ConfigError::Invalid(format!(
+                        "auth.public_base_url `{}` takes no callback path",
+                        cfg.auth.public_base_url
+                    ))
+                })?
+                .to_string();
         }
     }
 
-    if !cfg.auth.oidc.public_base_url.is_empty() {
-        public_origin(&cfg.auth.oidc.public_base_url)?;
+    // NOTE: ferrohealth-session 0.2.0 `config`: a sealed store with no key, a key beside a
+    // memory store and an absolute lifetime shorter than the idle one refuse the start.
+    if cfg.auth.oidc_enabled {
+        cfg.session.check(&cfg.oidc.check()?)?;
+    } else {
+        cfg.session.check_with(false)?;
     }
 
     Ok(cfg)
@@ -434,14 +380,14 @@ fn finish(mut cfg: ViewerConfig) -> Result<ViewerConfig, ConfigError> {
 pub fn public_origin(public_base_url: &str) -> Result<url::Url, ConfigError> {
     let parsed = url::Url::parse(public_base_url).map_err(|_unparsed| {
         ConfigError::Invalid(format!(
-            "auth.oidc.public_base_url `{public_base_url}` is no URL"
+            "auth.public_base_url `{public_base_url}` is no URL"
         ))
     })?;
     if parsed.origin().is_tuple() {
         Ok(parsed)
     } else {
         Err(ConfigError::Invalid(format!(
-            "auth.oidc.public_base_url `{public_base_url}` has no origin of its own"
+            "auth.public_base_url `{public_base_url}` has no origin of its own"
         )))
     }
 }
@@ -558,27 +504,37 @@ mod tests {
         assert_eq!(defaults.login.links, Vec::<crate::auth::LoginLink>::new());
     }
 
-    /// The absolute lifetime defaults to twelve hours, and a lifetime of zero
-    /// or one shorter than the idle window refuses the start.
+    /// The session is `ferrohealth-session`'s `[session]`: its lifetimes
+    /// default to an hour idle and twelve hours absolute, a lifetime of
+    /// zero or an absolute one shorter than the idle one refuses the start, and
+    /// so does a sealed store with no key.
     #[test]
-    fn the_absolute_lifetime_bounds_the_idle_window() {
+    fn the_session_section_is_checked_when_it_loads() {
         let defaults = load_sources(None, &BTreeMap::new()).unwrap();
-        assert_eq!(720, defaults.session.absolute_minutes);
-        for refused in [
-            "[session]\nabsolute_minutes = 0\n",
-            "[session]\nidle_minutes = 90\nabsolute_minutes = 60\n",
+        assert_eq!(3600, defaults.session.idle_timeout_s);
+        assert_eq!(43_200, defaults.session.absolute_timeout_s);
+        for (refused, key) in [
+            (
+                "[session]\nabsolute_timeout_s = 0\n",
+                "session.absolute_timeout_s",
+            ),
+            (
+                "[session]\nidle_timeout_s = 90\nabsolute_timeout_s = 60\n",
+                "session.absolute_timeout_s",
+            ),
+            ("[session]\nstore = \"sealed\"\n", "session.key"),
         ] {
             let err = load_sources(Some(refused), &BTreeMap::new())
                 .unwrap_err()
                 .to_string();
-            assert!(err.contains("session.absolute_minutes"), "{err}");
+            assert!(err.contains(key), "{refused}: {err}");
         }
         let equal = load_sources(
-            Some("[session]\nidle_minutes = 60\nabsolute_minutes = 60\n"),
+            Some("[session]\nidle_timeout_s = 60\nabsolute_timeout_s = 60\n"),
             &BTreeMap::new(),
         )
         .unwrap();
-        assert_eq!(60, equal.session.absolute_minutes);
+        assert_eq!(60, equal.session.absolute_timeout_s);
     }
 
     #[test]
@@ -647,12 +603,17 @@ mod tests {
         }
     }
 
-    /// The outbound TLS tables of the CDR and the issuer are the family's.
+    /// The CDR's outbound TLS table is the family's, and the provider's is
+    /// `ferrohealth-session`'s: its trust roots, its address overrides and
+    /// `[oidc.tls]` with the client certificate and the TLS floor.
     #[test]
-    fn the_cdr_and_issuer_tls_tables_parse() {
+    fn the_cdr_and_provider_tls_tables_parse() {
         let parsed = load_sources(
             Some(
-                "[cdr.tls]\ntrust_roots_file = \"/run/cdr-ca.pem\"\nmin_version = \"1.2\"\n\n[auth.oidc.tls]\ntrust_roots_file = \"/run/issuer-ca.pem\"\n",
+                "[cdr.tls]\ntrust_roots_file = \"/run/cdr-ca.pem\"\nmin_version = \"1.2\"\n\n\
+                 [oidc]\nca_file = \"/run/issuer-ca.pem\"\nresolve = [\"keycloak=127.0.0.1:8443\"]\n\n\
+                 [oidc.tls]\nclient_certificate = \"/run/viewer.crt\"\nclient_key_file = \"/run/viewer.key\"\n\
+                 min_version = \"1.3\"\n",
             ),
             &BTreeMap::new(),
         )
@@ -663,12 +624,89 @@ mod tests {
         );
         assert_eq!(
             Some(std::path::PathBuf::from("/run/issuer-ca.pem")),
-            parsed.auth.oidc.tls.trust_roots_file
+            parsed.oidc.ca_file
+        );
+        assert_eq!(parsed.oidc.resolve, ["keycloak=127.0.0.1:8443"]);
+        assert_eq!(
+            Some(std::path::PathBuf::from("/run/viewer.crt")),
+            parsed.oidc.tls.client_certificate
+        );
+        assert_eq!(
+            ferrohealth_smart::client::TlsVersion::Tls13,
+            parsed.oidc.tls.min_version
+        );
+        let floor = load_sources(
+            Some("[oidc.tls]\nmin_version = \"1.2\"\n"),
+            &BTreeMap::new(),
+        )
+        .unwrap();
+        assert_eq!(
+            ferrohealth_smart::client::TlsVersion::Tls12,
+            floor.oidc.tls.min_version,
+            "the floor is lowered only when asked"
+        );
+        assert_eq!(
+            ferrohealth_smart::client::TlsVersion::Tls13,
+            load_sources(
+                Some("[oidc]\nca_file = \"/run/ca.pem\"\n"),
+                &BTreeMap::new()
+            )
+            .unwrap()
+            .oidc
+            .tls
+            .min_version,
+            "a partial [oidc] keeps the viewer's TLS 1.3 floor"
         );
         assert!(
             load_sources(Some("[cdr.tls]\nca_file = \"x\"\n"), &BTreeMap::new()).is_err(),
             "an unknown key of the table is refused"
         );
+        let env = BTreeMap::from([(
+            "FERROEHR_VIEWER__OIDC__RESOLVE".to_owned(),
+            "keycloak=127.0.0.1:8443".to_owned(),
+        )]);
+        assert_eq!(
+            load_sources(None, &env).unwrap().oidc.resolve,
+            ["keycloak=127.0.0.1:8443"],
+            "a variable sets the list from its text"
+        );
+    }
+
+    /// The redirect URI derives from the public URL when it is not set, and
+    /// an OpenID Connect sign-in is checked by `ferrohealth-session` when the
+    /// configuration loads.
+    #[test]
+    fn the_oidc_sign_in_is_checked_when_it_loads() {
+        let env = BTreeMap::from([
+            (
+                "FERROEHR_VIEWER__AUTH__PUBLIC_BASE_URL".to_owned(),
+                "http://localhost:3000".to_owned(),
+            ),
+            (
+                "FERROEHR_VIEWER__AUTH__OIDC_ENABLED".to_owned(),
+                "true".to_owned(),
+            ),
+            (
+                "FERROEHR_VIEWER__OIDC__ISSUER".to_owned(),
+                "https://keycloak:8443/auth/realms/ferroehr".to_owned(),
+            ),
+            (
+                "FERROEHR_VIEWER__OIDC__CLIENT_ID".to_owned(),
+                "ferroehr-viewer".to_owned(),
+            ),
+        ]);
+        let loaded = load_sources(None, &env).unwrap();
+        assert_eq!(
+            loaded.oidc.redirect_uri,
+            "http://localhost:3000/auth/callback"
+        );
+        let mut unsafe_issuer = env;
+        unsafe_issuer.insert(
+            "FERROEHR_VIEWER__OIDC__ISSUER".to_owned(),
+            "http://keycloak:8080/realms/ferroehr".to_owned(),
+        );
+        let refused = load_sources(None, &unsafe_issuer).unwrap_err().to_string();
+        assert!(refused.contains("oidc.issuer"), "{refused}");
     }
 
     /// A public URL with no origin of its own cannot anchor the same-origin
@@ -677,11 +715,11 @@ mod tests {
     fn a_public_url_without_an_origin_is_refused() {
         for url in ["not a url", "data:text/plain,viewer"] {
             let env = BTreeMap::from([(
-                "FERROEHR_VIEWER__AUTH__OIDC__PUBLIC_BASE_URL".to_owned(),
+                "FERROEHR_VIEWER__AUTH__PUBLIC_BASE_URL".to_owned(),
                 url.to_owned(),
             )]);
             let refused = load_sources(None, &env).unwrap_err().to_string();
-            assert!(refused.contains("auth.oidc.public_base_url"), "{refused}");
+            assert!(refused.contains("auth.public_base_url"), "{refused}");
         }
     }
 

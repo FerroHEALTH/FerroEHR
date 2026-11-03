@@ -17,9 +17,9 @@
 #      class), so a login alone passes on a broken asset chain;
 #   2. the browser posts the credentials through the sign-in card's form and
 #      lands on the authenticated Dashboard. The Basic form is a plain POST
-#      to the page itself, `/login`, which answers accepted credentials with
+#      to the page itself, `/sign-in`, which answers accepted credentials with
 #      a redirect and refused ones with the page drawn again (#3980). So the
-#      script checks the form posts to /login before the click, and after it
+#      script checks the form posts to /sign-in before the click, and after it
 #      reads the performance log for that Document POST and its 3xx answer:
 #      a Dashboard reached by any other path (an automatic sign-in, a
 #      session already present) shows no such redirect and fails.
@@ -143,9 +143,9 @@ dump_browser_log() {
     -d '{"type":"browser"}' | jq -r '.value[]? | "\(.level) \(.message)"' || true
 }
 
-echo "── driving the login form at $VIEWER_URL/login"
+echo "── driving the login form at $VIEWER_URL/sign-in"
 curl -sS -X POST "$S/url" -H 'Content-Type: application/json' \
-  -d "{\"url\":\"$VIEWER_URL/login\"}" >/dev/null
+  -d "{\"url\":\"$VIEWER_URL/sign-in\"}" >/dev/null
 
 USER_EL=""
 for _ in $(seq 1 30); do
@@ -186,8 +186,8 @@ SUBMIT_EL=$(find_element 'form:has(input[name=password]) button[type=submit]')
 FORM_METHOD=$(curl -sS "$S/element/$FORM_EL/property/method" | jq -r '.value')
 FORM_ACTION=$(curl -sS "$S/element/$FORM_EL/property/action" | jq -r '.value')
 echo "   sign-in form: method=$FORM_METHOD action=$FORM_ACTION"
-[[ "$FORM_METHOD" == post && "$FORM_ACTION" == "$VIEWER_URL/login" ]] || {
-  echo "::error::the sign-in card's form does not POST to $VIEWER_URL/login (method=$FORM_METHOD action=$FORM_ACTION)"
+[[ "$FORM_METHOD" == post && "$FORM_ACTION" == "$VIEWER_URL/sign-in" ]] || {
+  echo "::error::the sign-in card's form does not POST to $VIEWER_URL/sign-in (method=$FORM_METHOD action=$FORM_ACTION)"
   dump_browser_log
   exit 1
 }
@@ -209,7 +209,7 @@ jq -e '.value == null' >/dev/null <<<"$CLICK" || {
 URL=""
 for _ in $(seq 1 20); do
   URL="$(current_url)"
-  case "$URL" in */login*) sleep 1 ;; *) break ;; esac
+  case "$URL" in */sign-in*) sleep 1 ;; *) break ;; esac
 done
 TITLE=$(curl -sS "$S/title" | jq -r '.value')
 echo "   url=$URL"
@@ -218,11 +218,11 @@ echo "   title=$TITLE"
 # Read the performance log once (reading drains it). A redirect keeps the
 # request id and arrives as a second requestWillBeSent carrying the previous
 # hop's `redirectResponse` (Chrome DevTools Protocol, Network domain), so one
-# line per POST to /login reads `<type> <has form body> <redirect status>`.
+# line per POST to /sign-in reads `<type> <has form body> <redirect status>`.
 LOGIN_POSTS=$(curl -sS -X POST "$S/se/log" -H 'Content-Type: application/json' \
   -d '{"type":"performance"}' \
   | jq -r '.value[]?.message' \
-  | jq -rs --arg url "$VIEWER_URL/login" '
+  | jq -rs --arg url "$VIEWER_URL/sign-in" '
       [.[] | .message | select(.method == "Network.requestWillBeSent") | .params] as $sent
       | $sent[]
       | select(.request.method == "POST" and .request.url == $url)
@@ -233,8 +233,8 @@ LOGIN_POSTS=$(curl -sS -X POST "$S/se/log" -H 'Content-Type: application/json' \
 echo "   login POSTs (type, form body, redirect status): ${LOGIN_POSTS:-<none>}"
 
 case "$URL" in
-  */login*)
-    echo "::error::the viewer image cannot be logged into from a browser: the submit click left the page on /login (issue #2871)"
+  */sign-in*)
+    echo "::error::the viewer image cannot be logged into from a browser: the submit click left the page on /sign-in (issue #2871)"
     dump_browser_log
     exit 1
     ;;
@@ -248,7 +248,7 @@ case "$TITLE" in
     ;;
 esac
 grep -qE '^Document true 3[0-9]{2}$' <<<"$LOGIN_POSTS" || {
-  echo "::error::no Document POST of the sign-in form to /login was answered with a redirect (${LOGIN_POSTS:-no login POST observed}): the login reached the Dashboard by another path"
+  echo "::error::no Document POST of the sign-in form to /sign-in was answered with a redirect (${LOGIN_POSTS:-no login POST observed}): the login reached the Dashboard by another path"
   dump_browser_log
   exit 1
 }

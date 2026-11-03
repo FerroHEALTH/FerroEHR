@@ -95,7 +95,7 @@ fn cdr_path(family: &str, template_id: &str) -> Option<(TemplateFamily, String)>
 /// and a CDR refusal answers `502` with the CDR's words.
 pub async fn download_template(
     axum::Extension(state): axum::Extension<crate::state::AppState>,
-    axum::Extension(viewer): axum::Extension<crate::session::ViewerSession>,
+    axum::Extension(viewer): axum::Extension<ferrohealth_session::record::Session>,
     axum::extract::Path((family, template_id)): axum::extract::Path<(String, String)>,
 ) -> Response {
     let Some((family, path)) = cdr_path(&family, &template_id) else {
@@ -105,7 +105,7 @@ pub async fn download_template(
     let url = state.cdr.rest_v1(&path);
     let answer = state
         .cdr
-        .call(http::Method::GET, &url, &viewer.credential)
+        .call(http::Method::GET, &url, viewer.credential())
         .accept(accept)
         .ok()
         .await;

@@ -32,7 +32,7 @@ use crate::error::ViewerError;
 #[derive(Debug)]
 pub struct Cdr {
     client: crate::cdr::CdrClient,
-    credential: crate::session::Credential,
+    credential: ferrohealth_session::record::Credential,
     identity: String,
 }
 
@@ -53,8 +53,8 @@ pub fn cdr() -> Result<Cdr, ViewerError> {
     let session = crate::session::require_session()?;
     Ok(Cdr {
         client: crate::scope::state()?.cdr,
-        credential: session.credential,
-        identity: session.identity,
+        credential: session.credential().clone(),
+        identity: crate::session::identity(&session),
     })
 }
 
