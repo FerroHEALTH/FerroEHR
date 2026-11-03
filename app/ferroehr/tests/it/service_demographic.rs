@@ -12,6 +12,7 @@ use ferroehr::service::version_update::WriteRequest;
 use serde_json::{Value, json};
 
 use crate::fixtures::db_now;
+use crate::fixtures::{change_type, committer};
 use crate::typed_body::typed;
 use ferroehr::error::ServiceError;
 use ferroehr::error::refusal::{Invalid, Malformed, Missing, Refusal};
@@ -141,7 +142,7 @@ fn uv<T: serde::de::DeserializeOwned, R: crate::fixtures::Envelope<T>>(
                     "value": "commit",
                     "defining_code": { "terminology_id": { "value": "openehr" }, "code_string": change }
                 },
-                "committer": { "_type": "PARTY_IDENTIFIED", "name": "sm tester" }
+                "committer": committer("sm tester")
             }
         });
         if let Some(p) = preceding {
@@ -629,7 +630,7 @@ async fn demographic_contribution_member_without_committer_is_refused() {
             }],
             "audit": {
                 "change_type": coded("249", "creation"),
-                "committer": { "_type": "PARTY_IDENTIFIED", "name": "tester" }
+                "committer": committer("tester")
             }
         }))
         .await
@@ -670,7 +671,7 @@ async fn demographic_contribution_multi_version() {
                             "code_string": "249"
                         }
                     },
-                    "committer": { "_type": "PARTY_IDENTIFIED", "name": "tester" }
+                    "committer": committer("tester")
                 },
                 "data": person("Alice")
             },
@@ -687,13 +688,13 @@ async fn demographic_contribution_multi_version() {
                             "code_string": "249"
                         }
                     },
-                    "committer": { "_type": "PARTY_IDENTIFIED", "name": "tester" }
+                    "committer": committer("tester")
                 },
                 "data": role("Nurse")
             }
         ],
-        "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } },
-            "committer": { "_type": "PARTY_IDENTIFIED", "name": "tester" }
+        "audit": { "change_type": change_type("251", "modification"),
+            "committer": committer("tester")
         }
     });
 
@@ -1071,7 +1072,7 @@ async fn demographic_contribution_refuses_the_lenient_spellings() {
             "defining_code": { "terminology_id": { "value": "openehr" }, "code_string": code } })
     };
     let audit = json!({ "change_type": coded("249", "creation"),
-        "committer": { "_type": "PARTY_IDENTIFIED", "name": "tester" } });
+        "committer": committer("tester") });
     let body = |lifecycle: Value, commit_audit: Value, audit: Value| {
         json!({
             "versions": [{
@@ -1103,7 +1104,7 @@ async fn demographic_contribution_refuses_the_lenient_spellings() {
         body(coded("532", "complete"), described, audit.clone()),
         body(
             coded("532", "complete"),
-            json!({ "committer": { "_type": "PARTY_IDENTIFIED", "name": "tester" } }),
+            json!({ "committer": committer("tester") }),
             audit.clone(),
         ),
         body(coded("532", "complete"), attestation, audit.clone()),
@@ -1142,7 +1143,7 @@ async fn demographic_contribution_audit_refusals_agree_with_the_ehr_path() {
         "defining_code": { "terminology_id": { "value": "openehr" }, "code_string": "532" } });
     let audit = json!({ "change_type": { "value": "creation",
             "defining_code": { "terminology_id": { "value": "openehr" }, "code_string": "249" } },
-        "committer": { "_type": "PARTY_IDENTIFIED", "name": "tester" } });
+        "committer": committer("tester") });
     let with = |member: &str, value: Value| {
         let mut changed = audit.clone();
         changed[member] = value;
@@ -1216,7 +1217,7 @@ async fn demographic_contribution_member_is_open_but_assigned_members_are_refuse
                 "defining_code": { "terminology_id": { "value": "openehr" }, "code_string": "532" } },
             "commit_audit": { "change_type": { "value": "creation",
                     "defining_code": { "terminology_id": { "value": "openehr" }, "code_string": "249" } },
-                "committer": { "_type": "PARTY_IDENTIFIED", "name": "tester" } },
+                "committer": committer("tester") },
             "data": person("Open member")
         });
         for (key, value) in extra {
@@ -1226,7 +1227,7 @@ async fn demographic_contribution_member_is_open_but_assigned_members_are_refuse
             "versions": [version],
             "audit": { "change_type": { "value": "creation",
                     "defining_code": { "terminology_id": { "value": "openehr" }, "code_string": "249" } },
-                "committer": { "_type": "PARTY_IDENTIFIED", "name": "tester" } }
+                "committer": committer("tester") }
         })
     };
     let input = "0198f1f1-0000-7000-8000-000000000042::sysA.example.org::1";

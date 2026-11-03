@@ -20,6 +20,8 @@ use ferroehr::service::version_update::WriteRequest;
 
 use serde_json::{Value, json};
 
+use crate::fixtures::attestation_by;
+use crate::fixtures::commit_audit;
 use crate::fixtures::first_version_uid;
 use crate::fixtures::{change_type, committer, composition, uv, vo_of};
 
@@ -57,15 +59,12 @@ async fn accompanying_attestation_then_standalone_666_attestation() {
         "_type": "CONTRIBUTION",
         "versions": [{
             "_type": "ORIGINAL_VERSION",
-            "commit_audit": {
-                "change_type": change_type("249", "creation"),
-                "committer": committer("author")
-            },
+            "commit_audit": commit_audit("249", "creation", "author"),
             "lifecycle_state": change_type("532", "complete"),
             "data": composition("v1"),
             "attestations": [ attestation("witnessed", false) ]
         }],
-        "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } },  "committer": committer("author") }
+        "audit": commit_audit("251", "modification", "author")
     });
     let created = svc
         .create_ehr_contribution(ehr_id.parse().expect("ehr uuid"), contribution)
@@ -97,25 +96,13 @@ async fn accompanying_attestation_then_standalone_666_attestation() {
         "versions": [{
             "preceding_version_uid": { "value": ovid_v1.clone() },
             "lifecycle_state": change_type("532", "complete"),
-            "commit_audit": {
-                "change_type": change_type("666", "attestation"),
-                "committer": committer("senior reviewer")
-            },
-            "attestations": [{
-                "_type": "UPDATE_ATTESTATION",
-                "change_type": change_type("666", "attestation"),
-                "committer": committer("senior reviewer"),
-                "reason": { "_type": "DV_TEXT", "value": "authorised" },
-                "is_pending": false
-            }]
+            "commit_audit": commit_audit("666", "attestation", "senior reviewer"),
+            "attestations": [attestation_by("senior reviewer", "authorised", false)]
         }],
         // The change set's own change type is the CLIENT's account of it (the
         // released commit schema requires it), never a server-derived
         // aggregate.
-        "audit": {
-            "change_type": change_type("666", "attestation"),
-            "committer": committer("senior reviewer")
-        }
+        "audit": commit_audit("666", "attestation", "senior reviewer")
     });
     let attest_created = svc
         .create_ehr_contribution(ehr_id.parse().expect("ehr uuid"), attest_contribution)
@@ -192,19 +179,10 @@ async fn attestation_error_cases() {
 
     // 666 without preceding_version_uid → 400 (cannot name its target).
     let err = attempt(json!({
-        "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
+        "audit": commit_audit("251", "modification", "conformance tester"), "versions": [{
             "lifecycle_state": change_type("532", "complete"),
-            "commit_audit": {
-                "change_type": change_type("666", "attestation"),
-                "committer": committer("x")
-            },
-            "attestations": [{
-                "_type": "UPDATE_ATTESTATION",
-                "change_type": change_type("666", "attestation"),
-                "committer": committer("x"),
-                "reason": { "_type": "DV_TEXT", "value": "authorised" },
-                "is_pending": false
-            }]
+            "commit_audit": commit_audit("666", "attestation", "x"),
+            "attestations": [attestation_by("x", "authorised", false)]
         }]
     }))
     .await
@@ -222,20 +200,11 @@ async fn attestation_error_cases() {
 
     // 666 carrying data → 422 (attestation adds no content).
     let err = attempt(json!({
-        "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
+        "audit": commit_audit("251", "modification", "conformance tester"), "versions": [{
             "preceding_version_uid": { "value": ovid_v1.clone() },
             "lifecycle_state": change_type("532", "complete"),
-            "commit_audit": {
-                "change_type": change_type("666", "attestation"),
-                "committer": committer("x")
-            },
-            "attestations": [{
-                "_type": "UPDATE_ATTESTATION",
-                "change_type": change_type("666", "attestation"),
-                "committer": committer("x"),
-                "reason": { "_type": "DV_TEXT", "value": "authorised" },
-                "is_pending": false
-            }],
+            "commit_audit": commit_audit("666", "attestation", "x"),
+            "attestations": [attestation_by("x", "authorised", false)],
             "data": composition("nope")
         }]
     }))
@@ -256,13 +225,10 @@ async fn attestation_error_cases() {
     // `schemas/common/UpdateAttestation.yaml` lists under `required` is a
     // schema failure, syntactically invalid content (ATTESTATION.reason 1..1).
     let err = attempt(json!({
-        "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
+        "audit": commit_audit("251", "modification", "conformance tester"), "versions": [{
             "preceding_version_uid": { "value": ovid_v1.clone() },
             "lifecycle_state": change_type("532", "complete"),
-            "commit_audit": {
-                "change_type": change_type("666", "attestation"),
-                "committer": committer("x")
-            },
+            "commit_audit": commit_audit("666", "attestation", "x"),
             "attestations": [{
                 "_type": "UPDATE_ATTESTATION",
                 "change_type": change_type("666", "attestation"),
@@ -288,13 +254,10 @@ async fn attestation_error_cases() {
     // `schemas/common/UpdateAttestation.yaml` lists under `required` is a
     // schema failure, syntactically invalid content (ATTESTATION.is_pending 1..1).
     let err = attempt(json!({
-        "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
+        "audit": commit_audit("251", "modification", "conformance tester"), "versions": [{
             "preceding_version_uid": { "value": ovid_v1.clone() },
             "lifecycle_state": change_type("532", "complete"),
-            "commit_audit": {
-                "change_type": change_type("666", "attestation"),
-                "committer": committer("x")
-            },
+            "commit_audit": commit_audit("666", "attestation", "x"),
             "attestations": [{
                 "_type": "UPDATE_ATTESTATION",
                 "change_type": change_type("666", "attestation"),
@@ -322,20 +285,11 @@ async fn attestation_error_cases() {
     // `400_CONTRIBUTION`: the modification does not match a stored object).
     let ghost = "00000000-0000-7000-8000-000000000000::ferroehr.local::1";
     let err = attempt(json!({
-        "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
+        "audit": commit_audit("251", "modification", "conformance tester"), "versions": [{
             "preceding_version_uid": { "value": ghost },
             "lifecycle_state": change_type("532", "complete"),
-            "commit_audit": {
-                "change_type": change_type("666", "attestation"),
-                "committer": committer("x")
-            },
-            "attestations": [{
-                "_type": "UPDATE_ATTESTATION",
-                "change_type": change_type("666", "attestation"),
-                "committer": committer("x"),
-                "reason": { "_type": "DV_TEXT", "value": "authorised" },
-                "is_pending": false
-            }]
+            "commit_audit": commit_audit("666", "attestation", "x"),
+            "attestations": [attestation_by("x", "authorised", false)]
         }]
     }))
     .await
@@ -372,27 +326,15 @@ async fn attestation_member_without_lifecycle_state_is_refused() {
     let attest = |lifecycle_state: Option<Value>| {
         let mut member = json!({
             "preceding_version_uid": { "value": ovid.clone() },
-            "commit_audit": {
-                "change_type": change_type("666", "attestation"),
-                "committer": committer("senior reviewer")
-            },
-            "attestations": [{
-                "_type": "UPDATE_ATTESTATION",
-                "change_type": change_type("666", "attestation"),
-                "committer": committer("senior reviewer"),
-                "reason": { "_type": "DV_TEXT", "value": "authorised" },
-                "is_pending": false
-            }]
+            "commit_audit": commit_audit("666", "attestation", "senior reviewer"),
+            "attestations": [attestation_by("senior reviewer", "authorised", false)]
         });
         if let Some(state) = lifecycle_state {
             member["lifecycle_state"] = state;
         }
         json!({
             "versions": [member],
-            "audit": {
-                "change_type": change_type("666", "attestation"),
-                "committer": committer("senior reviewer")
-            }
+            "audit": commit_audit("666", "attestation", "senior reviewer")
         })
     };
 
@@ -463,10 +405,7 @@ async fn attestation_without_committer_is_refused() {
         .await
         .expect("composition_create")
         .version_uid();
-    let audit = json!({
-        "change_type": change_type("251", "modification"),
-        "committer": committer("contribution committer")
-    });
+    let audit = commit_audit("251", "modification", "contribution committer");
 
     // The 666 member's own audit without a committer.
     let err = svc
@@ -517,10 +456,7 @@ async fn attestation_without_committer_is_refused() {
             ehr_uuid,
             json!({
                 "versions": [{
-                    "commit_audit": {
-                        "change_type": change_type("249", "creation"),
-                        "committer": committer("author")
-                    },
+                    "commit_audit": commit_audit("249", "creation", "author"),
                     "lifecycle_state": change_type("532", "complete"),
                     "data": composition("with an unattributed attestation"),
                     "attestations": [unattributed]
@@ -656,20 +592,14 @@ async fn attestation_member_refusal_names_its_index() {
             json!({
                 "versions": [
                     {
-                        "commit_audit": {
-                            "change_type": change_type("249", "creation"),
-                            "committer": committer("author")
-                        },
+                        "commit_audit": commit_audit("249", "creation", "author"),
                         "lifecycle_state": change_type("532", "complete"),
                         "data": composition("first member")
                     },
                     {
                         "preceding_version_uid": { "value": ovid },
                         "lifecycle_state": change_type("532", "complete"),
-                        "commit_audit": {
-                            "change_type": change_type("666", "attestation"),
-                            "committer": committer("senior reviewer")
-                        },
+                        "commit_audit": commit_audit("666", "attestation", "senior reviewer"),
                         "attestations": [{
                             "_type": "UPDATE_ATTESTATION",
                             "change_type": change_type("666", "attestation"),
@@ -679,10 +609,7 @@ async fn attestation_member_refusal_names_its_index() {
                         }]
                     }
                 ],
-                "audit": {
-                    "change_type": change_type("251", "modification"),
-                    "committer": committer("author")
-                }
+                "audit": commit_audit("251", "modification", "author")
             }),
         )
         .await
@@ -939,14 +866,11 @@ async fn contribution_honors_the_five_lifecycle_states() {
             ehr_id.parse().expect("ehr uuid"),
             json!({
                 "versions": [{
-                    "commit_audit": {
-                        "change_type": change_type("249", "creation"),
-                        "committer": committer("author")
-                    },
+                    "commit_audit": commit_audit("249", "creation", "author"),
                     "lifecycle_state": lifecycle("553"),
                     "data": composition("incomplete v1")
                 }],
-                "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } },  "committer": committer("author") }
+                "audit": commit_audit("251", "modification", "author")
             }),
         )
         .await
@@ -983,15 +907,12 @@ async fn contribution_honors_the_five_lifecycle_states() {
             ehr_id.parse().expect("ehr uuid"),
             json!({
                 "versions": [{
-                    "commit_audit": {
-                        "change_type": change_type("251", "modification"),
-                        "committer": committer("author")
-                    },
+                    "commit_audit": commit_audit("251", "modification", "author"),
                     "preceding_version_uid": { "value": current },
                     "lifecycle_state": lifecycle("800"),
                     "data": composition("edited")
                 }],
-                "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } },  "committer": committer("author") }
+                "audit": commit_audit("251", "modification", "author")
             }),
         )
         .await
@@ -1016,15 +937,12 @@ async fn contribution_honors_the_five_lifecycle_states() {
                 ehr_id.parse().expect("ehr uuid"),
                 json!({
                     "versions": [{
-                        "commit_audit": {
-                            "change_type": change_type("251", "modification"),
-                            "committer": committer("author")
-                        },
+                        "commit_audit": commit_audit("251", "modification", "author"),
                         "preceding_version_uid": { "value": current },
                         "lifecycle_state": lifecycle(code),
                         "data": composition("edited")
                     }],
-                    "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } },  "committer": committer("author") }
+                    "audit": commit_audit("251", "modification", "author")
                 }),
             )
             .await
@@ -1044,15 +962,12 @@ async fn contribution_honors_the_five_lifecycle_states() {
             ehr_id.parse().expect("ehr uuid"),
             json!({
                 "versions": [{
-                    "commit_audit": {
-                        "change_type": change_type("251", "modification"),
-                        "committer": committer("author")
-                    },
+                    "commit_audit": commit_audit("251", "modification", "author"),
                     "preceding_version_uid": { "value": current },
                     "lifecycle_state": lifecycle("999"),
                     "data": composition("bad state")
                 }],
-                "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } },  "committer": committer("author") }
+                "audit": commit_audit("251", "modification", "author")
             }),
         )
         .await
@@ -1075,14 +990,11 @@ async fn contribution_honors_the_five_lifecycle_states() {
         ehr_id.parse().expect("ehr uuid"),
         json!({
             "versions": [{
-                "commit_audit": {
-                    "change_type": change_type("523", "deleted"),
-                    "committer": committer("author")
-                },
+                "commit_audit": commit_audit("523", "deleted", "author"),
                 "lifecycle_state": lifecycle("523"),
                 "preceding_version_uid": { "value": current }
             }],
-            "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } },  "committer": committer("author") }
+            "audit": commit_audit("251", "modification", "author")
         }),
     )
     .await
@@ -1158,10 +1070,7 @@ async fn member_commit_audit_keeps_its_committer_and_shares_the_commit_instant()
                     // (A) states its committer, omits system_id.
                     {
                         "lifecycle_state": change_type("532", "complete"),
-                        "commit_audit": {
-                            "change_type": change_type("249", "creation"),
-                            "committer": committer("version-A author")
-                        },
+                        "commit_audit": commit_audit("249", "creation", "version-A author"),
                         "data": composition("takes the contribution system_id")
                     },
                     // (B) states a committer and a system_id of its own.
@@ -1214,16 +1123,10 @@ async fn member_commit_audit_keeps_its_committer_and_shares_the_commit_instant()
             json!({
                 "versions": [{
                     "lifecycle_state": change_type("532", "complete"),
-                    "commit_audit": {
-                        "change_type": change_type("249", "creation"),
-                        "committer": committer("version author")
-                    },
+                    "commit_audit": commit_audit("249", "creation", "version author"),
                     "data": composition("server system_id")
                 }],
-                "audit": {
-                    "change_type": change_type("249", "creation"),
-                    "committer": committer("contribution committer")
-                }
+                "audit": commit_audit("249", "creation", "contribution committer")
             }),
         )
         .await
@@ -1261,27 +1164,21 @@ async fn member_commit_audit_without_committer_is_refused() {
     let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
 
-    let body = |commit_audit: Value| {
+    let body = |member_audit: Value| {
         json!({
             "versions": [
                 {
                     "lifecycle_state": change_type("532", "complete"),
-                    "commit_audit": {
-                        "change_type": change_type("249", "creation"),
-                        "committer": committer("first author")
-                    },
+                    "commit_audit": commit_audit("249", "creation", "first author"),
                     "data": composition("first member")
                 },
                 {
                     "lifecycle_state": change_type("532", "complete"),
-                    "commit_audit": commit_audit,
+                    "commit_audit": member_audit,
                     "data": composition("second member")
                 }
             ],
-            "audit": {
-                "change_type": change_type("249", "creation"),
-                "committer": committer("contribution committer")
-            }
+            "audit": commit_audit("249", "creation", "contribution committer")
         })
     };
 
@@ -1311,10 +1208,7 @@ async fn member_commit_audit_without_committer_is_refused() {
 
     svc.create_ehr_contribution(
         ehr_uuid,
-        body(json!({
-            "change_type": change_type("249", "creation"),
-            "committer": committer("second author")
-        })),
+        body(commit_audit("249", "creation", "second author")),
     )
     .await
     .expect("the twin stating its committer commits");
@@ -1392,9 +1286,9 @@ async fn contribution_supplied_uid() {
             "lifecycle_state": crate::fixtures::lifecycle("532"),
             "commit_audit": { "change_type": { "value": "creation",
                 "defining_code": { "code_string": "249", "terminology_id": { "value": "openehr" } } },
-                "committer": { "_type": "PARTY_IDENTIFIED", "name": "T" } }
+                "committer": committer("T") }
         }],
-        "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } },  "committer": { "_type": "PARTY_IDENTIFIED", "name": "T" } }
+        "audit": commit_audit("251", "modification", "T")
     });
     let resp = svc
         .create_ehr_contribution(ehr_uuid, body.clone())
@@ -1589,14 +1483,11 @@ async fn contribution_cannot_delete_the_ehr_status() {
             ehr_uuid,
             serde_json::json!({
                 "versions": [{
-                    "commit_audit": {
-                        "change_type": change_type("523", "deleted"),
-                        "committer": committer("author")
-                    },
+                    "commit_audit": commit_audit("523", "deleted", "author"),
                     "lifecycle_state": lifecycle("523"),
                     "preceding_version_uid": { "value": status_uid }
                 }],
-                "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } },  "committer": committer("author") }
+                "audit": commit_audit("251", "modification", "author")
             }),
         )
         .await
@@ -1653,15 +1544,12 @@ async fn data_carrying_deleted_lifecycle_is_refused_on_both_routes() {
             ehr_uuid,
             json!({
                 "versions": [{
-                    "commit_audit": {
-                        "change_type": change_type("251", "modification"),
-                        "committer": committer("author")
-                    },
+                    "commit_audit": commit_audit("251", "modification", "author"),
                     "preceding_version_uid": { "value": v1 },
                     "lifecycle_state": lifecycle("523"),
                     "data": composition("deleted but full")
                 }],
-                "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } },  "committer": committer("author") }
+                "audit": commit_audit("251", "modification", "author")
             }),
         )
         .await
@@ -1757,14 +1645,11 @@ async fn a_delete_member_with_a_contradictory_lifecycle_state_is_refused() {
     let delete_member = |state: Value| {
         json!({
             "versions": [{
-                "commit_audit": {
-                    "change_type": change_type("523", "deleted"),
-                    "committer": committer("author")
-                },
+                "commit_audit": commit_audit("523", "deleted", "author"),
                 "preceding_version_uid": { "value": v1 },
                 "lifecycle_state": state
             }],
-            "audit": { "change_type": change_type("523", "deleted"), "committer": committer("author") }
+            "audit": commit_audit("523", "deleted", "author")
         })
     };
 
@@ -1847,14 +1732,11 @@ async fn deleting_an_already_deleted_composition_is_refused_on_both_routes() {
     let delete_member = |preceding: &str| {
         json!({
             "versions": [{
-                "commit_audit": {
-                    "change_type": change_type("523", "deleted"),
-                    "committer": committer("author")
-                },
+                "commit_audit": commit_audit("523", "deleted", "author"),
                 "preceding_version_uid": { "value": preceding },
                 "lifecycle_state": lifecycle("523")
             }],
-            "audit": { "change_type": change_type("523", "deleted"), "committer": committer("author") }
+            "audit": commit_audit("523", "deleted", "author")
         })
     };
 
@@ -1898,15 +1780,12 @@ async fn deleting_an_already_deleted_composition_is_refused_on_both_routes() {
             ehr_uuid,
             json!({
                 "versions": [{
-                    "commit_audit": {
-                        "change_type": change_type("251", "modification"),
-                        "committer": committer("author")
-                    },
+                    "commit_audit": commit_audit("251", "modification", "author"),
                     "preceding_version_uid": { "value": v2 },
                     "lifecycle_state": lifecycle("532"),
                     "data": composition("restored")
                 }],
-                "audit": { "change_type": change_type("251", "modification"), "committer": committer("author") }
+                "audit": commit_audit("251", "modification", "author")
             }),
         )
         .await
@@ -1967,14 +1846,11 @@ async fn incomplete_admits_missing_composition_data_but_never_wrong_data() {
     let member = |data: &Value, state: &str| {
         json!({
             "versions": [{
-                "commit_audit": {
-                    "change_type": change_type("249", "creation"),
-                    "committer": committer("author")
-                },
+                "commit_audit": commit_audit("249", "creation", "author"),
                 "lifecycle_state": lifecycle(state),
                 "data": data
             }],
-            "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } },  "committer": committer("author") }
+            "audit": commit_audit("251", "modification", "author")
         })
     };
 
@@ -2072,14 +1948,11 @@ async fn incomplete_relaxes_the_folder_kind_too() {
     let body = |lifecycle_code: &str| {
         json!({
             "versions": [{
-                "commit_audit": {
-                    "change_type": change_type("249", "creation"),
-                    "committer": committer("author")
-                },
+                "commit_audit": commit_audit("249", "creation", "author"),
                 "lifecycle_state": lifecycle(lifecycle_code),
                 "data": nameless
             }],
-            "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } },  "committer": committer("author") }
+            "audit": commit_audit("251", "modification", "author")
         })
     };
 
@@ -2119,13 +1992,10 @@ async fn contribution_member_without_lifecycle_state_is_refused() {
             ehr_uuid,
             json!({
                 "versions": [{
-                    "commit_audit": {
-                        "change_type": change_type("249", "creation"),
-                        "committer": committer("author")
-                    },
+                    "commit_audit": commit_audit("249", "creation", "author"),
                     "data": composition("no lifecycle")
                 }],
-                "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } },  "committer": committer("author") }
+                "audit": commit_audit("251", "modification", "author")
             }),
         )
         .await
@@ -2146,14 +2016,11 @@ async fn contribution_member_without_lifecycle_state_is_refused() {
         ehr_uuid,
         json!({
             "versions": [{
-                "commit_audit": {
-                    "change_type": change_type("249", "creation"),
-                    "committer": committer("author")
-                },
+                "commit_audit": commit_audit("249", "creation", "author"),
                 "lifecycle_state": lifecycle("532"),
                 "data": composition("with lifecycle")
             }],
-            "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } },  "committer": committer("author") }
+            "audit": commit_audit("251", "modification", "author")
         }),
     )
     .await
@@ -2182,10 +2049,7 @@ async fn merge_provenance_on_a_member_is_recorded_and_served() {
 
     let member = |preceding: &str, extra: Option<Value>| {
         let mut version = json!({
-            "commit_audit": {
-                "change_type": change_type("251", "modification"),
-                "committer": committer("author")
-            },
+            "commit_audit": commit_audit("251", "modification", "author"),
             "preceding_version_uid": { "value": preceding },
             "lifecycle_state": lifecycle("532"),
             "data": composition("v2")
@@ -2195,7 +2059,7 @@ async fn merge_provenance_on_a_member_is_recorded_and_served() {
         }
         json!({
             "versions": [version],
-            "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } },  "committer": committer("author") }
+            "audit": commit_audit("251", "modification", "author")
         })
     };
 
@@ -2293,10 +2157,7 @@ async fn foreign_version_identity_is_refused_on_the_commit_wire() {
     let foreign_uid = "0198f1f1-0000-7000-8000-000000000042::sysA.example.org::3";
     let member = |preceding: &str, extra: &[(&str, Value)]| {
         let mut version = json!({
-            "commit_audit": {
-                "change_type": change_type("251", "modification"),
-                "committer": committer("author")
-            },
+            "commit_audit": commit_audit("251", "modification", "author"),
             "preceding_version_uid": { "value": preceding },
             "lifecycle_state": lifecycle("532"),
             "data": composition("v2")
@@ -2306,7 +2167,7 @@ async fn foreign_version_identity_is_refused_on_the_commit_wire() {
         }
         json!({
             "versions": [version],
-            "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } },  "committer": committer("author") }
+            "audit": commit_audit("251", "modification", "author")
         })
     };
     let uid = json!({ "_type": "OBJECT_VERSION_ID", "value": foreign_uid });
@@ -2397,10 +2258,7 @@ async fn an_undeclared_contribution_member_key_is_accepted_and_assigned_ones_ref
     let ehr_uuid: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
 
     let mut member = json!({
-        "commit_audit": {
-            "change_type": change_type("249", "creation"),
-            "committer": committer("author")
-        },
+        "commit_audit": commit_audit("249", "creation", "author"),
         "lifecycle_state": change_type("532", "complete"),
         "data": composition("closed member read")
     });
@@ -2414,10 +2272,7 @@ async fn an_undeclared_contribution_member_key_is_accepted_and_assigned_ones_ref
             ehr_uuid,
             json!({
                 "versions": [member.clone()],
-                "audit": {
-                    "change_type": change_type("249", "creation"),
-                    "committer": committer("author")
-                }
+                "audit": commit_audit("249", "creation", "author")
             }),
         )
         .await
@@ -2451,10 +2306,7 @@ async fn an_undeclared_contribution_member_key_is_accepted_and_assigned_ones_ref
                 ehr_uuid,
                 json!({
                     "versions": [assigned],
-                    "audit": {
-                        "change_type": change_type("249", "creation"),
-                        "committer": committer("author")
-                    }
+                    "audit": commit_audit("249", "creation", "author")
                 }),
             )
             .await
@@ -2490,10 +2342,7 @@ async fn contribution_audit_change_type_is_required_not_derived() {
 
     let member = || {
         json!({
-            "commit_audit": {
-                "change_type": change_type("249", "creation"),
-                "committer": committer("author")
-            },
+            "commit_audit": commit_audit("249", "creation", "author"),
             "lifecycle_state": change_type("532", "complete"),
             "data": composition("audit twin")
         })
@@ -2585,10 +2434,7 @@ async fn contribution_audit_change_type_is_required_not_derived() {
             ehr_uuid,
             json!({
                 "versions": [member()],
-                "audit": {
-                    "change_type": change_type("249", "creation"),
-                    "committer": committer("author")
-                }
+                "audit": commit_audit("249", "creation", "author")
             }),
         )
         .await
@@ -2611,13 +2457,10 @@ async fn member_scoped_refusals_name_the_offending_version_index() {
 
     let good = json!({
         "data": composition("attributed-good"),
-        "lifecycle_state": { "_type": "DV_CODED_TEXT", "value": "complete", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "532" } },
-        "commit_audit": { "change_type": change_type("249", "creation"), "committer": committer("conformance tester") }
+        "lifecycle_state": change_type("532", "complete"),
+        "commit_audit": commit_audit("249", "creation", "conformance tester")
     });
-    let audit = json!({
-        "change_type": change_type("249", "creation"),
-        "committer": committer("conformance tester")
-    });
+    let audit = commit_audit("249", "creation", "conformance tester");
 
     // (a) the second member's data fails the strict canonical parse
     // (`language` removed) — the 400 names versions[1].
@@ -2647,7 +2490,7 @@ async fn member_scoped_refusals_name_the_offending_version_index() {
         "data": composition("attributed-change"),
         "lifecycle_state": good["lifecycle_state"],
         "preceding_version_uid": { "value": format!("{}::ferroehr.local::1", uuid::Uuid::nil()) },
-        "commit_audit": { "change_type": change_type("249", "creation"), "committer": committer("conformance tester") }
+        "commit_audit": commit_audit("249", "creation", "conformance tester")
     });
     let err = svc
         .create_ehr_contribution(
@@ -2669,8 +2512,8 @@ async fn member_scoped_refusals_name_the_offending_version_index() {
         json!({ "_type": "TEMPLATE_ID", "value": "no_such_template.v1" });
     let good = json!({
         "data": composition("attributed-good-2"),
-        "lifecycle_state": { "_type": "DV_CODED_TEXT", "value": "complete", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "532" } },
-        "commit_audit": { "change_type": change_type("249", "creation"), "committer": committer("conformance tester") }
+        "lifecycle_state": change_type("532", "complete"),
+        "commit_audit": commit_audit("249", "creation", "conformance tester")
     });
     let bad_template = json!({
         "data": templated,
@@ -2745,7 +2588,7 @@ async fn deactivating_contribution_carries_its_final_content() {
             member(composition("final note"), ("249", "creation"), None),
             member(ehr_status_modifiable(false), ("251", "modification"), Some(&status_uid)),
         ],
-        "audit": { "change_type": change_type("251", "modification"), "committer": committer("author") }
+        "audit": commit_audit("251", "modification", "author")
     });
     svc.create_ehr_contribution(ehr_uuid, mixed)
         .await
@@ -2785,7 +2628,7 @@ async fn reactivating_contribution_unlocks_its_own_content() {
     // (1) Content alone → refused.
     let content_only = json!({
         "versions": [ member(composition("blocked"), ("249", "creation"), None) ],
-        "audit": { "change_type": change_type("249", "creation"), "committer": committer("author") }
+        "audit": commit_audit("249", "creation", "author")
     });
     let blocked = svc
         .create_ehr_contribution(ehr_uuid, content_only)
@@ -2804,7 +2647,7 @@ async fn reactivating_contribution_unlocks_its_own_content() {
             member(composition("still blocked"), ("249", "creation"), None),
             member(ehr_status_modifiable(false), ("251", "modification"), Some(&status_uid)),
         ],
-        "audit": { "change_type": change_type("251", "modification"), "committer": committer("author") }
+        "audit": commit_audit("251", "modification", "author")
     });
     svc.create_ehr_contribution(ehr_uuid, still_off)
         .await
@@ -2818,7 +2661,7 @@ async fn reactivating_contribution_unlocks_its_own_content() {
             member(composition("welcome back"), ("249", "creation"), None),
             member(ehr_status_modifiable(true), ("251", "modification"), Some(&status_uid)),
         ],
-        "audit": { "change_type": change_type("251", "modification"), "committer": committer("author") }
+        "audit": commit_audit("251", "modification", "author")
     });
     svc.create_ehr_contribution(ehr_uuid, reactivating)
         .await
@@ -2860,7 +2703,7 @@ async fn concurrent_deactivation_is_seen_by_the_content_commit() {
         let ehr_uuid: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
         let content = json!({
             "versions": [ member(composition("raced"), ("249", "creation"), None) ],
-            "audit": { "change_type": change_type("249", "creation"), "committer": committer("author") }
+            "audit": commit_audit("249", "creation", "author")
         });
         svc.create_ehr_contribution(ehr_uuid, content).await
     });
@@ -2949,7 +2792,7 @@ async fn a_deactivated_ehr_reports_the_state_conflict_before_a_content_defect() 
         .remove("language");
     let set = json!({
         "versions": [ member(defective, ("249", "creation"), None) ],
-        "audit": { "change_type": change_type("249", "creation"), "committer": committer("author") }
+        "audit": commit_audit("249", "creation", "author")
     });
     let refused = svc
         .create_ehr_contribution(ehr_uuid, set)
@@ -2982,7 +2825,7 @@ async fn a_deactivated_ehr_reports_the_state_conflict_before_a_content_defect() 
             member(defective, ("249", "creation"), None),
             member(ehr_status_modifiable(true), ("251", "modification"), Some(&status_uid)),
         ],
-        "audit": { "change_type": change_type("251", "modification"), "committer": committer("author") }
+        "audit": commit_audit("251", "modification", "author")
     });
     let refused = svc
         .create_ehr_contribution(ehr_uuid, reactivating)
@@ -3014,10 +2857,7 @@ fn typed_body(lifecycle_state: Value, commit_audit: Value, audit: Value) -> Valu
 
 /// A `249|creation|` audit with its `_type` replaced (or dropped).
 fn creation_audit(tag: Option<&str>) -> Value {
-    let mut audit = json!({
-        "change_type": change_type("249", "creation"),
-        "committer": committer("author")
-    });
+    let mut audit = commit_audit("249", "creation", "author");
     if let Some(tag) = tag {
         audit["_type"] = json!(tag);
     }
@@ -3305,10 +3145,7 @@ async fn an_attestation_member_carries_its_attestations() {
                 },
                 "attestations": attestations
             }],
-            "audit": {
-                "change_type": change_type("666", "attestation"),
-                "committer": committer("senior reviewer")
-            }
+            "audit": commit_audit("666", "attestation", "senior reviewer")
         })
     };
     let err = svc

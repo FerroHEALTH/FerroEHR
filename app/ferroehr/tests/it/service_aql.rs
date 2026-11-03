@@ -41,6 +41,7 @@ use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData, UpdateV
 
 use crate::adl2_fixture::adl2_source;
 use crate::fixtures::base_composition;
+use crate::fixtures::committer;
 use crate::fixtures::set_not_queryable;
 
 const OBS_ARCHETYPE: &str = "openEHR-EHR-OBSERVATION.minimal.v1";
@@ -67,9 +68,9 @@ fn uv<T: serde::de::DeserializeOwned, R: crate::fixtures::Envelope<T>>(
                 system_id: None,
                 change_type: change_type_coded(change_code),
                 description: None,
-                committer: openehr_its::json::from_canonical_value::<PartyProxy>(
-                    &json!({ "_type": "PARTY_IDENTIFIED", "name": "conformance tester" }),
-                )
+                committer: openehr_its::json::from_canonical_value::<PartyProxy>(&json!(
+                    committer("conformance tester")
+                ))
                 .expect("committer"),
                 additional_properties: BTreeMap::new(),
             }),
@@ -2216,12 +2217,12 @@ fn multi_fragment_composition() -> Value {
         {
             "_type": "PARTICIPATION",
             "function": { "_type": "DV_TEXT", "value": "observer" },
-            "performer": { "_type": "PARTY_IDENTIFIED", "name": "Dr First" }
+            "performer": committer("Dr First")
         },
         {
             "_type": "PARTICIPATION",
             "function": { "_type": "DV_TEXT", "value": "assistant" },
-            "performer": { "_type": "PARTY_IDENTIFIED", "name": "Dr Second" }
+            "performer": committer("Dr Second")
         }
     ]);
     c["composer"] = json!({
@@ -2877,14 +2878,14 @@ async fn folder_contains_folder_reaches_items_referenced_versioned_folders() {
         "versions": [{
             "commit_audit": {
                 "change_type": coded("249", "creation"),
-                "committer": { "_type": "PARTY_IDENTIFIED", "name": "folder author" }
+                "committer": committer("folder author")
             },
             "lifecycle_state": coded("532", "complete"),
             "data": shared_plan
         }],
         "audit": {
             "change_type": coded("249", "creation"),
-            "committer": { "_type": "PARTY_IDENTIFIED", "name": "folder author" }
+            "committer": committer("folder author")
         }
     });
     let created = svc

@@ -30,7 +30,9 @@ use openehr_rm::v1_2::common::change_control::version_impl::canonical_form_of_js
 use serde_json::{Value, json};
 use sqlx::{PgPool, Row};
 
+use crate::fixtures::attestation_by;
 use crate::fixtures::{change_type, committer_proxy, composition, uid, uv};
+use crate::fixtures::{commit_audit, committer};
 
 /// A wire `UPDATE_ATTESTATION` partial for an attestation committed WITH the
 /// version (`UPDATE_VERSION.attestations`) — the "Signing content at
@@ -466,7 +468,7 @@ async fn canonical_xml_carries_the_signature() {
             "system_id": "ferroehr.local",
             "time_committed": { "_type": "DV_DATE_TIME", "value": "2026-07-07T10:11:12Z" },
             "change_type": change_type("249", "creation"),
-            "committer": { "_type": "PARTY_IDENTIFIED", "name": "FerroEHR" }
+            "committer": committer("FerroEHR")
         },
         "uid": {
             "_type": "OBJECT_VERSION_ID",
@@ -800,20 +802,11 @@ async fn after_committal_attestation_is_outside_the_signed_form() {
     svc.create_ehr_contribution(
         ehr_uuid,
         json!({
-            "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
+            "audit": commit_audit("251", "modification", "conformance tester"), "versions": [{
                 "preceding_version_uid": { "value": ovid.clone() },
                 "lifecycle_state": change_type("532", "complete"),
-                "commit_audit": {
-                    "change_type": change_type("666", "attestation"),
-                    "committer": { "_type": "PARTY_IDENTIFIED", "name": "senior reviewer" }
-                },
-                "attestations": [{
-                    "_type": "UPDATE_ATTESTATION",
-                    "change_type": change_type("666", "attestation"),
-                    "committer": { "_type": "PARTY_IDENTIFIED", "name": "senior reviewer" },
-                    "reason": { "_type": "DV_TEXT", "value": "authorised" },
-                    "is_pending": false
-                }]
+                "commit_audit": commit_audit("666", "attestation", "senior reviewer"),
+                "attestations": [attestation_by("senior reviewer", "authorised", false)]
             }]
         }),
     )

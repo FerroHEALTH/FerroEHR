@@ -20,7 +20,8 @@ use uuid::Uuid;
 use ferroehr::db::domain::DomainPools;
 use ferroehr::service::FerroEhrService;
 
-use crate::fixtures::{change_type, committer, composition, uv, vo_of};
+use crate::fixtures::commit_audit;
+use crate::fixtures::{change_type, composition, uv, vo_of};
 
 /// The per-object lock the commit path takes, by the same key expression.
 const ADVISORY_LOCK: &str = "SELECT pg_advisory_xact_lock(hashtextextended($1::text, 0))";
@@ -61,10 +62,7 @@ fn modification(preceding: &str, name: &str) -> Value {
     json!({
         "preceding_version_uid": { "value": preceding },
         "lifecycle_state": change_type("532", "complete"),
-        "commit_audit": {
-            "change_type": change_type("251", "modification"),
-            "committer": committer("lock order")
-        },
+        "commit_audit": commit_audit("251", "modification", "lock order"),
         "data": composition(name)
     })
 }
@@ -82,10 +80,7 @@ async fn a_contribution_takes_its_object_locks_in_vo_id_order() {
     let creation = |name: &str| {
         json!({
             "lifecycle_state": change_type("532", "complete"),
-            "commit_audit": {
-                "change_type": change_type("249", "creation"),
-                "committer": committer("lock order")
-            },
+            "commit_audit": commit_audit("249", "creation", "lock order"),
             "data": composition(name)
         })
     };
@@ -94,10 +89,7 @@ async fn a_contribution_takes_its_object_locks_in_vo_id_order() {
             ehr,
             json!({
                 "versions": [creation("first"), creation("second")],
-                "audit": {
-                    "change_type": change_type("249", "creation"),
-                    "committer": committer("lock order")
-                }
+                "audit": commit_audit("249", "creation", "lock order")
             }),
         )
         .await
@@ -123,10 +115,7 @@ async fn a_contribution_takes_its_object_locks_in_vo_id_order() {
         let svc = svc.clone();
         let body = json!({
             "versions": [modification(&high, "high"), modification(&low, "low")],
-            "audit": {
-                "change_type": change_type("251", "modification"),
-                "committer": committer("lock order")
-            }
+            "audit": commit_audit("251", "modification", "lock order")
         });
         tokio::spawn(async move { svc.create_ehr_contribution(ehr, body).await })
     };

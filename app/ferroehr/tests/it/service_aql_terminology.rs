@@ -33,6 +33,7 @@ use ferroehr::service::query::request::AqlQueryRequest;
 use ferroehr::service::terminology::config::TerminologyServerConfig;
 use ferroehr::service::terminology::fhir::FhirTerminologyProvider;
 
+use crate::fixtures::committer;
 use ferroehr::service::version_update::{change_type_coded, lifecycle_state_coded};
 use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData, UpdateVersion};
 
@@ -56,9 +57,9 @@ fn uv<T: serde::de::DeserializeOwned, R: crate::fixtures::Envelope<T>>(data: &Va
                 system_id: None,
                 change_type: change_type_coded("249"),
                 description: None,
-                committer: openehr_its::json::from_canonical_value::<PartyProxy>(
-                    &json!({ "_type": "PARTY_IDENTIFIED", "name": "conformance tester" }),
-                )
+                committer: openehr_its::json::from_canonical_value::<PartyProxy>(&json!(
+                    committer("conformance tester")
+                ))
                 .expect("committer"),
                 additional_properties: std::collections::BTreeMap::new(),
             }),

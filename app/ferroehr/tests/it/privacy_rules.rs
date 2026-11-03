@@ -7,6 +7,7 @@
 
 use serde_json::{Value, json};
 
+use crate::fixtures::committer;
 use ferroehr::privacy::config::{IdentifierScanConfig, PrivacyConfig, ScanMode};
 use ferroehr::privacy::{Finding, FindingClass, PrivacyPolicy};
 
@@ -178,7 +179,7 @@ fn the_subject_rule_binds_ehr_status_only() {
 fn a_named_party_identified_in_clinical_content_is_accepted_by_default() {
     let composition = json!({
         "_type": "COMPOSITION",
-        "composer": { "_type": "PARTY_IDENTIFIED", "name": "Dr Author" }
+        "composer": committer("Dr Author")
     });
     let findings = policy(&PrivacyConfig::default()).findings("COMPOSITION", &composition);
     assert!(findings.is_empty(), "{findings:?}");
@@ -572,7 +573,7 @@ fn narrowing_the_rule_list_narrows_what_is_caught() {
 fn the_default_policy_is_the_refusing_posture() {
     let composition = json!({
         "_type": "COMPOSITION",
-        "composer": { "_type": "PARTY_IDENTIFIED", "name": "Dr Author" },
+        "composer": committer("Dr Author"),
         "name": { "_type": "DV_TEXT", "value": "111222333" } // privacy-allow: synthetic, passes the eleven-test
     });
     let findings = PrivacyPolicy::default().findings("COMPOSITION", &composition);

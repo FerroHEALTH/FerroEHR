@@ -11,6 +11,7 @@ use uuid::Uuid;
 
 use crate::fixtures::db_now;
 use crate::fixtures::uv;
+use crate::fixtures::{commit_audit, committer};
 use crate::fixtures::{uid, vo_of};
 use crate::typed_body::typed;
 use ferroehr::error::ServiceError;
@@ -354,11 +355,11 @@ async fn relationship_via_demographic_contribution() {
                         "code_string": "249"
                     }
                 },
-                "committer": { "_type": "PARTY_IDENTIFIED", "name": "tester" }
+                "committer": committer("tester")
             },
             "data": relationship("colleague-of", "p1", "p2")
         }],
-        "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } },  "committer": { "_type": "PARTY_IDENTIFIED", "name": "tester" } }
+        "audit": commit_audit("251", "modification", "tester")
     });
 
     let created = svc

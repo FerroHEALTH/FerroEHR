@@ -10,6 +10,7 @@
 //! `org.openehr.rm.ehr.ehr.adoc` `EHR.tags` + master04 §Tags ("Tag `_target_`
 //! values can only be within the same EHR").
 
+use crate::fixtures::committer;
 use ferroehr::error::ServiceError;
 use ferroehr::service::version_update::{change_type_coded, lifecycle_state_coded};
 use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData, UpdateVersion};
@@ -34,9 +35,9 @@ fn uv<T: serde::de::DeserializeOwned, R: crate::fixtures::Envelope<T>>(
                 system_id: None,
                 change_type: change_type_coded(change_code),
                 description: None,
-                committer: openehr_its::json::from_canonical_value::<PartyProxy>(
-                    &json!({ "_type": "PARTY_IDENTIFIED", "name": "ehr-package tester" }),
-                )
+                committer: openehr_its::json::from_canonical_value::<PartyProxy>(&json!(
+                    committer("ehr-package tester")
+                ))
                 .expect("committer"),
                 additional_properties: std::collections::BTreeMap::new(),
             }),
@@ -76,7 +77,7 @@ fn composition(archetype: &str, category_code: &str, category_label: &str) -> Va
                 "code_string": category_code
             }
         },
-        "composer": { "_type": "PARTY_IDENTIFIED", "name": "ehr-package tester" }
+        "composer": committer("ehr-package tester")
     })
 }
 
