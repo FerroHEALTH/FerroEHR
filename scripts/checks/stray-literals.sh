@@ -148,7 +148,15 @@ self_test() {
   [[ "$(run src)" == 1 ]] || fail "the maker literal passed with no allow line"
   grep -qF 'src/maker.rs:2: "Cadasto B.V."' "$answer" || fail "the literal was not named: $(cat "$answer")"
 
-  echo "stray-literals: self-test OK (a new literal, a rise, a fall with its note, --update lowering and never raising, an allow line and named files)."
+  # The committed allow file passes a configuration refusal that opens with
+  # the key it names, bare or as key = value, and still refuses words.
+  cp "$root/scripts/checks/stray-literals.allow" "$project/scripts/checks/stray-literals.allow"
+  printf 'pub fn refusals() -> [String; 2] {\n    [\n        format!("auth.oidc.issuer is required: {}", 1),\n        format!("auth.oidc.enabled = true requires: {}", 2),\n    ]\n}\n' >"$project/src/refusal.rs"
+  [[ "$(run --files src/refusal.rs)" == 0 ]] || fail "a configuration refusal naming its key was refused: $(cat "$answer")"
+  printf 'pub fn text() -> String {\n    let s = "auth = on requires";\n    s.to_owned()\n}\n' >"$project/src/refusal.rs"
+  [[ "$(run --files src/refusal.rs)" == 1 ]] || fail "words without a dotted key passed as a configuration refusal"
+
+  echo "stray-literals: self-test OK (a new literal, a rise, a fall with its note, --update lowering and never raising, an allow line, named files and the configuration refusals the allow file passes)."
 }
 
 if [[ "${1:-}" = "--self-test" ]]; then
