@@ -17,8 +17,8 @@
 //! and the clinical domain, and the access record each one owes.
 //!
 //! The root modules beside the chapters carry the cross-chapter service
-//! vocabulary: the version-commit envelope
-//! ([`version_update`]), the list cursor ([`list`]), the
+//! vocabulary: the CONTRIBUTION commit both chapters share
+//! ([`contribution`]), the version-commit envelope ([`version_update`]), the list cursor ([`list`]), the
 //! platform-service enumeration ([`platform_service`]), the
 //! protocol-adapter response envelope ([`response`]), and the crate-internal
 //! ITS-REST datetime-request-parameter decoder (`datetime`).
@@ -42,6 +42,7 @@ pub mod message;
 pub mod query;
 pub mod terminology;
 
+pub(crate) mod contribution;
 pub(crate) mod datetime;
 pub mod list;
 pub mod platform_service;
