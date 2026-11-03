@@ -517,14 +517,9 @@ pub async fn current_vo(
 /// Every EHR's current `EHR_ACCESS` body that names `settings`, as
 /// `(ehr_id, canonical JSON text)`.
 ///
-/// The text match is a prefilter only: the caller parses each body and keeps
-/// the ones whose settings it understands. A logically deleted version has no
-/// body and is skipped.
-///
-/// Every query loads this through one cache entry, and each waiting request
-/// starts the load again when the one running it is abandoned, so it runs on
-/// a [`lease`]: an abandoned load closes its connection instead of holding a
-/// pool slot until the statement ends.
+/// The text match only prefilters: the caller parses each body and keeps the
+/// settings it understands; a logically deleted version has no body. It runs
+/// on a [`lease`], as every waiting query restarts an abandoned load.
 ///
 /// # Errors
 /// Returns [`StorageError::Database`] on a driver failure.
