@@ -24,7 +24,6 @@
 //! any handler runs: no valid principal is `401`, the configured read-only role
 //! is `403` on the writes, and the coarse operation class is `Clinical`.
 
-use axum::extract::State;
 use axum::response::{IntoResponse, Response};
 use http::{HeaderValue, StatusCode, header};
 use utoipa_axum::router::OpenApiRouter;
@@ -34,7 +33,7 @@ use openehr_its::rest::runtime::ApiError;
 
 use ferroehr::service::list::Page;
 
-use crate::api::{RequestParts, guarded_dispatch};
+use crate::api::{RequestParts, guarded_handler};
 use crate::overview::error::RestError;
 use crate::state::AppState;
 use crate::{negotiate, params};
@@ -42,7 +41,7 @@ use crate::{negotiate, params};
 /// The archetype/artefact extension routes as a native `utoipa-axum` router —
 /// **no ITS-REST contract** (see the module docs). Group-relative paths
 /// (nested under `base_path`); every operation runs through
-/// [`guarded_dispatch`] onto its handler.
+/// [`guarded_dispatch`](crate::api::guarded_dispatch) onto its handler.
 pub(crate) fn archetype_routes() -> OpenApiRouter<AppState> {
     // One `routes!` per PATH (the macro composes one method-router — handlers
     // in a single call must share the path; mixing paths panics at build with
@@ -75,438 +74,348 @@ const ADL_TEXT: &str = "text/plain; charset=utf-8";
 
 // ── ADL 1.4 archetypes ───────────────────────────────────────────────────────
 
-/// List the stored ADL 1.4 source archetypes
-/// (`GET /definition/archetype/adl1.4`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). The cursor is `offset` / `fetch`, the released template list's own
-/// parameter names.
-#[utoipa::path(
-    get, path = "/definition/archetype/adl1.4", tag = "definition-archetype",
-    params(
-        ("offset" = Option<u64>, Query,
-         description = "0-based offset into the id list (absent = from the \
-                        first item). Extension route — not a released wire \
-                        parameter.",
-         example = 0),
-        ("fetch" = Option<u64>, Query,
-         description = "Number of ids to return from `offset` \
-                        (absent or `0` = all).",
-         example = 20)
-    ),
-    responses(
-        (status = 200, description = "The stored ADL 1.4 `ARCHETYPE_ID`s, \
-                                      ascending. An empty store answers `200` \
-                                      with `[]` — an empty collection is a \
-                                      successful read, not a `404`.",
-         body = Vec<String>,
-         example = json!(["openEHR-EHR-COMPOSITION.prescription.v1"])),
-        (status = 400, description = "`offset`/`fetch` is not a non-negative \
-                                      integer.", body = serde_json::Value),
-        (status = 401, description = "Unauthenticated (auth enabled, no valid \
-                                      principal). Refused before the store is \
-                                      read.", body = serde_json::Value),
-        (status = 406, description = "The `Accept` header cannot be satisfied: \
-                                      an id list has no canonical-XML or \
-                                      Simplified representation, so it is \
-                                      served as `application/json` only.",
-         body = serde_json::Value)
-    )
-)]
-pub(crate) async fn definition_archetype_adl14_list(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "definition_archetype_adl14_list",
-        parts,
-        archetype_adl14_list,
-    )
-    .await
+guarded_handler! {
+    /// List the stored ADL 1.4 source archetypes
+    /// (`GET /definition/archetype/adl1.4`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module
+    /// docs). The cursor is `offset` / `fetch`, the released template list's own
+    /// parameter names.
+    #[utoipa::path(
+        get, path = "/definition/archetype/adl1.4", tag = "definition-archetype",
+        params(
+            ("offset" = Option<u64>, Query,
+             description = "0-based offset into the id list (absent = from the \
+                            first item). Extension route — not a released wire \
+                            parameter.",
+             example = 0),
+            ("fetch" = Option<u64>, Query,
+             description = "Number of ids to return from `offset` \
+                            (absent or `0` = all).",
+             example = 20)
+        ),
+        responses(
+            (status = 200, description = "The stored ADL 1.4 `ARCHETYPE_ID`s, \
+                                          ascending. An empty store answers `200` \
+                                          with `[]` — an empty collection is a \
+                                          successful read, not a `404`.",
+             body = Vec<String>,
+             example = json!(["openEHR-EHR-COMPOSITION.prescription.v1"])),
+            (status = 400, description = "`offset`/`fetch` is not a non-negative \
+                                          integer.", body = serde_json::Value),
+            (status = 401, description = "Unauthenticated (auth enabled, no valid \
+                                          principal). Refused before the store is \
+                                          read.", body = serde_json::Value),
+            (status = 406, description = "The `Accept` header cannot be satisfied: \
+                                          an id list has no canonical-XML or \
+                                          Simplified representation, so it is \
+                                          served as `application/json` only.",
+             body = serde_json::Value)
+        )
+    )]
+    definition_archetype_adl14_list => archetype_adl14_list
 }
 
-/// Store an ADL 1.4 source archetype (`POST /definition/archetype/adl1.4`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). An upload replaces an archetype with the same id or creates it, and
-/// only a valid archetype is stored: the `openehr-adl` engine judges the source
-/// **as 1.4** (ADL 1.4 `master08` §Validity Rules + the AOM 1.4 class
-/// invariants).
-#[utoipa::path(
-    post, path = "/definition/archetype/adl1.4", tag = "definition-archetype",
-    params(
-        ("Content-Type" = Option<String>, Header,
-         description = "`text/plain` — ADL 1.4 source text (the only body form \
-                        this route accepts). An absent header declares nothing \
-                        to refuse and reads as ADL text.",
-         example = "text/plain")
-    ),
-    request_body(content = String, content_type = "text/plain",
-                 description = "ADL 1.4 source. The `ARCHETYPE_ID` is read out \
-                                of the source's own `archetype` header — the \
-                                resource identity is the client's, never \
-                                server-assigned."),
-    responses(
-        (status = 201, description = "Stored. The body is the stored \
-                                      `ARCHETYPE_ID`. A re-upload of an \
-                                      existing id REPLACES it and answers `201` \
-                                      too — the operation is \
-                                      replace-or-create, so there is no \
-                                      conflict branch to report.",
-         body = String,
-         headers(
-             ("Location" = String,
-              description = "`<base_path>/definition/archetype/adl1.4/<archetype_id>` \
-                             — the URL of the stored archetype. Extension \
-                             route: the convention is borrowed from the \
-                             overview's §Location rule, not inherited from it.")
-         ),
-         example = json!("openEHR-EHR-COMPOSITION.prescription.v1")),
-        (status = 401, description = "Unauthenticated (auth enabled, no valid \
-                                      principal). Refused before the body is \
-                                      read.", body = serde_json::Value),
-        (status = 403, description = "The authenticated principal carries the \
-                                      configured read-only role: this route \
-                                      writes the definition store, so it is \
-                                      refused regardless of the payload.",
-         body = serde_json::Value),
-        (status = 415, description = "The request declares a `Content-Type` \
-                                      other than `text/plain`; the body cannot \
-                                      be processed as ADL source.",
-         body = serde_json::Value),
-        (status = 422, description = "The source does not parse as ADL 1.4, or \
-                                      fails the ADL 1.4 / AOM 1.4 phase-1 \
-                                      validity catalogue; the offending \
-                                      rule-code mnemonics are carried as the \
-                                      error detail.",
-         body = serde_json::Value)
-    )
-)]
-pub(crate) async fn definition_archetype_adl14_upload(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "definition_archetype_adl14_upload",
-        parts,
-        archetype_adl14_upload,
-    )
-    .await
+guarded_handler! {
+    /// Store an ADL 1.4 source archetype (`POST /definition/archetype/adl1.4`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module
+    /// docs). An upload replaces an archetype with the same id or creates it, and
+    /// only a valid archetype is stored: the `openehr-adl` engine judges the source
+    /// **as 1.4** (ADL 1.4 `master08` §Validity Rules + the AOM 1.4 class
+    /// invariants).
+    #[utoipa::path(
+        post, path = "/definition/archetype/adl1.4", tag = "definition-archetype",
+        params(
+            ("Content-Type" = Option<String>, Header,
+             description = "`text/plain` — ADL 1.4 source text (the only body form \
+                            this route accepts). An absent header declares nothing \
+                            to refuse and reads as ADL text.",
+             example = "text/plain")
+        ),
+        request_body(content = String, content_type = "text/plain",
+                     description = "ADL 1.4 source. The `ARCHETYPE_ID` is read out \
+                                    of the source's own `archetype` header — the \
+                                    resource identity is the client's, never \
+                                    server-assigned."),
+        responses(
+            (status = 201, description = "Stored. The body is the stored \
+                                          `ARCHETYPE_ID`. A re-upload of an \
+                                          existing id REPLACES it and answers `201` \
+                                          too — the operation is \
+                                          replace-or-create, so there is no \
+                                          conflict branch to report.",
+             body = String,
+             headers(
+                 ("Location" = String,
+                  description = "`<base_path>/definition/archetype/adl1.4/<archetype_id>` \
+                                 — the URL of the stored archetype. Extension \
+                                 route: the convention is borrowed from the \
+                                 overview's §Location rule, not inherited from it.")
+             ),
+             example = json!("openEHR-EHR-COMPOSITION.prescription.v1")),
+            (status = 401, description = "Unauthenticated (auth enabled, no valid \
+                                          principal). Refused before the body is \
+                                          read.", body = serde_json::Value),
+            (status = 403, description = "The authenticated principal carries the \
+                                          configured read-only role: this route \
+                                          writes the definition store, so it is \
+                                          refused regardless of the payload.",
+             body = serde_json::Value),
+            (status = 415, description = "The request declares a `Content-Type` \
+                                          other than `text/plain`; the body cannot \
+                                          be processed as ADL source.",
+             body = serde_json::Value),
+            (status = 422, description = "The source does not parse as ADL 1.4, or \
+                                          fails the ADL 1.4 / AOM 1.4 phase-1 \
+                                          validity catalogue; the offending \
+                                          rule-code mnemonics are carried as the \
+                                          error detail.",
+             body = serde_json::Value)
+        )
+    )]
+    definition_archetype_adl14_upload => archetype_adl14_upload
 }
 
-/// Retrieve one ADL 1.4 source archetype
-/// (`GET /definition/archetype/adl1.4/{archetype_id}`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). The `200`-vs-`404` of this read also answers whether the archetype
-/// exists.
-#[utoipa::path(
-    get, path = "/definition/archetype/adl1.4/{archetype_id}", tag = "definition-archetype",
-    params(
-        ("archetype_id" = String, Path,
-         description = "The `ARCHETYPE_ID`. Matched case-insensitively — BASE \
-                        `master05` §\"Composite Identifiers and Case\": two \
-                        identifiers \"identical apart from case … identify the \
-                        same thing\".",
-         example = "openEHR-EHR-COMPOSITION.prescription.v1")
-    ),
-    responses(
-        (status = 200, description = "The stored ADL 1.4 source, byte-for-byte \
-                                      as uploaded, as `text/plain`.",
-         body = String,
-         content_type = "text/plain"),
-        (status = 401, description = "Unauthenticated (auth enabled, no valid \
-                                      principal).", body = serde_json::Value),
-        (status = 404, description = "No archetype with that id. This is also \
-                                      the answer for a syntactically malformed \
-                                      `ARCHETYPE_ID`: the store key is an \
-                                      opaque, case-insensitively matched \
-                                      string with no syntactic gate on the \
-                                      read path, so an unparseable id is \
-                                      simply an id nothing is stored under.",
-         body = serde_json::Value)
-    )
-)]
-pub(crate) async fn definition_archetype_adl14_get(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "definition_archetype_adl14_get",
-        parts,
-        archetype_adl14_get,
-    )
-    .await
+guarded_handler! {
+    /// Retrieve one ADL 1.4 source archetype
+    /// (`GET /definition/archetype/adl1.4/{archetype_id}`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module
+    /// docs). The `200`-vs-`404` of this read also answers whether the archetype
+    /// exists.
+    #[utoipa::path(
+        get, path = "/definition/archetype/adl1.4/{archetype_id}", tag = "definition-archetype",
+        params(
+            ("archetype_id" = String, Path,
+             description = "The `ARCHETYPE_ID`. Matched case-insensitively — BASE \
+                            `master05` §\"Composite Identifiers and Case\": two \
+                            identifiers \"identical apart from case … identify the \
+                            same thing\".",
+             example = "openEHR-EHR-COMPOSITION.prescription.v1")
+        ),
+        responses(
+            (status = 200, description = "The stored ADL 1.4 source, byte-for-byte \
+                                          as uploaded, as `text/plain`.",
+             body = String,
+             content_type = "text/plain"),
+            (status = 401, description = "Unauthenticated (auth enabled, no valid \
+                                          principal).", body = serde_json::Value),
+            (status = 404, description = "No archetype with that id. This is also \
+                                          the answer for a syntactically malformed \
+                                          `ARCHETYPE_ID`: the store key is an \
+                                          opaque, case-insensitively matched \
+                                          string with no syntactic gate on the \
+                                          read path, so an unparseable id is \
+                                          simply an id nothing is stored under.",
+             body = serde_json::Value)
+        )
+    )]
+    definition_archetype_adl14_get => archetype_adl14_get
 }
 
-/// Delete one ADL 1.4 source archetype
-/// (`DELETE /definition/archetype/adl1.4/{archetype_id}`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). This is a definition-store
-/// removal, not a clinical delete: no VERSION is produced, so the success is a
-/// bodyless `204`.
-#[utoipa::path(
-    delete, path = "/definition/archetype/adl1.4/{archetype_id}", tag = "definition-archetype",
-    params(
-        ("archetype_id" = String, Path,
-         description = "The `ARCHETYPE_ID` (case-insensitive, per BASE \
-                        `master05` §\"Composite Identifiers and Case\").",
-         example = "openEHR-EHR-COMPOSITION.prescription.v1")
-    ),
-    responses(
-        (status = 204, description = "Removed. No body — the definition store \
-                                      holds no version history for source \
-                                      archetypes, so nothing survives to \
-                                      return."),
-        (status = 401, description = "Unauthenticated (auth enabled, no valid \
-                                      principal).", body = serde_json::Value),
-        (status = 403, description = "The authenticated principal carries the \
-                                      configured read-only role: this route \
-                                      writes the definition store, so it is \
-                                      refused before the store is touched.",
-         body = serde_json::Value),
-        (status = 404, description = "No archetype with that id.",
-         body = serde_json::Value)
-    )
-)]
-pub(crate) async fn definition_archetype_adl14_delete(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "definition_archetype_adl14_delete",
-        parts,
-        archetype_adl14_delete,
-    )
-    .await
+guarded_handler! {
+    /// Delete one ADL 1.4 source archetype
+    /// (`DELETE /definition/archetype/adl1.4/{archetype_id}`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module
+    /// docs). This is a definition-store
+    /// removal, not a clinical delete: no VERSION is produced, so the success is a
+    /// bodyless `204`.
+    #[utoipa::path(
+        delete, path = "/definition/archetype/adl1.4/{archetype_id}", tag = "definition-archetype",
+        params(
+            ("archetype_id" = String, Path,
+             description = "The `ARCHETYPE_ID` (case-insensitive, per BASE \
+                            `master05` §\"Composite Identifiers and Case\").",
+             example = "openEHR-EHR-COMPOSITION.prescription.v1")
+        ),
+        responses(
+            (status = 204, description = "Removed. No body — the definition store \
+                                          holds no version history for source \
+                                          archetypes, so nothing survives to \
+                                          return."),
+            (status = 401, description = "Unauthenticated (auth enabled, no valid \
+                                          principal).", body = serde_json::Value),
+            (status = 403, description = "The authenticated principal carries the \
+                                          configured read-only role: this route \
+                                          writes the definition store, so it is \
+                                          refused before the store is touched.",
+             body = serde_json::Value),
+            (status = 404, description = "No archetype with that id.",
+             body = serde_json::Value)
+        )
+    )]
+    definition_archetype_adl14_delete => archetype_adl14_delete
 }
 
 // ── ADL 2 archetypes + artefacts ─────────────────────────────────────────────
 
-/// List the stored ADL 2 archetypes (`GET /definition/archetype/adl2`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). It lists the
-/// artefacts whose concrete AOM2 type is `AUTHORED_ARCHETYPE` (AM AOM2
-/// §Archetypes), as opposed to the templates and OPTs the released
-/// `/definition/template/adl2` list already serves.
-#[utoipa::path(
-    get, path = "/definition/archetype/adl2", tag = "definition-archetype",
-    params(
-        ("offset" = Option<u64>, Query,
-         description = "0-based offset into the id list.",
-         example = 0),
-        ("fetch" = Option<u64>, Query,
-         description = "Number of ids to return from `offset` \
-                        (absent or `0` = all).",
-         example = 20)
-    ),
-    responses(
-        (status = 200, description = "The stored `AUTHORED_ARCHETYPE` HRIDs, \
-                                      ascending; `[]` on an empty store.",
-         body = Vec<String>,
-         example = json!(["openEHR-EHR-OBSERVATION.cnf_count.v1.0.0"])),
-        (status = 400, description = "`offset`/`fetch` is not a non-negative \
-                                      integer.", body = serde_json::Value),
-        (status = 401, description = "Unauthenticated (auth enabled, no valid \
-                                      principal).", body = serde_json::Value),
-        (status = 406, description = "An id list is served as \
-                                      `application/json` only.",
-         body = serde_json::Value)
-    )
-)]
-pub(crate) async fn definition_archetype_adl2_list(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "definition_archetype_adl2_list",
-        parts,
-        archetype_adl2_list,
-    )
-    .await
+guarded_handler! {
+    /// List the stored ADL 2 archetypes (`GET /definition/archetype/adl2`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module
+    /// docs). It lists the
+    /// artefacts whose concrete AOM2 type is `AUTHORED_ARCHETYPE` (AM AOM2
+    /// §Archetypes), as opposed to the templates and OPTs the released
+    /// `/definition/template/adl2` list already serves.
+    #[utoipa::path(
+        get, path = "/definition/archetype/adl2", tag = "definition-archetype",
+        params(
+            ("offset" = Option<u64>, Query,
+             description = "0-based offset into the id list.",
+             example = 0),
+            ("fetch" = Option<u64>, Query,
+             description = "Number of ids to return from `offset` \
+                            (absent or `0` = all).",
+             example = 20)
+        ),
+        responses(
+            (status = 200, description = "The stored `AUTHORED_ARCHETYPE` HRIDs, \
+                                          ascending; `[]` on an empty store.",
+             body = Vec<String>,
+             example = json!(["openEHR-EHR-OBSERVATION.cnf_count.v1.0.0"])),
+            (status = 400, description = "`offset`/`fetch` is not a non-negative \
+                                          integer.", body = serde_json::Value),
+            (status = 401, description = "Unauthenticated (auth enabled, no valid \
+                                          principal).", body = serde_json::Value),
+            (status = 406, description = "An id list is served as \
+                                          `application/json` only.",
+             body = serde_json::Value)
+        )
+    )]
+    definition_archetype_adl2_list => archetype_adl2_list
 }
 
-/// Count the stored ADL 2 archetypes (`GET /definition/archetype/adl2/count`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). The response body is a bare JSON number —
-/// the count IS the resource, and wrapping it in an object would invent a
-/// schema no spec defines.
-#[utoipa::path(
-    get, path = "/definition/archetype/adl2/count", tag = "definition-archetype",
-    responses(
-        (status = 200, description = "The total number of stored \
-                                      `AUTHORED_ARCHETYPE`s, as a bare JSON \
-                                      number.",
-         body = i64, example = json!(0)),
-        (status = 401, description = "Unauthenticated (auth enabled, no valid \
-                                      principal).", body = serde_json::Value),
-        (status = 406, description = "The count is served as \
-                                      `application/json` only.",
-         body = serde_json::Value)
-    )
-)]
-pub(crate) async fn definition_archetype_adl2_count(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "definition_archetype_adl2_count",
-        parts,
-        archetype_adl2_count,
-    )
-    .await
+guarded_handler! {
+    /// Count the stored ADL 2 archetypes (`GET /definition/archetype/adl2/count`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module
+    /// docs). The response body is a bare JSON number —
+    /// the count IS the resource, and wrapping it in an object would invent a
+    /// schema no spec defines.
+    #[utoipa::path(
+        get, path = "/definition/archetype/adl2/count", tag = "definition-archetype",
+        responses(
+            (status = 200, description = "The total number of stored \
+                                          `AUTHORED_ARCHETYPE`s, as a bare JSON \
+                                          number.",
+             body = i64, example = json!(0)),
+            (status = 401, description = "Unauthenticated (auth enabled, no valid \
+                                          principal).", body = serde_json::Value),
+            (status = 406, description = "The count is served as \
+                                          `application/json` only.",
+             body = serde_json::Value)
+        )
+    )]
+    definition_archetype_adl2_count => archetype_adl2_count
 }
 
-/// List every stored ADL 2 artefact (`GET /definition/artefact/adl2`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). It lists the whole
-/// AOM2 artefact union (archetypes + templates + OPTs), which no released route
-/// exposes: `/definition/template/adl2` lists templates only.
-#[utoipa::path(
-    get, path = "/definition/artefact/adl2", tag = "definition-archetype",
-    params(
-        ("offset" = Option<u64>, Query,
-         description = "0-based offset into the id list.",
-         example = 0),
-        ("fetch" = Option<u64>, Query,
-         description = "Number of ids to return from `offset` \
-                        (absent or `0` = all).",
-         example = 20)
-    ),
-    responses(
-        (status = 200, description = "Every stored AOM2 artefact HRID, \
-                                      ascending; `[]` on an empty store.",
-         body = Vec<String>,
-         example = json!(["openEHR-EHR-COMPOSITION.cnf_minimal.v1.0.0"])),
-        (status = 400, description = "`offset`/`fetch` is not a non-negative \
-                                      integer.", body = serde_json::Value),
-        (status = 401, description = "Unauthenticated (auth enabled, no valid \
-                                      principal).", body = serde_json::Value),
-        (status = 406, description = "An id list is served as \
-                                      `application/json` only.",
-         body = serde_json::Value)
-    )
-)]
-pub(crate) async fn definition_artefact_adl2_list(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "definition_artefact_adl2_list",
-        parts,
-        artefact_adl2_list,
-    )
-    .await
+guarded_handler! {
+    /// List every stored ADL 2 artefact (`GET /definition/artefact/adl2`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module
+    /// docs). It lists the whole
+    /// AOM2 artefact union (archetypes + templates + OPTs), which no released route
+    /// exposes: `/definition/template/adl2` lists templates only.
+    #[utoipa::path(
+        get, path = "/definition/artefact/adl2", tag = "definition-archetype",
+        params(
+            ("offset" = Option<u64>, Query,
+             description = "0-based offset into the id list.",
+             example = 0),
+            ("fetch" = Option<u64>, Query,
+             description = "Number of ids to return from `offset` \
+                            (absent or `0` = all).",
+             example = 20)
+        ),
+        responses(
+            (status = 200, description = "Every stored AOM2 artefact HRID, \
+                                          ascending; `[]` on an empty store.",
+             body = Vec<String>,
+             example = json!(["openEHR-EHR-COMPOSITION.cnf_minimal.v1.0.0"])),
+            (status = 400, description = "`offset`/`fetch` is not a non-negative \
+                                          integer.", body = serde_json::Value),
+            (status = 401, description = "Unauthenticated (auth enabled, no valid \
+                                          principal).", body = serde_json::Value),
+            (status = 406, description = "An id list is served as \
+                                          `application/json` only.",
+             body = serde_json::Value)
+        )
+    )]
+    definition_artefact_adl2_list => artefact_adl2_list
 }
 
-/// Count every stored ADL 2 artefact (`GET /definition/artefact/adl2/count`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). The body
-/// is a bare JSON number, as for the archetype count.
-#[utoipa::path(
-    get, path = "/definition/artefact/adl2/count", tag = "definition-archetype",
-    responses(
-        (status = 200, description = "The total number of stored AOM2 \
-                                      artefacts, as a bare JSON number.",
-         body = i64, example = json!(0)),
-        (status = 401, description = "Unauthenticated (auth enabled, no valid \
-                                      principal).", body = serde_json::Value),
-        (status = 406, description = "The count is served as \
-                                      `application/json` only.",
-         body = serde_json::Value)
-    )
-)]
-pub(crate) async fn definition_artefact_adl2_count(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "definition_artefact_adl2_count",
-        parts,
-        artefact_adl2_count,
-    )
-    .await
+guarded_handler! {
+    /// Count every stored ADL 2 artefact (`GET /definition/artefact/adl2/count`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module
+    /// docs). The body
+    /// is a bare JSON number, as for the archetype count.
+    #[utoipa::path(
+        get, path = "/definition/artefact/adl2/count", tag = "definition-archetype",
+        responses(
+            (status = 200, description = "The total number of stored AOM2 \
+                                          artefacts, as a bare JSON number.",
+             body = i64, example = json!(0)),
+            (status = 401, description = "Unauthenticated (auth enabled, no valid \
+                                          principal).", body = serde_json::Value),
+            (status = 406, description = "The count is served as \
+                                          `application/json` only.",
+             body = serde_json::Value)
+        )
+    )]
+    definition_artefact_adl2_count => artefact_adl2_count
 }
 
-/// Delete one stored ADL 2 artefact
-/// (`DELETE /definition/artefact/adl2/{artefact_id}`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). It deletes over the whole AOM2
-/// artefact union — archetype, template or OPT. The released ADL 2 group has no
-/// DELETE at all.
-#[utoipa::path(
-    delete, path = "/definition/artefact/adl2/{artefact_id}", tag = "definition-archetype",
-    params(
-        ("artefact_id" = String, Path,
-         description = "The AOM2 artefact HRID (case-insensitive, per BASE \
-                        `master05` §\"Composite Identifiers and Case\").",
-         example = "openEHR-EHR-COMPOSITION.cnf_minimal.v1.0.0")
-    ),
-    responses(
-        (status = 204, description = "Removed. No body — the definition store \
-                                      keeps no version history for AOM2 \
-                                      artefacts."),
-        (status = 401, description = "Unauthenticated (auth enabled, no valid \
-                                      principal).", body = serde_json::Value),
-        (status = 403, description = "The authenticated principal carries the \
-                                      configured read-only role: this route \
-                                      writes the definition store, so it is \
-                                      refused before the store is touched.",
-         body = serde_json::Value),
-        (status = 404, description = "No artefact with that id. This is also \
-                                      the answer for a syntactically malformed \
-                                      HRID: the store key is opaque and \
-                                      case-insensitively matched, so an \
-                                      unparseable id is simply an id nothing \
-                                      is stored under.",
-         body = serde_json::Value),
-        (status = 409, description = "The artefact is a template kind that \
-                                      compositions still reference (the count \
-                                      is named in the body): deleting it would \
-                                      orphan committed content, so the store \
-                                      refuses. Archived content counts too. \
-                                      Also when another stored artefact does \
-                                      not compile without it (a slot filler, \
-                                      `use_archetype` or specialisation \
-                                      parent, directly or through another): \
-                                      the body names every one.",
-         body = serde_json::Value)
-    )
-)]
-pub(crate) async fn definition_artefact_adl2_delete(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "definition_artefact_adl2_delete",
-        parts,
-        artefact_adl2_delete,
-    )
-    .await
+guarded_handler! {
+    /// Delete one stored ADL 2 artefact
+    /// (`DELETE /definition/artefact/adl2/{artefact_id}`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module
+    /// docs). It deletes over the whole AOM2
+    /// artefact union — archetype, template or OPT. The released ADL 2 group has no
+    /// DELETE at all.
+    #[utoipa::path(
+        delete, path = "/definition/artefact/adl2/{artefact_id}", tag = "definition-archetype",
+        params(
+            ("artefact_id" = String, Path,
+             description = "The AOM2 artefact HRID (case-insensitive, per BASE \
+                            `master05` §\"Composite Identifiers and Case\").",
+             example = "openEHR-EHR-COMPOSITION.cnf_minimal.v1.0.0")
+        ),
+        responses(
+            (status = 204, description = "Removed. No body — the definition store \
+                                          keeps no version history for AOM2 \
+                                          artefacts."),
+            (status = 401, description = "Unauthenticated (auth enabled, no valid \
+                                          principal).", body = serde_json::Value),
+            (status = 403, description = "The authenticated principal carries the \
+                                          configured read-only role: this route \
+                                          writes the definition store, so it is \
+                                          refused before the store is touched.",
+             body = serde_json::Value),
+            (status = 404, description = "No artefact with that id. This is also \
+                                          the answer for a syntactically malformed \
+                                          HRID: the store key is opaque and \
+                                          case-insensitively matched, so an \
+                                          unparseable id is simply an id nothing \
+                                          is stored under.",
+             body = serde_json::Value),
+            (status = 409, description = "The artefact is a template kind that \
+                                          compositions still reference (the count \
+                                          is named in the body): deleting it would \
+                                          orphan committed content, so the store \
+                                          refuses. Archived content counts too. \
+                                          Also when another stored artefact does \
+                                          not compile without it (a slot filler, \
+                                          `use_archetype` or specialisation \
+                                          parent, directly or through another): \
+                                          the body names every one.",
+             body = serde_json::Value)
+        )
+    )]
+    definition_artefact_adl2_delete => artefact_adl2_delete
 }
 
 // ── operations ────────────────────────────────────────────────────────────────

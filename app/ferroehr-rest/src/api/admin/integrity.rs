@@ -36,7 +36,6 @@
               storage-parity report is an operational document, not an RM resource)"
 )]
 
-use axum::extract::State;
 use axum::response::{IntoResponse, Response};
 use bytes::Bytes;
 use http::{HeaderValue, StatusCode, header};
@@ -51,14 +50,14 @@ use ferroehr::service::admin::integrity::{StorageParityEvent, StorageParityRepor
 use ferroehr::storage::integrity::StorageParityScope;
 
 use super::body::{AdminDisabled, AdminUnauthenticated, NotAdminClass};
-use crate::api::{RequestParts, guarded_dispatch};
+use crate::api::{RequestParts, guarded_handler};
 use crate::overview::error::RestError;
 use crate::state::AppState;
 use crate::{negotiate, params};
 
 /// The storage-integrity extension route as a native `utoipa-axum` router —
 /// **no ITS-REST contract** (see the module docs). Group-relative path (nested
-/// under the extensions root); the operation runs through [`guarded_dispatch`] onto
+/// under the extensions root); the operation runs through [`guarded_dispatch`](crate::api::guarded_dispatch) onto
 /// its handler.
 pub(crate) fn integrity_routes() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
@@ -66,190 +65,172 @@ pub(crate) fn integrity_routes() -> OpenApiRouter<AppState> {
         .routes(routes!(admin_rebuild_version_nodes))
 }
 
-/// Sweep the stored versions for content-copy disagreement
-/// (`POST /admin/integrity/verify`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module docs).
-/// Every stored version in both
-/// storage tiers is reassembled from its `node` rows and compared with its
-/// materialized body; the response is the resulting report.
-#[utoipa::path(
-    post, path = "/admin/integrity/verify", tag = "admin-integrity",
-    params(
-        ("ehr_id" = Option<String>, Query,
-         description = "Cover only versions belonging to this EHR. A sweep reads \
-                        every byte of what it covers, so this is how an operator \
-                        verifies one record without reading the repository."),
-        ("committed_since" = Option<String>, Query,
-         description = "Cover only versions whose validity begins at or after \
-                        this RFC 3339 instant, for verifying what changed since \
-                        an incident."),
-        ("Accept" = Option<String>, Header,
-         description = "`application/x-ndjson` streams the sweep as it runs, \
-                        which is how a whole large repository is verified in \
-                        one pass: the aggregated form computes its report \
-                        before the response exists and is bounded by the \
-                        server's 30 s request timeout. The stream must be \
-                        asked for by name — a wildcard, or no `Accept` at all, \
-                        keeps the aggregated document. Our own extension; no \
-                        openEHR spec governs this media type."),
-    ),
-    responses(
-        (status = 200, description = "The sweep ran. The body is the report: \
-                                      how many stored versions were read, how \
-                                      many carried a body, how many mismatches \
-                                      were found, and the mismatching versions \
-                                      by identifier. `mismatch_count` is the \
-                                      full count; `mismatches` is capped and \
-                                      `truncated` says whether the cap was \
-                                      reached (every mismatch is logged at \
-                                      `warn` whatever the cap does). A finding \
-                                      is NOT a request failure — the sweep \
-                                      succeeded and is reporting what it saw, \
-                                      so the status stays `200`. Under \
-                                      `Accept: application/x-ndjson` the same \
-                                      sweep is streamed instead: one JSON \
-                                      object per line, each carrying a `type` \
-                                      — a `mismatch` as it is found, a \
-                                      `progress` tick per enumerated page, and \
-                                      one closing `summary` with the same \
-                                      counts. A sweep that fails after the \
-                                      response began cannot change the status \
-                                      code, so it ends with an `error` line \
-                                      instead of a `summary`: read to the end \
-                                      to tell a finished sweep from an aborted \
-                                      one.",
-         content(
-             (serde_json::Value = "application/json", example = json!({
-                 "versions_checked": 128,
-                 "versions_with_body": 126,
-                 "versions_without_body": 2,
-                 "mismatch_count": 1,
-                 "mismatches": [{
-                     "vo_id": "8849182c-82ad-4088-a07f-48ead4180515",
-                     "sys_version": 2,
-                     "kind": "COMPOSITION",
-                     "defect": "content_differs"
-                 }],
-                 "truncated": false,
-                 "elapsed_ms": 431
-             })),
-             (String = "application/x-ndjson", example = json!(
-                 "{\"type\":\"mismatch\",\"vo_id\":\"8849182c-82ad-4088-a07f-48ead4180515\",\
-                   \"sys_version\":2,\"kind\":\"COMPOSITION\",\"defect\":\"content_differs\"}\n\
-                  {\"type\":\"progress\",\"versions_checked\":500,\"versions_with_body\":498,\
-                   \"versions_without_body\":2,\"mismatch_count\":1}\n\
-                  {\"type\":\"summary\",\"versions_checked\":128,\"versions_with_body\":126,\
-                   \"versions_without_body\":2,\"mismatch_count\":1,\"elapsed_ms\":431}\n"
+guarded_handler! {
+    /// Sweep the stored versions for content-copy disagreement
+    /// (`POST /admin/integrity/verify`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module docs).
+    /// Every stored version in both
+    /// storage tiers is reassembled from its `node` rows and compared with its
+    /// materialized body; the response is the resulting report.
+    #[utoipa::path(
+        post, path = "/admin/integrity/verify", tag = "admin-integrity",
+        params(
+            ("ehr_id" = Option<String>, Query,
+             description = "Cover only versions belonging to this EHR. A sweep reads \
+                            every byte of what it covers, so this is how an operator \
+                            verifies one record without reading the repository."),
+            ("committed_since" = Option<String>, Query,
+             description = "Cover only versions whose validity begins at or after \
+                            this RFC 3339 instant, for verifying what changed since \
+                            an incident."),
+            ("Accept" = Option<String>, Header,
+             description = "`application/x-ndjson` streams the sweep as it runs, \
+                            which is how a whole large repository is verified in \
+                            one pass: the aggregated form computes its report \
+                            before the response exists and is bounded by the \
+                            server's 30 s request timeout. The stream must be \
+                            asked for by name — a wildcard, or no `Accept` at all, \
+                            keeps the aggregated document. Our own extension; no \
+                            openEHR spec governs this media type."),
+        ),
+        responses(
+            (status = 200, description = "The sweep ran. The body is the report: \
+                                          how many stored versions were read, how \
+                                          many carried a body, how many mismatches \
+                                          were found, and the mismatching versions \
+                                          by identifier. `mismatch_count` is the \
+                                          full count; `mismatches` is capped and \
+                                          `truncated` says whether the cap was \
+                                          reached (every mismatch is logged at \
+                                          `warn` whatever the cap does). A finding \
+                                          is NOT a request failure — the sweep \
+                                          succeeded and is reporting what it saw, \
+                                          so the status stays `200`. Under \
+                                          `Accept: application/x-ndjson` the same \
+                                          sweep is streamed instead: one JSON \
+                                          object per line, each carrying a `type` \
+                                          — a `mismatch` as it is found, a \
+                                          `progress` tick per enumerated page, and \
+                                          one closing `summary` with the same \
+                                          counts. A sweep that fails after the \
+                                          response began cannot change the status \
+                                          code, so it ends with an `error` line \
+                                          instead of a `summary`: read to the end \
+                                          to tell a finished sweep from an aborted \
+                                          one.",
+             content(
+                 (serde_json::Value = "application/json", example = json!({
+                     "versions_checked": 128,
+                     "versions_with_body": 126,
+                     "versions_without_body": 2,
+                     "mismatch_count": 1,
+                     "mismatches": [{
+                         "vo_id": "8849182c-82ad-4088-a07f-48ead4180515",
+                         "sys_version": 2,
+                         "kind": "COMPOSITION",
+                         "defect": "content_differs"
+                     }],
+                     "truncated": false,
+                     "elapsed_ms": 431
+                 })),
+                 (String = "application/x-ndjson", example = json!(
+                     "{\"type\":\"mismatch\",\"vo_id\":\"8849182c-82ad-4088-a07f-48ead4180515\",\
+                       \"sys_version\":2,\"kind\":\"COMPOSITION\",\"defect\":\"content_differs\"}\n\
+                      {\"type\":\"progress\",\"versions_checked\":500,\"versions_with_body\":498,\
+                       \"versions_without_body\":2,\"mismatch_count\":1}\n\
+                      {\"type\":\"summary\",\"versions_checked\":128,\"versions_with_body\":126,\
+                       \"versions_without_body\":2,\"mismatch_count\":1,\"elapsed_ms\":431}\n"
+                 )),
              )),
-         )),
-        AdminUnauthenticated,
-        NotAdminClass,
-        AdminDisabled
-    )
-)]
-pub(crate) async fn admin_verify_storage_parity(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "admin_verify_storage_parity",
-        parts,
-        |state, parts| super::body::gated(state, parts, verify_storage_parity),
-    )
-    .await
+            AdminUnauthenticated,
+            NotAdminClass,
+            AdminDisabled
+        )
+    )]
+    admin_verify_storage_parity
+        => |state, parts| super::body::gated(state, parts, verify_storage_parity)
 }
 
-/// Re-derive the node rows of every damaged version from its stored body
-/// (`POST /admin/integrity/rebuild-nodes`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module docs).
-/// It is the repair the storage-parity
-/// sweep had no counterpart for: the sweep reports where a version's two
-/// content copies disagree, and this replaces the derived copy from the
-/// authoritative one.
-#[utoipa::path(
-    post, path = "/admin/integrity/rebuild-nodes", tag = "admin-integrity",
-    params(
-        ("ehr_id" = Option<String>, Query,
-         description = "Cover only versions belonging to this EHR."),
-        ("vo_id" = Option<String>, Query,
-         description = "Cover only versions of this versioned object."),
-        ("sys_version" = Option<i32>, Query,
-         description = "Cover only this version of that object. The ordinal is \
-                        per-object, so it needs `vo_id`; alone it is a `400`."),
-        ("committed_since" = Option<String>, Query,
-         description = "Cover only versions whose validity begins at or after \
-                        this RFC 3339 instant, for repairing what an incident \
-                        touched."),
-    ),
-    responses(
-        (status = 200, description = "The rebuild ran. The body reports how \
-                                      many versions the underlying sweep read, \
-                                      how many it found damaged, how many were \
-                                      rebuilt, and how many were refused, plus \
-                                      one record per damaged version naming \
-                                      the defect that selected it and what \
-                                      happened to it. A refusal is NOT a \
-                                      request failure: the version's own \
-                                      stored body is the damaged copy, so \
-                                      re-deriving the index from it would \
-                                      spread the damage; the version's rows \
-                                      are left exactly as they were and the \
-                                      run continues. `records` is capped and \
-                                      `truncated` says whether the cap was \
-                                      reached; every record is also logged. A \
-                                      run over an undamaged scope writes \
-                                      nothing.",
-         content(
-             (serde_json::Value = "application/json", example = json!({
-                 "versions_checked": 128,
-                 "versions_damaged": 2,
-                 "versions_rebuilt": 1,
-                 "versions_refused": 1,
-                 "records": [{
-                     "vo_id": "8849182c-82ad-4088-a07f-48ead4180515",
-                     "sys_version": 2,
-                     "kind": "COMPOSITION",
-                     "defect": "content_differs",
-                     "outcome": "rebuilt",
-                     "node_rows": 41
-                 }, {
-                     "vo_id": "1f0b7d64-6b2a-4a1f-9f0e-6b1d2a3c4d5e",
-                     "sys_version": 1,
-                     "kind": "COMPOSITION",
-                     "defect": "content_differs",
-                     "outcome": "refused",
-                     "reason": "the stored body does not decompose: …"
-                 }],
-                 "truncated": false,
-                 "elapsed_ms": 812
-             })),
-         )),
-        (status = 400, description = "`sys_version` without `vo_id`, or a \
-                                      malformed identifier or instant.",
-         body = serde_json::Value),
-        (status = 401, description = "Unauthenticated (auth enabled, no valid \
-                                      principal). Our own authorization design.",
-         body = serde_json::Value),
-        NotAdminClass,
-        AdminDisabled
-    )
-)]
-pub(crate) async fn admin_rebuild_version_nodes(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "admin_rebuild_version_nodes",
-        parts,
-        |state, parts| super::body::gated(state, parts, rebuild_version_nodes),
-    )
-    .await
+guarded_handler! {
+    /// Re-derive the node rows of every damaged version from its stored body
+    /// (`POST /admin/integrity/rebuild-nodes`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module docs).
+    /// It is the repair the storage-parity
+    /// sweep had no counterpart for: the sweep reports where a version's two
+    /// content copies disagree, and this replaces the derived copy from the
+    /// authoritative one.
+    #[utoipa::path(
+        post, path = "/admin/integrity/rebuild-nodes", tag = "admin-integrity",
+        params(
+            ("ehr_id" = Option<String>, Query,
+             description = "Cover only versions belonging to this EHR."),
+            ("vo_id" = Option<String>, Query,
+             description = "Cover only versions of this versioned object."),
+            ("sys_version" = Option<i32>, Query,
+             description = "Cover only this version of that object. The ordinal is \
+                            per-object, so it needs `vo_id`; alone it is a `400`."),
+            ("committed_since" = Option<String>, Query,
+             description = "Cover only versions whose validity begins at or after \
+                            this RFC 3339 instant, for repairing what an incident \
+                            touched."),
+        ),
+        responses(
+            (status = 200, description = "The rebuild ran. The body reports how \
+                                          many versions the underlying sweep read, \
+                                          how many it found damaged, how many were \
+                                          rebuilt, and how many were refused, plus \
+                                          one record per damaged version naming \
+                                          the defect that selected it and what \
+                                          happened to it. A refusal is NOT a \
+                                          request failure: the version's own \
+                                          stored body is the damaged copy, so \
+                                          re-deriving the index from it would \
+                                          spread the damage; the version's rows \
+                                          are left exactly as they were and the \
+                                          run continues. `records` is capped and \
+                                          `truncated` says whether the cap was \
+                                          reached; every record is also logged. A \
+                                          run over an undamaged scope writes \
+                                          nothing.",
+             content(
+                 (serde_json::Value = "application/json", example = json!({
+                     "versions_checked": 128,
+                     "versions_damaged": 2,
+                     "versions_rebuilt": 1,
+                     "versions_refused": 1,
+                     "records": [{
+                         "vo_id": "8849182c-82ad-4088-a07f-48ead4180515",
+                         "sys_version": 2,
+                         "kind": "COMPOSITION",
+                         "defect": "content_differs",
+                         "outcome": "rebuilt",
+                         "node_rows": 41
+                     }, {
+                         "vo_id": "1f0b7d64-6b2a-4a1f-9f0e-6b1d2a3c4d5e",
+                         "sys_version": 1,
+                         "kind": "COMPOSITION",
+                         "defect": "content_differs",
+                         "outcome": "refused",
+                         "reason": "the stored body does not decompose: …"
+                     }],
+                     "truncated": false,
+                     "elapsed_ms": 812
+                 })),
+             )),
+            (status = 400, description = "`sys_version` without `vo_id`, or a \
+                                          malformed identifier or instant.",
+             body = serde_json::Value),
+            (status = 401, description = "Unauthenticated (auth enabled, no valid \
+                                          principal). Our own authorization design.",
+             body = serde_json::Value),
+            NotAdminClass,
+            AdminDisabled
+        )
+    )]
+    admin_rebuild_version_nodes
+        => |state, parts| super::body::gated(state, parts, rebuild_version_nodes)
 }
 
 // ── operations ────────────────────────────────────────────────────────────────

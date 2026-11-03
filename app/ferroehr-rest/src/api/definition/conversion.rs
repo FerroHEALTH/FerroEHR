@@ -16,7 +16,6 @@
 
 use std::collections::BTreeMap;
 
-use axum::extract::State;
 use axum::response::Response;
 use http::StatusCode;
 use serde::Serialize;
@@ -25,7 +24,7 @@ use utoipa_axum::routes;
 
 use openehr_adl::adl14::opt::{ConvertedRoot, FillEdge, OptConversion};
 
-use crate::api::{RequestParts, guarded_dispatch};
+use crate::api::{RequestParts, guarded_handler};
 use crate::negotiate;
 use crate::overview::error::RestError;
 use crate::state::AppState;
@@ -36,7 +35,7 @@ use super::archetype::path_segment;
 // conversion but defines no route or algorithm, so no specification governs
 // these routes: our own design.
 /// The conversion routes as a native `utoipa-axum` router (paths relative to
-/// the extensions root); every operation runs through [`guarded_dispatch`].
+/// the extensions root); every operation runs through [`guarded_dispatch`](crate::api::guarded_dispatch).
 pub(crate) fn conversion_routes() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .routes(routes!(definition_archetype_adl14_convert))
@@ -130,106 +129,86 @@ impl From<FillEdge> for Fill {
     }
 }
 
-/// Convert a stored ADL 1.4 archetype to ADL 2
-/// (`GET /definition/archetype/adl1.4/{archetype_id}/adl2`).
-///
-/// **Our own extension: no ITS-REST operation governs this**, and no openEHR
-/// specification defines a conversion operation (module docs). The store is only read.
-#[utoipa::path(
-    get, path = "/definition/archetype/adl1.4/{archetype_id}/adl2", tag = "definition-archetype",
-    params(
-        ("archetype_id" = String, Path,
-         description = "The `ARCHETYPE_ID` of a stored ADL 1.4 archetype, matched \
-                        case-insensitively (BASE `master05` §\"Composite \
-                        Identifiers and Case\").",
-         example = "openEHR-EHR-COMPOSITION.prescription.v1")
-    ),
-    responses(
-        (status = 200, description = "The ADL 2 conversion: one root, its ADL 2 \
-                                      source, the conversion log and the \
-                                      `conversion_details`, and an empty \
-                                      `structure`. No openEHR specification \
-                                      governs this conversion: our own design.",
-         body = Conversion),
-        (status = 401, description = "Unauthenticated (auth enabled, no valid \
-                                      principal).", body = serde_json::Value),
-        (status = 404, description = "No archetype with that id.",
-         body = serde_json::Value),
-        (status = 406, description = "The conversion is served as \
-                                      `application/json` only.",
-         body = serde_json::Value),
-        (status = 422, description = "The stored source no longer converts: it \
-                                      does not parse, or the result carries a \
-                                      node ADL 2 has no syntax for. The same \
-                                      status an archetype upload answers for a \
-                                      source it cannot accept.",
-         body = serde_json::Value)
-    )
-)]
-pub(crate) async fn definition_archetype_adl14_convert(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "definition_archetype_adl14_convert",
-        parts,
-        archetype_adl14_convert,
-    )
-    .await
+guarded_handler! {
+    /// Convert a stored ADL 1.4 archetype to ADL 2
+    /// (`GET /definition/archetype/adl1.4/{archetype_id}/adl2`).
+    ///
+    /// **Our own extension: no ITS-REST operation governs this**, and no openEHR
+    /// specification defines a conversion operation (module docs). The store is only read.
+    #[utoipa::path(
+        get, path = "/definition/archetype/adl1.4/{archetype_id}/adl2", tag = "definition-archetype",
+        params(
+            ("archetype_id" = String, Path,
+             description = "The `ARCHETYPE_ID` of a stored ADL 1.4 archetype, matched \
+                            case-insensitively (BASE `master05` §\"Composite \
+                            Identifiers and Case\").",
+             example = "openEHR-EHR-COMPOSITION.prescription.v1")
+        ),
+        responses(
+            (status = 200, description = "The ADL 2 conversion: one root, its ADL 2 \
+                                          source, the conversion log and the \
+                                          `conversion_details`, and an empty \
+                                          `structure`. No openEHR specification \
+                                          governs this conversion: our own design.",
+             body = Conversion),
+            (status = 401, description = "Unauthenticated (auth enabled, no valid \
+                                          principal).", body = serde_json::Value),
+            (status = 404, description = "No archetype with that id.",
+             body = serde_json::Value),
+            (status = 406, description = "The conversion is served as \
+                                          `application/json` only.",
+             body = serde_json::Value),
+            (status = 422, description = "The stored source no longer converts: it \
+                                          does not parse, or the result carries a \
+                                          node ADL 2 has no syntax for. The same \
+                                          status an archetype upload answers for a \
+                                          source it cannot accept.",
+             body = serde_json::Value)
+        )
+    )]
+    definition_archetype_adl14_convert => archetype_adl14_convert
 }
 
-/// Convert a stored ADL 1.4 operational template to ADL 2
-/// (`GET /definition/template/adl1.4/{template_id}/adl2`).
-///
-/// **Our own extension: no ITS-REST operation governs this**, and no openEHR
-/// specification defines a conversion operation (module docs). The template is decomposed into one source per
-/// embedded archetype root; the store is only read.
-#[utoipa::path(
-    get, path = "/definition/template/adl1.4/{template_id}/adl2", tag = "definition-archetype",
-    params(
-        ("template_id" = String, Path,
-         description = "The `template_id` of a stored ADL 1.4 operational \
-                        template, matched case-insensitively (BASE `master05` \
-                        §\"Composite Identifiers and Case\").",
-         example = "IDCR Allergies List.v0")
-    ),
-    responses(
-        (status = 200, description = "The ADL 2 conversion: one root per \
-                                      embedded archetype root, the template's \
-                                      top root first, each with its ADL 2 \
-                                      source, conversion log and \
-                                      `conversion_details`, and the slot fills \
-                                      that joined them in `structure`. No \
-                                      openEHR specification governs this \
-                                      conversion: our own design.",
-         body = Conversion),
-        (status = 401, description = "Unauthenticated (auth enabled, no valid \
-                                      principal).", body = serde_json::Value),
-        (status = 404, description = "No operational template with that id.",
-         body = serde_json::Value),
-        (status = 406, description = "The conversion is served as \
-                                      `application/json` only.",
-         body = serde_json::Value),
-        (status = 422, description = "The stored template no longer converts: \
-                                      it does not parse, or a root does not \
-                                      convert or print as ADL 2.",
-         body = serde_json::Value)
-    )
-)]
-pub(crate) async fn definition_template_adl14_convert(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "definition_template_adl14_convert",
-        parts,
-        template_adl14_convert,
-    )
-    .await
+guarded_handler! {
+    /// Convert a stored ADL 1.4 operational template to ADL 2
+    /// (`GET /definition/template/adl1.4/{template_id}/adl2`).
+    ///
+    /// **Our own extension: no ITS-REST operation governs this**, and no openEHR
+    /// specification defines a conversion operation (module docs). The template is decomposed into one source per
+    /// embedded archetype root; the store is only read.
+    #[utoipa::path(
+        get, path = "/definition/template/adl1.4/{template_id}/adl2", tag = "definition-archetype",
+        params(
+            ("template_id" = String, Path,
+             description = "The `template_id` of a stored ADL 1.4 operational \
+                            template, matched case-insensitively (BASE `master05` \
+                            §\"Composite Identifiers and Case\").",
+             example = "IDCR Allergies List.v0")
+        ),
+        responses(
+            (status = 200, description = "The ADL 2 conversion: one root per \
+                                          embedded archetype root, the template's \
+                                          top root first, each with its ADL 2 \
+                                          source, conversion log and \
+                                          `conversion_details`, and the slot fills \
+                                          that joined them in `structure`. No \
+                                          openEHR specification governs this \
+                                          conversion: our own design.",
+             body = Conversion),
+            (status = 401, description = "Unauthenticated (auth enabled, no valid \
+                                          principal).", body = serde_json::Value),
+            (status = 404, description = "No operational template with that id.",
+             body = serde_json::Value),
+            (status = 406, description = "The conversion is served as \
+                                          `application/json` only.",
+             body = serde_json::Value),
+            (status = 422, description = "The stored template no longer converts: \
+                                          it does not parse, or a root does not \
+                                          convert or print as ADL 2.",
+             body = serde_json::Value)
+        )
+    )]
+    definition_template_adl14_convert => template_adl14_convert
 }
 
 /// The `definition_archetype_adl14_convert` operation.

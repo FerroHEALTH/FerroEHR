@@ -32,7 +32,6 @@
               operational JSON, not RM content"
 )]
 
-use axum::extract::State;
 use axum::response::Response;
 use http::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
@@ -43,7 +42,7 @@ use openehr_its::rest::runtime::ApiError;
 
 use super::body::{optional_str, required_query, required_str};
 use crate::api::refusals::JsonBodyRequired;
-use crate::api::{RequestParts, guarded_dispatch};
+use crate::api::{RequestParts, guarded_handler};
 use crate::overview::error::RestError;
 use crate::overview::version_id::{parse_ehr_id, parse_vo_id};
 use crate::state::AppState;
@@ -68,406 +67,353 @@ pub(crate) fn marks_routes() -> OpenApiRouter<AppState> {
         .routes(routes!(admin_retention_due))
 }
 
-/// Record a restriction of processing (`POST /admin/restriction`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module docs).
-#[utoipa::path(
-    post, path = "/admin/restriction", tag = "admin-marks",
-    request_body(content = serde_json::Value,
-                 description = "`{ \"ehr_id\": …, \"vo_id\": …?, \"ground\": …, \
-                                \"note\": …? }`. Omitting `vo_id` restricts the \
-                                whole EHR; `ground` is one of the four GDPR \
-                                Art. 18(1) points or `national`.",
-                 example = json!({
-                     "ehr_id": "7d44b88c-4199-4bad-97dc-d78268e01398",
-                     "ground": "gdpr-18-1-a",
-                     "note": "accuracy contested on 2026-09-15"
-                 })),
-    responses(
-        (status = 204, description = "The restriction is recorded and the marks \
-                                      it implies are in force. No body: the \
-                                      register is read back through \
-                                      `GET /admin/restriction`."),
-        (status = 400, description = "The body is not the object above, or the \
-                                      ground is outside the closed list.",
-         body = serde_json::Value),
-        (status = 401, description = "Unauthenticated. Our own authorization \
-                                      design — the released admin operations \
-                                      carry `security: []`.",
-         body = serde_json::Value),
-        (status = 403, description = "Authenticated but not in the Admin class.",
-         body = serde_json::Value),
-        (status = 404, description = "The EHR is unknown, or the named \
-                                      versioned object is not in it. Nothing is \
-                                      recorded.",
-         body = serde_json::Value),
-        (status = 405, description = "The admin API is disabled on this server.",
-         body = serde_json::Value),
-        JsonBodyRequired
-    )
-)]
-pub(crate) async fn admin_restrict_processing(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_restrict_processing", parts, |state, parts| {
-        super::body::gated(state, parts, restrict_processing)
-    })
-    .await
+guarded_handler! {
+    /// Record a restriction of processing (`POST /admin/restriction`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module docs).
+    #[utoipa::path(
+        post, path = "/admin/restriction", tag = "admin-marks",
+        request_body(content = serde_json::Value,
+                     description = "`{ \"ehr_id\": …, \"vo_id\": …?, \"ground\": …, \
+                                    \"note\": …? }`. Omitting `vo_id` restricts the \
+                                    whole EHR; `ground` is one of the four GDPR \
+                                    Art. 18(1) points or `national`.",
+                     example = json!({
+                         "ehr_id": "7d44b88c-4199-4bad-97dc-d78268e01398",
+                         "ground": "gdpr-18-1-a",
+                         "note": "accuracy contested on 2026-09-15"
+                     })),
+        responses(
+            (status = 204, description = "The restriction is recorded and the marks \
+                                          it implies are in force. No body: the \
+                                          register is read back through \
+                                          `GET /admin/restriction`."),
+            (status = 400, description = "The body is not the object above, or the \
+                                          ground is outside the closed list.",
+             body = serde_json::Value),
+            (status = 401, description = "Unauthenticated. Our own authorization \
+                                          design — the released admin operations \
+                                          carry `security: []`.",
+             body = serde_json::Value),
+            (status = 403, description = "Authenticated but not in the Admin class.",
+             body = serde_json::Value),
+            (status = 404, description = "The EHR is unknown, or the named \
+                                          versioned object is not in it. Nothing is \
+                                          recorded.",
+             body = serde_json::Value),
+            (status = 405, description = "The admin API is disabled on this server.",
+             body = serde_json::Value),
+            JsonBodyRequired
+        )
+    )]
+    admin_restrict_processing => |state, parts| {
+            super::body::gated(state, parts, restrict_processing)
+        }
 }
 
-/// Read one EHR's restriction register (`GET /admin/restriction`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module docs).
-#[utoipa::path(
-    get, path = "/admin/restriction", tag = "admin-marks",
-    params(("ehr_id" = String, Query, description = "The EHR whose register to read.")),
-    responses(
-        (status = 200, description = "The register rows, newest request first. \
-                                      A lift is a row with `lifted_at` set, \
-                                      never a deletion: GDPR Art. 18(3) makes \
-                                      the sequence the obligation.",
-         body = serde_json::Value),
-        (status = 400, description = "`ehr_id` is missing or not a UUID.",
-         body = serde_json::Value),
-        (status = 401, description = "Unauthenticated.", body = serde_json::Value),
-        (status = 403, description = "Not in the Admin class.", body = serde_json::Value),
-        (status = 404, description = "The EHR is unknown.", body = serde_json::Value),
-        (status = 405, description = "The admin API is disabled on this server.",
-         body = serde_json::Value)
-    )
-)]
-pub(crate) async fn admin_restriction_register(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "admin_restriction_register",
-        parts,
-        |state, parts| super::body::gated(state, parts, restriction_register),
-    )
-    .await
+guarded_handler! {
+    /// Read one EHR's restriction register (`GET /admin/restriction`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module docs).
+    #[utoipa::path(
+        get, path = "/admin/restriction", tag = "admin-marks",
+        params(("ehr_id" = String, Query, description = "The EHR whose register to read.")),
+        responses(
+            (status = 200, description = "The register rows, newest request first. \
+                                          A lift is a row with `lifted_at` set, \
+                                          never a deletion: GDPR Art. 18(3) makes \
+                                          the sequence the obligation.",
+             body = serde_json::Value),
+            (status = 400, description = "`ehr_id` is missing or not a UUID.",
+             body = serde_json::Value),
+            (status = 401, description = "Unauthenticated.", body = serde_json::Value),
+            (status = 403, description = "Not in the Admin class.", body = serde_json::Value),
+            (status = 404, description = "The EHR is unknown.", body = serde_json::Value),
+            (status = 405, description = "The admin API is disabled on this server.",
+             body = serde_json::Value)
+        )
+    )]
+    admin_restriction_register
+        => |state, parts| super::body::gated(state, parts, restriction_register)
 }
 
-/// Lift a restriction (`POST /admin/restriction/lift`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module docs).
-#[utoipa::path(
-    post, path = "/admin/restriction/lift", tag = "admin-marks",
-    request_body(content = serde_json::Value,
-                 description = "`{ \"ehr_id\": …, \"vo_id\": …? }` — the grain \
-                                to lift. Omitting `vo_id` lifts the whole-EHR \
-                                restrictions and leaves any object-scoped one \
-                                standing.",
-                 example = json!({ "ehr_id": "7d44b88c-4199-4bad-97dc-d78268e01398" })),
-    responses(
-        (status = 204, description = "Every in-force restriction at that grain \
-                                      carries a lift instant, and the marks are \
-                                      recomputed. Idempotent: lifting nothing \
-                                      succeeds. The controller informs the \
-                                      subject BEFORE calling this \
-                                      (GDPR Art. 18(3))."),
-        (status = 400, description = "The body is not the object above.",
-         body = serde_json::Value),
-        (status = 401, description = "Unauthenticated.", body = serde_json::Value),
-        (status = 403, description = "Not in the Admin class.", body = serde_json::Value),
-        (status = 404, description = "The EHR is unknown, or the named object is \
-                                      not in it.",
-         body = serde_json::Value),
-        (status = 405, description = "The admin API is disabled on this server.",
-         body = serde_json::Value),
-        JsonBodyRequired
-    )
-)]
-pub(crate) async fn admin_lift_restriction(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_lift_restriction", parts, |state, parts| {
-        super::body::gated(state, parts, lift_restriction)
-    })
-    .await
+guarded_handler! {
+    /// Lift a restriction (`POST /admin/restriction/lift`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module docs).
+    #[utoipa::path(
+        post, path = "/admin/restriction/lift", tag = "admin-marks",
+        request_body(content = serde_json::Value,
+                     description = "`{ \"ehr_id\": …, \"vo_id\": …? }` — the grain \
+                                    to lift. Omitting `vo_id` lifts the whole-EHR \
+                                    restrictions and leaves any object-scoped one \
+                                    standing.",
+                     example = json!({ "ehr_id": "7d44b88c-4199-4bad-97dc-d78268e01398" })),
+        responses(
+            (status = 204, description = "Every in-force restriction at that grain \
+                                          carries a lift instant, and the marks are \
+                                          recomputed. Idempotent: lifting nothing \
+                                          succeeds. The controller informs the \
+                                          subject BEFORE calling this \
+                                          (GDPR Art. 18(3))."),
+            (status = 400, description = "The body is not the object above.",
+             body = serde_json::Value),
+            (status = 401, description = "Unauthenticated.", body = serde_json::Value),
+            (status = 403, description = "Not in the Admin class.", body = serde_json::Value),
+            (status = 404, description = "The EHR is unknown, or the named object is \
+                                          not in it.",
+             body = serde_json::Value),
+            (status = 405, description = "The admin API is disabled on this server.",
+             body = serde_json::Value),
+            JsonBodyRequired
+        )
+    )]
+    admin_lift_restriction => |state, parts| {
+            super::body::gated(state, parts, lift_restriction)
+        }
 }
 
-/// Record, override or withdraw the research objection
-/// (`POST /admin/research-objection`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module docs).
-#[utoipa::path(
-    post, path = "/admin/research-objection", tag = "admin-marks",
-    request_body(content = serde_json::Value,
-                 description = "`{ \"ehr_id\": …, \"objected\": true|false, \
-                                \"ground\": …? }`. `objected: true` records the \
-                                objection; `ground` beside it records the \
-                                controller's Art. 21(6) public-interest \
-                                override, which puts the EHR back in the \
-                                research population and says on whose \
-                                authority; `objected: false` withdraws the \
-                                objection entirely.",
-                 example = json!({
-                     "ehr_id": "7d44b88c-4199-4bad-97dc-d78268e01398",
-                     "objected": true
-                 })),
-    responses(
-        (status = 204, description = "The mark is in force. While it stands, \
-                                      the EHR is absent from population AQL, \
-                                      from every Extract and from the event \
-                                      stream; a read of the record for care is \
-                                      unaffected, because Art. 21(6) reaches \
-                                      research processing and not the care \
-                                      record."),
-        (status = 400, description = "The body is not the object above, or a \
-                                      ground was given with a withdrawal.",
-         body = serde_json::Value),
-        (status = 401, description = "Unauthenticated.", body = serde_json::Value),
-        (status = 403, description = "Not in the Admin class.", body = serde_json::Value),
-        (status = 404, description = "The EHR is unknown.", body = serde_json::Value),
-        (status = 405, description = "The admin API is disabled on this server.",
-         body = serde_json::Value),
-        JsonBodyRequired
-    )
-)]
-pub(crate) async fn admin_research_objection(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_research_objection", parts, |state, parts| {
-        super::body::gated(state, parts, research_objection)
-    })
-    .await
+guarded_handler! {
+    /// Record, override or withdraw the research objection
+    /// (`POST /admin/research-objection`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module docs).
+    #[utoipa::path(
+        post, path = "/admin/research-objection", tag = "admin-marks",
+        request_body(content = serde_json::Value,
+                     description = "`{ \"ehr_id\": …, \"objected\": true|false, \
+                                    \"ground\": …? }`. `objected: true` records the \
+                                    objection; `ground` beside it records the \
+                                    controller's Art. 21(6) public-interest \
+                                    override, which puts the EHR back in the \
+                                    research population and says on whose \
+                                    authority; `objected: false` withdraws the \
+                                    objection entirely.",
+                     example = json!({
+                         "ehr_id": "7d44b88c-4199-4bad-97dc-d78268e01398",
+                         "objected": true
+                     })),
+        responses(
+            (status = 204, description = "The mark is in force. While it stands, \
+                                          the EHR is absent from population AQL, \
+                                          from every Extract and from the event \
+                                          stream; a read of the record for care is \
+                                          unaffected, because Art. 21(6) reaches \
+                                          research processing and not the care \
+                                          record."),
+            (status = 400, description = "The body is not the object above, or a \
+                                          ground was given with a withdrawal.",
+             body = serde_json::Value),
+            (status = 401, description = "Unauthenticated.", body = serde_json::Value),
+            (status = 403, description = "Not in the Admin class.", body = serde_json::Value),
+            (status = 404, description = "The EHR is unknown.", body = serde_json::Value),
+            (status = 405, description = "The admin API is disabled on this server.",
+             body = serde_json::Value),
+            JsonBodyRequired
+        )
+    )]
+    admin_research_objection => |state, parts| {
+            super::body::gated(state, parts, research_objection)
+        }
 }
 
-/// Read the retention register (`GET /admin/retention/policy`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module docs).
-#[utoipa::path(
-    get, path = "/admin/retention/policy", tag = "admin-marks",
-    responses(
-        (status = 200, description = "Every declared period, with the content \
-                                      kind, the EHDS priority category it is \
-                                      keyed on (null for every object of the \
-                                      kind), the registered origin it is keyed \
-                                      on (null for every origin), the jurisdiction, the anchor rule \
-                                      and the legal citation it rests on. This \
-                                      is the register GDPR Art. 30(1)(f), DSG \
-                                      Art. 25 Abs. 2 lit. d and EHDS Annex II \
-                                      3.4 are answered from.",
-         body = serde_json::Value),
-        (status = 401, description = "Unauthenticated.", body = serde_json::Value),
-        (status = 403, description = "Not in the Admin class.", body = serde_json::Value),
-        (status = 405, description = "The admin API is disabled on this server.",
-         body = serde_json::Value)
-    )
-)]
-pub(crate) async fn admin_retention_policies(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_retention_policies", parts, |state, parts| {
-        super::body::gated(state, parts, retention_policies)
-    })
-    .await
+guarded_handler! {
+    /// Read the retention register (`GET /admin/retention/policy`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module docs).
+    #[utoipa::path(
+        get, path = "/admin/retention/policy", tag = "admin-marks",
+        responses(
+            (status = 200, description = "Every declared period, with the content \
+                                          kind, the EHDS priority category it is \
+                                          keyed on (null for every object of the \
+                                          kind), the registered origin it is keyed \
+                                          on (null for every origin), the jurisdiction, the anchor rule \
+                                          and the legal citation it rests on. This \
+                                          is the register GDPR Art. 30(1)(f), DSG \
+                                          Art. 25 Abs. 2 lit. d and EHDS Annex II \
+                                          3.4 are answered from.",
+             body = serde_json::Value),
+            (status = 401, description = "Unauthenticated.", body = serde_json::Value),
+            (status = 403, description = "Not in the Admin class.", body = serde_json::Value),
+            (status = 405, description = "The admin API is disabled on this server.",
+             body = serde_json::Value)
+        )
+    )]
+    admin_retention_policies => |state, parts| {
+            super::body::gated(state, parts, retention_policies)
+        }
 }
 
-/// Declare a retention period (`PUT /admin/retention/policy`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module docs).
-#[utoipa::path(
-    put, path = "/admin/retention/policy", tag = "admin-marks",
-    request_body(content = serde_json::Value,
-                 description = "`{ \"kind\": …, \"jurisdiction\": …, \
-                                \"category\": …?, \"origin\": …?, \
-                                \"period\": …, \"anchor\": …, \
-                                \"source\": … }`. `kind` is COMPOSITION | \
-                                EHR_STATUS | FOLDER | EHR; `category`, when \
-                                present, keys the period on one EHDS priority \
-                                category as `[audit.categories]` names it (a \
-                                priority category by its code: \
-                                Patient-Summaries | Electronic-Prescriptions | \
-                                Electronic-Dispensations | Medical-Imaging | \
-                                Laboratory-Reports | Discharge-Reports, or as \
-                                <system>|<code>; a national category as the \
-                                <system>|<code> the map declares; or none), \
-                                stored as its <system>|<code> token, \
-                                and an object the map cannot classify takes \
-                                the longest period configured for its kind; \
-                                `origin`, when present, keys it on one origin \
-                                `[[origins.registered]]` declares, by its id, \
-                                matched against the origins each version \
-                                recorded at commit; \
-                                `period` is a PostgreSQL interval, `anchor` one \
-                                of last_commit | death | majority, and \
-                                `source` the legal citation the period rests \
-                                on.",
-                 example = json!({
-                     "kind": "COMPOSITION",
-                     "jurisdiction": "CH",
-                     "period": "20 years",
-                     "anchor": "last_commit",
-                     "source": "EPDV Art. 10 Abs. 1 lit. d"
-                 })),
-    responses(
-        (status = 204, description = "The period is declared, replacing any \
-                                      earlier one for that kind, category, \
-                                      origin and jurisdiction."),
-        (status = 400, description = "The body is not the object above, or the \
-                                      register refused the kind, the category, \
-                                      an unregistered origin, the anchor rule \
-                                      or a non-positive period.",
-         body = serde_json::Value),
-        (status = 401, description = "Unauthenticated.", body = serde_json::Value),
-        (status = 403, description = "Not in the Admin class.", body = serde_json::Value),
-        (status = 405, description = "The admin API is disabled on this server.",
-         body = serde_json::Value),
-        JsonBodyRequired
-    )
-)]
-pub(crate) async fn admin_put_retention_policy(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "admin_put_retention_policy",
-        parts,
-        |state, parts| super::body::gated(state, parts, put_retention_policy),
-    )
-    .await
+guarded_handler! {
+    /// Declare a retention period (`PUT /admin/retention/policy`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module docs).
+    #[utoipa::path(
+        put, path = "/admin/retention/policy", tag = "admin-marks",
+        request_body(content = serde_json::Value,
+                     description = "`{ \"kind\": …, \"jurisdiction\": …, \
+                                    \"category\": …?, \"origin\": …?, \
+                                    \"period\": …, \"anchor\": …, \
+                                    \"source\": … }`. `kind` is COMPOSITION | \
+                                    EHR_STATUS | FOLDER | EHR; `category`, when \
+                                    present, keys the period on one EHDS priority \
+                                    category as `[audit.categories]` names it (a \
+                                    priority category by its code: \
+                                    Patient-Summaries | Electronic-Prescriptions | \
+                                    Electronic-Dispensations | Medical-Imaging | \
+                                    Laboratory-Reports | Discharge-Reports, or as \
+                                    <system>|<code>; a national category as the \
+                                    <system>|<code> the map declares; or none), \
+                                    stored as its <system>|<code> token, \
+                                    and an object the map cannot classify takes \
+                                    the longest period configured for its kind; \
+                                    `origin`, when present, keys it on one origin \
+                                    `[[origins.registered]]` declares, by its id, \
+                                    matched against the origins each version \
+                                    recorded at commit; \
+                                    `period` is a PostgreSQL interval, `anchor` one \
+                                    of last_commit | death | majority, and \
+                                    `source` the legal citation the period rests \
+                                    on.",
+                     example = json!({
+                         "kind": "COMPOSITION",
+                         "jurisdiction": "CH",
+                         "period": "20 years",
+                         "anchor": "last_commit",
+                         "source": "EPDV Art. 10 Abs. 1 lit. d"
+                     })),
+        responses(
+            (status = 204, description = "The period is declared, replacing any \
+                                          earlier one for that kind, category, \
+                                          origin and jurisdiction."),
+            (status = 400, description = "The body is not the object above, or the \
+                                          register refused the kind, the category, \
+                                          an unregistered origin, the anchor rule \
+                                          or a non-positive period.",
+             body = serde_json::Value),
+            (status = 401, description = "Unauthenticated.", body = serde_json::Value),
+            (status = 403, description = "Not in the Admin class.", body = serde_json::Value),
+            (status = 405, description = "The admin API is disabled on this server.",
+             body = serde_json::Value),
+            JsonBodyRequired
+        )
+    )]
+    admin_put_retention_policy
+        => |state, parts| super::body::gated(state, parts, put_retention_policy)
 }
 
-/// Record an EHR's retention anchor and any EHR-wide hold
-/// (`PUT /admin/retention/anchor`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module docs).
-#[utoipa::path(
-    put, path = "/admin/retention/anchor", tag = "admin-marks",
-    request_body(content = serde_json::Value,
-                 description = "`{ \"ehr_id\": …, \"jurisdiction\": …, \
-                                \"anchored_at\": …?, \"hold_at\": …?, \
-                                \"hold_ground\": …? }`. `anchored_at` stays \
-                                absent until the anchor event is known to the \
-                                deployment; a hold needs both its instant and \
-                                its ground.",
-                 example = json!({
-                     "ehr_id": "7d44b88c-4199-4bad-97dc-d78268e01398",
-                     "jurisdiction": "CH",
-                     "anchored_at": "2026-01-31T00:00:00Z"
-                 })),
-    responses(
-        (status = 204, description = "The anchor is recorded. While a hold is \
-                                      set, the EHR is absent from the due list \
-                                      whatever its period says."),
-        (status = 400, description = "The body is not the object above, or the \
-                                      register refused a hold instant with no \
-                                      ground.",
-         body = serde_json::Value),
-        (status = 401, description = "Unauthenticated.", body = serde_json::Value),
-        (status = 403, description = "Not in the Admin class.", body = serde_json::Value),
-        (status = 404, description = "The EHR is unknown.", body = serde_json::Value),
-        (status = 405, description = "The admin API is disabled on this server.",
-         body = serde_json::Value),
-        JsonBodyRequired
-    )
-)]
-pub(crate) async fn admin_retention_anchor(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_retention_anchor", parts, |state, parts| {
-        super::body::gated(state, parts, retention_anchor)
-    })
-    .await
+guarded_handler! {
+    /// Record an EHR's retention anchor and any EHR-wide hold
+    /// (`PUT /admin/retention/anchor`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module docs).
+    #[utoipa::path(
+        put, path = "/admin/retention/anchor", tag = "admin-marks",
+        request_body(content = serde_json::Value,
+                     description = "`{ \"ehr_id\": …, \"jurisdiction\": …, \
+                                    \"anchored_at\": …?, \"hold_at\": …?, \
+                                    \"hold_ground\": …? }`. `anchored_at` stays \
+                                    absent until the anchor event is known to the \
+                                    deployment; a hold needs both its instant and \
+                                    its ground.",
+                     example = json!({
+                         "ehr_id": "7d44b88c-4199-4bad-97dc-d78268e01398",
+                         "jurisdiction": "CH",
+                         "anchored_at": "2026-01-31T00:00:00Z"
+                     })),
+        responses(
+            (status = 204, description = "The anchor is recorded. While a hold is \
+                                          set, the EHR is absent from the due list \
+                                          whatever its period says."),
+            (status = 400, description = "The body is not the object above, or the \
+                                          register refused a hold instant with no \
+                                          ground.",
+             body = serde_json::Value),
+            (status = 401, description = "Unauthenticated.", body = serde_json::Value),
+            (status = 403, description = "Not in the Admin class.", body = serde_json::Value),
+            (status = 404, description = "The EHR is unknown.", body = serde_json::Value),
+            (status = 405, description = "The admin API is disabled on this server.",
+             body = serde_json::Value),
+            JsonBodyRequired
+        )
+    )]
+    admin_retention_anchor => |state, parts| {
+            super::body::gated(state, parts, retention_anchor)
+        }
 }
 
-/// Place or release a per-object retention hold
-/// (`POST /admin/retention/hold`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module docs).
-#[utoipa::path(
-    post, path = "/admin/retention/hold", tag = "admin-marks",
-    request_body(content = serde_json::Value,
-                 description = "`{ \"vo_id\": …, \"held\": true|false }` — the \
-                                per-object exemption EPDV Art. 10 Abs. 2 lit. b \
-                                lets a patient ask for.",
-                 example = json!({
-                     "vo_id": "df58b2ee-30bd-4b2c-9b7d-3a0f8e5c6d21",
-                     "held": true
-                 })),
-    responses(
-        (status = 204, description = "The hold is in force (or released). A \
-                                      held object is counted separately in the \
-                                      due list and is never part of what a \
-                                      disposal would cover."),
-        (status = 400, description = "The body is not the object above.",
-         body = serde_json::Value),
-        (status = 401, description = "Unauthenticated.", body = serde_json::Value),
-        (status = 403, description = "Not in the Admin class.", body = serde_json::Value),
-        (status = 404, description = "No versioned object with that id.",
-         body = serde_json::Value),
-        (status = 405, description = "The admin API is disabled on this server.",
-         body = serde_json::Value),
-        JsonBodyRequired
-    )
-)]
-pub(crate) async fn admin_retention_hold(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_retention_hold", parts, |state, parts| {
-        super::body::gated(state, parts, retention_hold)
-    })
-    .await
+guarded_handler! {
+    /// Place or release a per-object retention hold
+    /// (`POST /admin/retention/hold`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module docs).
+    #[utoipa::path(
+        post, path = "/admin/retention/hold", tag = "admin-marks",
+        request_body(content = serde_json::Value,
+                     description = "`{ \"vo_id\": …, \"held\": true|false }` — the \
+                                    per-object exemption EPDV Art. 10 Abs. 2 lit. b \
+                                    lets a patient ask for.",
+                     example = json!({
+                         "vo_id": "df58b2ee-30bd-4b2c-9b7d-3a0f8e5c6d21",
+                         "held": true
+                     })),
+        responses(
+            (status = 204, description = "The hold is in force (or released). A \
+                                          held object is counted separately in the \
+                                          due list and is never part of what a \
+                                          disposal would cover."),
+            (status = 400, description = "The body is not the object above.",
+             body = serde_json::Value),
+            (status = 401, description = "Unauthenticated.", body = serde_json::Value),
+            (status = 403, description = "Not in the Admin class.", body = serde_json::Value),
+            (status = 404, description = "No versioned object with that id.",
+             body = serde_json::Value),
+            (status = 405, description = "The admin API is disabled on this server.",
+             body = serde_json::Value),
+            JsonBodyRequired
+        )
+    )]
+    admin_retention_hold => |state, parts| {
+            super::body::gated(state, parts, retention_hold)
+        }
 }
 
-/// What has fallen due (`GET /admin/retention/due`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module docs).
-#[utoipa::path(
-    get, path = "/admin/retention/due", tag = "admin-marks",
-    params(("limit" = Option<i64>, Query,
-            description = "Maximum rows to return; 100 when absent.")),
-    responses(
-        (status = 200, description = "The EHRs whose period has run and which \
-                                      carry no EHR-wide hold, oldest first, \
-                                      one row per period (and per EHDS \
-                                      priority category where the period is \
-                                      keyed on one), each with the citation \
-                                      the period rests on and the counts of \
-                                      objects due and objects exempted by a \
-                                      per-object hold. \
-                                      A LIST, never a disposal: the server \
-                                      deletes no clinical content on a timer \
-                                      (RM common master06 §Logical Deletion), \
-                                      and acting on a row is the controller's \
-                                      decision, carried out through the \
-                                      physical delete.",
-         body = serde_json::Value),
-        (status = 400, description = "`limit` is not a positive number.",
-         body = serde_json::Value),
-        (status = 401, description = "Unauthenticated.", body = serde_json::Value),
-        (status = 403, description = "Not in the Admin class.", body = serde_json::Value),
-        (status = 405, description = "The admin API is disabled on this server.",
-         body = serde_json::Value)
-    )
-)]
-pub(crate) async fn admin_retention_due(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_retention_due", parts, |state, parts| {
-        super::body::gated(state, parts, retention_due)
-    })
-    .await
+guarded_handler! {
+    /// What has fallen due (`GET /admin/retention/due`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module docs).
+    #[utoipa::path(
+        get, path = "/admin/retention/due", tag = "admin-marks",
+        params(("limit" = Option<i64>, Query,
+                description = "Maximum rows to return; 100 when absent.")),
+        responses(
+            (status = 200, description = "The EHRs whose period has run and which \
+                                          carry no EHR-wide hold, oldest first, \
+                                          one row per period (and per EHDS \
+                                          priority category where the period is \
+                                          keyed on one), each with the citation \
+                                          the period rests on and the counts of \
+                                          objects due and objects exempted by a \
+                                          per-object hold. \
+                                          A LIST, never a disposal: the server \
+                                          deletes no clinical content on a timer \
+                                          (RM common master06 §Logical Deletion), \
+                                          and acting on a row is the controller's \
+                                          decision, carried out through the \
+                                          physical delete.",
+             body = serde_json::Value),
+            (status = 400, description = "`limit` is not a positive number.",
+             body = serde_json::Value),
+            (status = 401, description = "Unauthenticated.", body = serde_json::Value),
+            (status = 403, description = "Not in the Admin class.", body = serde_json::Value),
+            (status = 405, description = "The admin API is disabled on this server.",
+             body = serde_json::Value)
+        )
+    )]
+    admin_retention_due => |state, parts| {
+            super::body::gated(state, parts, retention_due)
+        }
 }
 
 // ── operations ────────────────────────────────────────────────────────────────

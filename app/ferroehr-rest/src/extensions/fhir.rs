@@ -14,7 +14,6 @@
 //! boundary.
 
 use axum::Json;
-use axum::extract::State;
 use axum::response::{IntoResponse, Response};
 use http::StatusCode;
 use http::header::{CONTENT_TYPE, HeaderValue};
@@ -30,7 +29,7 @@ use utoipa_axum::routes;
 use ferroehr::error::ServiceError;
 use ferroehr::system_log::store::{AuditCriterion, AuditElement, AuditToken, AuditTokenSystem};
 
-use crate::api::{RequestParts, guarded_dispatch};
+use crate::api::{RequestParts, guarded_handler};
 use crate::extensions::access::authz::roles::RbacDecision;
 use crate::overview::error::RestError;
 use crate::state::AppState;
@@ -40,58 +39,48 @@ const FHIR_JSON: &str = "application/fhir+json";
 
 /// The ITI-81 route as a native `utoipa-axum` router (its path carries
 /// `/fhir/r4` and is nested under the REST root, beside the openEHR base path).
-/// Served through [`guarded_dispatch`].
+/// Served through [`guarded_dispatch`](crate::api::guarded_dispatch).
 pub(crate) fn routes() -> OpenApiRouter<AppState> {
     OpenApiRouter::new().routes(routes!(audit_event_search))
 }
 
-/// The RESTful-ATNA **ITI-81 Retrieve ATNA Audit Event** transaction
-/// (`GET /fhir/r4/AuditEvent`): a FHIR search over the local Audit Record
-/// Repository, returning a `searchset` Bundle of stored FHIR R4 `AuditEvent`
-/// documents (IHE BALP shape). Gated by the local store (`[audit.store]`; 404
-/// when off) and admin-only under RBAC (the node's security log is an operator
-/// surface). `ihe-atna` reads the query: at least one `date` is required
-/// (`RESTful` ATNA §3.81.4.1.2.1), and `patient`, `agent`, `entity` (or their
-/// `.identifier` forms), `outcome`, `action`, `_count` and `_offset` are
-/// applied; a parameter the store cannot apply is a `400` `not-supported`,
-/// and one `ihe-atna` does not know is ignored (§3.81.4.1.3).
-///
-/// OUR OWN EXTENSION as far as openEHR is concerned — no openEHR spec governs
-/// this: the ITS-REST resource set defines no audit-retrieval endpoint. Its
-/// basis is IHE ITI TF-2, transaction **ITI-81 (Retrieve ATNA Audit Event)**,
-/// whose RESTful-ATNA option this realizes over the local Audit Record
-/// Repository.
-#[utoipa::path(
-    get, path = "/fhir/r4/AuditEvent", tag = "audit",
-    params(
-        ("date" = Vec<String>, Query, description = "Required, at least one (RESTful ATNA §3.81.4.1.2.1): event-time bounds, FHIR date values with the `eq`, `gt`, `lt`, `ge`, `le`, `sa` or `eb` prefix (e.g. `date=ge2026-07-01&date=le2026-07-18T00:00:00Z`)."),
-        ("patient" = Option<String>, Query, description = "The recorded patient (EHR subject) id. Required for a caller holding `authz.rbac.subject_audit_role`, which reads the log for one subject at a time."),
-        ("agent" = Option<String>, Query, description = "The authenticated principal."),
-        ("entity" = Option<String>, Query, description = "The touched resource id."),
-        ("outcome" = Option<String>, Query, description = "The outcome indicator: 0, 4, 8 or 12."),
-        ("action" = Option<String>, Query, description = "The action code: C, R, U, D or E."),
-        ("_count" = Option<i64>, Query, description = "Page size (default 50, max 1000)."),
-        ("_offset" = Option<i64>, Query, description = "Page offset.")
-    ),
-    responses(
-        (status = 200, description = "A FHIR searchset Bundle of AuditEvent resources.", content_type = "application/fhir+json"),
-        (status = 400, description = "No `date`, a malformed search parameter (`invalid`), or one the local store cannot apply (`not-supported`), as an OperationOutcome.", content_type = "application/fhir+json"),
-        (status = 403, description = "Caller lacks the admin role, or holds only the subject-scoped audit role and named no `patient` (OperationOutcome).", content_type = "application/fhir+json"),
-        (status = 404, description = "The local audit record repository is disabled (OperationOutcome). With authentication enabled, an unauthenticated request to a disabled group is answered `401` first (the group gate sits behind authentication).", content_type = "application/fhir+json")
-    )
-)]
-pub(crate) async fn audit_event_search(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "audit_event_search",
-        parts,
-        |state, parts| async move { Ok(audit_search(&state, &parts).await) },
-    )
-    .await
+guarded_handler! {
+    /// The RESTful-ATNA **ITI-81 Retrieve ATNA Audit Event** transaction
+    /// (`GET /fhir/r4/AuditEvent`): a FHIR search over the local Audit Record
+    /// Repository, returning a `searchset` Bundle of stored FHIR R4 `AuditEvent`
+    /// documents (IHE BALP shape). Gated by the local store (`[audit.store]`; 404
+    /// when off) and admin-only under RBAC (the node's security log is an operator
+    /// surface). `ihe-atna` reads the query: at least one `date` is required
+    /// (`RESTful` ATNA §3.81.4.1.2.1), and `patient`, `agent`, `entity` (or their
+    /// `.identifier` forms), `outcome`, `action`, `_count` and `_offset` are
+    /// applied; a parameter the store cannot apply is a `400` `not-supported`,
+    /// and one `ihe-atna` does not know is ignored (§3.81.4.1.3).
+    ///
+    /// OUR OWN EXTENSION as far as openEHR is concerned — no openEHR spec governs
+    /// this: the ITS-REST resource set defines no audit-retrieval endpoint. Its
+    /// basis is IHE ITI TF-2, transaction **ITI-81 (Retrieve ATNA Audit Event)**,
+    /// whose RESTful-ATNA option this realizes over the local Audit Record
+    /// Repository.
+    #[utoipa::path(
+        get, path = "/fhir/r4/AuditEvent", tag = "audit",
+        params(
+            ("date" = Vec<String>, Query, description = "Required, at least one (RESTful ATNA §3.81.4.1.2.1): event-time bounds, FHIR date values with the `eq`, `gt`, `lt`, `ge`, `le`, `sa` or `eb` prefix (e.g. `date=ge2026-07-01&date=le2026-07-18T00:00:00Z`)."),
+            ("patient" = Option<String>, Query, description = "The recorded patient (EHR subject) id. Required for a caller holding `authz.rbac.subject_audit_role`, which reads the log for one subject at a time."),
+            ("agent" = Option<String>, Query, description = "The authenticated principal."),
+            ("entity" = Option<String>, Query, description = "The touched resource id."),
+            ("outcome" = Option<String>, Query, description = "The outcome indicator: 0, 4, 8 or 12."),
+            ("action" = Option<String>, Query, description = "The action code: C, R, U, D or E."),
+            ("_count" = Option<i64>, Query, description = "Page size (default 50, max 1000)."),
+            ("_offset" = Option<i64>, Query, description = "Page offset.")
+        ),
+        responses(
+            (status = 200, description = "A FHIR searchset Bundle of AuditEvent resources.", content_type = "application/fhir+json"),
+            (status = 400, description = "No `date`, a malformed search parameter (`invalid`), or one the local store cannot apply (`not-supported`), as an OperationOutcome.", content_type = "application/fhir+json"),
+            (status = 403, description = "Caller lacks the admin role, or holds only the subject-scoped audit role and named no `patient` (OperationOutcome).", content_type = "application/fhir+json"),
+            (status = 404, description = "The local audit record repository is disabled (OperationOutcome). With authentication enabled, an unauthenticated request to a disabled group is answered `401` first (the group gate sits behind authentication).", content_type = "application/fhir+json")
+        )
+    )]
+    audit_event_search => |state, parts| async move { Ok(audit_search(&state, &parts).await) }
 }
 
 /// `GET /fhir/r4/AuditEvent` — the ITI-81 retrieval over the local Audit
