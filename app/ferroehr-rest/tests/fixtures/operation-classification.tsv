@@ -130,8 +130,8 @@ management_prometheus	false	-	None	None	-	Skip	Some(Audited { action: Execute, o
 management_status	false	-	None	None	-	Skip	Some(Audited { action: Execute, object: ApplicationActivity })	-	false	false	false
 message_export_ehr_extracts	false	-	Some(Ehr)	Some(Read)	-	Pre	None	-	false	false	false
 message_export_ehrs	false	-	Some(Ehr)	Some(Read)	-	Pre	None	-	false	false	false
-message_import_ehr	false	-	None	None	-	Skip	None	-	false	false	false
-message_import_ehr_extract	false	-	None	None	-	Skip	None	-	false	false	false
+message_import_ehr	false	-	Some(Ehr)	Some(Create)	-	Pre	Some(Audited { action: Create, object: Ehr })	-	false	false	false
+message_import_ehr_extract	false	-	Some(Ehr)	Some(Update)	-	Pre	Some(Audited { action: Update, object: Ehr })	-	false	false	false
 metrics_detail	false	-	None	None	-	Skip	None	-	false	false	false
 metrics_list	false	-	None	None	-	Skip	None	-	false	false	false
 openapi_json	false	-	None	None	-	Skip	None	-	false	false	false

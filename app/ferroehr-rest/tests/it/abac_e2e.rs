@@ -1585,3 +1585,73 @@ async fn an_export_of_the_own_patients_ehr_is_served() {
     assert_eq!(code, StatusCode::OK, "{extracts}");
     assert_eq!(extracts.as_array().map(Vec::len), Some(1));
 }
+
+/// A `POST` of the CNF messaging corpus extract `name` to `path`, for a caller
+/// whose token carries `patient`.
+fn import(path: &str, name: &str, patient: Option<&str>) -> Request<Body> {
+    let file = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../corpus/fixtures/messaging")
+        .join(name);
+    let extract = std::fs::read_to_string(&file).expect("read the corpus extract");
+    Request::builder()
+        .method("POST")
+        .uri(common::full(path))
+        .header("authorization", bearer(patient))
+        .header("content-type", "application/json")
+        .header("x-forwarded-for", "203.0.113.9")
+        .body(Body::from(extract))
+        .expect("request")
+}
+
+/// Both EHR Extract import routes pass the ABAC pre-check a direct write
+/// passes: an import into another patient's EHR is refused with `403`, and so
+/// is either import for a token without the configured patient claim. Before,
+/// neither route reached the ABAC policy-enforcement point.
+#[tokio::test]
+async fn an_import_outside_the_patient_scope_is_forbidden() {
+    let (_pg, svc) = service(None).await;
+    let app = abac_app(svc, true).await;
+
+    assert_eq!(
+        status(
+            &app,
+            import(
+                &format!("/message/import/{EHR_OTHER}"),
+                "ehr_extract.folder.json",
+                Some(PATIENT_OWN)
+            )
+        )
+        .await,
+        StatusCode::FORBIDDEN,
+        "an import into another patient's EHR is refused"
+    );
+    for path in [
+        "/message/import".to_owned(),
+        format!("/message/import/{EHR_OWN}"),
+    ] {
+        assert_eq!(
+            status(&app, import(&path, "ehr_extract.v1.json", None)).await,
+            StatusCode::FORBIDDEN,
+            "{path} needs the patient claim"
+        );
+    }
+}
+
+/// An import into the caller's own EHR clears the gate and lands.
+#[tokio::test]
+async fn an_import_into_the_own_patients_ehr_lands() {
+    let (_pg, svc, seed) = service_and_seed_app().await;
+    seed_ehr(&seed, EHR_OWN).await;
+    let app = abac_app(svc, true).await;
+
+    let (code, body) = common::send_body(
+        &app,
+        import(
+            &format!("/message/import/{EHR_OWN}"),
+            "ehr_extract.folder.json",
+            Some(PATIENT_OWN),
+        ),
+    )
+    .await;
+    assert_eq!(code, StatusCode::NO_CONTENT, "{body}");
+}
