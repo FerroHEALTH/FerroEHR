@@ -30,7 +30,7 @@ use utoipa_axum::routes;
 use ferroehr::error::ServiceError;
 use ferroehr::system_log::store::{AuditCriterion, AuditElement, AuditToken, AuditTokenSystem};
 
-use crate::api::{BoxResponse, RequestParts, guarded_dispatch};
+use crate::api::{RequestParts, guarded_dispatch};
 use crate::extensions::access::authz::roles::RbacDecision;
 use crate::overview::error::RestError;
 use crate::state::AppState;
@@ -40,8 +40,7 @@ const FHIR_JSON: &str = "application/fhir+json";
 
 /// The ITI-81 route as a native `utoipa-axum` router (its path carries
 /// `/fhir/r4` and is nested under the REST root, beside the openEHR base path).
-/// Served through [`guarded_dispatch`] →
-/// [`dispatch`].
+/// Served through [`guarded_dispatch`].
 pub(crate) fn routes() -> OpenApiRouter<AppState> {
     OpenApiRouter::new().routes(routes!(audit_event_search))
 }
@@ -86,12 +85,13 @@ pub(crate) async fn audit_event_search(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "audit_event_search", parts, dispatch).await
-}
-
-/// Dispatches the ITI-81 retrieval behind the shared request guard.
-pub(crate) fn dispatch(state: AppState, _op: &'static str, parts: RequestParts) -> BoxResponse {
-    Box::pin(async move { audit_search(&state, &parts).await })
+    guarded_dispatch(
+        state,
+        "audit_event_search",
+        parts,
+        |state, parts| async move { Ok(audit_search(&state, &parts).await) },
+    )
+    .await
 }
 
 /// `GET /fhir/r4/AuditEvent` — the ITI-81 retrieval over the local Audit

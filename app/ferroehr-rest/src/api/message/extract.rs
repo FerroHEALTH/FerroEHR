@@ -35,7 +35,7 @@
 )]
 
 use axum::extract::State;
-use axum::response::{IntoResponse, Response};
+use axum::response::Response;
 use http::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -46,7 +46,7 @@ use openehr_rm::v1_2::ehr_extract::common::extract_spec::ExtractSpec;
 
 use ferroehr::ids::EhrId;
 
-use crate::api::{BoxResponse, RequestParts, guarded_dispatch};
+use crate::api::{RequestParts, guarded_dispatch};
 use crate::extensions::access::{ehr_access, opt_out, patient_scope};
 use crate::negotiate;
 use crate::overview::error::RestError;
@@ -55,8 +55,8 @@ use crate::state::AppState;
 
 /// The EHR-Extract extension routes as a native `utoipa-axum` router — **no
 /// ITS-REST contract** (see the module docs). Group-relative paths (nested
-/// under the extensions root); every operation runs through [`guarded_dispatch`] with
-/// [`dispatch`].
+/// under the extensions root); every operation runs through [`guarded_dispatch`] onto
+/// its handler.
 pub(crate) fn extract_routes() -> OpenApiRouter<AppState> {
     // One `routes!` per PATH (handlers in a single call must share the path).
     OpenApiRouter::new()
@@ -102,7 +102,7 @@ pub(crate) async fn message_export_ehrs(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "message_export_ehrs", parts, dispatch).await
+    guarded_dispatch(state, "message_export_ehrs", parts, export_ehrs).await
 }
 
 /// Export EXTRACTs by `EXTRACT_SPEC` (`POST /message/export`).
@@ -192,7 +192,13 @@ pub(crate) async fn message_export_ehr_extracts(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "message_export_ehr_extracts", parts, dispatch).await
+    guarded_dispatch(
+        state,
+        "message_export_ehr_extracts",
+        parts,
+        export_ehr_extracts,
+    )
+    .await
 }
 
 /// Import a whole EHR from an EXTRACT (`POST /message/import{?ehr_id}`).
@@ -250,7 +256,7 @@ pub(crate) async fn message_import_ehr(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "message_import_ehr", parts, dispatch).await
+    guarded_dispatch(state, "message_import_ehr", parts, import_ehr).await
 }
 
 /// Import an EXTRACT into an existing EHR
@@ -306,66 +312,72 @@ pub(crate) async fn message_import_ehr_extract(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "message_import_ehr_extract", parts, dispatch).await
+    guarded_dispatch(
+        state,
+        "message_import_ehr_extract",
+        parts,
+        import_ehr_extract,
+    )
+    .await
 }
 
-// ── dispatch ─────────────────────────────────────────────────────────────────
+// ── operations ────────────────────────────────────────────────────────────────
 
-pub(crate) fn dispatch(state: AppState, op: &'static str, parts: RequestParts) -> BoxResponse {
-    Box::pin(async move {
-        // Boxed like the sibling dispatchers: the import arms' futures are large.
-        Box::pin(run(state, op, parts))
-            .await
-            .unwrap_or_else(IntoResponse::into_response)
-    })
-}
-
-async fn run(
+/// The `message_export_ehrs` operation.
+pub(crate) async fn export_ehrs(
     state: AppState,
-    op: &'static str,
     parts: RequestParts,
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
+    let ehr_id = super::path_ehr_id(&parts)?;
+    let extracts = state.backend().extract_ehrs(ehr_id).await?;
+    Ok(negotiate::body::respond(h, StatusCode::OK, &extracts))
+}
 
-    match op {
-        "message_export_ehrs" => {
-            let ehr_id = super::path_ehr_id(&parts)?;
-            let extracts = state.backend().extract_ehrs(ehr_id).await?;
-            Ok(negotiate::body::respond(h, StatusCode::OK, &extracts))
-        }
-        "message_export_ehr_extracts" => {
-            let spec = negotiate::decode::rm_value::<ExtractSpec>(h, &parts.body)?;
-            let ehr_ids = state.backend().manifest_ehr_ids(&spec).await?;
-            if let Err(refusal) = ehr_access::enforce_each(&state, &ehr_ids).await {
-                return Ok(*refusal);
-            }
-            if let Err(refusal) = patient_scope::each(&state, &ehr_ids).await {
-                return Ok(*refusal);
-            }
-            opt_out::record_overrides(&state, op, &ehr_ids).await?;
-            let extracts = state.backend().export_ehr_extracts(spec).await?;
-            Ok(negotiate::body::respond(h, StatusCode::OK, &extracts))
-        }
-        "message_import_ehr" => {
-            let requested = query_ehr_id(&parts)?;
-            let extract = read_extract(&parts)?;
-            let created = state.backend().import_ehr(requested, extract).await?;
-            Ok(negotiate::prefer::identifier_response(
-                h,
-                StatusCode::CREATED,
-                &created.to_string(),
-            ))
-        }
-        "message_import_ehr_extract" => {
-            let ehr_id = super::path_ehr_id(&parts)?;
-            let extract = read_extract(&parts)?;
-            state.backend().import_ehr_extract(ehr_id, extract).await?;
-            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
-        }
-        other => Err(RestError::from(ApiError::Internal(format!(
-            "unrouted message extract operation: {other}"
-        )))),
+/// The `message_export_ehr_extracts` operation.
+pub(crate) async fn export_ehr_extracts(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let spec = negotiate::decode::rm_value::<ExtractSpec>(h, &parts.body)?;
+    let ehr_ids = state.backend().manifest_ehr_ids(&spec).await?;
+    if let Err(refusal) = ehr_access::enforce_each(&state, &ehr_ids).await {
+        return Ok(*refusal);
     }
+    if let Err(refusal) = patient_scope::each(&state, &ehr_ids).await {
+        return Ok(*refusal);
+    }
+    opt_out::record_overrides(&state, "message_export_ehr_extracts", &ehr_ids).await?;
+    let extracts = state.backend().export_ehr_extracts(spec).await?;
+    Ok(negotiate::body::respond(h, StatusCode::OK, &extracts))
+}
+
+/// The `message_import_ehr` operation.
+pub(crate) async fn import_ehr(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let requested = query_ehr_id(&parts)?;
+    let extract = read_extract(&parts)?;
+    let created = state.backend().import_ehr(requested, extract).await?;
+    Ok(negotiate::prefer::identifier_response(
+        h,
+        StatusCode::CREATED,
+        &created.to_string(),
+    ))
+}
+
+/// The `message_import_ehr_extract` operation.
+pub(crate) async fn import_ehr_extract(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let ehr_id = super::path_ehr_id(&parts)?;
+    let extract = read_extract(&parts)?;
+    state.backend().import_ehr_extract(ehr_id, extract).await?;
+    Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
 }
 
 /// Decode the request body as a canonical `EXTRACT` (JSON or XML, per the

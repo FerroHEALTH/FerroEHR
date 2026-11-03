@@ -82,12 +82,9 @@ pub(crate) async fn admin_delay_access(
     State(state): State<AppState>,
     request: Request,
 ) -> Response {
-    super::body::handle(
-        state,
-        request,
-        "admin_delay_access",
-        super::body::dispatch::<AccessDelayRoutes>,
-    )
+    super::body::handle(state, request, "admin_delay_access", |state, parts| {
+        super::body::gated(state, parts, delay)
+    })
     .await
 }
 
@@ -115,7 +112,7 @@ pub(crate) async fn admin_access_delay_register(
         state,
         request,
         "admin_access_delay_register",
-        super::body::dispatch::<AccessDelayRoutes>,
+        |state, parts| super::body::gated(state, parts, register),
     )
     .await
 }
@@ -155,43 +152,48 @@ pub(crate) async fn admin_release_access_delay(
         state,
         request,
         "admin_release_access_delay",
-        super::body::dispatch::<AccessDelayRoutes>,
+        |state, parts| super::body::gated(state, parts, release),
     )
     .await
 }
 
-/// The access delay routes' operations.
-struct AccessDelayRoutes;
+/// The `admin_access_delay_register` operation.
+async fn register(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+    let ehr_id = required_query(&parts, "ehr_id")?;
+    let rows = state
+        .backend()
+        .access_delay_register(parse_ehr_id(&ehr_id)?)
+        .await?;
+    let body = serde_json::json!({ "access_delays": rows });
+    Ok(negotiate::body::respond(
+        &parts.headers,
+        StatusCode::OK,
+        &body,
+    ))
+}
 
-impl super::body::RegisterRoutes for AccessDelayRoutes {
-    async fn run(state: &AppState, op: &str, parts: &RequestParts) -> Result<Response, RestError> {
-        let backend = state.backend();
-        if op == "admin_access_delay_register" {
-            let ehr_id = required_query(parts, "ehr_id")?;
-            let rows = backend
-                .access_delay_register(parse_ehr_id(&ehr_id)?)
-                .await?;
-            let body = serde_json::json!({ "access_delays": rows });
-            return Ok(negotiate::body::respond(
-                &parts.headers,
-                StatusCode::OK,
-                &body,
-            ));
-        }
-        let body = negotiate::decode::json_value(&parts.headers, &parts.body)?;
-        let ehr_id = required_str(&body, "ehr_id")?;
-        let vo_id = required_str(&body, "vo_id")?;
-        if op == "admin_delay_access" {
-            let until = optional_str(&body, "until")?;
-            let note = optional_str(&body, "note")?;
-            backend
-                .delay_person_access(parse_ehr_id(ehr_id)?, parse_vo_id(vo_id)?, until, note)
-                .await?;
-        } else {
-            backend
-                .release_person_access(parse_ehr_id(ehr_id)?, parse_vo_id(vo_id)?)
-                .await?;
-        }
-        Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
-    }
+/// The `admin_delay_access` operation.
+async fn delay(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+    let body = negotiate::decode::json_value(&parts.headers, &parts.body)?;
+    let ehr_id = required_str(&body, "ehr_id")?;
+    let vo_id = required_str(&body, "vo_id")?;
+    let until = optional_str(&body, "until")?;
+    let note = optional_str(&body, "note")?;
+    state
+        .backend()
+        .delay_person_access(parse_ehr_id(ehr_id)?, parse_vo_id(vo_id)?, until, note)
+        .await?;
+    Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
+}
+
+/// The `admin_release_access_delay` operation.
+async fn release(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+    let body = negotiate::decode::json_value(&parts.headers, &parts.body)?;
+    let ehr_id = required_str(&body, "ehr_id")?;
+    let vo_id = required_str(&body, "vo_id")?;
+    state
+        .backend()
+        .release_person_access(parse_ehr_id(ehr_id)?, parse_vo_id(vo_id)?)
+        .await?;
+    Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
 }

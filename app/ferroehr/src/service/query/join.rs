@@ -430,8 +430,7 @@ fn party_ids(rows: &[Vec<Value>], column: usize) -> Result<Vec<VoId>, Failure> {
     rows.iter()
         .map(|row| {
             let uid = row.get(column).and_then(Value::as_str).unwrap_or_default();
-            let object = uid.split("::").next().unwrap_or_default();
-            Uuid::parse_str(object).map(VoId).map_err(|e| {
+            VoId::from_uid_head(uid).map_err(|e| {
                 Failure::analysis(ServiceError::internal(
                     "read a party row's versioned-object id",
                     e,

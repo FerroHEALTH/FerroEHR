@@ -40,7 +40,7 @@
 )]
 
 use axum::extract::State;
-use axum::response::{IntoResponse, Response};
+use axum::response::Response;
 use http::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -50,7 +50,7 @@ use openehr_its::rest::runtime::ApiError;
 
 use super::body::{AdminDisabled, NotAdminClass};
 use crate::api::refusals::JsonBodyRequired;
-use crate::api::{BoxResponse, RequestParts, guarded_dispatch};
+use crate::api::{RequestParts, guarded_dispatch};
 use crate::negotiate;
 use crate::overview::error::RestError;
 use crate::overview::version_id::{parse_ehr_id, parse_party_id};
@@ -58,8 +58,8 @@ use crate::state::AppState;
 
 /// The archive extension routes as a native `utoipa-axum` router — **no
 /// ITS-REST contract** (see the module docs). Group-relative paths (nested
-/// under the extensions root); every operation runs through [`guarded_dispatch`] with
-/// [`dispatch`].
+/// under the extensions root); every operation runs through [`guarded_dispatch`] onto
+/// its handler.
 pub(crate) fn archive_routes() -> OpenApiRouter<AppState> {
     // One `routes!` per PATH (handlers in a single call must share the path).
     OpenApiRouter::new()
@@ -112,7 +112,10 @@ pub(crate) async fn admin_archive_ehrs(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_archive_ehrs", parts, dispatch).await
+    guarded_dispatch(state, "admin_archive_ehrs", parts, |state, parts| {
+        super::body::gated(state, parts, archive_ehrs)
+    })
+    .await
 }
 
 /// Move selected parties to archival storage (`POST /admin/archive/parties`).
@@ -158,7 +161,10 @@ pub(crate) async fn admin_archive_parties(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_archive_parties", parts, dispatch).await
+    guarded_dispatch(state, "admin_archive_parties", parts, |state, parts| {
+        super::body::gated(state, parts, archive_parties)
+    })
+    .await
 }
 
 /// Bring selected EHRs back from archival storage
@@ -216,7 +222,13 @@ pub(crate) async fn admin_restore_archived_ehrs(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_restore_archived_ehrs", parts, dispatch).await
+    guarded_dispatch(
+        state,
+        "admin_restore_archived_ehrs",
+        parts,
+        |state, parts| super::body::gated(state, parts, restore_archived_ehrs),
+    )
+    .await
 }
 
 /// Bring selected parties back from archival storage
@@ -270,62 +282,65 @@ pub(crate) async fn admin_restore_archived_parties(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_restore_archived_parties", parts, dispatch).await
+    guarded_dispatch(
+        state,
+        "admin_restore_archived_parties",
+        parts,
+        |state, parts| super::body::gated(state, parts, restore_archived_parties),
+    )
+    .await
 }
 
-// ── dispatch ─────────────────────────────────────────────────────────────────
+// ── operations ────────────────────────────────────────────────────────────────
 
-pub(crate) fn dispatch(state: AppState, op: &'static str, parts: RequestParts) -> BoxResponse {
-    Box::pin(async move {
-        run(state, op, parts)
-            .await
-            .unwrap_or_else(IntoResponse::into_response)
-    })
-}
-
-async fn run(
+/// The `admin_archive_ehrs` operation.
+pub(crate) async fn archive_ehrs(
     state: AppState,
-    op: &'static str,
     parts: RequestParts,
 ) -> Result<Response, RestError> {
-    // The whole ADMIN group is opt-in; the gate and its two grounds are stated
-    // once, in the group dispatcher.
-    if let Some(refusal) = super::dispatch::admin_group_gate(&state) {
-        return Ok(refusal);
-    }
     let h = &parts.headers;
+    let ids = id_list(&negotiate::decode::json_value(h, &parts.body)?, "ehr_ids")?;
+    state.backend().archive_ehrs(&ehr_ids(&ids)?).await?;
+    Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
+}
 
-    match op {
-        "admin_archive_ehrs" => {
-            let ids = id_list(&negotiate::decode::json_value(h, &parts.body)?, "ehr_ids")?;
-            state.backend().archive_ehrs(&ehr_ids(&ids)?).await?;
-            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
-        }
-        "admin_archive_parties" => {
-            let ids = id_list(&negotiate::decode::json_value(h, &parts.body)?, "party_ids")?;
-            state.backend().archive_parties(&party_ids(&ids)?).await?;
-            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
-        }
-        "admin_restore_archived_ehrs" => {
-            let ids = id_list(&negotiate::decode::json_value(h, &parts.body)?, "ehr_ids")?;
-            state
-                .backend()
-                .restore_archived_ehrs(&ehr_ids(&ids)?)
-                .await?;
-            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
-        }
-        "admin_restore_archived_parties" => {
-            let ids = id_list(&negotiate::decode::json_value(h, &parts.body)?, "party_ids")?;
-            state
-                .backend()
-                .restore_archived_parties(&party_ids(&ids)?)
-                .await?;
-            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
-        }
-        other => Err(RestError::from(ApiError::Internal(format!(
-            "unrouted admin archive operation: {other}"
-        )))),
-    }
+/// The `admin_archive_parties` operation.
+pub(crate) async fn archive_parties(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let ids = id_list(&negotiate::decode::json_value(h, &parts.body)?, "party_ids")?;
+    state.backend().archive_parties(&party_ids(&ids)?).await?;
+    Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
+}
+
+/// The `admin_restore_archived_ehrs` operation.
+pub(crate) async fn restore_archived_ehrs(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let ids = id_list(&negotiate::decode::json_value(h, &parts.body)?, "ehr_ids")?;
+    state
+        .backend()
+        .restore_archived_ehrs(&ehr_ids(&ids)?)
+        .await?;
+    Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
+}
+
+/// The `admin_restore_archived_parties` operation.
+pub(crate) async fn restore_archived_parties(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let ids = id_list(&negotiate::decode::json_value(h, &parts.body)?, "party_ids")?;
+    state
+        .backend()
+        .restore_archived_parties(&party_ids(&ids)?)
+        .await?;
+    Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
 }
 
 /// Read the `{ "<field>": [ … ] }` id list out of the request body. A missing

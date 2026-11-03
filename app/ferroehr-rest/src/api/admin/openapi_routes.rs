@@ -5,8 +5,7 @@
 //! ITS-REST admin operations plus four of our own extension routes.
 //!
 //! Each `#[utoipa::path]` handler single-sources its route and its `OpenAPI`
-//! path, then forwards to the group dispatcher ([`super::dispatch::dispatch`])
-//! through [`guarded_dispatch`].
+//! path, then calls its operation's handler through [`guarded_dispatch`].
 //!
 //! The Admin API is `DEVELOPMENT`-state within ITS-REST Release-1.1.0
 //! (`docs/admin/Description.md` §Status). That is a reporting qualifier only:
@@ -181,7 +180,10 @@ pub(crate) async fn admin_config(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_config", parts, super::dispatch::dispatch).await
+    guarded_dispatch(state, "admin_config", parts, |state, _parts| async move {
+        Ok(super::operations::config(&state))
+    })
+    .await
 }
 
 /// Delete multiple EHRs (`DELETE /admin/ehr/all`).
@@ -304,12 +306,9 @@ pub(crate) async fn admin_ehr_delete_all(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "admin_ehr_delete_all",
-        parts,
-        super::dispatch::dispatch,
-    )
+    guarded_dispatch(state, "admin_ehr_delete_all", parts, |state, parts| {
+        super::body::gated(state, parts, super::operations::ehr_delete_all)
+    })
     .await
 }
 
@@ -425,7 +424,10 @@ pub(crate) async fn admin_ehr_delete(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_ehr_delete", parts, super::dispatch::dispatch).await
+    guarded_dispatch(state, "admin_ehr_delete", parts, |state, parts| {
+        super::body::gated(state, parts, super::operations::ehr_delete)
+    })
+    .await
 }
 
 /// Physically delete one operational template by its `template_id`
@@ -529,12 +531,9 @@ pub(crate) async fn admin_template_delete(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "admin_template_delete",
-        parts,
-        super::dispatch::dispatch,
-    )
+    guarded_dispatch(state, "admin_template_delete", parts, |state, parts| {
+        super::body::gated(state, parts, super::operations::template_delete)
+    })
     .await
 }
 
@@ -628,12 +627,9 @@ pub(crate) async fn admin_party_delete(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "admin_party_delete",
-        parts,
-        super::dispatch::dispatch,
-    )
+    guarded_dispatch(state, "admin_party_delete", parts, |state, parts| {
+        super::body::gated(state, parts, super::operations::party_delete)
+    })
     .await
 }
 
@@ -725,11 +721,8 @@ pub(crate) async fn admin_query_delete(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "admin_query_delete",
-        parts,
-        super::dispatch::dispatch,
-    )
+    guarded_dispatch(state, "admin_query_delete", parts, |state, parts| {
+        super::body::gated(state, parts, super::operations::query_delete)
+    })
     .await
 }

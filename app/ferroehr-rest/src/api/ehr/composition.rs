@@ -109,31 +109,12 @@ fn typed_composition(value: &Value) -> Result<Composition, RestError> {
     })
 }
 
-pub(super) async fn run(
-    state: AppState,
-    op: &'static str,
-    parts: RequestParts,
-) -> Result<Response, RestError> {
-    match op {
-        "composition_create" => create(state, parts).await,
-        "composition_get" => get(state, parts).await,
-        "composition_update" => Box::pin(update(state, parts)).await,
-        "composition_delete" => delete(state, parts).await,
-        "composition_tags_get" => tags_get(state, parts).await,
-        "composition_tags_update" => tags_update(state, parts).await,
-        "composition_tags_delete" => tags_delete(state, parts).await,
-        other => Err(RestError::from(ApiError::Internal(format!(
-            "unrouted ehr operation: {other}"
-        )))),
-    }
-}
-
 /// `composition_create` — commit a new COMPOSITION into an EHR.
 ///
 /// # Errors
 /// The parameter, body-decode, commit and item-tag rejections the operation
 /// declares.
-async fn create(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+pub(crate) async fn create(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
     let created = StatusCode::CREATED;
     let base = state.config().rest.base_path.clone();
@@ -177,7 +158,7 @@ async fn create(state: AppState, parts: RequestParts) -> Result<Response, RestEr
 /// # Errors
 /// The parameter and read rejections the operation declares, plus a `406` for
 /// an unfulfillable `Accept`.
-async fn get(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
     let q = parts.query.as_deref();
     let ok = StatusCode::OK;
@@ -258,7 +239,7 @@ async fn get(state: AppState, parts: RequestParts) -> Result<Response, RestError
 /// # Errors
 /// The parameter, body-decode, precondition and commit rejections the
 /// operation declares.
-async fn update(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+pub(crate) async fn update(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
     let ok = StatusCode::OK;
     let no_content = StatusCode::NO_CONTENT;
@@ -345,7 +326,7 @@ async fn update(state: AppState, parts: RequestParts) -> Result<Response, RestEr
 ///
 /// # Errors
 /// The parameter, precondition and commit rejections the operation declares.
-async fn delete(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+pub(crate) async fn delete(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
     let p = parts.decode(
         CompositionDeleteParams::from_request,
@@ -440,7 +421,7 @@ async fn delete(state: AppState, parts: RequestParts) -> Result<Response, RestEr
 ///
 /// # Errors
 /// The parameter and read rejections the operation declares.
-async fn tags_get(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+pub(crate) async fn tags_get(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
     let ok = StatusCode::OK;
     let p = parts.decode(
@@ -467,7 +448,10 @@ async fn tags_get(state: AppState, parts: RequestParts) -> Result<Response, Rest
 /// # Errors
 /// The parameter rejections the operation declares, plus the body rejections
 /// [`crate::overview::negotiate::decode::typed_json`] states.
-async fn tags_update(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+pub(crate) async fn tags_update(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
     let h = &parts.headers;
     let ok = StatusCode::OK;
     let no_content = StatusCode::NO_CONTENT;
@@ -500,7 +484,10 @@ async fn tags_update(state: AppState, parts: RequestParts) -> Result<Response, R
 ///
 /// # Errors
 /// The parameter and delete rejections the operation declares.
-async fn tags_delete(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+pub(crate) async fn tags_delete(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
     let no_content = StatusCode::NO_CONTENT;
     let p = parts.decode(
         CompositionTagsDeleteParams::from_request,

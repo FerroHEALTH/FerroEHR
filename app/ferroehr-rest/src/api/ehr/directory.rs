@@ -26,7 +26,6 @@ use openehr_its::rest::generated::ehr::{
     DirectoryCreateParams, DirectoryDeleteParams, DirectoryGetAtTimeParams,
     DirectoryGetByVersionIdParams, DirectoryUpdateParams,
 };
-use openehr_its::rest::runtime::ApiError;
 use openehr_rm::prelude::Folder;
 
 use ferroehr::error::ServiceError;
@@ -40,31 +39,16 @@ use crate::overview::negotiate::resource::Tree;
 use crate::overview::version_id::{parse_ehr_id, parse_version_uid, require_if_match};
 use crate::state::AppState;
 
-pub(super) async fn run(
-    state: AppState,
-    op: &'static str,
-    parts: RequestParts,
-) -> Result<Response, RestError> {
-    // DIRECTORY is not templated, so it has no Simplified-Formats mapping.
-    crate::formats::dispatch::guard_non_templated(&parts.headers)?;
-
-    match op {
-        "directory_get_at_time" => get_at_time(state, parts).await,
-        "directory_update" => Box::pin(update(state, parts)).await,
-        "directory_create" => create(state, parts).await,
-        "directory_delete" => delete(state, parts).await,
-        "directory_get_by_version_id" => get_by_version_id(state, parts).await,
-        other => Err(RestError::from(ApiError::Internal(format!(
-            "unrouted ehr operation: {other}"
-        )))),
-    }
-}
-
 /// `directory_get_at_time` — serve the EHR's directory as of an instant.
 ///
 /// # Errors
 /// The parameter and read rejections the operation declares.
-async fn get_at_time(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+pub(crate) async fn get_at_time(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    // DIRECTORY is not templated, so it has no Simplified-Formats mapping.
+    crate::formats::dispatch::guard_non_templated(&parts.headers)?;
     let h = &parts.headers;
     let q = parts.query.as_deref();
     let ok = StatusCode::OK;
@@ -97,7 +81,9 @@ async fn get_at_time(state: AppState, parts: RequestParts) -> Result<Response, R
 ///
 /// # Errors
 /// The parameter, precondition and commit rejections the operation declares.
-async fn update(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+pub(crate) async fn update(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+    // DIRECTORY is not templated, so it has no Simplified-Formats mapping.
+    crate::formats::dispatch::guard_non_templated(&parts.headers)?;
     let h = &parts.headers;
     let ok = StatusCode::OK;
     let no_content = StatusCode::NO_CONTENT;
@@ -173,7 +159,9 @@ async fn update(state: AppState, parts: RequestParts) -> Result<Response, RestEr
 ///
 /// # Errors
 /// The parameter and commit rejections the operation declares.
-async fn create(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+pub(crate) async fn create(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+    // DIRECTORY is not templated, so it has no Simplified-Formats mapping.
+    crate::formats::dispatch::guard_non_templated(&parts.headers)?;
     let h = &parts.headers;
     let created = StatusCode::CREATED;
     let base = state.config().rest.base_path.clone();
@@ -229,7 +217,9 @@ async fn create(state: AppState, parts: RequestParts) -> Result<Response, RestEr
 ///
 /// # Errors
 /// The parameter, precondition and commit rejections the operation declares.
-async fn delete(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+pub(crate) async fn delete(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+    // DIRECTORY is not templated, so it has no Simplified-Formats mapping.
+    crate::formats::dispatch::guard_non_templated(&parts.headers)?;
     let h = &parts.headers;
     let p = parts.decode(
         DirectoryDeleteParams::from_request,
@@ -269,7 +259,12 @@ async fn delete(state: AppState, parts: RequestParts) -> Result<Response, RestEr
 ///
 /// # Errors
 /// The parameter and read rejections the operation declares.
-async fn get_by_version_id(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+pub(crate) async fn get_by_version_id(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    // DIRECTORY is not templated, so it has no Simplified-Formats mapping.
+    crate::formats::dispatch::guard_non_templated(&parts.headers)?;
     let h = &parts.headers;
     let q = parts.query.as_deref();
     let ok = StatusCode::OK;

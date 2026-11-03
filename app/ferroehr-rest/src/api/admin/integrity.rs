@@ -51,15 +51,15 @@ use ferroehr::service::admin::integrity::{StorageParityEvent, StorageParityRepor
 use ferroehr::storage::integrity::StorageParityScope;
 
 use super::body::{AdminDisabled, AdminUnauthenticated, NotAdminClass};
-use crate::api::{BoxResponse, RequestParts, guarded_dispatch};
+use crate::api::{RequestParts, guarded_dispatch};
 use crate::overview::error::RestError;
 use crate::state::AppState;
 use crate::{negotiate, params};
 
 /// The storage-integrity extension route as a native `utoipa-axum` router —
 /// **no ITS-REST contract** (see the module docs). Group-relative path (nested
-/// under the extensions root); the operation runs through [`guarded_dispatch`] with
-/// [`dispatch`].
+/// under the extensions root); the operation runs through [`guarded_dispatch`] onto
+/// its handler.
 pub(crate) fn integrity_routes() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .routes(routes!(admin_verify_storage_parity))
@@ -153,7 +153,13 @@ pub(crate) async fn admin_verify_storage_parity(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_verify_storage_parity", parts, dispatch).await
+    guarded_dispatch(
+        state,
+        "admin_verify_storage_parity",
+        parts,
+        |state, parts| super::body::gated(state, parts, verify_storage_parity),
+    )
+    .await
 }
 
 /// Re-derive the node rows of every damaged version from its stored body
@@ -237,55 +243,46 @@ pub(crate) async fn admin_rebuild_version_nodes(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_rebuild_version_nodes", parts, dispatch).await
+    guarded_dispatch(
+        state,
+        "admin_rebuild_version_nodes",
+        parts,
+        |state, parts| super::body::gated(state, parts, rebuild_version_nodes),
+    )
+    .await
 }
 
-// ── dispatch ─────────────────────────────────────────────────────────────────
+// ── operations ────────────────────────────────────────────────────────────────
 
-pub(crate) fn dispatch(state: AppState, op: &'static str, parts: RequestParts) -> BoxResponse {
-    Box::pin(async move {
-        run(state, op, parts)
-            .await
-            .unwrap_or_else(IntoResponse::into_response)
-    })
-}
-
-async fn run(
+/// The `admin_verify_storage_parity` operation.
+pub(crate) async fn verify_storage_parity(
     state: AppState,
-    op: &'static str,
     parts: RequestParts,
 ) -> Result<Response, RestError> {
-    // The whole ADMIN group is opt-in; the gate and its two grounds are stated
-    // once, in the group dispatcher.
-    if let Some(refusal) = super::dispatch::admin_group_gate(&state) {
-        return Ok(refusal);
+    let scope = parity_scope(parts.query.as_deref())?;
+    if negotiate::accepts_ndjson(&parts.headers) {
+        return Ok(stream_parity(&state, scope));
     }
-    match op {
-        "admin_verify_storage_parity" => {
-            let scope = parity_scope(parts.query.as_deref())?;
-            if negotiate::accepts_ndjson(&parts.headers) {
-                return Ok(stream_parity(&state, scope));
-            }
-            let report = state.backend().verify_storage_parity(scope).await?;
-            Ok(negotiate::body::respond(
-                &parts.headers,
-                StatusCode::OK,
-                &parity_report(&report),
-            ))
-        }
-        "admin_rebuild_version_nodes" => {
-            let scope = parity_scope(parts.query.as_deref())?;
-            let report = state.backend().rebuild_version_nodes(scope).await?;
-            Ok(negotiate::body::respond(
-                &parts.headers,
-                StatusCode::OK,
-                &rebuild_report(&report),
-            ))
-        }
-        other => Err(RestError::from(ApiError::Internal(format!(
-            "unrouted admin integrity operation: {other}"
-        )))),
-    }
+    let report = state.backend().verify_storage_parity(scope).await?;
+    Ok(negotiate::body::respond(
+        &parts.headers,
+        StatusCode::OK,
+        &parity_report(&report),
+    ))
+}
+
+/// The `admin_rebuild_version_nodes` operation.
+pub(crate) async fn rebuild_version_nodes(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let scope = parity_scope(parts.query.as_deref())?;
+    let report = state.backend().rebuild_version_nodes(scope).await?;
+    Ok(negotiate::body::respond(
+        &parts.headers,
+        StatusCode::OK,
+        &rebuild_report(&report),
+    ))
 }
 
 /// The optional bounds narrowing which stored versions a sweep, or the rebuild

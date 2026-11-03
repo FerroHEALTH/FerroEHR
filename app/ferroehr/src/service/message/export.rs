@@ -433,7 +433,7 @@ impl FerroEhrService {
                     _ => None,
                 };
                 let Some(raw) = candidate else { continue };
-                let Ok(vo_id) = raw.split("::").next().unwrap_or(raw).parse::<VoId>() else {
+                let Ok(vo_id) = VoId::from_uid_head(raw) else {
                     continue;
                 };
                 if out.iter().any(|(v, _)| *v == vo_id) {

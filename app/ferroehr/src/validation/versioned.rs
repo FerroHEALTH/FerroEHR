@@ -153,11 +153,10 @@ fn collect_local_item_refs(folder: &Value, system_id: &str, at: &str, out: &mut 
 /// The versioned-object root of an `OBJECT_REF.id` value — the uid before any
 /// `::` qualification — when it is a uid this store can hold.
 fn item_ref_root(id_value: &str) -> Option<uuid::Uuid> {
-    let root = id_value.split("::").next().unwrap_or(id_value);
     // NOTE: `Result → Option` is the decision here (reliability.md class): a
     // non-UUID root is a legitimately unresolvable id, reported by the caller
     // as an unresolvable reference — not a swallowed defect.
-    uuid::Uuid::parse_str(root).ok()
+    VoId::from_uid_head(id_value).ok().map(|vo_id| vo_id.0)
 }
 
 /// Refuse a FOLDER commit whose `items` contain a reference that CLAIMS this

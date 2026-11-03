@@ -8,8 +8,8 @@
 //!
 //! Governing spec: `docs/specs/openehr/ITS-REST/specifications/docs/definition/`.
 //! The group is split along the three spec resources the OAS `tags` name —
-//! `ADL1.4`, `ADL2`, and `Query` — one module each, with `dispatch` as the
-//! operation-id `match` that fans out to them:
+//! `ADL1.4`, `ADL2`, and `Query` — one module each, whose handlers the
+//! routes of `openapi_routes` call directly:
 //!
 //! - `template_adl14` — `definition_template_adl1.4_{list,upload,get,example_get}`.
 //! - `template_adl2` — `definition_template_adl2_{list,upload,get,example_get,version_get}`.
@@ -26,11 +26,13 @@
 
 pub(crate) mod archetype;
 pub(crate) mod conversion;
-pub(crate) mod dispatch;
 pub(crate) mod openapi_routes;
 mod stored_query;
 mod template_adl14;
 mod template_adl2;
+
+use ferroehr::service::definition::types::TemplateListFilter;
+use ferroehr::service::list::Page;
 
 // The `adl1.4/{id}/example` handler negotiates the Simplified-Formats
 // (FLAT/STRUCTURED) representations through the shared `crate::formats::dispatch`
@@ -67,4 +69,30 @@ fn party_example_response(
         _ => return None,
     };
     Some(response)
+}
+
+/// Fold the wire `template_id`/`concept`/`version`/`offset`/`fetch` query
+/// parameters (decoded on both `definition_template_*_list` operations) into the
+/// [`TemplateListFilter`] + [`Page`] the `DefinitionAdapter` list methods
+/// carry. `offset` defaults to `0` (`parameters/query/offset.yaml`); a `fetch`
+/// of `0`/absent is normalized to "all" by [`Page::limit`]. Negative wire values
+/// (out of the spec's `integer`/`0`-based range) degrade to the defaults rather
+/// than erroring.
+fn list_filter_and_page(
+    template_id: Option<String>,
+    concept: Option<String>,
+    version: Option<String>,
+    offset: Option<i64>,
+    fetch: Option<i64>,
+) -> (TemplateListFilter, Page) {
+    let filter = TemplateListFilter {
+        template_id,
+        concept,
+        version,
+    };
+    let page = Page {
+        item_offset: offset.and_then(|o| u64::try_from(o).ok()),
+        items_to_fetch: fetch.and_then(|f| u64::try_from(f).ok()),
+    };
+    (filter, page)
 }

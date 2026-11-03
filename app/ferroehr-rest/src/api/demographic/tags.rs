@@ -24,7 +24,6 @@ use openehr_its::rest::generated::demographic::{
     PersonTagsGetParams, PersonTagsUpdateParams, RoleTagsDeleteParams, RoleTagsGetParams,
     RoleTagsUpdateParams,
 };
-use openehr_its::rest::runtime::ApiError;
 
 use ferroehr::versioning::object_version_id::parse_uid_based_id;
 
@@ -35,121 +34,126 @@ use crate::state::AppState;
 use ferroehr::service::demographic::types::PartyKind;
 use http::StatusCode;
 
-/// The per-kind `ITEM_TAG` operations (`tags_get`/`tags_update`/`tags_delete`).
-pub(super) async fn run(
+/// The `uid_based_id` of a request, decoded through the routed kind's own
+/// generated params struct.
+macro_rules! uid_based_id {
+    ($parts:ident, $params:ident) => {
+        $parts
+            .decode($params::from_request, $params::PARAMS)?
+            .uid_based_id
+    };
+}
+
+/// The per-kind `ITEM_TAG` read (`{kind}_tags_get`).
+pub(crate) async fn get(
     state: AppState,
     kind: PartyKind,
-    action: &str,
     parts: RequestParts,
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let seg = kind.segment();
-    // Each kind's own generated params struct, decoded for its `uid_based_id`.
-    macro_rules! uid_based_id {
-        ($params:ident) => {
-            parts
-                .decode($params::from_request, $params::PARAMS)?
-                .uid_based_id
-        };
-    }
+    // Each kind's own generated params type (see the module doc).
+    let uid_based_id = match kind {
+        PartyKind::Agent => uid_based_id!(parts, AgentTagsGetParams),
+        PartyKind::Group => uid_based_id!(parts, GroupTagsGetParams),
+        PartyKind::Organisation => uid_based_id!(parts, OrganisationTagsGetParams),
+        PartyKind::Person => uid_based_id!(parts, PersonTagsGetParams),
+        PartyKind::Role => uid_based_id!(parts, RoleTagsGetParams),
+    };
+    let tags = state
+        .backend()
+        .party_tags_get(kind, parse_uid_based_id(&uid_based_id)?)
+        .await?;
+    Ok(negotiate::body::respond(
+        h,
+        StatusCode::OK,
+        &openehr_its::json::to_canonical_value(&tags),
+    ))
+}
 
-    match action {
-        "tags_get" => {
-            // Each kind's own generated params type (see the module doc).
-            let uid_based_id = match kind {
-                PartyKind::Agent => uid_based_id!(AgentTagsGetParams),
-                PartyKind::Group => uid_based_id!(GroupTagsGetParams),
-                PartyKind::Organisation => uid_based_id!(OrganisationTagsGetParams),
-                PartyKind::Person => uid_based_id!(PersonTagsGetParams),
-                PartyKind::Role => uid_based_id!(RoleTagsGetParams),
-            };
-            let tags = state
-                .backend()
-                .party_tags_get(kind, parse_uid_based_id(&uid_based_id)?)
-                .await?;
-            Ok(negotiate::body::respond(
-                h,
-                StatusCode::OK,
-                &openehr_its::json::to_canonical_value(&tags),
-            ))
+/// The per-kind `ITEM_TAG` update (`{kind}_tags_update`).
+pub(crate) async fn update(
+    state: AppState,
+    kind: PartyKind,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let uid_based_id = match kind {
+        PartyKind::Agent => uid_based_id!(parts, AgentTagsUpdateParams),
+        PartyKind::Group => uid_based_id!(parts, GroupTagsUpdateParams),
+        PartyKind::Organisation => uid_based_id!(parts, OrganisationTagsUpdateParams),
+        PartyKind::Person => uid_based_id!(parts, PersonTagsUpdateParams),
+        PartyKind::Role => uid_based_id!(parts, RoleTagsUpdateParams),
+    };
+    let body = negotiate::decode::typed_json(h, &parts.body, "JSON array body")?;
+    let tags = state
+        .backend()
+        .party_tags_update(kind, parse_uid_based_id(&uid_based_id)?, body)
+        .await?;
+    // person_tags_update.yaml — 200 (200_PERSON_ItemTagList_updated)
+    // with the tag list on `Prefer: return=representation`; 204
+    // (204_updated) when `Prefer` is missing or `return=minimal`,
+    // with `Preference-Applied` declaring which.
+    Ok(negotiate::prefer::write_collection(
+        h,
+        StatusCode::NO_CONTENT,
+        StatusCode::OK,
+        &openehr_its::json::to_canonical_value(&tags),
+    ))
+}
+
+/// The per-kind `ITEM_TAG` delete (`{kind}_tags_delete`).
+pub(crate) async fn delete(
+    state: AppState,
+    kind: PartyKind,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let (uid_based_id, key) = match kind {
+        PartyKind::Agent => {
+            let p = parts.decode(
+                AgentTagsDeleteParams::from_request,
+                AgentTagsDeleteParams::PARAMS,
+            )?;
+            (p.uid_based_id, p.key)
         }
-        "tags_update" => {
-            let uid_based_id = match kind {
-                PartyKind::Agent => uid_based_id!(AgentTagsUpdateParams),
-                PartyKind::Group => uid_based_id!(GroupTagsUpdateParams),
-                PartyKind::Organisation => uid_based_id!(OrganisationTagsUpdateParams),
-                PartyKind::Person => uid_based_id!(PersonTagsUpdateParams),
-                PartyKind::Role => uid_based_id!(RoleTagsUpdateParams),
-            };
-            let body = negotiate::decode::typed_json(h, &parts.body, "JSON array body")?;
-            let tags = state
-                .backend()
-                .party_tags_update(kind, parse_uid_based_id(&uid_based_id)?, body)
-                .await?;
-            // person_tags_update.yaml — 200 (200_PERSON_ItemTagList_updated)
-            // with the tag list on `Prefer: return=representation`; 204
-            // (204_updated) when `Prefer` is missing or `return=minimal`,
-            // with `Preference-Applied` declaring which.
-            Ok(negotiate::prefer::write_collection(
-                h,
-                StatusCode::NO_CONTENT,
-                StatusCode::OK,
-                &openehr_its::json::to_canonical_value(&tags),
-            ))
+        PartyKind::Group => {
+            let p = parts.decode(
+                GroupTagsDeleteParams::from_request,
+                GroupTagsDeleteParams::PARAMS,
+            )?;
+            (p.uid_based_id, p.key)
         }
-        "tags_delete" => {
-            let (uid_based_id, key) = match kind {
-                PartyKind::Agent => {
-                    let p = parts.decode(
-                        AgentTagsDeleteParams::from_request,
-                        AgentTagsDeleteParams::PARAMS,
-                    )?;
-                    (p.uid_based_id, p.key)
-                }
-                PartyKind::Group => {
-                    let p = parts.decode(
-                        GroupTagsDeleteParams::from_request,
-                        GroupTagsDeleteParams::PARAMS,
-                    )?;
-                    (p.uid_based_id, p.key)
-                }
-                PartyKind::Organisation => {
-                    let p = parts.decode(
-                        OrganisationTagsDeleteParams::from_request,
-                        OrganisationTagsDeleteParams::PARAMS,
-                    )?;
-                    (p.uid_based_id, p.key)
-                }
-                PartyKind::Person => {
-                    let p = parts.decode(
-                        PersonTagsDeleteParams::from_request,
-                        PersonTagsDeleteParams::PARAMS,
-                    )?;
-                    (p.uid_based_id, p.key)
-                }
-                PartyKind::Role => {
-                    let p = parts.decode(
-                        RoleTagsDeleteParams::from_request,
-                        RoleTagsDeleteParams::PARAMS,
-                    )?;
-                    (p.uid_based_id, p.key)
-                }
-            };
-            state
-                .backend()
-                .party_tags_delete(kind, parse_uid_based_id(&uid_based_id)?, key)
-                .await?;
-            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
+        PartyKind::Organisation => {
+            let p = parts.decode(
+                OrganisationTagsDeleteParams::from_request,
+                OrganisationTagsDeleteParams::PARAMS,
+            )?;
+            (p.uid_based_id, p.key)
         }
-        other => Err(RestError::from(ApiError::Internal(format!(
-            "unrouted demographic tag operation: {seg}_{other}"
-        )))),
-    }
+        PartyKind::Person => {
+            let p = parts.decode(
+                PersonTagsDeleteParams::from_request,
+                PersonTagsDeleteParams::PARAMS,
+            )?;
+            (p.uid_based_id, p.key)
+        }
+        PartyKind::Role => {
+            let p = parts.decode(
+                RoleTagsDeleteParams::from_request,
+                RoleTagsDeleteParams::PARAMS,
+            )?;
+            (p.uid_based_id, p.key)
+        }
+    };
+    state
+        .backend()
+        .party_tags_delete(kind, parse_uid_based_id(&uid_based_id)?, key)
+        .await?;
+    Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
 }
 
 /// `GET /demographic/tags` — the kind-agnostic `ITEM_TAG` collection filter
 /// (`demographic_tags_get.yaml`).
-pub(super) async fn run_collection(
+pub(crate) async fn collection(
     state: AppState,
     parts: RequestParts,
 ) -> Result<Response, RestError> {

@@ -26,7 +26,7 @@
 )]
 
 use axum::extract::State;
-use axum::response::{IntoResponse, Response};
+use axum::response::Response;
 use http::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -36,7 +36,7 @@ use openehr_its::rest::runtime::ApiError;
 use ferroehr::error::ServiceError;
 use ferroehr::versioning::object_version_id::parse_version_uid;
 
-use crate::api::{BoxResponse, RequestParts, guarded_dispatch};
+use crate::api::{RequestParts, guarded_dispatch};
 use crate::overview::error::RestError;
 use crate::state::AppState;
 use crate::{negotiate, params};
@@ -92,32 +92,14 @@ pub(crate) async fn admin_party_identifiers(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_party_identifiers", parts, dispatch).await
-}
-
-// ── dispatch ─────────────────────────────────────────────────────────────────
-
-pub(crate) fn dispatch(state: AppState, op: &'static str, parts: RequestParts) -> BoxResponse {
-    Box::pin(async move {
-        run(state, op, parts)
-            .await
-            .unwrap_or_else(IntoResponse::into_response)
+    guarded_dispatch(state, "admin_party_identifiers", parts, |state, parts| {
+        super::body::gated(state, parts, party_identifiers)
     })
+    .await
 }
 
-async fn run(
-    state: AppState,
-    op: &'static str,
-    parts: RequestParts,
-) -> Result<Response, RestError> {
-    if let Some(refusal) = super::dispatch::admin_group_gate(&state) {
-        return Ok(refusal);
-    }
-    if op != "admin_party_identifiers" {
-        return Err(RestError::from(ApiError::Internal(format!(
-            "unrouted admin identifier operation: {op}"
-        ))));
-    }
+/// The `admin_party_identifiers` operation.
+async fn party_identifiers(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
     let roles = crate::extensions::access::authn::current_principal()
         .map(|principal| principal.roles)
         .unwrap_or_default();

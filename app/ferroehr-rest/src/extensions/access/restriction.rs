@@ -120,10 +120,9 @@ pub(super) fn named_objects(parts: &RequestParts) -> Vec<(&str, VoId)> {
         .iter()
         .filter_map(|param| parts.path.get(*param))
         .filter_map(|raw| {
-            let head = raw.split("::").next().unwrap_or(raw);
-            Uuid::parse_str(head)
+            VoId::from_uid_head(raw)
                 .ok()
-                .map(|vo_id| (raw.as_str(), VoId(vo_id)))
+                .map(|vo_id| (raw.as_str(), vo_id))
         })
         .collect()
 }
