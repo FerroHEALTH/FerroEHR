@@ -18,7 +18,7 @@
 //!
 //! The root modules beside the chapters carry the cross-chapter service
 //! vocabulary: the CONTRIBUTION commit both chapters share
-//! ([`contribution`]), the version-commit envelope ([`version_update`]), the list cursor ([`list`]), the
+//! (`contribution`), the version-commit envelope ([`version_update`]), the list cursor ([`list`]), the
 //! platform-service enumeration ([`platform_service`]), the
 //! protocol-adapter response envelope ([`response`]), and the crate-internal
 //! ITS-REST datetime-request-parameter decoder (`datetime`).

@@ -57,7 +57,7 @@ fn domain_pool(cx: &FerroEhrService, party_only: bool) -> &sqlx::PgPool {
 /// false`) and the demographic contribution path (`ehr_id = None`, `party_only
 /// = true`), each of which hands over the parts of its own group's generated
 /// `NewContribution` ([`decode_new_contribution`](crate::versioning::contribution::decode_new_contribution)). Each version's storage
-/// action and preserved audit change-type code come from [`classify`](crate::versioning::contribution::classify); the
+/// action and preserved audit change-type code come from `classify` in [`crate::versioning::contribution`]; the
 /// object kind from the payload `_type` (create) or the stored object
 /// (modify/delete).
 ///
@@ -65,7 +65,7 @@ fn domain_pool(cx: &FerroEhrService, party_only: bool) -> &sqlx::PgPool {
 /// CONTRIBUTION to a missing EHR is a clean `NotFound`, not a storage FK error.
 ///
 /// # Errors
-/// [`ServiceError::NotFound`] for a missing target EHR; the [`classify`](crate::versioning::contribution::classify)
+/// [`ServiceError::NotFound`] for a missing target EHR; the `classify` in [`crate::versioning::contribution`]
 /// rejections per version; [`ServiceError::Unprocessable`] for a malformed
 /// CONTRIBUTION `uid`, an empty `versions` list, a scope-mismatched kind, or a
 /// failed content/audit validation; [`ServiceError::BadRequest`] when an audit
@@ -215,7 +215,7 @@ struct ContributionWrite<'a> {
     /// check.
     folder_commits: Vec<Value>,
     /// Whether the set needs the content-write gate
-    /// ([`needs_content_write_permission`](crate::versioning::contribution::needs_content_write_permission)); evaluated in-transaction.
+    /// ([`needs_content_write_permission`]); evaluated in-transaction.
     needs_content_permission: bool,
 }
 
@@ -328,7 +328,7 @@ async fn read_target_kinds(
 ///
 /// # Errors
 /// The per-member rejections of the create/modify/delete shapes — see
-/// [`create_change`], [`modify_change`] and [`delete_change`](crate::versioning::contribution::delete_change).
+/// [`create_change`], [`modify_change`] and [`delete_change`].
 async fn build_change(
     cx: &FerroEhrService,
     kinds: &HashMap<VoId, Kind>,

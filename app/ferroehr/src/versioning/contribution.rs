@@ -256,7 +256,7 @@ fn classify_modification(
 }
 
 /// One parsed `UPDATE_VERSION` of a CONTRIBUTION commit — the single-pass plan
-/// entry (see the parse pass in [`commit_version_set`]).
+/// entry (see the parse pass in [`commit_version_set`](crate::service::contribution::commit_version_set)).
 pub(crate) struct PlannedVersion {
     /// The member's position in the submitted `versions` array — every
     /// member-scoped refusal names it.
@@ -775,7 +775,7 @@ pub(crate) fn check_kind_scope(kind: Kind, party_only: bool) -> Result<(), Servi
 /// other state asks for two contradictory things. The code is the released
 /// `400_CONTRIBUTION` change-control trigger, "the modification type does not
 /// match the operation" (`responses/400_CONTRIBUTION.yaml`). An absent state is
-/// [`commit_version_set`]'s business, not this function's.
+/// [`commit_version_set`](crate::service::contribution::commit_version_set)'s business, not this function's.
 ///
 /// # Errors
 /// [`ServiceError::BadRequest`] when `declared` resolves to a
