@@ -621,6 +621,29 @@ compositions and 100 EHRs and 500 International Patient Summaries. That change
 took a vital signs version from 21.6 KB to 17.1 KB and an International
 Patient Summary from 159 KB to 131 KB.
 
+### Measuring your own figures
+
+`scripts/perf/storage-sizing.sh` in the repository runs the same phases
+against a running FerroEHR and reports the bytes per create, update, delete
+and read, per relation, and the node rows with their heap and index bytes per
+row. Start the server on a fresh database, so the run is all the database
+holds, then:
+
+```sh
+scripts/perf/storage-sizing.sh run sizing-out
+```
+
+It reads the sizes through `psql` as the database superuser, by default in the
+quickstart's `ferroehr-postgres` container (`SIZING_PSQL` names another
+command), and writes `sizing-out/report.json`.
+`SIZING_TEMPLATE=international-patient-summary` measures the larger
+composition, and `SIZING_EHRS`, `SIZING_PER_EHR`, `SIZING_UPDATES`,
+`SIZING_DELETES` and `SIZING_READS` set the counts; the script's header lists
+every setting. With the defaults (300 EHRs, 3 000 vital signs creates, 750
+updates, 300 deletes and 6 000 reads) it reproduces the figures below within
+a few percent. Its WAL figures include the full-page images each phase's
+`CHECKPOINT` forces, so they are higher than a steady state.
+
 ### Bytes per composition version
 
 | Per committed version | Vital signs (10.8 KB of JSON) | International Patient Summary (87 KB of JSON) |
