@@ -15,15 +15,15 @@ set -euo pipefail
 
 payload="$(cat)"
 
-if ! printf '%s' "$payload" | grep -qE 'git[[:space:]]+commit'; then
+if ! grep -qE 'git[[:space:]]+commit' <<<"$payload"; then
   exit 0
 fi
 
 # The checkout the command runs in: a `cd <dir>` it opens with, else the
 # session's working directory.
-dir="$(printf '%s' "$payload" | sed -nE 's/.*"command"[[:space:]]*:[[:space:]]*"cd[[:space:]]+([^"&;[:space:]]+).*/\1/p' | head -n 1)"
+dir="$(sed -nE 's/.*"command"[[:space:]]*:[[:space:]]*"cd[[:space:]]+([^"&;[:space:]]+).*/\1/p' <<<"$payload" | sed -n 1p)"
 if [[ -z "$dir" ]]; then
-  dir="$(printf '%s' "$payload" | sed -nE 's/.*"cwd"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' | head -n 1)"
+  dir="$(sed -nE 's/.*"cwd"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' <<<"$payload" | sed -n 1p)"
 fi
 dir="${dir:-$CLAUDE_PROJECT_DIR}"
 git -C "$dir" rev-parse --show-toplevel >/dev/null 2>&1 || exit 0
