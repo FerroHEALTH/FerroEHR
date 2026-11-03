@@ -12,19 +12,23 @@
 //! Built once at boot, like every other configured collaborator, so a
 //! misconfigured key is a boot error rather than a first-write surprise.
 
+#![expect(
+    clippy::disallowed_types,
+    reason = "owner-approved 2026-08-03 (#1694): service-surface signatures over stored canonical \
+              fragments and dynamic shapes"
+)]
+
 use std::collections::BTreeMap;
 
 use serde_json::Value;
 use sqlx::PgConnection;
 use uuid::Uuid;
 
+use crate::identifier_protection::body;
+use crate::identifier_protection::config::IdentifierProtectionConfig;
+use crate::identifier_protection::crypto::{CryptoError, DomainKeys, KeyDomain, RootKey};
+use crate::identifier_protection::store::{IdentifierStore, StoreError};
 use crate::ids::VoId;
-use crate::service::demographic::identifier::body;
-use crate::service::demographic::identifier::config::IdentifierProtectionConfig;
-use crate::service::demographic::identifier::crypto::{
-    CryptoError, DomainKeys, KeyDomain, RootKey,
-};
-use crate::service::demographic::identifier::store::{IdentifierStore, StoreError};
 use crate::storage::identifier_repo::{self, IdentifierRepoError};
 
 /// The national-identifier protection engine.
@@ -308,7 +312,7 @@ fn collect(node: &Value, pointer: &mut String, found: &mut Vec<(String, Uuid)>) 
 #[cfg(test)]
 mod tests {
     use super::{EngineError, IdentifierProtection, referenced};
-    use crate::service::demographic::identifier::config::IdentifierProtectionConfig;
+    use crate::identifier_protection::config::IdentifierProtectionConfig;
     use serde_json::json;
 
     fn pool() -> sqlx::PgPool {

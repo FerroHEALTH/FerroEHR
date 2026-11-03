@@ -24,6 +24,7 @@ use std::time::Duration;
 use anyhow::Context as _;
 use clap::{Parser, Subcommand};
 use ferroehr::aql::subject::ehr_subject;
+use ferroehr::config::access_delay::AccessDelayPolicy;
 use ferroehr::config::deployment::{DatabaseFacts, DeploymentPosture, DeploymentProfile};
 use ferroehr::config::management::EndpointLevels;
 use ferroehr::config::management::ManagementConfig;
@@ -34,7 +35,6 @@ use ferroehr::extensions::outbox;
 use ferroehr::ids::EhrId;
 use ferroehr::manufacturer::MANUFACTURER;
 use ferroehr::report::Report;
-use ferroehr::service::admin::access_delay::config::AccessDelayPolicy;
 use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::storage::ehr_repo::ehr_subject_columns;
 use ferroehr::support::{SupportPeriod, today_utc};
@@ -580,13 +580,12 @@ fn assemble_service(
     // key that cannot be parsed is a boot error: a server that believes it
     // seals national identifiers and does not is the failure this refuses to
     // start into.
-    let identifiers =
-        ferroehr::service::demographic::identifier::engine::IdentifierProtection::from_config(
-            &config.demographic.identifier_protection,
-            config.demographic.identifier_protection.key.as_ref(),
-            pools.party.clone(),
-        )
-        .context("building the [demographic.identifier_protection] engine")?;
+    let identifiers = ferroehr::identifier_protection::engine::IdentifierProtection::from_config(
+        &config.demographic.identifier_protection,
+        config.demographic.identifier_protection.key.as_ref(),
+        pools.party.clone(),
+    )
+    .context("building the [demographic.identifier_protection] engine")?;
 
     // The licence in force: the configured token, else the one the build
     // embeds. Never a boot failure; the outcome is logged once, served on
