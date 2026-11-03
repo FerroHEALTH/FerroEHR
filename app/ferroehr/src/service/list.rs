@@ -18,12 +18,6 @@ pub struct Page {
 }
 
 impl Page {
-    /// The whole list — no offset, no limit.
-    #[must_use]
-    pub fn all() -> Self {
-        Self::default()
-    }
-
     /// The effective 0-based offset (`item_offset`, defaulting to 0).
     #[must_use]
     pub fn offset(self) -> u64 {

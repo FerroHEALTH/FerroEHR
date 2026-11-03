@@ -62,14 +62,6 @@ pub(crate) fn respond<T: Serialize>(
     }
 }
 
-/// The abstract XSD type declared for a published document element, when the
-/// element's declared type is abstract and the instance must therefore carry
-/// `xsi:type` — the published-element fact is stated ONCE, in the crate that
-/// owns the schemas ([`openehr_its::xml::PUBLISHED_ROOTS`]).
-fn declared_root_type(root_tag: &str) -> Option<&'static str> {
-    openehr_its::xml::declared_abstract_root_type(root_tag)
-}
-
 /// Render a canonical-JSON `Value` that IS a single spec-typed RM object,
 /// honouring `Accept` for canonical JSON or XML. `T` is the concrete
 /// `openehr-rm` type the value encodes; `root_tag` is the XML root element
@@ -119,7 +111,7 @@ where
                     .into_response_body();
                 }
             };
-            let serialized = match declared_root_type(root_tag) {
+            let serialized = match openehr_its::xml::declared_abstract_root_type(root_tag) {
                 Some(declared) => {
                     openehr_its::xml::runtime::to_xml_declared(&typed, root_tag, declared, ns)
                 }
@@ -477,11 +469,17 @@ mod tests {
     /// schemas publish no element for is absent by construction.
     #[test]
     fn declared_root_type_names_only_the_published_abstract_elements() {
-        assert_eq!(declared_root_type("version"), Some("VERSION"));
-        assert_eq!(declared_root_type("items"), Some("LOCATABLE"));
+        assert_eq!(
+            openehr_its::xml::declared_abstract_root_type("version"),
+            Some("VERSION")
+        );
+        assert_eq!(
+            openehr_its::xml::declared_abstract_root_type("items"),
+            Some("LOCATABLE")
+        );
         for concrete in ["composition", "template", "archetype", "versioned_object"] {
             assert_eq!(
-                declared_root_type(concrete),
+                openehr_its::xml::declared_abstract_root_type(concrete),
                 None,
                 "{concrete} is declared with a concrete type — no xsi:type at the root"
             );
@@ -493,7 +491,7 @@ mod tests {
             "folder",
         ] {
             assert_eq!(
-                declared_root_type(undeclared),
+                openehr_its::xml::declared_abstract_root_type(undeclared),
                 None,
                 "{undeclared} is not a published document element at all"
             );

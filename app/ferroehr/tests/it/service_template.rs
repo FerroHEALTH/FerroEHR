@@ -46,7 +46,7 @@ async fn template_upload_list_get_roundtrip() {
 
     // List includes the uploaded template.
     let list = svc
-        .template_adl14_list(TemplateListFilter::default(), Page::all())
+        .template_adl14_list(TemplateListFilter::default(), Page::default())
         .await
         .expect("list");
     assert!(
@@ -81,7 +81,7 @@ async fn template_upload_list_get_roundtrip() {
 
     // The original template is untouched and there is still exactly one row.
     let list2 = svc
-        .template_adl14_list(TemplateListFilter::default(), Page::all())
+        .template_adl14_list(TemplateListFilter::default(), Page::default())
         .await
         .expect("list after conflicting re-upload");
     assert_eq!(

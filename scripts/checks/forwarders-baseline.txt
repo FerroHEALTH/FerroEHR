@@ -7,7 +7,7 @@ app/ferroehr-rest/src/api/definition/template_adl14.rs: set_template_etag -> neg
 app/ferroehr-rest/src/api/definition/template_adl2.rs: set_template_etag -> negotiate::resource::set_etag(resp, hrid)
 app/ferroehr-rest/src/api/ehr/mod.rs: committer_proxy -> ferroehr::service::committer::request_committer()
 app/ferroehr-rest/src/api/item_tags.rs: write_body -> negotiate::decode::typed_json_vec::<UpdateItemTag>(headers, body)
-app/ferroehr-rest/src/overview/error.rs: method_not_allowed_handler -> status_error_response(StatusCode::METHOD_NOT_ALLOWED, "the request method is not allowed on this resource", )
+app/ferroehr-rest/src/overview/error.rs: method_not_allowed_handler -> status_error_response(StatusCode::METHOD_NOT_ALLOWED, "the request method is not allowed on this resource", )	the handler the API router mounts as its method_not_allowed_fallback, which axum decorates with the matched path's Allow set; its unit test drives the same handler, and inlining it into the router would leave the test a second copy of the response
 app/ferroehr-rest/src/overview/negotiate/body.rs: declared_root_type -> openehr_its::xml::declared_abstract_root_type(root_tag)
 app/ferroehr-rest/src/router.rs: not_found -> error::status_error_response(StatusCode::NOT_FOUND, "no resource is served at this path")
 app/ferroehr-rest/src/system_log/middleware.rs: token_id -> claim(principal, "jti")

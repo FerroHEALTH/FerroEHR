@@ -403,18 +403,12 @@ pub(super) fn fill_common(
     // The bearer token's `jti` (RFC 7519 §4.1.7) is the minimal token identity
     // IHE BALP `OAUTHaccessTokenUse.Minimal` records; token contents are never
     // logged.
-    event.token_id = principal.and_then(token_id);
+    event.token_id = principal.and_then(|principal| claim(principal, "jti"));
     // How the person authenticated and who that person is (EHDS Annex II 3.1
     // and 3.2(b)), as the authentication layer judged it.
     event.actor = caller.actor.cloned().unwrap_or_default();
     event.client_ip = client_ip;
     event.timestamp = timestamp;
-}
-
-/// Returns the `jti` claim of a Bearer principal's validated token, if present
-/// and a non-empty string.
-fn token_id(principal: &Principal) -> Option<String> {
-    claim(principal, "jti")
 }
 
 /// Returns the string claim `name` of a Bearer principal's validated token,
