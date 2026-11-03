@@ -72,7 +72,10 @@ where
     H: FnOnce(AppState, RequestParts) -> F + Send,
     F: Future<Output = Result<Response, RestError>> + Send,
 {
-    let parts = crate::api::into_parts(request).await;
+    let parts = match crate::api::read_request::into_parts(request).await {
+        Ok(parts) => parts,
+        Err(unreadable) => return axum::response::IntoResponse::into_response(unreadable),
+    };
     guarded_dispatch(state, op, parts, handler).await
 }
 
