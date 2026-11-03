@@ -128,6 +128,13 @@ die() {
 }
 
 command -v gh >/dev/null 2>&1 || die "the GitHub CLI (gh) is not installed"
+
+# Every tracker read goes through gh_retry: a 504 from the GraphQL endpoint
+# failed a merge-queue entry that had changed nothing here (#4885). The window
+# stays inside the CI job's ten minutes; a 4xx or a GraphQL error fails at once.
+# shellcheck source=scripts/lib/gh-retry.sh
+. scripts/lib/gh-retry.sh
+GH_RETRY_WINDOW="${GH_RETRY_WINDOW:-240}"
 command -v jq >/dev/null 2>&1 || die "jq is required (brew install jq / preinstalled on CI runners)"
 
 # ── the delta rules ──────────────────────────────────────────────────────────
@@ -177,6 +184,45 @@ delta_verdict() {
   return "$bad"
 }
 
+# read_tracker <out>: the one issue-list read, everything the page needs.
+read_tracker() {
+  gh_retry gh issue list --state all --limit "$FETCH_LIMIT" \
+    --json number,title,body,state,stateReason,url > "$1"
+}
+
+# retry_test <dir>: read_tracker against a stub gh on PATH that answers 504
+# once, then a 4xx, so the self-test proves the read rides out the one and
+# refuses the other without a token.
+retry_test() {
+  local d="$1" fails=0 answer got
+  mkdir -p "$d/bin"
+  cat > "$d/bin/gh" <<'STUB'
+#!/usr/bin/env bash
+n=$(($(cat "$STUB_DIR/calls" 2>/dev/null || echo 0) + 1))
+echo "$n" > "$STUB_DIR/calls"
+case "$STUB_MODE:$n" in
+  gateway:1) echo "HTTP 504: 504 Gateway Timeout (https://api.github.com/graphql)" >&2; exit 1 ;;
+  gateway:*) echo '[]' ;;
+  refused:*) echo "HTTP 401: Bad credentials (https://api.github.com/graphql)" >&2; exit 1 ;;
+esac
+STUB
+  chmod +x "$d/bin/gh"
+  for answer in gateway refused; do
+    rm -f "$d/calls"
+    if PATH="$d/bin:$PATH" STUB_DIR="$d" STUB_MODE="$answer" GH_RETRY_SLEEP=true \
+      read_tracker "$d/issues.json" 2> "$d/err"; then got=0; else got=1; fi
+    case "$answer:$got:$(cat "$d/calls")" in
+      gateway:0:2 | refused:1:1) echo "self-test ok: the tracker read on a $answer answer" ;;
+      *)
+        echo "self-test FAILED: the tracker read on a $answer answer (exit $got after $(cat "$d/calls") calls)" >&2
+        cat "$d/err" >&2
+        fails=1
+        ;;
+    esac
+  done
+  return "$fails"
+}
+
 self_test() {
   local d fails=0 title="# Control matrix"
   d="$(mktemp -d)"
@@ -219,6 +265,7 @@ self_test() {
   expect "rows out of order" 1 "$d/main" "$d/order" "$d/want" "12" 0
   expect "generator changed without a full render" 1 "$d/main" "$d/own" "$d/want" "12" 1
   expect "generator changed with a full render" 0 "$d/main" "$d/want" "$d/want" "12" 1
+  retry_test "$d/retry" || fails=1
   rm -rf "$d"
   [[ "$fails" -eq 0 ]] || die "self-test failed"
   echo "control-matrix: self-test passed"
@@ -266,9 +313,7 @@ printf '%s\n' "${LEGAL_SOURCES[@]}" |
 
 # ── the tracker ──────────────────────────────────────────────────────────────
 # One call, and everything the page needs, readable with a repository token.
-gh issue list --state all --limit "$FETCH_LIMIT" \
-  --json number,title,body,state,stateReason,url \
-  > "$WORK/issues.json" || die "could not read the tracker (is gh authenticated?)"
+read_tracker "$WORK/issues.json" || die "could not read the tracker (is gh authenticated?)"
 
 fetched="$(jq 'length' "$WORK/issues.json")"
 [[ "$fetched" -lt "$FETCH_LIMIT" ]] ||
@@ -352,12 +397,12 @@ fi
 # closing keyword but not whether they merged, and an OPEN one must not move a
 # row (#3253). One GraphQL read per control-bearing issue fetches the state;
 # ~30 issues, one call each, well inside the rate budget.
-repo="$(gh repo view --json nameWithOwner --jq .nameWithOwner)" ||
+repo="$(gh_retry gh repo view --json nameWithOwner --jq .nameWithOwner)" ||
   die "could not resolve the current repository (run inside a gh-authenticated clone)"
 : > "$WORK/prs.jsonl"
 for issue in $(jq -r '[ .[] | .number ] | unique | .[]' "$WORK/controls.json"); do
   # shellcheck disable=SC2016 # $owner/$name/$number are GraphQL variables, bound by the -f flags
-  gh api graphql -f owner="${repo%%/*}" -f name="${repo##*/}" -F number="$issue" \
+  gh_retry gh api graphql -f owner="${repo%%/*}" -f name="${repo##*/}" -F number="$issue" \
     -f query='query($owner:String!,$name:String!,$number:Int!){
       repository(owner:$owner,name:$name){issue(number:$number){
         closedByPullRequestsReferences(first:20){nodes{number url merged}}}}}' \
@@ -376,7 +421,7 @@ echo '{"issues": [], "pr": null}' > "$WORK/none.json"
 cp "$WORK/none.json" "$WORK/closing.json"
 if [[ -n "$CLOSING" ]]; then
   # shellcheck disable=SC2016 # GraphQL variables, bound by the -f flags
-  gh api graphql -f owner="${repo%%/*}" -f name="${repo##*/}" -F number="$CLOSING" \
+  gh_retry gh api graphql -f owner="${repo%%/*}" -f name="${repo##*/}" -F number="$CLOSING" \
     -f query='query($owner:String!,$name:String!,$number:Int!){
       repository(owner:$owner,name:$name){pullRequest(number:$number){
         number url closingIssuesReferences(first:50){nodes{number}}}}}' \
