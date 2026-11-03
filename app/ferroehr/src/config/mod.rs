@@ -25,6 +25,7 @@
 
 pub mod loader;
 
+pub mod access_delay;
 pub mod auth;
 pub mod authz;
 pub mod deployment;
@@ -112,7 +113,7 @@ pub struct FerroEhrConfig {
     pub privacy: crate::privacy::config::PrivacyConfig,
     /// `[demographic]` — the demographic domain, including national-identifier
     /// protection.
-    pub demographic: crate::service::demographic::identifier::config::DemographicConfig,
+    pub demographic: crate::identifier_protection::config::DemographicConfig,
     /// `[cohort]` — the cross-domain cohort-query allow-list and limits.
     pub cohort: crate::service::linkage::cohort::config::CohortConfig,
     /// `[ehr_index]` — who holds the subject-to-EHR cross-reference: an IHE
@@ -121,7 +122,7 @@ pub struct FerroEhrConfig {
     /// `[usage_report]` — the installation report to `FerroPULSE` (on by default).
     pub usage_report: ferrohealth_usage_report::section::UsageReportSection,
     /// `[access_delay]` — the EHDS Art. 3(3) delay of the person's own access.
-    pub access_delay: crate::service::admin::access_delay::config::AccessDelayConfig,
+    pub access_delay: access_delay::AccessDelayConfig,
 }
 
 impl Default for FerroEhrConfig {
@@ -159,12 +160,11 @@ impl Default for FerroEhrConfig {
             audit: crate::system_log::config::AuditConfig::default(),
             origins: crate::origins::OriginsConfig::default(),
             privacy: crate::privacy::config::PrivacyConfig::default(),
-            demographic:
-                crate::service::demographic::identifier::config::DemographicConfig::default(),
+            demographic: crate::identifier_protection::config::DemographicConfig::default(),
             cohort: crate::service::linkage::cohort::config::CohortConfig::default(),
             ehr_index: crate::service::ehr_index::config::EhrIndexConfig::default(),
             usage_report: ferrohealth_usage_report::section::UsageReportSection::default(),
-            access_delay: crate::service::admin::access_delay::config::AccessDelayConfig::default(),
+            access_delay: access_delay::AccessDelayConfig::default(),
         }
     }
 }

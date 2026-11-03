@@ -78,12 +78,12 @@ use crate::db::domain::Domain;
 use crate::db::parent_statistics;
 use crate::error::ServiceError;
 use crate::error::refusal::{ArchiveDefect, Clash, Malformed, Refusal};
+use crate::identifier_protection::store::StoreError;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::admin::types::{
     CompressionFormat, DumpLoadFailReport, ExportFormat, ExportSpec,
 };
-use crate::service::demographic::identifier::store::StoreError;
 use crate::storage::codec::decompose;
 use crate::storage::dump_repo::write::StoredAudit;
 use crate::storage::dump_repo::{

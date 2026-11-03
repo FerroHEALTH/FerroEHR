@@ -28,6 +28,8 @@
 //! - [`error`] — the one error type every layer answers, [`error::ServiceError`],
 //!   and its refusal kinds ([`error::refusal`]).
 //! - [`storage`] — the decomposed node model, node codec, and row I/O.
+//! - [`identifier_protection`] — national identifiers sealed out of party
+//!   bodies before they are stored, and expanded for an authorised reader.
 //! - [`db`] — pool, settings, migrators.
 //! - [`telemetry`] — observability infrastructure.
 //! - [`extensions`] — quarantined enterprise extensions (eventing,
@@ -49,6 +51,7 @@ pub mod db;
 pub mod decommission;
 pub mod error;
 pub mod extensions;
+pub mod identifier_protection;
 pub mod ids;
 pub mod licence;
 pub mod manufacturer;
