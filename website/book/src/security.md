@@ -299,7 +299,15 @@ server default**, in both directions:
   A CONTRIBUTION, an EHR Extract import or an admin archive load that
   carries such settings is refused with `400` naming the setting that does
   not parse (the load names its EHR too, and writes nothing of the archive),
-  so only settings stored before that check can hold an EHR.
+  so only settings stored before that check can hold an EHR. An
+  administrator repairs a held EHR with
+  `POST /ferroehr/rest/extensions/v1/admin/ehr-access/repair`, body
+  `{"ehr_id": "…", "settings": {…}}`: the new settings must parse, the
+  repair commits a new `EHR_ACCESS` version with its own commit audit and
+  contribution, and it writes an access record
+  (`ehr-access-repair:<versioned object uid>`) naming the administrator. The
+  repair is refused with `409` for an EHR that is not held; such an EHR
+  changes its settings with a CONTRIBUTION.
 - **Gate-keeper:** once set, only that principal may commit a new
   `EHR_ACCESS` version (via a CONTRIBUTION; there is no dedicated
   `EHR_ACCESS` endpoint in the openEHR REST API). Changes are versioned and

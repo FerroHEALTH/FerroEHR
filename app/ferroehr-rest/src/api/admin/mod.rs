@@ -23,6 +23,7 @@
 //! spec-silence flag and register citation.
 
 pub mod access_delay;
+pub mod access_repair;
 pub mod access_restriction;
 pub mod archive;
 mod body;
