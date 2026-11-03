@@ -16,6 +16,7 @@ use ferroehr::service::version_update::WriteRequest;
 use serde_json::{Value, json};
 use sqlx::{PgPool, Row};
 
+use crate::fixtures::commit_audit;
 use crate::fixtures::{committer, composition_by, uv};
 use crate::typed_body::typed;
 use ferroehr::extensions::outbox::{OutboxDomain, reconcile};
@@ -161,7 +162,7 @@ async fn composition_and_contribution_commits_each_write_one_phi_free_outbox_row
                     "code_string": "532" } },
             "data": composition("c1")
         }],
-        "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } },  "committer": committer("author") }
+        "audit": commit_audit("251", "modification", "author")
     });
     svc.create_ehr_contribution(ehr, contribution)
         .await
@@ -217,7 +218,7 @@ async fn outbox_disabled_writes_no_rows() {
                     "code_string": "532" } },
             "data": composition("c1")
         }],
-        "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } },  "committer": committer("author") }
+        "audit": commit_audit("251", "modification", "author")
     });
     svc.create_ehr_contribution(ehr, contribution)
         .await
@@ -341,10 +342,7 @@ async fn the_feed_serves_every_committed_row_in_seq_order_until_acknowledged() {
 
 #[tokio::test]
 async fn import_writes_one_phi_free_outbox_row() {
-    let source_db = testkit::db().await.expect("testkit database");
-    let source = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &source_db.pool(),
-    ));
+    let (_source_db, source) = crate::fixtures::service().await;
     let target_db = testkit::db().await.expect("testkit database");
     let target_pool = target_db.pool();
     let target = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(

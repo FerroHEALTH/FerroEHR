@@ -24,7 +24,6 @@
 //! target resource, the response SHOULD be `405 Method Not Allowed` status
 //! code" — `docs/overview/Requests_and_responses.md` §"HTTP Methods").
 
-use axum::extract::State;
 use axum::response::Response;
 use http::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
@@ -37,7 +36,7 @@ use ferroehr::service::platform_service::PlatformService;
 use ferroehr::storage::statistics::CompositionCount;
 
 use super::body::{AdminDisabled, AdminUnauthenticated, NotAdminClass};
-use crate::api::{RequestParts, guarded_dispatch};
+use crate::api::{RequestParts, guarded_handler};
 use crate::overview::error::RestError;
 use crate::state::AppState;
 use crate::{negotiate, params};
@@ -45,7 +44,7 @@ use crate::{negotiate, params};
 /// The activity-report extension routes as a native `utoipa-axum` router —
 /// **no ITS-REST contract** (see the module docs). Group-relative paths
 /// (nested under the extensions root); every operation runs through
-/// [`guarded_dispatch`] onto its handler.
+/// [`guarded_dispatch`](crate::api::guarded_dispatch) onto its handler.
 pub(crate) fn report_routes() -> OpenApiRouter<AppState> {
     // One `routes!` per PATH (handlers in a single call must share the path).
     OpenApiRouter::new()
@@ -55,252 +54,215 @@ pub(crate) fn report_routes() -> OpenApiRouter<AppState> {
         .routes(routes!(admin_report_composition_version_count))
 }
 
-/// List the CONTRIBUTION ids of one platform service
-/// (`GET /admin/report/contribution`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module
-/// docs).
-#[utoipa::path(
-    get, path = "/admin/report/contribution", tag = "admin-report",
-    params(
-        ("a_service" = String, Query,
-         description = "The platform service naming the \
-                        versioned-content service to report on — one of \
-                        `Admin`, `Definitions`, `Ehr`, `Ehr_index`, \
-                        `Demographic`, `Message`, `Query`, `System_log`, \
-                        matched case-insensitively. \
-                        A service that holds no versioned content reports \
-                        empty/zero rather than failing.",
-         example = "Ehr"),
-        ("time_interval" = Option<String>, Query,
-         description = "The optional time interval as \
-                        `<lower>/<upper>`, matched CLOSED against the \
-                        CONTRIBUTION / version audit `time_committed`. Either \
-                        bound may be empty for an open interval \
-                        (`/2026-01-01T00:00:00Z`, `2020-01-01T00:00:00Z/`); an \
-                        absent parameter is the fully open interval. A pair \
-                        bounded on BOTH sides must satisfy `lower <= upper` \
-                        (BASE `Interval` invariant `Limits_consistent`).",
-         example = "2020-01-01T00:00:00Z/2026-12-31T00:00:00Z")
-    ),
-    responses(
-        (status = 200, description = "The matching CONTRIBUTION ids, ordered by \
-                                      commit time then id. A service that is \
-                                      not a versioned-content service yields \
-                                      `[]`.",
-         body = Vec<String>,
-         example = json!(["8849182c-82ad-4088-a07f-48ead4180515"])),
-        (status = 400, description = "`a_service` is absent or names no \
-                                      platform service, `time_interval` \
-                                      is not `<lower>/<upper>`, a bound is not a \
-                                      valid ISO 8601 date-time, or the bounded \
-                                      pair has its lower bound AFTER its upper \
-                                      bound (BASE `Interval` invariant \
-                                      `Limits_consistent`).",
-         body = serde_json::Value),
-        AdminUnauthenticated,
-        NotAdminClass,
-        AdminDisabled
-    )
-)]
-pub(crate) async fn admin_report_contributions(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "admin_report_contributions",
-        parts,
-        |state, parts| super::body::gated(state, parts, contributions),
-    )
-    .await
+guarded_handler! {
+    /// List the CONTRIBUTION ids of one platform service
+    /// (`GET /admin/report/contribution`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module
+    /// docs).
+    #[utoipa::path(
+        get, path = "/admin/report/contribution", tag = "admin-report",
+        params(
+            ("a_service" = String, Query,
+             description = "The platform service naming the \
+                            versioned-content service to report on — one of \
+                            `Admin`, `Definitions`, `Ehr`, `Ehr_index`, \
+                            `Demographic`, `Message`, `Query`, `System_log`, \
+                            matched case-insensitively. \
+                            A service that holds no versioned content reports \
+                            empty/zero rather than failing.",
+             example = "Ehr"),
+            ("time_interval" = Option<String>, Query,
+             description = "The optional time interval as \
+                            `<lower>/<upper>`, matched CLOSED against the \
+                            CONTRIBUTION / version audit `time_committed`. Either \
+                            bound may be empty for an open interval \
+                            (`/2026-01-01T00:00:00Z`, `2020-01-01T00:00:00Z/`); an \
+                            absent parameter is the fully open interval. A pair \
+                            bounded on BOTH sides must satisfy `lower <= upper` \
+                            (BASE `Interval` invariant `Limits_consistent`).",
+             example = "2020-01-01T00:00:00Z/2026-12-31T00:00:00Z")
+        ),
+        responses(
+            (status = 200, description = "The matching CONTRIBUTION ids, ordered by \
+                                          commit time then id. A service that is \
+                                          not a versioned-content service yields \
+                                          `[]`.",
+             body = Vec<String>,
+             example = json!(["8849182c-82ad-4088-a07f-48ead4180515"])),
+            (status = 400, description = "`a_service` is absent or names no \
+                                          platform service, `time_interval` \
+                                          is not `<lower>/<upper>`, a bound is not a \
+                                          valid ISO 8601 date-time, or the bounded \
+                                          pair has its lower bound AFTER its upper \
+                                          bound (BASE `Interval` invariant \
+                                          `Limits_consistent`).",
+             body = serde_json::Value),
+            AdminUnauthenticated,
+            NotAdminClass,
+            AdminDisabled
+        )
+    )]
+    admin_report_contributions => |state, parts| super::body::gated(state, parts, contributions)
 }
 
-/// Count the CONTRIBUTIONs of one platform service
-/// (`GET /admin/report/contribution/count`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). The body is a bare JSON number — the count IS the
-/// resource, and an object wrapper would invent a schema no spec defines.
-#[utoipa::path(
-    get, path = "/admin/report/contribution/count", tag = "admin-report",
-    params(
-        ("a_service" = String, Query,
-         description = "The platform service naming the \
-                        versioned-content service to report on — one of \
-                        `Admin`, `Definitions`, `Ehr`, `Ehr_index`, \
-                        `Demographic`, `Message`, `Query`, `System_log`, \
-                        matched case-insensitively. \
-                        A service that holds no versioned content reports \
-                        empty/zero rather than failing.",
-         example = "Ehr"),
-        ("time_interval" = Option<String>, Query,
-         description = "The optional time interval as \
-                        `<lower>/<upper>`, matched CLOSED against the \
-                        CONTRIBUTION / version audit `time_committed`. Either \
-                        bound may be empty for an open interval \
-                        (`/2026-01-01T00:00:00Z`, `2020-01-01T00:00:00Z/`); an \
-                        absent parameter is the fully open interval. A pair \
-                        bounded on BOTH sides must satisfy `lower <= upper` \
-                        (BASE `Interval` invariant `Limits_consistent`).",
-         example = "2020-01-01T00:00:00Z/2026-12-31T00:00:00Z")
-    ),
-    responses(
-        (status = 200, description = "The number of matching CONTRIBUTIONs, as \
-                                      a bare JSON number (`0` for a service \
-                                      that holds no versioned content).",
-         body = i64, example = json!(0)),
-        (status = 400, description = "`a_service` is absent or names no \
-                                      platform service, `time_interval` \
-                                      is not `<lower>/<upper>`, a bound is not a \
-                                      valid ISO 8601 date-time, or the bounded \
-                                      pair has its lower bound AFTER its upper \
-                                      bound (BASE `Interval` invariant \
-                                      `Limits_consistent`).",
-         body = serde_json::Value),
-        AdminUnauthenticated,
-        NotAdminClass,
-        AdminDisabled
-    )
-)]
-pub(crate) async fn admin_report_contribution_count(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "admin_report_contribution_count",
-        parts,
-        |state, parts| super::body::gated(state, parts, contribution_count),
-    )
-    .await
+guarded_handler! {
+    /// Count the CONTRIBUTIONs of one platform service
+    /// (`GET /admin/report/contribution/count`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module
+    /// docs). The body is a bare JSON number — the count IS the
+    /// resource, and an object wrapper would invent a schema no spec defines.
+    #[utoipa::path(
+        get, path = "/admin/report/contribution/count", tag = "admin-report",
+        params(
+            ("a_service" = String, Query,
+             description = "The platform service naming the \
+                            versioned-content service to report on — one of \
+                            `Admin`, `Definitions`, `Ehr`, `Ehr_index`, \
+                            `Demographic`, `Message`, `Query`, `System_log`, \
+                            matched case-insensitively. \
+                            A service that holds no versioned content reports \
+                            empty/zero rather than failing.",
+             example = "Ehr"),
+            ("time_interval" = Option<String>, Query,
+             description = "The optional time interval as \
+                            `<lower>/<upper>`, matched CLOSED against the \
+                            CONTRIBUTION / version audit `time_committed`. Either \
+                            bound may be empty for an open interval \
+                            (`/2026-01-01T00:00:00Z`, `2020-01-01T00:00:00Z/`); an \
+                            absent parameter is the fully open interval. A pair \
+                            bounded on BOTH sides must satisfy `lower <= upper` \
+                            (BASE `Interval` invariant `Limits_consistent`).",
+             example = "2020-01-01T00:00:00Z/2026-12-31T00:00:00Z")
+        ),
+        responses(
+            (status = 200, description = "The number of matching CONTRIBUTIONs, as \
+                                          a bare JSON number (`0` for a service \
+                                          that holds no versioned content).",
+             body = i64, example = json!(0)),
+            (status = 400, description = "`a_service` is absent or names no \
+                                          platform service, `time_interval` \
+                                          is not `<lower>/<upper>`, a bound is not a \
+                                          valid ISO 8601 date-time, or the bounded \
+                                          pair has its lower bound AFTER its upper \
+                                          bound (BASE `Interval` invariant \
+                                          `Limits_consistent`).",
+             body = serde_json::Value),
+            AdminUnauthenticated,
+            NotAdminClass,
+            AdminDisabled
+        )
+    )]
+    admin_report_contribution_count
+        => |state, parts| super::body::gated(state, parts, contribution_count)
 }
 
-/// Count the `VERSIONED_COMPOSITION`s of one platform service
-/// (`GET /admin/report/versioned_composition/count`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). It counts distinct version
-/// CONTAINERS, as against the individual versions its sibling counts.
-#[utoipa::path(
-    get, path = "/admin/report/versioned_composition/count", tag = "admin-report",
-    params(
-        ("a_service" = String, Query,
-         description = "The platform service naming the \
-                        versioned-content service to report on — one of \
-                        `Admin`, `Definitions`, `Ehr`, `Ehr_index`, \
-                        `Demographic`, `Message`, `Query`, `System_log`, \
-                        matched case-insensitively. \
-                        A service that holds no versioned content reports \
-                        empty/zero rather than failing.",
-         example = "Ehr"),
-        ("time_interval" = Option<String>, Query,
-         description = "The optional time interval as \
-                        `<lower>/<upper>`, matched CLOSED against the \
-                        CONTRIBUTION / version audit `time_committed`. Either \
-                        bound may be empty for an open interval \
-                        (`/2026-01-01T00:00:00Z`, `2020-01-01T00:00:00Z/`); an \
-                        absent parameter is the fully open interval. A pair \
-                        bounded on BOTH sides must satisfy `lower <= upper` \
-                        (BASE `Interval` invariant `Limits_consistent`).",
-         example = "2020-01-01T00:00:00Z/2026-12-31T00:00:00Z")
-    ),
-    responses(
-        (status = 200, description = "The number of distinct COMPOSITION \
-                                      version containers with a version \
-                                      committed in the interval, as a bare JSON \
-                                      number. COMPOSITIONs are EHR-scoped, so \
-                                      only `a_service=Ehr` can be non-zero.",
-         body = i64, example = json!(0)),
-        (status = 400, description = "`a_service` is absent or names no \
-                                      platform service, `time_interval` \
-                                      is not `<lower>/<upper>`, a bound is not a \
-                                      valid ISO 8601 date-time, or the bounded \
-                                      pair has its lower bound AFTER its upper \
-                                      bound (BASE `Interval` invariant \
-                                      `Limits_consistent`).",
-         body = serde_json::Value),
-        AdminUnauthenticated,
-        NotAdminClass,
-        AdminDisabled
-    )
-)]
-pub(crate) async fn admin_report_versioned_composition_count(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "admin_report_versioned_composition_count",
-        parts,
-        |state, parts| super::body::gated(state, parts, versioned_composition_count),
-    )
-    .await
+guarded_handler! {
+    /// Count the `VERSIONED_COMPOSITION`s of one platform service
+    /// (`GET /admin/report/versioned_composition/count`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module
+    /// docs). It counts distinct version
+    /// CONTAINERS, as against the individual versions its sibling counts.
+    #[utoipa::path(
+        get, path = "/admin/report/versioned_composition/count", tag = "admin-report",
+        params(
+            ("a_service" = String, Query,
+             description = "The platform service naming the \
+                            versioned-content service to report on — one of \
+                            `Admin`, `Definitions`, `Ehr`, `Ehr_index`, \
+                            `Demographic`, `Message`, `Query`, `System_log`, \
+                            matched case-insensitively. \
+                            A service that holds no versioned content reports \
+                            empty/zero rather than failing.",
+             example = "Ehr"),
+            ("time_interval" = Option<String>, Query,
+             description = "The optional time interval as \
+                            `<lower>/<upper>`, matched CLOSED against the \
+                            CONTRIBUTION / version audit `time_committed`. Either \
+                            bound may be empty for an open interval \
+                            (`/2026-01-01T00:00:00Z`, `2020-01-01T00:00:00Z/`); an \
+                            absent parameter is the fully open interval. A pair \
+                            bounded on BOTH sides must satisfy `lower <= upper` \
+                            (BASE `Interval` invariant `Limits_consistent`).",
+             example = "2020-01-01T00:00:00Z/2026-12-31T00:00:00Z")
+        ),
+        responses(
+            (status = 200, description = "The number of distinct COMPOSITION \
+                                          version containers with a version \
+                                          committed in the interval, as a bare JSON \
+                                          number. COMPOSITIONs are EHR-scoped, so \
+                                          only `a_service=Ehr` can be non-zero.",
+             body = i64, example = json!(0)),
+            (status = 400, description = "`a_service` is absent or names no \
+                                          platform service, `time_interval` \
+                                          is not `<lower>/<upper>`, a bound is not a \
+                                          valid ISO 8601 date-time, or the bounded \
+                                          pair has its lower bound AFTER its upper \
+                                          bound (BASE `Interval` invariant \
+                                          `Limits_consistent`).",
+             body = serde_json::Value),
+            AdminUnauthenticated,
+            NotAdminClass,
+            AdminDisabled
+        )
+    )]
+    admin_report_versioned_composition_count
+        => |state, parts| super::body::gated(state, parts, versioned_composition_count)
 }
 
-/// Count the individual COMPOSITION versions of one platform service
-/// (`GET /admin/report/composition_version/count`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module
-/// docs).
-#[utoipa::path(
-    get, path = "/admin/report/composition_version/count", tag = "admin-report",
-    params(
-        ("a_service" = String, Query,
-         description = "The platform service naming the \
-                        versioned-content service to report on — one of \
-                        `Admin`, `Definitions`, `Ehr`, `Ehr_index`, \
-                        `Demographic`, `Message`, `Query`, `System_log`, \
-                        matched case-insensitively. \
-                        A service that holds no versioned content reports \
-                        empty/zero rather than failing.",
-         example = "Ehr"),
-        ("time_interval" = Option<String>, Query,
-         description = "The optional time interval as \
-                        `<lower>/<upper>`, matched CLOSED against the \
-                        CONTRIBUTION / version audit `time_committed`. Either \
-                        bound may be empty for an open interval \
-                        (`/2026-01-01T00:00:00Z`, `2020-01-01T00:00:00Z/`); an \
-                        absent parameter is the fully open interval. A pair \
-                        bounded on BOTH sides must satisfy `lower <= upper` \
-                        (BASE `Interval` invariant `Limits_consistent`).",
-         example = "2020-01-01T00:00:00Z/2026-12-31T00:00:00Z")
-    ),
-    responses(
-        (status = 200, description = "The number of individual COMPOSITION \
-                                      version rows committed in the interval, \
-                                      as a bare JSON number. COMPOSITIONs are \
-                                      EHR-scoped, so only `a_service=Ehr` can \
-                                      be non-zero.",
-         body = i64, example = json!(0)),
-        (status = 400, description = "`a_service` is absent or names no \
-                                      platform service, `time_interval` \
-                                      is not `<lower>/<upper>`, a bound is not a \
-                                      valid ISO 8601 date-time, or the bounded \
-                                      pair has its lower bound AFTER its upper \
-                                      bound (BASE `Interval` invariant \
-                                      `Limits_consistent`).",
-         body = serde_json::Value),
-        AdminUnauthenticated,
-        NotAdminClass,
-        AdminDisabled
-    )
-)]
-pub(crate) async fn admin_report_composition_version_count(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "admin_report_composition_version_count",
-        parts,
-        |state, parts| super::body::gated(state, parts, composition_version_count),
-    )
-    .await
+guarded_handler! {
+    /// Count the individual COMPOSITION versions of one platform service
+    /// (`GET /admin/report/composition_version/count`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module
+    /// docs).
+    #[utoipa::path(
+        get, path = "/admin/report/composition_version/count", tag = "admin-report",
+        params(
+            ("a_service" = String, Query,
+             description = "The platform service naming the \
+                            versioned-content service to report on — one of \
+                            `Admin`, `Definitions`, `Ehr`, `Ehr_index`, \
+                            `Demographic`, `Message`, `Query`, `System_log`, \
+                            matched case-insensitively. \
+                            A service that holds no versioned content reports \
+                            empty/zero rather than failing.",
+             example = "Ehr"),
+            ("time_interval" = Option<String>, Query,
+             description = "The optional time interval as \
+                            `<lower>/<upper>`, matched CLOSED against the \
+                            CONTRIBUTION / version audit `time_committed`. Either \
+                            bound may be empty for an open interval \
+                            (`/2026-01-01T00:00:00Z`, `2020-01-01T00:00:00Z/`); an \
+                            absent parameter is the fully open interval. A pair \
+                            bounded on BOTH sides must satisfy `lower <= upper` \
+                            (BASE `Interval` invariant `Limits_consistent`).",
+             example = "2020-01-01T00:00:00Z/2026-12-31T00:00:00Z")
+        ),
+        responses(
+            (status = 200, description = "The number of individual COMPOSITION \
+                                          version rows committed in the interval, \
+                                          as a bare JSON number. COMPOSITIONs are \
+                                          EHR-scoped, so only `a_service=Ehr` can \
+                                          be non-zero.",
+             body = i64, example = json!(0)),
+            (status = 400, description = "`a_service` is absent or names no \
+                                          platform service, `time_interval` \
+                                          is not `<lower>/<upper>`, a bound is not a \
+                                          valid ISO 8601 date-time, or the bounded \
+                                          pair has its lower bound AFTER its upper \
+                                          bound (BASE `Interval` invariant \
+                                          `Limits_consistent`).",
+             body = serde_json::Value),
+            AdminUnauthenticated,
+            NotAdminClass,
+            AdminDisabled
+        )
+    )]
+    admin_report_composition_version_count
+        => |state, parts| super::body::gated(state, parts, composition_version_count)
 }
 
 // ── operations ────────────────────────────────────────────────────────────────

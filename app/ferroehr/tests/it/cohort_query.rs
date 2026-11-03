@@ -439,9 +439,7 @@ async fn predicates_intersect() {
 /// are refused with their own typed errors rather than an empty cohort.
 #[tokio::test]
 async fn an_unknown_predicate_and_an_unbound_deployment_are_refused() {
-    let db = testkit::db().await.expect("testkit database");
-
-    let unbound = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (db, unbound) = crate::fixtures::service().await;
     assert!(!unbound.cohort_enabled(), "no predicate is bound");
     assert!(
         matches!(

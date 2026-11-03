@@ -25,7 +25,6 @@
               envelope"
 )]
 
-use axum::extract::State;
 use axum::response::Response;
 use http::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
@@ -36,7 +35,7 @@ use openehr_its::rest::runtime::ApiError;
 use ferroehr::error::ServiceError;
 use ferroehr::versioning::object_version_id::parse_version_uid;
 
-use crate::api::{RequestParts, guarded_dispatch};
+use crate::api::{RequestParts, guarded_handler};
 use crate::overview::error::RestError;
 use crate::state::AppState;
 use crate::{negotiate, params};
@@ -47,55 +46,50 @@ pub(crate) fn identifier_routes() -> OpenApiRouter<AppState> {
     OpenApiRouter::new().routes(routes!(admin_party_identifiers))
 }
 
-/// Read a party version with its protected identifiers expanded
-/// (`GET /admin/party/identifiers`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module docs).
-#[utoipa::path(
-    get, path = "/admin/party/identifiers", tag = "admin-identifiers",
-    params(("version_uid" = String, Query,
-            description = "The `OBJECT_VERSION_ID` of the party version to read. Any \
-                           version may be named, so a historical version shows the \
-                           values it committed.")),
-    responses(
-        (status = 200, description = "`{ \"version_uid\": …, \"expanded_schemes\": [...], \
-                                      \"version\": … }`: the party's \
-                                      `ORIGINAL_VERSION` with each protected \
-                                      identifier put back to its value, and the \
-                                      scheme of each value put back. The body is a \
-                                      view: it no longer matches the stored, signed \
-                                      version. Each scheme expanded is one access \
-                                      record naming the reader, the party and the \
-                                      scheme, never the value.",
-         body = serde_json::Value),
-        (status = 400, description = "`version_uid` is missing or not an \
-                                      `OBJECT_VERSION_ID`, or the deployment \
-                                      configures no identifier protection.",
-         body = serde_json::Value),
-        (status = 401, description = "Unauthenticated.", body = serde_json::Value),
-        (status = 403, description = "Not in the Admin class, or not holding \
-                                      `authz.rbac.identifier_reader_role` (unset: \
-                                      nobody holds it).",
-         body = serde_json::Value),
-        (status = 404, description = "No party holds that version.",
-         body = serde_json::Value),
-        (status = 405, description = "The admin API is disabled on this server.",
-         body = serde_json::Value),
-        (status = 503, description = "The access record could not be written under \
-                                      `audit.fail_mode = \"closed\"`; the values are \
-                                      withheld.",
-         body = serde_json::Value)
-    )
-)]
-pub(crate) async fn admin_party_identifiers(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_party_identifiers", parts, |state, parts| {
-        super::body::gated(state, parts, party_identifiers)
-    })
-    .await
+guarded_handler! {
+    /// Read a party version with its protected identifiers expanded
+    /// (`GET /admin/party/identifiers`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module docs).
+    #[utoipa::path(
+        get, path = "/admin/party/identifiers", tag = "admin-identifiers",
+        params(("version_uid" = String, Query,
+                description = "The `OBJECT_VERSION_ID` of the party version to read. Any \
+                               version may be named, so a historical version shows the \
+                               values it committed.")),
+        responses(
+            (status = 200, description = "`{ \"version_uid\": …, \"expanded_schemes\": [...], \
+                                          \"version\": … }`: the party's \
+                                          `ORIGINAL_VERSION` with each protected \
+                                          identifier put back to its value, and the \
+                                          scheme of each value put back. The body is a \
+                                          view: it no longer matches the stored, signed \
+                                          version. Each scheme expanded is one access \
+                                          record naming the reader, the party and the \
+                                          scheme, never the value.",
+             body = serde_json::Value),
+            (status = 400, description = "`version_uid` is missing or not an \
+                                          `OBJECT_VERSION_ID`, or the deployment \
+                                          configures no identifier protection.",
+             body = serde_json::Value),
+            (status = 401, description = "Unauthenticated.", body = serde_json::Value),
+            (status = 403, description = "Not in the Admin class, or not holding \
+                                          `authz.rbac.identifier_reader_role` (unset: \
+                                          nobody holds it).",
+             body = serde_json::Value),
+            (status = 404, description = "No party holds that version.",
+             body = serde_json::Value),
+            (status = 405, description = "The admin API is disabled on this server.",
+             body = serde_json::Value),
+            (status = 503, description = "The access record could not be written under \
+                                          `audit.fail_mode = \"closed\"`; the values are \
+                                          withheld.",
+             body = serde_json::Value)
+        )
+    )]
+    admin_party_identifiers => |state, parts| {
+            super::body::gated(state, parts, party_identifiers)
+        }
 }
 
 /// The `admin_party_identifiers` operation.

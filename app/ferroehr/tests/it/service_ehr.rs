@@ -18,9 +18,10 @@ use ferroehr::error::refusal::{Clash, Invalid, Malformed, Missing, Refusal};
 use ferroehr::service::FerroEhrService;
 use ferroehr::versioning::change::Committed;
 
-use crate::fixtures::{change_type, composition, folder, uid, uv};
+use crate::fixtures::{composition, folder, uid, uv};
 use crate::item_tag_fixture::ehr_tag;
 
+use crate::fixtures::{commit_audit, committer};
 use crate::typed_body::typed;
 use ferroehr::service::version_update::{WriteRequest, change_type_coded};
 use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData};
@@ -496,13 +497,10 @@ async fn is_modifiable_false_blocks_content_writes_but_not_ehr_status() {
         .create_ehr_contribution(
             ehr_uuid,
             json!({
-                "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
+                "audit": commit_audit("251", "modification", "conformance tester"), "versions": [{
                     "lifecycle_state": crate::fixtures::lifecycle("532"),
                     "data": composition("Via contribution"),
-                    "commit_audit": {
-                        "change_type": change_type("249", "creation"),
-                        "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" }
-                    }
+                    "commit_audit": commit_audit("249", "creation", "conformance tester")
                 }]
             }),
         )
@@ -577,9 +575,9 @@ async fn ehr_creation_merges_the_committal_metadata() {
             description: Some(ferroehr::service::version_update::plain_text(
                 "EHR opened at triage",
             )),
-            committer: openehr_its::json::from_canonical_value::<PartyProxy>(
-                &json!({ "_type": "PARTY_IDENTIFIED", "name": "Dr Chart" }),
-            )
+            committer: openehr_its::json::from_canonical_value::<PartyProxy>(&json!(committer(
+                "Dr Chart"
+            )))
             .expect("committer"),
             system_id: Some("example.openehr.systemid".to_owned()),
             additional_properties: std::collections::BTreeMap::new(),
@@ -653,9 +651,9 @@ async fn ehr_creation_rejects_a_change_type_that_is_not_a_creation() {
             system_id: None,
             change_type: change_type_coded(code),
             description: None,
-            committer: openehr_its::json::from_canonical_value::<PartyProxy>(
-                &json!({ "_type": "PARTY_IDENTIFIED", "name": "Dr Chart" }),
-            )
+            committer: openehr_its::json::from_canonical_value::<PartyProxy>(&json!(committer(
+                "Dr Chart"
+            )))
             .expect("committer"),
             additional_properties: std::collections::BTreeMap::new(),
         })),
@@ -688,9 +686,9 @@ async fn ehr_creation_refuses_a_stated_empty_system_id() {
             system_id: Some(String::new()),
             change_type: ferroehr::service::version_update::unstated_code(),
             description: None,
-            committer: openehr_its::json::from_canonical_value::<PartyProxy>(
-                &json!({ "_type": "PARTY_IDENTIFIED", "name": "Dr Chart" }),
-            )
+            committer: openehr_its::json::from_canonical_value::<PartyProxy>(&json!(committer(
+                "Dr Chart"
+            )))
             .expect("committer"),
             additional_properties: std::collections::BTreeMap::new(),
         })),
@@ -819,14 +817,11 @@ async fn contribution_commits_a_composition_atomically() {
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
     let body = json!({
-        "audit": {
-            "change_type": change_type("249", "creation"),
-            "committer": { "_type": "PARTY_IDENTIFIED", "name": "Dr. Contribution" }
-        },
+        "audit": commit_audit("249", "creation", "Dr. Contribution"),
         "versions": [{
             "lifecycle_state": crate::fixtures::lifecycle("532"),
             "data": composition("Via contribution"),
-            "commit_audit": { "change_type": change_type("249", "creation"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "Dr. Contribution" } }
+            "commit_audit": commit_audit("249", "creation", "Dr. Contribution")
         }]
     });
     let contribution = svc
@@ -873,10 +868,10 @@ async fn contribution_preserves_the_client_change_type_and_rejects_invalid_combo
         .create_ehr_contribution(
             ehr_uuid,
             json!({
-                "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
+                "audit": commit_audit("251", "modification", "conformance tester"), "versions": [{
                     "lifecycle_state": crate::fixtures::lifecycle("532"),
                     "data": composition("v1"),
-                    "commit_audit": { "change_type": change_type("249", "creation"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }
+                    "commit_audit": commit_audit("249", "creation", "conformance tester")
                 }]
             }),
         )
@@ -892,15 +887,12 @@ async fn contribution_preserves_the_client_change_type_and_rejects_invalid_combo
         .create_ehr_contribution(
             ehr_uuid,
             json!({
-                "audit": {
-                    "change_type": change_type("250", "amendment"),
-                    "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" }
-                },
+                "audit": commit_audit("250", "amendment", "conformance tester"),
                 "versions": [{
                     "lifecycle_state": crate::fixtures::lifecycle("532"),
                     "data": composition("v2 corrected"),
                     "preceding_version_uid": { "value": ovid_v1 },
-                    "commit_audit": { "change_type": change_type("250", "amendment"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }
+                    "commit_audit": commit_audit("250", "amendment", "conformance tester")
                 }]
             }),
         )
@@ -938,11 +930,11 @@ async fn contribution_preserves_the_client_change_type_and_rejects_invalid_combo
         .create_ehr_contribution(
             ehr_uuid,
             json!({
-                "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
+                "audit": commit_audit("251", "modification", "conformance tester"), "versions": [{
                     "lifecycle_state": crate::fixtures::lifecycle("532"),
                     "data": composition("v3"),
                     "preceding_version_uid": { "value": ovid_v2 },
-                    "commit_audit": { "change_type": change_type("249", "creation"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }
+                    "commit_audit": commit_audit("249", "creation", "conformance tester")
                 }]
             }),
         )
@@ -966,11 +958,11 @@ async fn contribution_preserves_the_client_change_type_and_rejects_invalid_combo
         .create_ehr_contribution(
             ehr_uuid,
             json!({
-                "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
+                "audit": commit_audit("251", "modification", "conformance tester"), "versions": [{
                     "lifecycle_state": crate::fixtures::lifecycle("532"),
                     "data": composition("v3"),
                     "preceding_version_uid": { "value": ovid_v2 },
-                    "commit_audit": { "change_type": change_type("999", "bogus"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }
+                    "commit_audit": commit_audit("999", "bogus", "conformance tester")
                 }]
             }),
         )
@@ -1020,14 +1012,11 @@ async fn contribution_rejects_an_invalid_composition() {
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
     let body = json!({
-        "audit": {
-            "change_type": change_type("249", "creation"),
-            "committer": { "_type": "PARTY_IDENTIFIED", "name": "Dr. Contribution" }
-        },
+        "audit": commit_audit("249", "creation", "Dr. Contribution"),
         "versions": [{
             "lifecycle_state": crate::fixtures::lifecycle("532"),
             "data": composition_with_bad_category(),
-            "commit_audit": { "change_type": change_type("249", "creation"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "Dr. Contribution" } }
+            "commit_audit": commit_audit("249", "creation", "Dr. Contribution")
         }]
     });
     let res = svc.create_ehr_contribution(ehr_uuid, body).await;
@@ -1920,10 +1909,10 @@ async fn ehr_folders_indexes_multiple_hierarchies_in_rank_order() {
         .create_ehr_contribution(
             ehr_uuid,
             json!({
-                "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
+                "audit": commit_audit("251", "modification", "conformance tester"), "versions": [{
                     "lifecycle_state": crate::fixtures::lifecycle("532"),
                     "data": secondary,
-                    "commit_audit": { "change_type": change_type("249", "creation"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }
+                    "commit_audit": commit_audit("249", "creation", "conformance tester")
                 }]
             }),
         )
@@ -1968,11 +1957,11 @@ async fn ehr_folders_indexes_multiple_hierarchies_in_rank_order() {
         .create_ehr_contribution(
             ehr_uuid,
             json!({
-                "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
+                "audit": commit_audit("251", "modification", "conformance tester"), "versions": [{
                     "lifecycle_state": crate::fixtures::lifecycle("532"),
                     "data": secondary_v2,
                     "preceding_version_uid": { "value": f2_ovid_v1 },
-                    "commit_audit": { "change_type": change_type("251", "modification"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }
+                    "commit_audit": commit_audit("251", "modification", "conformance tester")
                 }]
             }),
         )
@@ -2039,10 +2028,10 @@ async fn logical_delete_of_a_secondary_hierarchy_drops_it_from_folders() {
         .create_ehr_contribution(
             ehr_uuid,
             json!({
-                "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
+                "audit": commit_audit("251", "modification", "conformance tester"), "versions": [{
                     "lifecycle_state": crate::fixtures::lifecycle("532"),
                     "data": folder("primary"),
-                    "commit_audit": { "change_type": change_type("249", "creation"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }
+                    "commit_audit": commit_audit("249", "creation", "conformance tester")
                 }]
             }),
         )
@@ -2059,10 +2048,10 @@ async fn logical_delete_of_a_secondary_hierarchy_drops_it_from_folders() {
         .create_ehr_contribution(
             ehr_uuid,
             json!({
-                "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
+                "audit": commit_audit("251", "modification", "conformance tester"), "versions": [{
                     "lifecycle_state": crate::fixtures::lifecycle("532"),
                     "data": folder("secondary"),
-                    "commit_audit": { "change_type": change_type("249", "creation"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }
+                    "commit_audit": commit_audit("249", "creation", "conformance tester")
                 }]
             }),
         )
@@ -2085,10 +2074,10 @@ async fn logical_delete_of_a_secondary_hierarchy_drops_it_from_folders() {
     svc.create_ehr_contribution(
         ehr_uuid,
         json!({
-            "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
+            "audit": commit_audit("251", "modification", "conformance tester"), "versions": [{
                 "lifecycle_state": crate::fixtures::lifecycle("523"),
                 "preceding_version_uid": { "value": f2_ovid },
-                "commit_audit": { "change_type": change_type("523", "deleted"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }
+                "commit_audit": commit_audit("523", "deleted", "conformance tester")
             }]
         }),
     )

@@ -22,7 +22,6 @@
               operational JSON, and the OpenAPI examples are written as JSON"
 )]
 
-use axum::extract::State;
 use axum::response::Response;
 use http::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
@@ -31,7 +30,7 @@ use utoipa_axum::routes;
 use ferroehr::extensions::outbox::{FeedEvent, OutboxDomain};
 use openehr_its::rest::runtime::ApiError;
 
-use crate::api::{RequestParts, guarded_dispatch};
+use crate::api::{RequestParts, guarded_handler};
 use crate::overview::error::RestError;
 use crate::state::AppState;
 use crate::{negotiate, params};
@@ -70,100 +69,92 @@ struct Ack {
     last_seq: i64,
 }
 
-/// Read the events after a reader's cursor
-/// (`GET /admin/outbox/{reader}`).
-///
-/// **Our own extension — no openEHR spec governs this** (module docs).
-#[utoipa::path(
-    get, path = "/admin/outbox/{reader}", tag = "admin-outbox",
-    params(
-        ("reader" = String, Path, description = "A reader `[outbox] readers` names."),
-        ("limit" = Option<i64>, Query, description = "The most events to return, 1 to 1000; 100 when absent."),
-        ("domain" = Option<String>, Query, description = "The outbox to read: `clinical` (the default) or `party`. Each has its own `seq` and its own cursor.")
-    ),
-    responses(
-        (status = 200, description = "`{ \"reader\": …, \"events\": [...] }`: the \
-                                      events after the reader's cursor in `seq` \
-                                      order, empty when there are none. Each event \
-                                      is the stored PHI-free envelope with its \
-                                      `seq` beside it. A read moves no cursor.",
-         body = serde_json::Value,
-         example = json!({
-             "reader": "ferrobridge",
-             "events": [{
-                 "seq": 42,
-                 "contribution_id": "0196f1f4-8c3a-7d2e-9b1a-3c5d7e9f1a2b",
-                 "ehr_id": "7d44b88c-4199-4bad-97dc-d78268e01398",
-                 "committed_at": "2026-11-02T09:15:00.123456Z",
-                 "versions": [{
-                     "vo_id": "0196f1f4-8c3b-7a10-8f2e-4d6c8b0a2e4f",
-                     "kind": "COMPOSITION",
-                     "sys_version": 3,
-                     "version_tree_id": "3",
-                     "change_type": "251",
-                     "template_id": "vital_signs.v1"
+guarded_handler! {
+    /// Read the events after a reader's cursor
+    /// (`GET /admin/outbox/{reader}`).
+    ///
+    /// **Our own extension — no openEHR spec governs this** (module docs).
+    #[utoipa::path(
+        get, path = "/admin/outbox/{reader}", tag = "admin-outbox",
+        params(
+            ("reader" = String, Path, description = "A reader `[outbox] readers` names."),
+            ("limit" = Option<i64>, Query, description = "The most events to return, 1 to 1000; 100 when absent."),
+            ("domain" = Option<String>, Query, description = "The outbox to read: `clinical` (the default) or `party`. Each has its own `seq` and its own cursor.")
+        ),
+        responses(
+            (status = 200, description = "`{ \"reader\": …, \"events\": [...] }`: the \
+                                          events after the reader's cursor in `seq` \
+                                          order, empty when there are none. Each event \
+                                          is the stored PHI-free envelope with its \
+                                          `seq` beside it. A read moves no cursor.",
+             body = serde_json::Value,
+             example = json!({
+                 "reader": "ferrobridge",
+                 "events": [{
+                     "seq": 42,
+                     "contribution_id": "0196f1f4-8c3a-7d2e-9b1a-3c5d7e9f1a2b",
+                     "ehr_id": "7d44b88c-4199-4bad-97dc-d78268e01398",
+                     "committed_at": "2026-11-02T09:15:00.123456Z",
+                     "versions": [{
+                         "vo_id": "0196f1f4-8c3b-7a10-8f2e-4d6c8b0a2e4f",
+                         "kind": "COMPOSITION",
+                         "sys_version": 3,
+                         "version_tree_id": "3",
+                         "change_type": "251",
+                         "template_id": "vital_signs.v1"
+                     }]
                  }]
-             }]
-         })),
-        (status = 400, description = "`limit` is not an integer from 1 to 1000, or \
-                                      `domain` is neither `clinical` nor `party`.",
-         body = serde_json::Value),
-        (status = 401, description = "Unauthenticated.", body = serde_json::Value),
-        (status = 403, description = "Not in the Admin class, or the token lacks the \
-                                      `__ferroehr.outbox` scope.",
-         body = serde_json::Value),
-        (status = 404, description = "The reader is unknown or inactive: \
-                                      `[outbox] readers` does not name it.",
-         body = serde_json::Value)
-    )
-)]
-pub(crate) async fn admin_outbox_read(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, READ, parts, read).await
+             })),
+            (status = 400, description = "`limit` is not an integer from 1 to 1000, or \
+                                          `domain` is neither `clinical` nor `party`.",
+             body = serde_json::Value),
+            (status = 401, description = "Unauthenticated.", body = serde_json::Value),
+            (status = 403, description = "Not in the Admin class, or the token lacks the \
+                                          `__ferroehr.outbox` scope.",
+             body = serde_json::Value),
+            (status = 404, description = "The reader is unknown or inactive: \
+                                          `[outbox] readers` does not name it.",
+             body = serde_json::Value)
+        )
+    )]
+    admin_outbox_read as READ => read
 }
 
-/// Acknowledge the events up to a `seq`, moving the reader's cursor
-/// (`POST /admin/outbox/{reader}/ack`).
-///
-/// **Our own extension — no openEHR spec governs this** (module docs).
-#[utoipa::path(
-    post, path = "/admin/outbox/{reader}/ack", tag = "admin-outbox",
-    params(
-        ("reader" = String, Path, description = "A reader `[outbox] readers` names."),
-        ("domain" = Option<String>, Query, description = "The outbox whose cursor moves: `clinical` (the default) or `party`.")
-    ),
-    request_body(content = serde_json::Value,
-                 description = "`{ \"last_seq\": … }`: the highest `seq` the reader has delivered.",
-                 example = json!({ "last_seq": 42 })),
-    responses(
-        (status = 204, description = "The cursor is at `last_seq`. Acknowledging \
-                                      the current cursor again is a `204` too."),
-        (status = 400, description = "The body is not `{ \"last_seq\": <integer> }`, \
-                                      or `domain` is neither `clinical` nor `party`.",
-         body = serde_json::Value),
-        (status = 401, description = "Unauthenticated.", body = serde_json::Value),
-        (status = 403, description = "Not in the Admin class, or the token lacks the \
-                                      `__ferroehr.outbox` scope.",
-         body = serde_json::Value),
-        (status = 404, description = "The reader is unknown or inactive.",
-         body = serde_json::Value),
-        (status = 409, description = "`last_seq` lies below the cursor, which never \
-                                      moves back, or above the highest row of the \
-                                      outbox.",
-         body = serde_json::Value),
-        (status = 415, description = "The body is not `application/json`.",
-         body = serde_json::Value)
-    )
-)]
-pub(crate) async fn admin_outbox_ack(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, ACK, parts, ack).await
+guarded_handler! {
+    /// Acknowledge the events up to a `seq`, moving the reader's cursor
+    /// (`POST /admin/outbox/{reader}/ack`).
+    ///
+    /// **Our own extension — no openEHR spec governs this** (module docs).
+    #[utoipa::path(
+        post, path = "/admin/outbox/{reader}/ack", tag = "admin-outbox",
+        params(
+            ("reader" = String, Path, description = "A reader `[outbox] readers` names."),
+            ("domain" = Option<String>, Query, description = "The outbox whose cursor moves: `clinical` (the default) or `party`.")
+        ),
+        request_body(content = serde_json::Value,
+                     description = "`{ \"last_seq\": … }`: the highest `seq` the reader has delivered.",
+                     example = json!({ "last_seq": 42 })),
+        responses(
+            (status = 204, description = "The cursor is at `last_seq`. Acknowledging \
+                                          the current cursor again is a `204` too."),
+            (status = 400, description = "The body is not `{ \"last_seq\": <integer> }`, \
+                                          or `domain` is neither `clinical` nor `party`.",
+             body = serde_json::Value),
+            (status = 401, description = "Unauthenticated.", body = serde_json::Value),
+            (status = 403, description = "Not in the Admin class, or the token lacks the \
+                                          `__ferroehr.outbox` scope.",
+             body = serde_json::Value),
+            (status = 404, description = "The reader is unknown or inactive.",
+             body = serde_json::Value),
+            (status = 409, description = "`last_seq` lies below the cursor, which never \
+                                          moves back, or above the highest row of the \
+                                          outbox.",
+             body = serde_json::Value),
+            (status = 415, description = "The body is not `application/json`.",
+             body = serde_json::Value)
+        )
+    )]
+    admin_outbox_ack as ACK => ack
 }
 
 /// The `admin_outbox_read` operation.

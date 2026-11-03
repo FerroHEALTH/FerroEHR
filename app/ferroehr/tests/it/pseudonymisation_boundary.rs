@@ -28,9 +28,11 @@ use ferroehr::service::version_update::WriteRequest;
 use sqlx::{Connection, PgConnection, PgPool, Row};
 use uuid::Uuid;
 
+use crate::fixtures::committer;
 use crate::typed_body::typed;
 use ferroehr::error::ServiceError;
 use ferroehr::error::refusal::{Clash, Invalid, Refusal};
+use ferroehr::ids::EhrId;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::types::PartyKind;
 
@@ -846,6 +848,37 @@ fn protection_engine(
     .expect("protection is enabled")
 }
 
+/// Creates an EHR on `svc` and commits an `EHR_STATUS` whose subject is the
+/// `PERSON` party `party`, as an extract carries it.
+async fn ehr_naming_party(svc: &FerroEhrService, party: &str) -> EhrId {
+    let ehr = crate::fixtures::create_ehr(svc).await;
+    let mut status = svc
+        .ehr_status(ehr, None)
+        .await
+        .map(|r| r.body)
+        .expect("status get");
+    let status_ovid = status
+        .pointer("/uid/value")
+        .and_then(serde_json::Value::as_str)
+        .expect("uid")
+        .to_owned();
+    status.as_object_mut().expect("status obj").remove("uid");
+    *status.pointer_mut("/subject").expect("the subject") = serde_json::json!({
+        "_type": "PARTY_SELF",
+        "external_ref": {
+            "_type": "PARTY_REF",
+            "namespace": "demographic",
+            "type": "PERSON",
+            "id": { "_type": "HIER_OBJECT_ID", "value": party }
+        }
+    });
+    Box::pin(svc.replace_ehr_status(ehr, crate::fixtures::uv(&status, "251", Some(&status_ovid))))
+        .await
+        .map(|m| m.uid)
+        .expect("status update");
+    ehr
+}
+
 /// A PERSON with `family` as its family name, carrying one `DV_IDENTIFIER` per
 /// `(type, id)` pair.
 fn person_carrying(family: &str, identifiers: &[(&str, &str)]) -> serde_json::Value {
@@ -882,7 +915,7 @@ fn persons_with_bsn(families: &[&str], bsn: &str) -> serde_json::Value {
             }
         })
     };
-    let committer = serde_json::json!({ "_type": "PARTY_IDENTIFIED", "name": "tester" });
+    let committer = serde_json::json!(committer("tester"));
     let versions: Vec<serde_json::Value> = families
         .iter()
         .map(|family| {
@@ -1034,6 +1067,22 @@ fn protected_service(
     (service, engine, party_pool)
 }
 
+/// Creates the synthetic PERSON `Lovelace` carrying `SYNTHETIC_BSN` on `svc`
+/// and returns its versioned-object id and first version uid.
+async fn create_lovelace(svc: &FerroEhrService) -> (String, String) {
+    let created = svc
+        .party_create(
+            PartyKind::Person,
+            WriteRequest::new(typed(&person_carrying(
+                "Lovelace",
+                &[("nl-bsn", SYNTHETIC_BSN)],
+            ))),
+        )
+        .await
+        .expect("the person is created");
+    committed_ids(&created.body)
+}
+
 /// The versioned-object uuid and the version uid of a committed party.
 fn committed_ids(body: &serde_json::Value) -> (String, String) {
     let version = body
@@ -1091,17 +1140,7 @@ async fn each_party_version_keeps_the_identifier_it_committed() {
     let db = testkit::db().await.expect("testkit database");
     let (service, engine, party_pool) = protected_service(&db);
 
-    let created = service
-        .party_create(
-            PartyKind::Person,
-            WriteRequest::new(typed(&person_carrying(
-                "Lovelace",
-                &[("nl-bsn", SYNTHETIC_BSN)],
-            ))),
-        )
-        .await
-        .expect("create the person");
-    let (vo, v1) = committed_ids(&created.body);
+    let (vo, v1) = create_lovelace(&service).await;
     service
         .party_update(
             PartyKind::Person,
@@ -1180,17 +1219,7 @@ async fn a_carried_reference_is_sealed_again_for_the_new_version() {
     let db = testkit::db().await.expect("testkit database");
     let (service, engine, party_pool) = protected_service(&db);
 
-    let created = service
-        .party_create(
-            PartyKind::Person,
-            WriteRequest::new(typed(&person_carrying(
-                "Lovelace",
-                &[("nl-bsn", SYNTHETIC_BSN)],
-            ))),
-        )
-        .await
-        .expect("create the person");
-    let (vo, v1) = committed_ids(&created.body);
+    let (vo, v1) = create_lovelace(&service).await;
     let served = service
         .party_get(PartyKind::Person, crate::fixtures::at(vo.clone()), None)
         .await
@@ -1251,17 +1280,7 @@ async fn a_reference_to_another_partys_identifier_is_refused() {
     let db = testkit::db().await.expect("testkit database");
     let (service, _engine, party_pool) = protected_service(&db);
 
-    let created = service
-        .party_create(
-            PartyKind::Person,
-            WriteRequest::new(typed(&person_carrying(
-                "Lovelace",
-                &[("nl-bsn", SYNTHETIC_BSN)],
-            ))),
-        )
-        .await
-        .expect("create the person");
-    let (vo, _) = committed_ids(&created.body);
+    let (vo, _) = create_lovelace(&service).await;
     let stored = service
         .party_get(PartyKind::Person, crate::fixtures::at(vo), None)
         .await
@@ -1453,52 +1472,13 @@ async fn a_party_write_response_serves_the_stored_form() {
 async fn an_imported_party_with_a_plaintext_identifier_is_refused() {
     use openehr_rm::v1_2::ehr_extract::common::extract::Extract;
 
-    let source_db = testkit::db().await.expect("testkit database");
-    let source = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &source_db.pool(),
-    ));
+    let (_source_db, source) = crate::fixtures::service().await;
     let target_db = testkit::db().await.expect("testkit database");
     let (target, _engine, target_party) = protected_service(&target_db);
 
-    let created = source
-        .party_create(
-            PartyKind::Person,
-            WriteRequest::new(typed(&person_carrying(
-                "Lovelace",
-                &[("nl-bsn", SYNTHETIC_BSN)],
-            ))),
-        )
-        .await
-        .expect("an unprotected source stores the person as written");
-    let (party, _) = committed_ids(&created.body);
+    let (party, _) = create_lovelace(&source).await;
 
-    let ehr = crate::fixtures::create_ehr(&source).await;
-    let mut status = source
-        .ehr_status(ehr, None)
-        .await
-        .map(|r| r.body)
-        .expect("status get");
-    let status_ovid = status
-        .pointer("/uid/value")
-        .and_then(serde_json::Value::as_str)
-        .expect("uid")
-        .to_owned();
-    status.as_object_mut().expect("status obj").remove("uid");
-    *status.pointer_mut("/subject").expect("the subject") = serde_json::json!({
-        "_type": "PARTY_SELF",
-        "external_ref": {
-            "_type": "PARTY_REF",
-            "namespace": "demographic",
-            "type": "PERSON",
-            "id": { "_type": "HIER_OBJECT_ID", "value": party }
-        }
-    });
-    Box::pin(
-        source.replace_ehr_status(ehr, crate::fixtures::uv(&status, "251", Some(&status_ovid))),
-    )
-    .await
-    .map(|m| m.uid)
-    .expect("status update");
+    let ehr = ehr_naming_party(&source, &party).await;
     let exported = source.extract_ehrs(ehr).await.expect("export_ehrs");
     let extract: Extract =
         openehr_its::json::from_canonical_value(exported.first().expect("one EXTRACT"))
@@ -1537,45 +1517,9 @@ async fn an_imported_party_with_another_deployments_sealed_identifier_is_refused
     let target_db = testkit::db().await.expect("testkit database");
     let (target, _engine, target_party) = protected_service(&target_db);
 
-    let created = source
-        .party_create(
-            PartyKind::Person,
-            WriteRequest::new(typed(&person_carrying(
-                "Lovelace",
-                &[("nl-bsn", SYNTHETIC_BSN)],
-            ))),
-        )
-        .await
-        .expect("the source seals the identifier");
-    let (party, _) = committed_ids(&created.body);
+    let (party, _) = create_lovelace(&source).await;
 
-    let ehr = crate::fixtures::create_ehr(&source).await;
-    let mut status = source
-        .ehr_status(ehr, None)
-        .await
-        .map(|r| r.body)
-        .expect("status get");
-    let status_ovid = status
-        .pointer("/uid/value")
-        .and_then(serde_json::Value::as_str)
-        .expect("uid")
-        .to_owned();
-    status.as_object_mut().expect("status obj").remove("uid");
-    *status.pointer_mut("/subject").expect("the subject") = serde_json::json!({
-        "_type": "PARTY_SELF",
-        "external_ref": {
-            "_type": "PARTY_REF",
-            "namespace": "demographic",
-            "type": "PERSON",
-            "id": { "_type": "HIER_OBJECT_ID", "value": party }
-        }
-    });
-    Box::pin(
-        source.replace_ehr_status(ehr, crate::fixtures::uv(&status, "251", Some(&status_ovid))),
-    )
-    .await
-    .map(|m| m.uid)
-    .expect("status update");
+    let ehr = ehr_naming_party(&source, &party).await;
     let exported = source.extract_ehrs(ehr).await.expect("export_ehrs");
     let text = serde_json::to_string(&exported).expect("the extract serializes");
     assert!(
@@ -1625,17 +1569,7 @@ async fn a_dump_and_load_carries_the_sealed_identifiers() {
     let target_db = testkit::db().await.expect("testkit database");
     let (target, target_engine, target_party) = protected_service(&target_db);
 
-    let created = source
-        .party_create(
-            PartyKind::Person,
-            WriteRequest::new(typed(&person_carrying(
-                "Lovelace",
-                &[("nl-bsn", SYNTHETIC_BSN)],
-            ))),
-        )
-        .await
-        .expect("create the person");
-    let (vo, v1) = committed_ids(&created.body);
+    let (vo, v1) = create_lovelace(&source).await;
     source
         .party_update(
             PartyKind::Person,
@@ -1690,24 +1624,11 @@ async fn a_dump_and_load_carries_the_sealed_identifiers() {
 /// nothing of it.
 #[tokio::test]
 async fn a_load_refuses_a_plaintext_identifier_per_container() {
-    let source_db = testkit::db().await.expect("testkit database");
-    let source = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &source_db.pool(),
-    ));
+    let (_source_db, source) = crate::fixtures::service().await;
     let target_db = testkit::db().await.expect("testkit database");
     let (target, _engine, target_party) = protected_service(&target_db);
 
-    let created = source
-        .party_create(
-            PartyKind::Person,
-            WriteRequest::new(typed(&person_carrying(
-                "Lovelace",
-                &[("nl-bsn", SYNTHETIC_BSN)],
-            ))),
-        )
-        .await
-        .expect("an unprotected source stores the person as written");
-    let (vo, _) = committed_ids(&created.body);
+    let (vo, _) = create_lovelace(&source).await;
 
     let dir = crate::admin_fixture::archive_dir();
     source
@@ -1738,17 +1659,7 @@ async fn erasing_a_party_removes_its_sealed_identifiers() {
     let db = testkit::db().await.expect("testkit database");
     let (service, _engine, party_pool) = protected_service(&db);
 
-    let created = service
-        .party_create(
-            PartyKind::Person,
-            WriteRequest::new(typed(&person_carrying(
-                "Lovelace",
-                &[("nl-bsn", SYNTHETIC_BSN)],
-            ))),
-        )
-        .await
-        .expect("create the person");
-    let (vo, v1) = committed_ids(&created.body);
+    let (vo, v1) = create_lovelace(&service).await;
     let changed = service
         .party_update(
             PartyKind::Person,

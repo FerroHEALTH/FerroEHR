@@ -18,6 +18,7 @@ use std::path::{Path, PathBuf};
 
 use serde_json::{Map, Value, json};
 
+use crate::fixtures::committer;
 use ferroehr::error::ServiceError;
 use ferroehr::ids::EhrId;
 use ferroehr::service::FerroEhrService;
@@ -127,9 +128,9 @@ fn creation<R: crate::fixtures::Envelope<openehr_rm::prelude::Composition>>(data
                 system_id: None,
                 change_type: change_type_coded("249"),
                 description: None,
-                committer: openehr_its::json::from_canonical_value::<PartyProxy>(
-                    &json!({ "_type": "PARTY_IDENTIFIED", "name": "conformance tester" }),
-                )
+                committer: openehr_its::json::from_canonical_value::<PartyProxy>(&json!(
+                    committer("conformance tester")
+                ))
                 .expect("committer"),
                 additional_properties: BTreeMap::new(),
             }),

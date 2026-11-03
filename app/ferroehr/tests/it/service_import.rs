@@ -48,55 +48,14 @@ use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::service::ehr_index::types::SubjectRef;
 
+use crate::fixtures::commit_audit;
 use crate::fixtures::db_now;
 use crate::fixtures::status_for_subject;
 use crate::fixtures::{composition, uv};
+use crate::fixtures::{find_by_xtype, seed_extract_ehr};
 use crate::typed_body::typed;
 use ferroehr::versioning::signature::config::{Mode, SigningConfig, VerifyOnRead};
 use ferroehr::versioning::signature::signer::Signer;
-
-/// Seed an EHR with an `EHR_STATUS` (create → update = two versions), a directory
-/// `FOLDER`, and the auto-created `EHR_ACCESS` — the same shape the export tests
-/// seed. Returns the EHR id.
-async fn seed_ehr(svc: &FerroEhrService) -> ferroehr::ids::EhrId {
-    let ehr_uuid = crate::fixtures::create_ehr(svc).await;
-
-    let mut status = svc
-        .ehr_status(ehr_uuid, None)
-        .await
-        .map(|r| r.body)
-        .expect("status get");
-    let status_ovid = status["uid"]["value"].as_str().expect("uid").to_owned();
-    status.as_object_mut().expect("status obj").remove("uid");
-
-    svc.create_directory(
-        ehr_uuid,
-        uv(
-            &json!({
-                "_type": "FOLDER",
-                "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
-                "archetype_details": {
-                    "_type": "ARCHETYPED",
-                    "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
-                    "rm_version": "1.1.0"
-                },
-                "name": { "_type": "DV_TEXT", "value": "root" }
-            }),
-            "249",
-            None,
-        ),
-    )
-    .await
-    .expect("directory");
-
-    status["is_modifiable"] = json!(false);
-    Box::pin(svc.replace_ehr_status(ehr_uuid, uv(&status, "251", Some(&status_ovid))))
-        .await
-        .map(|m| m.uid)
-        .expect("status update");
-
-    ehr_uuid
-}
 
 /// The single-`EXTRACT` result of an `export_ehrs`, as a typed [`Extract`]
 /// (the wire shape the import calls receive).
@@ -105,16 +64,6 @@ async fn export_one(svc: &FerroEhrService, ehr: ferroehr::ids::EhrId) -> Extract
     assert_eq!(extracts.len(), 1, "one EHR id → one EXTRACT");
     openehr_its::json::from_canonical_value(&extracts.remove(0))
         .expect("EXTRACT deserializes into the typed RM model")
-}
-
-/// The content item of an extract whose wrapped object has the given
-/// `X_VERSIONED_*` `_type`.
-fn find_by_xtype<'a>(extract: &'a Value, xtype: &str) -> Option<&'a Value> {
-    extract["chapters"][0]["items"]
-        .as_array()
-        .expect("chapter items")
-        .iter()
-        .find(|it| it["item"]["_type"] == json!(xtype))
 }
 
 /// How many content items of an extract wrap the given `X_VERSIONED_*` `_type`.
@@ -154,16 +103,10 @@ fn status_for_subject_in(subject_id: &str, namespace: &str) -> Value {
 
 #[tokio::test]
 async fn import_ehr_clone_into_fresh_target_reuses_source_id() {
-    let source_db = testkit::db().await.expect("testkit database");
-    let source = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &source_db.pool(),
-    ));
-    let target_db = testkit::db().await.expect("testkit database");
-    let target = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &target_db.pool(),
-    ));
+    let (_source_db, source) = crate::fixtures::service().await;
+    let (_target_db, target) = crate::fixtures::service().await;
 
-    let ehr = seed_ehr(&source).await;
+    let ehr = seed_extract_ehr(&source).await.0;
     let source_status = source
         .ehr_status(ehr, None)
         .await
@@ -226,16 +169,10 @@ async fn import_ehr_without_ehr_access_bootstraps_the_mandatory_default() {
     // EHR_ACCESS must therefore be completed locally — otherwise the clone
     // violates the invariant permanently and its served EHR body omits the
     // mandatory reference.
-    let source_db = testkit::db().await.expect("testkit database");
-    let source = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &source_db.pool(),
-    ));
-    let target_db = testkit::db().await.expect("testkit database");
-    let target = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &target_db.pool(),
-    ));
+    let (_source_db, source) = crate::fixtures::service().await;
+    let (_target_db, target) = crate::fixtures::service().await;
 
-    let ehr = seed_ehr(&source).await;
+    let ehr = seed_extract_ehr(&source).await.0;
     let exported = source.extract_ehrs(ehr).await.expect("export");
     assert_eq!(
         count_by_xtype(&exported[0], "X_VERSIONED_EHR_ACCESS"),
@@ -294,10 +231,7 @@ async fn import_ehr_promotes_the_subject_for_lookup_and_uniqueness() {
     // so the clone is found by the subject lookup
     // (`operations/ehr_get_by_subject.yaml`) and holds the subject against a
     // later create (one EHR per subject — RM ehr master04 §EHR Status).
-    let source_db = testkit::db().await.expect("testkit database");
-    let source = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &source_db.pool(),
-    ));
+    let (_source_db, source) = crate::fixtures::service().await;
     let target_db = testkit::db().await.expect("testkit database");
     let target = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
         &target_db.pool(),
@@ -352,10 +286,7 @@ async fn import_ehr_conflicting_subject_is_rejected_and_rolled_back() {
     // Importing a clone of a subject this repository already holds under
     // another EHR is a conflict, not a silent duplicate (one EHR per subject —
     // RM ehr master04 §EHR Status); the whole import transaction rolls back.
-    let source_db = testkit::db().await.expect("testkit database");
-    let source = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &source_db.pool(),
-    ));
+    let (_source_db, source) = crate::fixtures::service().await;
     let target_db = testkit::db().await.expect("testkit database");
     let target = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
         &target_db.pool(),
@@ -402,16 +333,10 @@ async fn import_ehr_conflicting_subject_is_rejected_and_rolled_back() {
 
 #[tokio::test]
 async fn import_ehr_into_fixed_fresh_id() {
-    let source_db = testkit::db().await.expect("testkit database");
-    let source = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &source_db.pool(),
-    ));
-    let target_db = testkit::db().await.expect("testkit database");
-    let target = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &target_db.pool(),
-    ));
+    let (_source_db, source) = crate::fixtures::service().await;
+    let (_target_db, target) = crate::fixtures::service().await;
 
-    let ehr = seed_ehr(&source).await;
+    let ehr = seed_extract_ehr(&source).await.0;
     let source_status = source
         .ehr_status(ehr, None)
         .await
@@ -457,7 +382,7 @@ async fn import_ehr_into_fixed_fresh_id() {
 async fn import_ehr_refuses_access_settings_that_do_not_parse() {
     let (_source_db, source) = crate::fixtures::service().await;
     let (_target_db, svc) = crate::fixtures::service().await;
-    let ehr = seed_ehr(&source).await;
+    let ehr = seed_extract_ehr(&source).await.0;
     let exported = openehr_its::json::to_canonical_value(&export_one(&source, ehr).await);
     let with_settings = |default_access: &str| -> Extract {
         let mut raw = exported.clone();
@@ -500,7 +425,7 @@ async fn import_ehr_refuses_access_settings_that_do_not_parse() {
 #[tokio::test]
 async fn import_ehr_duplicate_target_is_rejected() {
     let (_db, svc) = crate::fixtures::service().await;
-    let ehr = seed_ehr(&svc).await;
+    let ehr = seed_extract_ehr(&svc).await.0;
 
     // import_ehr imports into an *empty* target; a fixed id that already exists
     // is `ehr_create_fail_duplicate_id`.
@@ -514,16 +439,10 @@ async fn import_ehr_duplicate_target_is_rejected() {
 
 #[tokio::test]
 async fn import_ehr_extract_adds_a_versioned_object_and_rejects_re_import() {
-    let source_db = testkit::db().await.expect("testkit database");
-    let source = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &source_db.pool(),
-    ));
-    let target_db = testkit::db().await.expect("testkit database");
-    let target = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &target_db.pool(),
-    ));
+    let (_source_db, source) = crate::fixtures::service().await;
+    let (_target_db, target) = crate::fixtures::service().await;
 
-    let src_ehr = seed_ehr(&source).await;
+    let src_ehr = seed_extract_ehr(&source).await.0;
 
     // A FOLDER-only extract (item_list restricts to the directory container),
     // so importing it into an existing EHR that has no directory is a clean
@@ -619,16 +538,10 @@ async fn import_ehr_extract_adds_a_versioned_object_and_rejects_re_import() {
 /// written as the row's own and the foreign contribution reference was dropped.
 #[tokio::test]
 async fn an_imported_version_serves_the_wrapper_and_wrapped_split() {
-    let source_db = testkit::db().await.expect("testkit database");
-    let source = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &source_db.pool(),
-    ));
-    let target_db = testkit::db().await.expect("testkit database");
-    let target = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &target_db.pool(),
-    ));
+    let (_source_db, source) = crate::fixtures::service().await;
+    let (_target_db, target) = crate::fixtures::service().await;
 
-    let ehr = seed_ehr(&source).await;
+    let ehr = seed_extract_ehr(&source).await.0;
     let exported = source.extract_ehrs(ehr).await.expect("export");
     let source_version = find_by_xtype(&exported[0], "X_VERSIONED_EHR_STATUS")
         .expect("exported EHR_STATUS")["item"]["versions"][0]
@@ -714,16 +627,10 @@ async fn an_imported_version_serves_the_wrapper_and_wrapped_split() {
 /// the LOCAL import act, never the source's clock. Regression for #1679.
 #[tokio::test]
 async fn an_imported_container_reports_the_local_chronology() {
-    let source_db = testkit::db().await.expect("testkit database");
-    let source = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &source_db.pool(),
-    ));
-    let target_db = testkit::db().await.expect("testkit database");
-    let target = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &target_db.pool(),
-    ));
+    let (_source_db, source) = crate::fixtures::service().await;
+    let (target_db, target) = crate::fixtures::service().await;
 
-    let ehr = seed_ehr(&source).await;
+    let ehr = seed_extract_ehr(&source).await.0;
     let exported = source.extract_ehrs(ehr).await.expect("export");
     let source_version = find_by_xtype(&exported[0], "X_VERSIONED_EHR_STATUS")
         .expect("exported EHR_STATUS")["item"]["versions"][0]
@@ -793,16 +700,10 @@ async fn an_imported_container_reports_the_local_chronology() {
 /// carried the LOCAL contribution reference under the source's identity.
 #[tokio::test]
 async fn a_re_export_reproduces_the_wrapped_original_verbatim() {
-    let source_db = testkit::db().await.expect("testkit database");
-    let source = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &source_db.pool(),
-    ));
-    let target_db = testkit::db().await.expect("testkit database");
-    let target = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &target_db.pool(),
-    ));
+    let (_source_db, source) = crate::fixtures::service().await;
+    let (_target_db, target) = crate::fixtures::service().await;
 
-    let ehr = seed_ehr(&source).await;
+    let ehr = seed_extract_ehr(&source).await.0;
     let exported = source.extract_ehrs(ehr).await.expect("export");
     target
         .import_ehr(None, export_one(&source, ehr).await)
@@ -837,10 +738,7 @@ async fn a_re_export_reproduces_the_wrapped_original_verbatim() {
 /// signature is stored verbatim and never re-verified.
 #[tokio::test]
 async fn a_signed_import_signs_the_wrapper_and_the_read_verifies_it() {
-    let source_db = testkit::db().await.expect("testkit database");
-    let source = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &source_db.pool(),
-    ));
+    let (_source_db, source) = crate::fixtures::service().await;
     let target_db = testkit::db().await.expect("testkit database");
     let config = SigningConfig {
         enabled: true,
@@ -857,7 +755,7 @@ async fn a_signed_import_signs_the_wrapper_and_the_read_verifies_it() {
     ))
     .with_signer(Arc::new(signer));
 
-    let ehr = seed_ehr(&source).await;
+    let ehr = seed_extract_ehr(&source).await.0;
     let exported = source.extract_ehrs(ehr).await.expect("export");
     let source_version = find_by_xtype(&exported[0], "X_VERSIONED_EHR_STATUS")
         .expect("exported EHR_STATUS")["item"]["versions"][0]
@@ -936,7 +834,7 @@ async fn a_cloned_ehr_keeps_the_source_ehr_id_but_takes_the_local_system_id() {
     ))
     .with_system_id(TARGET_SYSTEM);
 
-    let ehr = seed_ehr(&source).await;
+    let ehr = seed_extract_ehr(&source).await.0;
     let source_summary = source.ehr_read(ehr).await.expect("source summary").body;
     assert_eq!(
         source_summary["system_id"]["value"], SOURCE_SYSTEM,
@@ -992,14 +890,8 @@ async fn a_cloned_ehr_keeps_the_source_ehr_id_but_takes_the_local_system_id() {
 /// fail it too.
 #[tokio::test]
 async fn an_as_of_read_before_the_import_does_not_see_the_imported_version() {
-    let source_db = testkit::db().await.expect("testkit database");
-    let source = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &source_db.pool(),
-    ));
-    let target_db = testkit::db().await.expect("testkit database");
-    let target = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &target_db.pool(),
-    ));
+    let (_source_db, source) = crate::fixtures::service().await;
+    let (target_db, target) = crate::fixtures::service().await;
 
     // A plain modifiable source EHR (the seeded fixture ends non-modifiable).
     let ehr = crate::fixtures::create_ehr(&source).await;
@@ -1093,7 +985,7 @@ async fn a_two_hop_copy_wraps_at_each_system_over_one_unchanged_original() {
     ))
     .with_system_id("sysC.example.org");
 
-    let ehr = seed_ehr(&system_a).await;
+    let ehr = seed_extract_ehr(&system_a).await.0;
     let original = find_by_xtype(
         &system_a.extract_ehrs(ehr).await.expect("export A")[0],
         "X_VERSIONED_EHR_STATUS",
@@ -1171,16 +1063,10 @@ async fn a_two_hop_copy_wraps_at_each_system_over_one_unchanged_original() {
 /// `service_contribution::accompanying_attestation_then_standalone_666_attestation`.
 #[tokio::test]
 async fn attesting_an_imported_version_is_refused() {
-    let source_db = testkit::db().await.expect("testkit database");
-    let source = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &source_db.pool(),
-    ));
-    let target_db = testkit::db().await.expect("testkit database");
-    let target = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &target_db.pool(),
-    ));
+    let (_source_db, source) = crate::fixtures::service().await;
+    let (_target_db, target) = crate::fixtures::service().await;
 
-    let ehr = seed_ehr(&source).await;
+    let ehr = seed_extract_ehr(&source).await.0;
     let exported = source.extract_ehrs(ehr).await.expect("export");
     let imported_uid = find_by_xtype(&exported[0], "X_VERSIONED_EHR_STATUS")
         .expect("exported EHR_STATUS")["item"]["versions"][0]["uid"]["value"]
@@ -1194,7 +1080,7 @@ async fn attesting_an_imported_version_is_refused() {
         .expect("import_ehr");
 
     let attest_contribution = json!({
-        "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
+        "audit": commit_audit("251", "modification", "conformance tester"), "versions": [{
             "preceding_version_uid": { "value": imported_uid },
             "lifecycle_state": {
                 "_type": "DV_CODED_TEXT",
@@ -1300,16 +1186,10 @@ fn retree_status_version(extract: &Value, from: &str, to: &str) -> Extract {
 /// in the extract nor stored) is refused as a precondition violation.
 #[tokio::test]
 async fn import_refuses_a_branch_version_without_its_fork_point_trunk() {
-    let source_db = testkit::db().await.expect("testkit database");
-    let source = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &source_db.pool(),
-    ));
-    let target_db = testkit::db().await.expect("testkit database");
-    let target = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &target_db.pool(),
-    ));
+    let (_source_db, source) = crate::fixtures::service().await;
+    let (_target_db, target) = crate::fixtures::service().await;
 
-    let ehr = seed_ehr(&source).await;
+    let ehr = seed_extract_ehr(&source).await.0;
     let exported = source.extract_ehrs(ehr).await.expect("export");
     // Status versions 1 and 2 exist; re-tree 2 → 2.1.1: its fork-point trunk
     // (version 2 itself) is now absent from the set and nothing is stored.
@@ -1333,16 +1213,10 @@ async fn import_refuses_a_branch_version_without_its_fork_point_trunk() {
 /// (Case-3 append).
 #[tokio::test]
 async fn import_refuses_a_branch_version_without_its_branch_predecessor() {
-    let source_db = testkit::db().await.expect("testkit database");
-    let source = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &source_db.pool(),
-    ));
-    let target_db = testkit::db().await.expect("testkit database");
-    let target = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &target_db.pool(),
-    ));
+    let (_source_db, source) = crate::fixtures::service().await;
+    let (_target_db, target) = crate::fixtures::service().await;
 
-    let ehr = seed_ehr(&source).await;
+    let ehr = seed_extract_ehr(&source).await.0;
     let exported = source.extract_ehrs(ehr).await.expect("export");
     let ehr_id = target
         .import_ehr(
@@ -1370,29 +1244,16 @@ async fn import_refuses_a_branch_version_without_its_branch_predecessor() {
 /// back as an `IMPORTED_VERSION`.
 #[tokio::test]
 async fn import_accepts_a_branch_version_whose_closure_is_already_stored() {
-    let source_db = testkit::db().await.expect("testkit database");
-    let source = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &source_db.pool(),
-    ));
-    let target_db = testkit::db().await.expect("testkit database");
-    let target = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &target_db.pool(),
-    ));
+    let (_source_db, source) = crate::fixtures::service().await;
+    let (_target_db, target) = crate::fixtures::service().await;
 
-    let ehr = seed_ehr(&source).await;
+    let ehr = seed_extract_ehr(&source).await.0;
     let exported = source.extract_ehrs(ehr).await.expect("export");
-    let status_uid = find_by_xtype(&exported[0], "X_VERSIONED_EHR_STATUS")
-        .expect("exported EHR_STATUS")["item"]["versions"][0]["uid"]["value"]
-        .as_str()
-        .expect("uid")
-        .to_owned();
-    let vo_id = ferroehr::ids::VoId(
-        status_uid
-            .split("::")
-            .next()
-            .expect("object_id")
-            .parse()
-            .expect("vo uuid"),
+    let vo_id = crate::fixtures::object(
+        find_by_xtype(&exported[0], "X_VERSIONED_EHR_STATUS").expect("exported EHR_STATUS")["item"]
+            ["versions"][0]["uid"]["value"]
+            .as_str()
+            .expect("uid"),
     );
     let ehr_id = target
         .import_ehr(
@@ -1424,29 +1285,16 @@ async fn import_accepts_a_branch_version_whose_closure_is_already_stored() {
 /// surfaced as a bare storage conflict.
 #[tokio::test]
 async fn import_advances_an_open_branch_lineage_and_rejects_a_stale_branch_version() {
-    let source_db = testkit::db().await.expect("testkit database");
-    let source = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &source_db.pool(),
-    ));
-    let target_db = testkit::db().await.expect("testkit database");
-    let target = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &target_db.pool(),
-    ));
+    let (_source_db, source) = crate::fixtures::service().await;
+    let (_target_db, target) = crate::fixtures::service().await;
 
-    let ehr = seed_ehr(&source).await;
+    let ehr = seed_extract_ehr(&source).await.0;
     let exported = source.extract_ehrs(ehr).await.expect("export");
-    let status_uid = find_by_xtype(&exported[0], "X_VERSIONED_EHR_STATUS")
-        .expect("exported EHR_STATUS")["item"]["versions"][0]["uid"]["value"]
-        .as_str()
-        .expect("uid")
-        .to_owned();
-    let vo_id = ferroehr::ids::VoId(
-        status_uid
-            .split("::")
-            .next()
-            .expect("object_id")
-            .parse()
-            .expect("vo uuid"),
+    let vo_id = crate::fixtures::object(
+        find_by_xtype(&exported[0], "X_VERSIONED_EHR_STATUS").expect("exported EHR_STATUS")["item"]
+            ["versions"][0]["uid"]["value"]
+            .as_str()
+            .expect("uid"),
     );
     let ehr_id = target
         .import_ehr(
@@ -1498,14 +1346,8 @@ async fn import_advances_an_open_branch_lineage_and_rejects_a_stale_branch_versi
 /// boundary CHECK rather than quietly.
 #[tokio::test]
 async fn an_extract_carries_its_parties_into_the_receivers_demographic_domain() {
-    let source_db = testkit::db().await.expect("testkit database");
-    let source = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &source_db.pool(),
-    ));
-    let target_db = testkit::db().await.expect("testkit database");
-    let target = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-        &target_db.pool(),
-    ));
+    let (_source_db, source) = crate::fixtures::service().await;
+    let (target_db, target) = crate::fixtures::service().await;
 
     let created = source
         .party_create(

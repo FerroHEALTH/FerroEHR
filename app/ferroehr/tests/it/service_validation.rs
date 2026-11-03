@@ -25,6 +25,7 @@ use crate::fixtures::uv;
 use serde_json::{Value, json};
 use sqlx::PgPool;
 
+use crate::fixtures::{commit_audit, committer};
 use ferroehr::error::ServiceError;
 use ferroehr::error::refusal::{Clash, Invalid, Refusal};
 use ferroehr::service::FerroEhrService;
@@ -300,9 +301,9 @@ fn coded_text_value(code: &str, value: &str) -> Value {
 /// A `553|incomplete|` CONTRIBUTION carrying a single `creation` version.
 fn incomplete_creation_contribution(data: &Value) -> Value {
     json!({
-        "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
+        "audit": commit_audit("251", "modification", "conformance tester"), "versions": [{
             "data": data,
-            "commit_audit": { "change_type": coded_text_value("249", "creation"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } },
+            "commit_audit": { "change_type": coded_text_value("249", "creation"), "committer": committer("conformance tester") },
             "lifecycle_state": crate::fixtures::lifecycle("553")
         }]
     })

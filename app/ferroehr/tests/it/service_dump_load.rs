@@ -44,6 +44,7 @@ use crate::admin_fixture::{
     archive_dir, count_for_ehr, repository, seed_full_ehr, truncate_to_half,
 };
 use crate::fixtures::status_for_subject;
+use crate::fixtures::{attestation_by, commit_audit};
 use crate::fixtures::{change_type, committer, composition, source_chain, uid, uv};
 use crate::typed_body::typed;
 use ferroehr::service::admin::types::{
@@ -1106,10 +1107,7 @@ fn attested_contribution() -> Value {
         "_type": "CONTRIBUTION",
         "versions": [{
             "_type": "ORIGINAL_VERSION",
-            "commit_audit": {
-                "change_type": change_type("249", "creation"),
-                "committer": committer("author")
-            },
+            "commit_audit": commit_audit("249", "creation", "author"),
             "lifecycle_state": change_type("532", "complete"),
             "data": composition("attested encounter"),
             "attestations": [{
@@ -1121,10 +1119,7 @@ fn attested_contribution() -> Value {
                 "proof": "proof-bytes"
             }]
         }],
-        "audit": {
-            "change_type": change_type("251", "modification"),
-            "committer": committer("author")
-        }
+        "audit": commit_audit("251", "modification", "author")
     })
 }
 
@@ -1135,22 +1130,10 @@ fn later_attest_contribution(ovid: &str) -> Value {
         "versions": [{
             "preceding_version_uid": { "value": ovid },
             "lifecycle_state": change_type("532", "complete"),
-            "commit_audit": {
-                "change_type": change_type("666", "attestation"),
-                "committer": committer("senior reviewer")
-            },
-            "attestations": [{
-                "_type": "UPDATE_ATTESTATION",
-                "change_type": change_type("666", "attestation"),
-                "committer": committer("senior reviewer"),
-                "reason": { "_type": "DV_TEXT", "value": "authorised" },
-                "is_pending": false
-            }]
+            "commit_audit": commit_audit("666", "attestation", "senior reviewer"),
+            "attestations": [attestation_by("senior reviewer", "authorised", false)]
         }],
-        "audit": {
-            "change_type": change_type("666", "attestation"),
-            "committer": committer("senior reviewer")
-        }
+        "audit": commit_audit("666", "attestation", "senior reviewer")
     })
 }
 
@@ -1403,7 +1386,7 @@ fn wave_uv<T: serde::de::DeserializeOwned, R: crate::fixtures::Envelope<T>>(data
                     "value": "creation",
                     "defining_code": { "terminology_id": { "value": "openehr" }, "code_string": "249" }
                 },
-                "committer": { "_type": "PARTY_IDENTIFIED", "name": "wave tester" }
+                "committer": committer("wave tester")
             }
         });
         openehr_its::json::from_canonical_value(&v).expect("UpdateVersion")

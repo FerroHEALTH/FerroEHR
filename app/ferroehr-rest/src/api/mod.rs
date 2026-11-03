@@ -439,6 +439,31 @@ where
     resp
 }
 
+/// Declares one guarded REST handler: the `#[utoipa::path]` function that
+/// snapshots the request with [`into_parts`] and runs one operation through
+/// [`guarded_dispatch`].
+///
+/// The handler's attributes (its doc comment and `#[utoipa::path]`) come
+/// first, then its name, then the operation's handler. The operation id is the
+/// handler's name unless `as <op>` names another one. No openEHR spec governs
+/// this: our own design.
+macro_rules! guarded_handler {
+    ($(#[$attr:meta])* $name:ident => $handler:expr) => {
+        $crate::api::guarded_handler! { $(#[$attr])* $name as stringify!($name) => $handler }
+    };
+    ($(#[$attr:meta])* $name:ident as $op:expr => $handler:expr) => {
+        $(#[$attr])*
+        pub(crate) async fn $name(
+            axum::extract::State(state): axum::extract::State<$crate::state::AppState>,
+            request: axum::extract::Request,
+        ) -> axum::response::Response {
+            let parts = $crate::api::into_parts(request).await;
+            $crate::api::guarded_dispatch(state, $op, parts, $handler).await
+        }
+    };
+}
+pub(crate) use guarded_handler;
+
 /// Strip RFC 6570 query/expansion suffixes (e.g. `all{?ehr_id*}` → `all`) that
 /// the `OpenAPI` paths carry but axum path templates do not use; `{name}` capture
 /// segments are already axum-0.8 syntax and pass through unchanged.

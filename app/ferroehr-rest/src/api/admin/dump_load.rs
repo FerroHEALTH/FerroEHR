@@ -39,7 +39,6 @@
               negotiate seam produced once (stored-content serving / commit interior)"
 )]
 
-use axum::extract::State;
 use axum::response::Response;
 use http::StatusCode;
 use serde_json::{Value, json};
@@ -54,14 +53,14 @@ use ferroehr::service::admin::types::{
 
 use super::body::{AdminDisabled, NotAdminClass};
 use crate::api::refusals::JsonBodyRequired;
-use crate::api::{RequestParts, guarded_dispatch};
+use crate::api::{RequestParts, guarded_handler};
 use crate::negotiate;
 use crate::overview::error::RestError;
 use crate::state::AppState;
 
 /// The dump/load extension routes as a native `utoipa-axum` router — **no
 /// ITS-REST contract** (see the module docs). Group-relative paths (nested
-/// under the extensions root); every operation runs through [`guarded_dispatch`] onto
+/// under the extensions root); every operation runs through [`guarded_dispatch`](crate::api::guarded_dispatch) onto
 /// its handler.
 pub(crate) fn dump_load_routes() -> OpenApiRouter<AppState> {
     // One `routes!` per PATH (handlers in a single call must share the path).
@@ -70,143 +69,133 @@ pub(crate) fn dump_load_routes() -> OpenApiRouter<AppState> {
         .routes(routes!(admin_load))
 }
 
-/// Export every EHR to a file-system archive (`POST /admin/dump`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module
-/// docs).
-#[utoipa::path(
-    post, path = "/admin/dump", tag = "admin-dump-load",
-    request_body(content = serde_json::Value,
-                 description = "The export parameters as one object: \
-                                `file_sys_loc` (required, the archive location \
-                                on the SERVER's file system) plus the \
-                                export parameters `logical_format` \
-                                (`openehr_canonical_json`, the default, keeps \
-                                each version's payload inline as canonical \
-                                JSON \\| `openehr_canonical_xml` externalizes \
-                                it as a `versions/<version_uid>.xml` \
-                                `ORIGINAL_VERSION` document under the ITS-XML \
-                                published `<version>` root; the archive's own \
-                                manifest/segment envelope is JSON in both), \
-                                `compression_format` \
-                                (`zip` \\| `7z`; absent = uncompressed) and \
-                                `segment_split_size` (kb, default 1024). \
-                                The extension defines no `encoding`, so any \
-                                value is refused.",
-                 example = json!({
-                     "file_sys_loc": "/tmp/openehr-export",
-                     "logical_format": "openehr_canonical_json",
-                     "compression_format": "zip",
-                     "segment_split_size": 1024
-                 })),
-    responses(
-        (status = 200, description = "The archive was written. The body is the \
-                                      list of fail reports the \
-                                      operation returns — EMPTY when every EHR \
-                                      was dumped successfully.",
-         body = Vec<serde_json::Value>, example = json!([])),
-        (status = 400, description = "`file_sys_loc` is absent or blank, a \
-                                      format value names no member of its \
-                                      vendored enumeration, `encoding` is \
-                                      present (the extension defines no \
-                                      encoding), or `segment_split_size` is \
-                                      not a positive integer.",
-         body = serde_json::Value),
-        (status = 401, description = "Unauthenticated (auth enabled, no valid \
-                                      principal). Our own authorization design \
-                                      — the released admin operations carry \
-                                      `security: []`.",
-         body = serde_json::Value),
-        NotAdminClass,
-        AdminDisabled,
-        JsonBodyRequired,
-        (status = 500, description = "The location, a \
-                                      segment entry, a version-payload entry or \
-                                      the manifest could not be created or \
-                                      written.",
-         body = serde_json::Value)
-    )
-)]
-pub(crate) async fn admin_dump(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_dump", parts, |state, parts| {
-        super::body::gated(state, parts, dump)
-    })
-    .await
+guarded_handler! {
+    /// Export every EHR to a file-system archive (`POST /admin/dump`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module
+    /// docs).
+    #[utoipa::path(
+        post, path = "/admin/dump", tag = "admin-dump-load",
+        request_body(content = serde_json::Value,
+                     description = "The export parameters as one object: \
+                                    `file_sys_loc` (required, the archive location \
+                                    on the SERVER's file system) plus the \
+                                    export parameters `logical_format` \
+                                    (`openehr_canonical_json`, the default, keeps \
+                                    each version's payload inline as canonical \
+                                    JSON \\| `openehr_canonical_xml` externalizes \
+                                    it as a `versions/<version_uid>.xml` \
+                                    `ORIGINAL_VERSION` document under the ITS-XML \
+                                    published `<version>` root; the archive's own \
+                                    manifest/segment envelope is JSON in both), \
+                                    `compression_format` \
+                                    (`zip` \\| `7z`; absent = uncompressed) and \
+                                    `segment_split_size` (kb, default 1024). \
+                                    The extension defines no `encoding`, so any \
+                                    value is refused.",
+                     example = json!({
+                         "file_sys_loc": "/tmp/openehr-export",
+                         "logical_format": "openehr_canonical_json",
+                         "compression_format": "zip",
+                         "segment_split_size": 1024
+                     })),
+        responses(
+            (status = 200, description = "The archive was written. The body is the \
+                                          list of fail reports the \
+                                          operation returns — EMPTY when every EHR \
+                                          was dumped successfully.",
+             body = Vec<serde_json::Value>, example = json!([])),
+            (status = 400, description = "`file_sys_loc` is absent or blank, a \
+                                          format value names no member of its \
+                                          vendored enumeration, `encoding` is \
+                                          present (the extension defines no \
+                                          encoding), or `segment_split_size` is \
+                                          not a positive integer.",
+             body = serde_json::Value),
+            (status = 401, description = "Unauthenticated (auth enabled, no valid \
+                                          principal). Our own authorization design \
+                                          — the released admin operations carry \
+                                          `security: []`.",
+             body = serde_json::Value),
+            NotAdminClass,
+            AdminDisabled,
+            JsonBodyRequired,
+            (status = 500, description = "The location, a \
+                                          segment entry, a version-payload entry or \
+                                          the manifest could not be created or \
+                                          written.",
+             body = serde_json::Value)
+        )
+    )]
+    admin_dump => |state, parts| {
+            super::body::gated(state, parts, dump)
+        }
 }
 
-/// Populate the repository from a file-system archive (`POST /admin/load`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module
-/// docs).
-#[utoipa::path(
-    post, path = "/admin/load", tag = "admin-dump-load",
-    request_body(content = serde_json::Value,
-                 description = "`{ \"file_sys_loc\": … }` — the archive \
-                                location on the SERVER's file system. \
-                                The load takes this ONE parameter, so the container \
-                                (loose files, `archive.zip` or `archive.7z`) \
-                                is detected from what the location holds and \
-                                the payload form comes from the archive's own \
-                                manifest `format` member.",
-                 example = json!({ "file_sys_loc": "/tmp/openehr-export" })),
-    responses(
-        (status = 200, description = "The archive was read. The body is the \
-                                      list of fail reports the \
-                                      operation returns: one entry per entity \
-                                      that did NOT load — notably \"import EHRs \
-                                      with duplicate EHR ids will fail\", which \
-                                      is reported per EHR and skipped, never \
-                                      fatal, and so is a record whose \
-                                      externalized `versions/*.xml` payload \
-                                      will not read. EMPTY when the whole \
-                                      archive loaded.",
-         body = Vec<serde_json::Value>,
-         example = json!([{ "entity_type": "EHR",
-                            "entity_id": "7d44b88c-4199-4bad-97dc-d78268e01398",
-                            "dump_status": false,
-                            "error": "an EHR with this id already exists" }])),
-        (status = 400, description = "`file_sys_loc` is absent or blank, the \
-                                      archive carries externalized multimedia \
-                                      this server has no store for, or the \
-                                      archive is malformed (`archive-invalid`): \
-                                      the container, the manifest, a segment or \
-                                      a blob entry is absent, truncated or does \
-                                      not parse as an export archive, or the \
-                                      manifest names no known logical format. \
-                                      With `Prefer: return=representation` the \
-                                      `archive` member names the entry or the \
-                                      declared format.",
-         body = serde_json::Value),
-        (status = 401, description = "Unauthenticated. Our own authorization \
-                                      design.",
-         body = serde_json::Value),
-        (status = 403, description = "Authenticated but not in the Admin class. \
-                                      Our own authorization design.",
-         body = serde_json::Value),
-        AdminDisabled,
-        JsonBodyRequired,
-        (status = 500, description = "The location holds no archive \
-                                      container, or the server's filesystem \
-                                      refused a read of it. A corrupt \
-                                      per-version payload entry is NOT here: it \
-                                      belongs to exactly one EHR, so it is a \
-                                      per-entity `200` report.",
-         body = serde_json::Value)
-    )
-)]
-pub(crate) async fn admin_load(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_load", parts, |state, parts| {
-        super::body::gated(state, parts, load)
-    })
-    .await
+guarded_handler! {
+    /// Populate the repository from a file-system archive (`POST /admin/load`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module
+    /// docs).
+    #[utoipa::path(
+        post, path = "/admin/load", tag = "admin-dump-load",
+        request_body(content = serde_json::Value,
+                     description = "`{ \"file_sys_loc\": … }` — the archive \
+                                    location on the SERVER's file system. \
+                                    The load takes this ONE parameter, so the container \
+                                    (loose files, `archive.zip` or `archive.7z`) \
+                                    is detected from what the location holds and \
+                                    the payload form comes from the archive's own \
+                                    manifest `format` member.",
+                     example = json!({ "file_sys_loc": "/tmp/openehr-export" })),
+        responses(
+            (status = 200, description = "The archive was read. The body is the \
+                                          list of fail reports the \
+                                          operation returns: one entry per entity \
+                                          that did NOT load — notably \"import EHRs \
+                                          with duplicate EHR ids will fail\", which \
+                                          is reported per EHR and skipped, never \
+                                          fatal, and so is a record whose \
+                                          externalized `versions/*.xml` payload \
+                                          will not read. EMPTY when the whole \
+                                          archive loaded.",
+             body = Vec<serde_json::Value>,
+             example = json!([{ "entity_type": "EHR",
+                                "entity_id": "7d44b88c-4199-4bad-97dc-d78268e01398",
+                                "dump_status": false,
+                                "error": "an EHR with this id already exists" }])),
+            (status = 400, description = "`file_sys_loc` is absent or blank, the \
+                                          archive carries externalized multimedia \
+                                          this server has no store for, or the \
+                                          archive is malformed (`archive-invalid`): \
+                                          the container, the manifest, a segment or \
+                                          a blob entry is absent, truncated or does \
+                                          not parse as an export archive, or the \
+                                          manifest names no known logical format. \
+                                          With `Prefer: return=representation` the \
+                                          `archive` member names the entry or the \
+                                          declared format.",
+             body = serde_json::Value),
+            (status = 401, description = "Unauthenticated. Our own authorization \
+                                          design.",
+             body = serde_json::Value),
+            (status = 403, description = "Authenticated but not in the Admin class. \
+                                          Our own authorization design.",
+             body = serde_json::Value),
+            AdminDisabled,
+            JsonBodyRequired,
+            (status = 500, description = "The location holds no archive \
+                                          container, or the server's filesystem \
+                                          refused a read of it. A corrupt \
+                                          per-version payload entry is NOT here: it \
+                                          belongs to exactly one EHR, so it is a \
+                                          per-entity `200` report.",
+             body = serde_json::Value)
+        )
+    )]
+    admin_load => |state, parts| {
+            super::body::gated(state, parts, load)
+        }
 }
 
 /// The `admin_dump` operation.
