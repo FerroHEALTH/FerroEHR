@@ -835,7 +835,10 @@ async fn read_api() -> Tabbed<Api> {
                     groups: crate::bff::system::group_openapi_paths(&document),
                     text: crate::bff::pretty_body(&body, crate::format::ReprFormat::CanonicalJson),
                 }),
-                Err(error) => Err(refused(ViewerError::failed("OpenAPI document JSON", error))),
+                Err(error) => Err(refused(ViewerError::failed(
+                    tr(ConsoleMsg::ServerApiJson),
+                    error,
+                ))),
             },
             Err(error) => Err(refused(error)),
         };

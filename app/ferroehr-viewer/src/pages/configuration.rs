@@ -434,7 +434,7 @@ async fn read_page(section: String) -> Shown {
             }
             Err(error) => Shown::Refused(Refused::new(
                 tr(ConsoleMsg::ConfigRefused),
-                ViewerError::failed("configuration JSON", error),
+                ViewerError::failed(tr(ConsoleMsg::ConfigJson), error),
             )),
         },
         Err(error) => Shown::Refused(Refused::new(tr(ConsoleMsg::ConfigRefused), error)),

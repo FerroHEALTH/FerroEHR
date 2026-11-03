@@ -290,6 +290,8 @@ crate::locale::messages! {
         ConfigRecords = "config-records",
         /// `The CDR's configuration could not be read.`
         ConfigRefused = "config-refused",
+        /// `configuration JSON`
+        ConfigJson = "config-json",
         /// `Configuration sections`
         ConfigSections = "config-sections",
         /// `Server and database`
@@ -312,6 +314,8 @@ crate::locale::messages! {
         ServerApiLine = "server-api-line",
         /// `The OpenAPI document could not be read.`
         ServerApiRefused = "server-api-refused",
+        /// `OpenAPI document JSON`
+        ServerApiJson = "server-api-json",
         /// `Apply…`
         ServerApply = "server-apply",
         /// `Apply the filter`
