@@ -45,7 +45,7 @@ async fn archetype_upload_get_list_replace_delete() {
     // Precondition: not present yet.
     assert!(!crate::fixtures::archetype_stored(&db.pool(), ARCHETYPE_ID).await);
     assert_eq!(
-        svc.list_archetypes_adl14(Page::all()).await.unwrap(),
+        svc.list_archetypes_adl14(Page::default()).await.unwrap(),
         Vec::<String>::new()
     );
 
@@ -60,7 +60,10 @@ async fn archetype_upload_get_list_replace_delete() {
     svc.upload_archetype(adl.clone()).await.expect("upload");
     assert!(crate::fixtures::archetype_stored(&db.pool(), ARCHETYPE_ID).await);
     assert_eq!(
-        svc.list_archetypes_adl14(Page::all()).await.unwrap().len(),
+        svc.list_archetypes_adl14(Page::default())
+            .await
+            .unwrap()
+            .len(),
         1
     );
 
@@ -69,7 +72,7 @@ async fn archetype_upload_get_list_replace_delete() {
     assert_eq!(got, adl, "stored ADL source is byte-identical");
 
     // list names the stored archetype.
-    let list = svc.list_archetypes_adl14(Page::all()).await.unwrap();
+    let list = svc.list_archetypes_adl14(Page::default()).await.unwrap();
     assert_eq!(list, vec![ARCHETYPE_ID.to_owned()]);
 
     // upload_archetype replaces if the id already exists (spec: "replace it").
@@ -78,7 +81,10 @@ async fn archetype_upload_get_list_replace_delete() {
         .await
         .expect("replace");
     assert_eq!(
-        svc.list_archetypes_adl14(Page::all()).await.unwrap().len(),
+        svc.list_archetypes_adl14(Page::default())
+            .await
+            .unwrap()
+            .len(),
         1,
         "replace, not insert"
     );
@@ -92,7 +98,7 @@ async fn archetype_upload_get_list_replace_delete() {
     svc.delete_archetype(ARCHETYPE_ID).await.expect("delete");
     assert!(!crate::fixtures::archetype_stored(&db.pool(), ARCHETYPE_ID).await);
     assert_eq!(
-        svc.list_archetypes_adl14(Page::all()).await.unwrap(),
+        svc.list_archetypes_adl14(Page::default()).await.unwrap(),
         Vec::<String>::new()
     );
 }
@@ -207,7 +213,7 @@ async fn archetype_semantic_validity_runs_the_14_engine() {
     );
     // Nothing was stored (validation gates the write).
     assert_eq!(
-        svc.list_archetypes_adl14(Page::all()).await.unwrap(),
+        svc.list_archetypes_adl14(Page::default()).await.unwrap(),
         Vec::<String>::new()
     );
 }
@@ -292,7 +298,7 @@ async fn opt_upload_get_list_filter_delete() {
             .is_err()
     );
     assert_eq!(
-        svc.template_adl14_list(TemplateListFilter::default(), Page::all())
+        svc.template_adl14_list(TemplateListFilter::default(), Page::default())
             .await
             .unwrap(),
         Vec::<serde_json::Value>::new()
@@ -301,7 +307,7 @@ async fn opt_upload_get_list_filter_delete() {
     // upload (valid OPT).
     svc.template_adl14_upload(&xml).await.expect("upload opt");
     let listed = svc
-        .template_adl14_list(TemplateListFilter::default(), Page::all())
+        .template_adl14_list(TemplateListFilter::default(), Page::default())
         .await
         .unwrap();
     assert_eq!(
@@ -323,7 +329,7 @@ async fn opt_upload_get_list_filter_delete() {
                 template_id: Some("IDCR*Allergies*".to_owned()),
                 ..TemplateListFilter::default()
             },
-            Page::all(),
+            Page::default(),
         )
         .await
         .unwrap();
@@ -354,7 +360,7 @@ async fn opt_upload_get_list_filter_delete() {
         .expect("delete opt");
     assert!(svc.template_adl14_get(OPT_TEMPLATE_ID).await.is_err());
     assert_eq!(
-        svc.template_adl14_list(TemplateListFilter::default(), Page::all())
+        svc.template_adl14_list(TemplateListFilter::default(), Page::default())
             .await
             .unwrap(),
         Vec::<serde_json::Value>::new()
@@ -448,7 +454,7 @@ async fn template_adl14_list_filters_and_paginates() {
 
     // Empty filter + Page::all → the full set (both templates).
     let all = svc
-        .template_adl14_list(TemplateListFilter::default(), Page::all())
+        .template_adl14_list(TemplateListFilter::default(), Page::default())
         .await
         .expect("list all");
     assert_eq!(all.len(), 2, "both templates without a filter");
@@ -460,7 +466,7 @@ async fn template_adl14_list_filters_and_paginates() {
                 template_id: Some("IDCR Allergies*".to_owned()),
                 ..TemplateListFilter::default()
             },
-            Page::all(),
+            Page::default(),
         )
         .await
         .expect("list filtered");
@@ -477,7 +483,7 @@ async fn template_adl14_list_filters_and_paginates() {
                 template_id: Some("does-not-exist*".to_owned()),
                 ..TemplateListFilter::default()
             },
-            Page::all(),
+            Page::default(),
         )
         .await
         .expect("list empty");
@@ -548,7 +554,7 @@ async fn template_adl14_list_absent_version_collapses_to_latest() {
 
     // `version` absent → only the latest version of the family.
     let latest = svc
-        .template_adl14_list(TemplateListFilter::default(), Page::all())
+        .template_adl14_list(TemplateListFilter::default(), Page::default())
         .await
         .expect("list latest");
     assert_eq!(
@@ -564,7 +570,7 @@ async fn template_adl14_list_absent_version_collapses_to_latest() {
                 version: Some("*".to_owned()),
                 ..TemplateListFilter::default()
             },
-            Page::all(),
+            Page::default(),
         )
         .await
         .expect("list all versions");
@@ -789,15 +795,15 @@ async fn adl2_upload_get_list_by_kind_delete() {
 
     // list_artefacts = all HRIDs; the archetype list and the template list
     // partition them.
-    let all = svc.list_artefacts(Page::all()).await.unwrap();
+    let all = svc.list_artefacts(Page::default()).await.unwrap();
     assert_eq!(all.len(), 3);
     assert!(all.contains(&ADL2_OPT_HRID.to_owned()));
     assert_eq!(
-        svc.list_archetypes_adl2(Page::all()).await.unwrap(),
+        svc.list_archetypes_adl2(Page::default()).await.unwrap(),
         vec![ADL2_ARCH_HRID.to_owned()]
     );
     let mut templates = listed_template_ids(
-        &svc.template_adl2_list(TemplateListFilter::default(), Page::all())
+        &svc.template_adl2_list(TemplateListFilter::default(), Page::default())
             .await
             .unwrap(),
     );

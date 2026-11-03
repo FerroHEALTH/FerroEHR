@@ -185,7 +185,12 @@ pub fn routes(state: AppState, authenticator: &Arc<Authenticator>) -> Router {
 
     // A path no route serves answers a `404` problem, never an empty body.
     let inner = mount_public_surface(&cfg, &state, authenticator, api, &rest_root)
-        .fallback(not_found)
+        .fallback(|| async {
+            error::status_error_response(
+                StatusCode::NOT_FOUND,
+                "no resource is served at this path",
+            )
+        })
         .layer(from_fn_with_state(
             FhirBase::of(&rest_root),
             problem::finish,
@@ -231,11 +236,6 @@ pub fn routes(state: AppState, authenticator: &Arc<Authenticator>) -> Router {
     // merged beside the CORS-wrapped surface so `OPTIONS` is not eaten as a
     // preflight.
     inner.merge(Router::new().route(&cfg.rest.base_path, system::options::route(manifest)))
-}
-
-/// The `404` of a path no route serves, as an `about:blank` problem.
-async fn not_found() -> Response {
-    error::status_error_response(StatusCode::NOT_FOUND, "no resource is served at this path")
 }
 
 /// Puts the authenticated subject on the request as the caller the

@@ -124,7 +124,9 @@ pub(super) async fn upload(state: &AppState, parts: &RequestParts) -> Result<Res
     // representation, `{template_id}` on identifier, empty on minimal — with
     // `Location` and the weak `ETag` in every case.
     let mut resp = upload_response(h, &location, hrid, source);
-    set_template_etag(&mut resp, hrid);
+    // NOTE: the weak `ETag` is the resolved `ARCHETYPE_HRID` (AM `v2_4`), whose SEMVER
+    // `release_version` changes whenever the served artefact does.
+    negotiate::resource::set_etag(&mut resp, hrid);
     Ok(resp)
 }
 
@@ -216,22 +218,6 @@ pub(super) async fn example_get(
     }
 }
 
-/// Set the weak `ETag` of a served ADL2 template. The value is the artefact's
-/// **resolved** `ARCHETYPE_HRID` (AM `v2_4` — the HRID carries the artefact's
-/// SEMVER `release_version`, so it changes whenever the served artefact does),
-/// mirroring the ADL 1.4 sibling's `template_id` `ETag`.
-///
-/// ITS-REST `Requests_and_responses.md` §"`ETag` and Last-Modified": both
-/// headers "SHOULD be included in responses for VERSION, `VERSIONED_OBJECT`, or
-/// other resources that have versioning or unique state identifiers", and the
-/// `ETag` "is considered to be of weak-type and should have a weakness
-/// indicator `W/` prefix" — constructed by the shared
-/// [`negotiate::resource::set_etag`] helper so upload and GET share one
-/// implementation.
-fn set_template_etag(resp: &mut Response, hrid: &str) {
-    negotiate::resource::set_etag(resp, hrid);
-}
-
 /// Resolve + render one ADL2 template in the `Accept`-negotiated representation.
 async fn render(
     state: &AppState,
@@ -246,7 +232,7 @@ async fn render(
                 .template_adl2_source(template_id, version)
                 .await?;
             let mut resp = text_response(StatusCode::OK, None, template.payload);
-            set_template_etag(&mut resp, &template.hrid);
+            negotiate::resource::set_etag(&mut resp, &template.hrid);
             Ok(resp)
         }
         Some(Adl2Repr::Json) => {
@@ -255,7 +241,7 @@ async fn render(
                 .template_adl2_opt_json(template_id, version)
                 .await?;
             let mut resp = json_response(StatusCode::OK, template.payload);
-            set_template_etag(&mut resp, &template.hrid);
+            negotiate::resource::set_etag(&mut resp, &template.hrid);
             Ok(resp)
         }
         None => Err(RestError::from(ApiError::NotAcceptable(

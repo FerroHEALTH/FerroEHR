@@ -196,7 +196,7 @@ impl FerroEhrService {
         page: Page,
     ) -> Result<Vec<Value>, ServiceError> {
         Ok(filter_templates(
-            self.adl2_template_list(Page::all()).await?,
+            self.adl2_template_list(Page::default()).await?,
             &filter,
             page,
         ))
@@ -434,7 +434,7 @@ mod tests {
                 "Vital Signs.v0",
             ]),
             &TemplateListFilter::default(),
-            Page::all(),
+            Page::default(),
         );
         assert_eq!(ids(&out), vec!["Encounter.v2", "Vital Signs.v0"]);
     }
@@ -445,7 +445,7 @@ mod tests {
         let out = filter_templates(
             rows(&["T.v1.9", "T.v1.10", "U.v1.999", "U.v2"]),
             &TemplateListFilter::default(),
-            Page::all(),
+            Page::default(),
         );
         assert_eq!(ids(&out), vec!["T.v1.10", "U.v2"]);
     }
@@ -460,7 +460,7 @@ mod tests {
         let out = filter_templates(
             rows(&["Report.v1", "report.v1.0"]),
             &TemplateListFilter::default(),
-            Page::all(),
+            Page::default(),
         );
         assert_eq!(ids(&out), vec!["report.v1.0"]);
     }
@@ -472,7 +472,7 @@ mod tests {
         let out = filter_templates(
             rows(&["Foo", "Foo.v1", "Foo.v3", "Foo.verified"]),
             &TemplateListFilter::default(),
-            Page::all(),
+            Page::default(),
         );
         assert_eq!(ids(&out), vec!["Foo", "Foo.v3", "Foo.verified"]);
     }
@@ -487,7 +487,7 @@ mod tests {
                 version: Some("*".into()),
                 ..TemplateListFilter::default()
             },
-            Page::all(),
+            Page::default(),
         );
         assert_eq!(out, all);
     }
@@ -502,7 +502,7 @@ mod tests {
                 version: Some("1.*".into()),
                 ..TemplateListFilter::default()
             },
-            Page::all(),
+            Page::default(),
         );
         assert_eq!(ids(&out), vec!["T.v1.0", "T.v1.5"]);
     }
@@ -519,7 +519,7 @@ mod tests {
                 version: Some("1.0".into()),
                 ..TemplateListFilter::default()
             },
-            Page::all(),
+            Page::default(),
         );
         assert_eq!(ids(&out), vec!["T.v1.0"]);
     }
@@ -532,7 +532,7 @@ mod tests {
                 version: Some("9.9.9".into()),
                 ..TemplateListFilter::default()
             },
-            Page::all(),
+            Page::default(),
         );
         assert_eq!(out, Vec::<Value>::new());
     }
@@ -548,7 +548,7 @@ mod tests {
                 version: Some("*".into()),
                 ..TemplateListFilter::default()
             },
-            Page::all(),
+            Page::default(),
         );
         assert_eq!(ids(&star), vec!["Plain", "T.v1.0"]);
         let concrete = filter_templates(
@@ -557,7 +557,7 @@ mod tests {
                 version: Some("1.*".into()),
                 ..TemplateListFilter::default()
             },
-            Page::all(),
+            Page::default(),
         );
         assert_eq!(ids(&concrete), vec!["T.v1.0"]);
     }

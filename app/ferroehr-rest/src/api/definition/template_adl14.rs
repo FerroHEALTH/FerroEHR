@@ -162,7 +162,9 @@ fn unrepresented_response(location: &str, template_id: &str) -> Response {
     if let Ok(v) = HeaderValue::from_str(location) {
         resp.headers_mut().insert(header::LOCATION, v);
     }
-    set_template_etag(&mut resp, template_id);
+    // NOTE: `headers/ETag_Template_adl1_4.yaml` gives a template the weak `W/"<template_id>"`,
+    // keyed as the upload answers so a client's `If-None-Match` round-trips.
+    negotiate::resource::set_etag(&mut resp, template_id);
     resp
 }
 
@@ -201,7 +203,7 @@ pub(super) async fn get(state: &AppState, parts: &RequestParts) -> Result<Respon
     match fmt {
         WireFormat::CanonicalXml => {
             let mut resp = negotiate::body::body(StatusCode::OK, negotiate::APPLICATION_XML, xml);
-            set_template_etag(&mut resp, &template_id);
+            negotiate::resource::set_etag(&mut resp, &template_id);
             Ok(resp)
         }
         // Both JSON forms serve the Web Template document, the only JSON
@@ -254,17 +256,6 @@ pub(super) async fn example_get(
     }
 }
 
-/// Set the weak `ETag` the retrieved/uploaded template responses mandate
-/// (`headers/ETag_Template_adl1_4.yaml`: `W/"<id>"`). Keyed on the
-/// `template_id` string, matching the upload path so a client's `If-None-Match`
-/// round-trips. The weak-form construction goes through the shared
-/// [`negotiate::resource::set_etag`] helper (overview §"Deprecated headers": a
-/// resource-identifier `ETag` MUST carry the `W/` weakness indicator), so the
-/// upload and this GET share one implementation of the `W/"…"` format.
-fn set_template_etag(resp: &mut Response, template_id: &str) {
-    negotiate::resource::set_etag(resp, template_id);
-}
-
 /// Render the `201_Template_adl1_4_upload` response per `Prefer`:
 /// `return=representation` → `representation`, the OPT XML or the Web
 /// Template `Accept` negotiated; `return=identifier` → the JSON
@@ -303,7 +294,7 @@ fn upload_response(
     if let Ok(v) = HeaderValue::from_str(location) {
         resp.headers_mut().insert(header::LOCATION, v);
     }
-    set_template_etag(&mut resp, template_id);
+    negotiate::resource::set_etag(&mut resp, template_id);
     negotiate::prefer::set_preference_applied(&mut resp, applied);
     resp
 }
@@ -346,6 +337,6 @@ async fn web_template_response(
         }
         _ => negotiate::body::body(status, negotiate::APPLICATION_WT_JSON, json),
     };
-    set_template_etag(&mut resp, template_id);
+    negotiate::resource::set_etag(&mut resp, template_id);
     Ok(resp)
 }
