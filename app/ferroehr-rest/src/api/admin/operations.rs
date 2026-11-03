@@ -29,113 +29,116 @@ use openehr_its::rest::decode::query_component_octets;
 use openehr_its::rest::generated::admin::AdminEhrDeleteParams;
 use openehr_its::rest::runtime::ApiError;
 
-use crate::api::{BoxResponse, RequestParts};
+use crate::api::RequestParts;
 use crate::overview::error::RestError;
 use crate::overview::version_id::{parse_ehr_id, parse_party_id};
 
 use crate::negotiate;
 use crate::state::AppState;
 
-pub(crate) fn dispatch(state: AppState, op: &'static str, parts: RequestParts) -> BoxResponse {
-    Box::pin(async move {
-        run(state, op, parts)
-            .await
-            .unwrap_or_else(IntoResponse::into_response)
-    })
-}
-
-async fn run(
+/// The `admin_ehr_delete` operation.
+pub(crate) async fn ehr_delete(
     state: AppState,
-    op: &'static str,
     parts: RequestParts,
 ) -> Result<Response, RestError> {
-    // This `405` comes from a matched handler, so axum's allow-header machinery
-    // never runs and the `Allow` RFC 9110 §15.5.6 mandates is stated as the
-    // empty field value — §10.2.1's case for a resource "temporarily disabled by
-    // configuration".
-    if let Some(refusal) = admin_group_gate(&state) {
-        return Ok(refusal);
-    }
-    let q = parts.query.as_deref();
-
-    match op {
-        "admin_ehr_delete" => {
-            let p = parts.decode(
-                AdminEhrDeleteParams::from_request,
-                AdminEhrDeleteParams::PARAMS,
-            )?;
-            // Physical EHR delete → 204 No Content; unknown EHR → 404
-            // (the service maps `ehr_id_does_not_exist` to NotFound).
-            state
-                .backend()
-                .admin_ehr_delete(parse_ehr_id(&p.ehr_id)?)
-                .await?;
-            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
-        }
-        // NOTE: no openEHR spec governs the routes below — our own extensions;
-        // both mirror `admin_ehr_delete` (204, 404, same admin gate).
-        "admin_template_delete" => {
-            let template_id = path_segment(&parts, "template_id")?;
-            // A template still referenced by a committed version is a 409:
-            // never orphan clinical data.
-            state.backend().admin_template_delete(&template_id).await?;
-            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
-        }
-        // The party with its relationships; a malformed id is 400, an unknown
-        // one 404.
-        "admin_party_delete" => {
-            let party_id = path_segment(&parts, "party_id")?;
-            state
-                .backend()
-                .physical_party_delete(parse_party_id(&party_id)?)
-                .await?;
-            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
-        }
-        "admin_query_delete" => {
-            let qualified_name = path_segment(&parts, "qualified_query_name")?;
-            let version = path_segment(&parts, "version")?;
-            state
-                .backend()
-                .admin_query_delete(&qualified_name, &version)
-                .await?;
-            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
-        }
-        "admin_config" => {
-            // NOTE: no openEHR spec governs configuration — our own extension.
-            // The binary builds this snapshot at boot, so every secret leaf is
-            // already redacted by its own `Secret`/`SecretUrl` type.
-            let snapshot = state.observability().env_snapshot.as_ref().clone();
-            Ok((StatusCode::OK, Json(snapshot)).into_response())
-        }
-        "admin_ehr_delete_all" => {
-            // The generated `AdminEhrDeleteAllParams.ehr_id: Option<String>`
-            // under-models the RFC 6570 `{?ehr_id*}` list, so the full list is
-            // read from the raw query. `ehr_id` is optional
-            // (`parameters/query/ehr_id_Admin.yaml`), so an empty list means
-            // "delete ALL EHRs" (`operations/admin_ehr_delete_all.yaml`), which
-            // is the semantics the service seam honours.
-            let ids = ehr_id_list(q)
-                .iter()
-                .map(|id| parse_ehr_id(id))
-                .collect::<Result<Vec<_>, _>>()?;
-            state.backend().admin_ehr_delete_all(&ids).await?;
-            // The only declared success responses are a bodyless `204` (sync)
-            // and `202` (async); this server is synchronous.
-            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
-        }
-        other => Err(RestError::from(ApiError::Internal(format!(
-            "unrouted admin operation: {other}"
-        )))),
-    }
+    let p = parts.decode(
+        AdminEhrDeleteParams::from_request,
+        AdminEhrDeleteParams::PARAMS,
+    )?;
+    // Physical EHR delete → 204 No Content; unknown EHR → 404
+    // (the service maps `ehr_id_does_not_exist` to NotFound).
+    state
+        .backend()
+        .admin_ehr_delete(parse_ehr_id(&p.ehr_id)?)
+        .await?;
+    Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
 }
 
-/// The ADMIN group's config gate, shared by every dispatcher mounted under
-/// `/admin/` — this one plus the [`archive`](super::archive) and
+/// The `admin_template_delete` operation.
+pub(crate) async fn template_delete(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let template_id = path_segment(&parts, "template_id")?;
+    // A template still referenced by a committed version is a 409:
+    // never orphan clinical data.
+    state.backend().admin_template_delete(&template_id).await?;
+    Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
+}
+
+/// The `admin_party_delete` operation.
+pub(crate) async fn party_delete(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let party_id = path_segment(&parts, "party_id")?;
+    state
+        .backend()
+        .physical_party_delete(parse_party_id(&party_id)?)
+        .await?;
+    Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
+}
+
+/// The `admin_query_delete` operation.
+pub(crate) async fn query_delete(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let qualified_name = path_segment(&parts, "qualified_query_name")?;
+    let version = path_segment(&parts, "version")?;
+    state
+        .backend()
+        .admin_query_delete(&qualified_name, &version)
+        .await?;
+    Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
+}
+
+/// The `admin_config` operation.
+pub(crate) fn config(state: &AppState) -> Response {
+    if let Some(refusal) = admin_group_gate(state) {
+        return refusal;
+    }
+    // NOTE: no openEHR spec governs configuration — our own extension.
+    // The binary builds this snapshot at boot, so every secret leaf is
+    // already redacted by its own `Secret`/`SecretUrl` type.
+    let snapshot = state.observability().env_snapshot.as_ref().clone();
+    (StatusCode::OK, Json(snapshot)).into_response()
+}
+
+/// The `admin_ehr_delete_all` operation.
+pub(crate) async fn ehr_delete_all(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let q = parts.query.as_deref();
+    // The generated `AdminEhrDeleteAllParams.ehr_id: Option<String>`
+    // under-models the RFC 6570 `{?ehr_id*}` list, so the full list is
+    // read from the raw query. `ehr_id` is optional
+    // (`parameters/query/ehr_id_Admin.yaml`), so an empty list means
+    // "delete ALL EHRs" (`operations/admin_ehr_delete_all.yaml`), which
+    // is the semantics the service seam honours.
+    let ids = ehr_id_list(q)
+        .iter()
+        .map(|id| parse_ehr_id(id))
+        .collect::<Result<Vec<_>, _>>()?;
+    state.backend().admin_ehr_delete_all(&ids).await?;
+    // The only declared success responses are a bodyless `204` (sync)
+    // and `202` (async); this server is synchronous.
+    Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
+}
+
+/// The ADMIN group's config gate, shared by every handler mounted under
+/// `/admin/`: these, and those of the [`archive`](super::archive) and
 /// [`report`](super::report) extension groups.
 ///
 /// `Some(refusal)` while `AppConfig::admin.enabled` is off, `None` when the
 /// group serves. One decision in one place, so no route under `/admin/` can
 /// drift out of the gate.
+///
+/// The `405` comes from a matched handler, so axum's allow-header machinery
+/// never runs and the `Allow` RFC 9110 §15.5.6 mandates is stated as the
+/// empty field value: §10.2.1's case for a resource "temporarily disabled by
+/// configuration".
 pub(super) fn admin_group_gate(state: &AppState) -> Option<Response> {
     (!state.config().admin.enabled).then(|| {
         crate::overview::error::method_not_allowed_response(

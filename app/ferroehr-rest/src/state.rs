@@ -3,12 +3,12 @@
 
 //! Shared application state.
 //!
-//! [`AppState`] is the router state every group dispatcher in [`crate::api`]
+//! [`AppState`] is the router state every operation handler in [`crate::api`]
 //! receives. It holds the concrete platform service (`FerroEhrService`)
 //! (no trait objects, no stub backend — the binary monomorphizes it
 //! over the DB-backed `FerroEhrService`). It is cheap to
 //! clone (an `Arc` inside) and carries the configuration, the service `S` the
-//! dispatchers call into, the optional authorization handle, and the
+//! handlers call into, the optional authorization handle, and the
 //! [`Observability`] bundle (management surface + telemetry handles + health
 //! registry) — which defaults to fully off, so a server without observability
 //! is the clean default. ATNA auditing lives in the platform service `S` (its
@@ -88,7 +88,7 @@ impl AppState {
         &self.inner.config
     }
 
-    /// The service the group dispatchers call into.
+    /// The service the operation handlers call into.
     pub(crate) fn backend(&self) -> &FerroEhrService {
         &self.inner.backend
     }

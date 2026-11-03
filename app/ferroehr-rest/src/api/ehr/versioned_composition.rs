@@ -33,105 +33,113 @@ use crate::overview::error::RestError;
 use crate::overview::version_id::{parse_ehr_id, parse_uuid, parse_version_uid};
 use crate::state::AppState;
 
-pub(super) async fn run(
+/// The `versioned_composition_get` operation.
+pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let p = parts.decode(
+        VersionedCompositionGetParams::from_request,
+        VersionedCompositionGetParams::PARAMS,
+    )?;
+    let ehr_id = parse_ehr_id(&p.ehr_id)?;
+    let vo_id = parse_uuid(&p.versioned_object_uid, "versioned_object_uid")?;
+    let vo_id = ferroehr::ids::VoId(vo_id);
+    let mut resp = state.backend().versioned_composition(ehr_id, vo_id).await?;
+    // The container carries no content of its own, so the access
+    // record is classified by the COMPOSITION it holds (EHDS Annex II
+    // 3.2(c)).
+    let content = state.backend().audit_content_of_objects(&[vo_id]).await?;
+    resp.meta = resp.meta.map(|meta| meta.with_content(content));
+    Ok(negotiate::resource::read_rm::<VersionedComposition>(
+        h,
+        &resp,
+        VERSIONED_COMPOSITION_ROOT_TAG,
+    ))
+}
+
+/// The `versioned_composition_revision_history` operation.
+pub(crate) async fn revision_history(
     state: AppState,
-    op: &'static str,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let p = parts.decode(
+        VersionedCompositionRevisionHistoryParams::from_request,
+        VersionedCompositionRevisionHistoryParams::PARAMS,
+    )?;
+    let ehr_id = parse_ehr_id(&p.ehr_id)?;
+    let vo_id = parse_uuid(&p.versioned_object_uid, "versioned_object_uid")?;
+    let resp = state
+        .backend()
+        .composition_revision_history(ehr_id, ferroehr::ids::VoId(vo_id))
+        .await?;
+    Ok(negotiate::resource::read_rm::<RevisionHistory>(
+        h,
+        &resp,
+        REVISION_HISTORY_ROOT_TAG,
+    ))
+}
+
+/// The `versioned_composition_version_get_at_time` operation.
+pub(crate) async fn version_get_at_time(
+    state: AppState,
     parts: RequestParts,
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
     let q = parts.query.as_deref();
+    let p = parts.decode(
+        VersionedCompositionVersionGetAtTimeParams::from_request,
+        VersionedCompositionVersionGetAtTimeParams::PARAMS,
+    )?;
+    let ehr_id = parse_ehr_id(&p.ehr_id)?;
+    let vo_id = parse_uuid(&p.versioned_object_uid, "versioned_object_uid")?;
+    let mut resp = state
+        .backend()
+        .composition_version_at_time(ehr_id, ferroehr::ids::VoId(vo_id), p.version_at_time)
+        .await?;
+    // The VERSION envelope carries the same externalized media the bare
+    // resource does, so it re-inlines on the same request.
+    resp.body = super::expand_multimedia_if_requested(&state, q, resp.body).await?;
+    Ok(negotiate::resource::read_rm::<Version<Composition>>(
+        h,
+        &resp,
+        VERSION_ROOT_TAG,
+    ))
+}
 
-    match op {
-        "versioned_composition_get" => {
-            let p = parts.decode(
-                VersionedCompositionGetParams::from_request,
-                VersionedCompositionGetParams::PARAMS,
-            )?;
-            let ehr_id = parse_ehr_id(&p.ehr_id)?;
-            let vo_id = parse_uuid(&p.versioned_object_uid, "versioned_object_uid")?;
-            let vo_id = ferroehr::ids::VoId(vo_id);
-            let mut resp = state.backend().versioned_composition(ehr_id, vo_id).await?;
-            // The container carries no content of its own, so the access
-            // record is classified by the COMPOSITION it holds (EHDS Annex II
-            // 3.2(c)).
-            let content = state.backend().audit_content_of_objects(&[vo_id]).await?;
-            resp.meta = resp.meta.map(|meta| meta.with_content(content));
-            Ok(negotiate::resource::read_rm::<VersionedComposition>(
-                h,
-                &resp,
-                VERSIONED_COMPOSITION_ROOT_TAG,
-            ))
-        }
-        "versioned_composition_revision_history" => {
-            let p = parts.decode(
-                VersionedCompositionRevisionHistoryParams::from_request,
-                VersionedCompositionRevisionHistoryParams::PARAMS,
-            )?;
-            let ehr_id = parse_ehr_id(&p.ehr_id)?;
-            let vo_id = parse_uuid(&p.versioned_object_uid, "versioned_object_uid")?;
-            let resp = state
-                .backend()
-                .composition_revision_history(ehr_id, ferroehr::ids::VoId(vo_id))
-                .await?;
-            Ok(negotiate::resource::read_rm::<RevisionHistory>(
-                h,
-                &resp,
-                REVISION_HISTORY_ROOT_TAG,
-            ))
-        }
-        "versioned_composition_version_get_at_time" => {
-            let p = parts.decode(
-                VersionedCompositionVersionGetAtTimeParams::from_request,
-                VersionedCompositionVersionGetAtTimeParams::PARAMS,
-            )?;
-            let ehr_id = parse_ehr_id(&p.ehr_id)?;
-            let vo_id = parse_uuid(&p.versioned_object_uid, "versioned_object_uid")?;
-            let mut resp = state
-                .backend()
-                .composition_version_at_time(ehr_id, ferroehr::ids::VoId(vo_id), p.version_at_time)
-                .await?;
-            // The VERSION envelope carries the same externalized media the bare
-            // resource does, so it re-inlines on the same request.
-            resp.body = super::expand_multimedia_if_requested(&state, q, resp.body).await?;
-            Ok(negotiate::resource::read_rm::<Version<Composition>>(
-                h,
-                &resp,
-                VERSION_ROOT_TAG,
-            ))
-        }
-        "versioned_composition_version_get_by_id" => {
-            let p = parts.decode(
-                VersionedCompositionVersionGetByIdParams::from_request,
-                VersionedCompositionVersionGetByIdParams::PARAMS,
-            )?;
-            let ehr_id = parse_ehr_id(&p.ehr_id)?;
-            let vo_id = parse_uuid(&p.versioned_object_uid, "versioned_object_uid")?;
-            let ovid = parse_version_uid(&p.version_uid)?;
-            // The version_uid's object_id must match the VERSIONED_OBJECT
-            // identifier the path names (overview `Resources.md` §Identifier
-            // types; RM common version.adoc `Owner_id_valid`), so an incoherent
-            // pair names nothing here and is a 404.
-            if crate::overview::version_id::object_id_uuid(&ovid) != Some(vo_id) {
-                return Err(RestError::from(ApiError::NotFound(format!(
-                    "version {} in versioned object {}",
-                    p.version_uid, p.versioned_object_uid
-                ))));
-            }
-            let mut resp = state
-                .backend()
-                .composition_version_envelope(ehr_id, ovid)
-                .await?;
-            // The VERSION envelope carries the same externalized media the bare
-            // resource does, so it re-inlines on the same request.
-            resp.body = super::expand_multimedia_if_requested(&state, q, resp.body).await?;
-            Ok(negotiate::resource::read_rm::<Version<Composition>>(
-                h,
-                &resp,
-                VERSION_ROOT_TAG,
-            ))
-        }
-        other => Err(RestError::from(ApiError::Internal(format!(
-            "unrouted ehr operation: {other}"
-        )))),
+/// The `versioned_composition_version_get_by_id` operation.
+pub(crate) async fn version_get_by_id(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let q = parts.query.as_deref();
+    let p = parts.decode(
+        VersionedCompositionVersionGetByIdParams::from_request,
+        VersionedCompositionVersionGetByIdParams::PARAMS,
+    )?;
+    let ehr_id = parse_ehr_id(&p.ehr_id)?;
+    let vo_id = parse_uuid(&p.versioned_object_uid, "versioned_object_uid")?;
+    let ovid = parse_version_uid(&p.version_uid)?;
+    // The version_uid's object_id must match the VERSIONED_OBJECT
+    // identifier the path names (overview `Resources.md` §Identifier
+    // types; RM common version.adoc `Owner_id_valid`), so an incoherent
+    // pair names nothing here and is a 404.
+    if crate::overview::version_id::object_id_uuid(&ovid) != Some(vo_id) {
+        return Err(RestError::from(ApiError::NotFound(format!(
+            "version {} in versioned object {}",
+            p.version_uid, p.versioned_object_uid
+        ))));
     }
+    let mut resp = state
+        .backend()
+        .composition_version_envelope(ehr_id, ovid)
+        .await?;
+    // The VERSION envelope carries the same externalized media the bare
+    // resource does, so it re-inlines on the same request.
+    resp.body = super::expand_multimedia_if_requested(&state, q, resp.body).await?;
+    Ok(negotiate::resource::read_rm::<Version<Composition>>(
+        h,
+        &resp,
+        VERSION_ROOT_TAG,
+    ))
 }

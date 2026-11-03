@@ -6,7 +6,7 @@
 //!
 //! Operation semantics are the ITS-REST Definition API
 //! (`docs/specs/openehr/ITS-REST`); no openEHR spec governs the OAS layout. Each
-//! handler forwards to the group dispatcher through [`guarded_dispatch`].
+//! handler calls its operation's handler through [`guarded_dispatch`].
 //!
 //! NOTE (operation ids): a few released operation ids carry `.` (e.g.
 //! `definition_template_adl1.4_list`, `definition_query_store.yaml`) — invalid
@@ -218,7 +218,7 @@ pub(crate) async fn definition_template_adl1_4_list(
         state,
         "definition_template_adl1.4_list",
         parts,
-        super::dispatch::dispatch,
+        |state, parts| async move { super::template_adl14::list(&state, &parts).await },
     )
     .await
 }
@@ -410,7 +410,7 @@ pub(crate) async fn definition_template_adl1_4_upload(
         state,
         "definition_template_adl1.4_upload",
         parts,
-        super::dispatch::dispatch,
+        |state, parts| async move { super::template_adl14::upload(&state, &parts).await },
     )
     .await
 }
@@ -543,7 +543,7 @@ pub(crate) async fn definition_template_adl1_4_get(
         state,
         "definition_template_adl1.4_get",
         parts,
-        super::dispatch::dispatch,
+        |state, parts| async move { super::template_adl14::get(&state, &parts).await },
     )
     .await
 }
@@ -668,7 +668,7 @@ pub(crate) async fn definition_template_adl1_4_example_get(
         state,
         "definition_template_adl1.4_example_get",
         parts,
-        super::dispatch::dispatch,
+        |state, parts| async move { super::template_adl14::example_get(&state, &parts).await },
     )
     .await
 }
@@ -797,7 +797,7 @@ pub(crate) async fn definition_template_adl2_list(
         state,
         "definition_template_adl2_list",
         parts,
-        super::dispatch::dispatch,
+        |state, parts| async move { super::template_adl2::list(&state, &parts).await },
     )
     .await
 }
@@ -967,7 +967,7 @@ pub(crate) async fn definition_template_adl2_upload(
         state,
         "definition_template_adl2_upload",
         parts,
-        super::dispatch::dispatch,
+        |state, parts| async move { super::template_adl2::upload(&state, &parts).await },
     )
     .await
 }
@@ -1094,7 +1094,7 @@ pub(crate) async fn definition_template_adl2_get(
         state,
         "definition_template_adl2_get",
         parts,
-        super::dispatch::dispatch,
+        |state, parts| async move { super::template_adl2::get(&state, &parts).await },
     )
     .await
 }
@@ -1216,7 +1216,7 @@ pub(crate) async fn definition_template_adl2_example_get(
         state,
         "definition_template_adl2_example_get",
         parts,
-        super::dispatch::dispatch,
+        |state, parts| async move { super::template_adl2::example_get(&state, &parts).await },
     )
     .await
 }
@@ -1362,7 +1362,7 @@ pub(crate) async fn definition_template_adl2_version_get(
         state,
         "definition_template_adl2_version_get",
         parts,
-        super::dispatch::dispatch,
+        |state, parts| async move { super::template_adl2::version_get(&state, &parts).await },
     )
     .await
 }
@@ -1450,7 +1450,7 @@ pub(crate) async fn definition_query_list_all(
         state,
         "definition_query_list_all",
         parts,
-        super::dispatch::dispatch,
+        |state, parts| async move { super::stored_query::list_all(&state, &parts).await },
     )
     .await
 }
@@ -1585,7 +1585,7 @@ pub(crate) async fn definition_query_list(
         state,
         "definition_query_list",
         parts,
-        super::dispatch::dispatch,
+        |state, parts| async move { super::stored_query::list(&state, &parts).await },
     )
     .await
 }
@@ -1736,7 +1736,7 @@ pub(crate) async fn definition_query_store_yaml(
         state,
         "definition_query_store.yaml",
         parts,
-        super::dispatch::dispatch,
+        |state, parts| async move { super::stored_query::store(&state, &parts).await },
     )
     .await
 }
@@ -1871,7 +1871,7 @@ pub(crate) async fn definition_query_version_get(
         state,
         "definition_query_version_get",
         parts,
-        super::dispatch::dispatch,
+        |state, parts| async move { super::stored_query::version_get(&state, &parts).await },
     )
     .await
 }
@@ -2050,7 +2050,7 @@ pub(crate) async fn definition_query_version_store_yaml(
         state,
         "definition_query_version_store.yaml",
         parts,
-        super::dispatch::dispatch,
+        |state, parts| async move { super::stored_query::version_store(&state, &parts).await },
     )
     .await
 }

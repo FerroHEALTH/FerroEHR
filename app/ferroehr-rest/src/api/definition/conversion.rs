@@ -17,16 +17,15 @@
 use std::collections::BTreeMap;
 
 use axum::extract::State;
-use axum::response::{IntoResponse, Response};
+use axum::response::Response;
 use http::StatusCode;
 use serde::Serialize;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use openehr_adl::adl14::opt::{ConvertedRoot, FillEdge, OptConversion};
-use openehr_its::rest::runtime::ApiError;
 
-use crate::api::{BoxResponse, RequestParts, guarded_dispatch};
+use crate::api::{RequestParts, guarded_dispatch};
 use crate::negotiate;
 use crate::overview::error::RestError;
 use crate::state::AppState;
@@ -172,7 +171,13 @@ pub(crate) async fn definition_archetype_adl14_convert(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "definition_archetype_adl14_convert", parts, dispatch).await
+    guarded_dispatch(
+        state,
+        "definition_archetype_adl14_convert",
+        parts,
+        archetype_adl14_convert,
+    )
+    .await
 }
 
 /// Convert a stored ADL 1.4 operational template to ADL 2
@@ -218,40 +223,39 @@ pub(crate) async fn definition_template_adl14_convert(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "definition_template_adl14_convert", parts, dispatch).await
+    guarded_dispatch(
+        state,
+        "definition_template_adl14_convert",
+        parts,
+        template_adl14_convert,
+    )
+    .await
 }
 
-pub(crate) fn dispatch(state: AppState, op: &'static str, parts: RequestParts) -> BoxResponse {
-    Box::pin(async move {
-        run(state, op, parts)
-            .await
-            .unwrap_or_else(IntoResponse::into_response)
-    })
-}
-
-async fn run(
+/// The `definition_archetype_adl14_convert` operation.
+async fn archetype_adl14_convert(
     state: AppState,
-    op: &'static str,
     parts: RequestParts,
 ) -> Result<Response, RestError> {
-    let conversion = match op {
-        "definition_archetype_adl14_convert" => {
-            let archetype_id = path_segment(&parts, "archetype_id")?;
-            state.backend().adl14_convert_to_adl2(archetype_id).await?
-        }
-        "definition_template_adl14_convert" => {
-            let template_id = path_segment(&parts, "template_id")?;
-            state
-                .backend()
-                .adl14_convert_opt_to_adl2(template_id)
-                .await?
-        }
-        other => {
-            return Err(RestError::from(ApiError::Internal(format!(
-                "unrouted definition conversion operation: {other}"
-            ))));
-        }
-    };
+    let archetype_id = path_segment(&parts, "archetype_id")?;
+    let conversion = state.backend().adl14_convert_to_adl2(archetype_id).await?;
+    Ok(negotiate::body::respond(
+        &parts.headers,
+        StatusCode::OK,
+        &Conversion::from(conversion),
+    ))
+}
+
+/// The `definition_template_adl14_convert` operation.
+async fn template_adl14_convert(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let template_id = path_segment(&parts, "template_id")?;
+    let conversion = state
+        .backend()
+        .adl14_convert_opt_to_adl2(template_id)
+        .await?;
     Ok(negotiate::body::respond(
         &parts.headers,
         StatusCode::OK,

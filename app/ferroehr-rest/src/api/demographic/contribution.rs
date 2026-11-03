@@ -16,7 +16,6 @@ use axum::response::Response;
 use http::StatusCode;
 
 use openehr_its::rest::generated::demographic::ContributionGetParams;
-use openehr_its::rest::runtime::ApiError;
 
 use crate::api::RequestParts;
 use crate::negotiate;
@@ -25,72 +24,63 @@ use crate::overview::negotiate::resource::Tree;
 use crate::state::AppState;
 use ferroehr::service::response::ServiceResponse;
 
-/// The `contribution_*` operations.
-pub(super) async fn run(
-    state: AppState,
-    op: &'static str,
-    parts: RequestParts,
-) -> Result<Response, RestError> {
+/// The `contribution_create` operation.
+pub(crate) async fn create(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
     let base = state.config().rest.base_path.clone();
+    // A CONTRIBUTION commit is a `NewContribution` wrapper DTO, JSON only.
+    let body = negotiate::decode::json_value(h, &parts.body)?;
+    let resp = state
+        .backend()
+        .demographic_contribution_create(body)
+        .await?;
+    // 201_demographic_CONTRIBUTION + ETag(contribution_uid)/Location;
+    // body per Prefer (oneOf[Contribution, Identifier]).
+    Ok(write_shared(
+        h,
+        &base,
+        "contribution",
+        StatusCode::CREATED,
+        StatusCode::CREATED,
+        &resp,
+    ))
+}
 
-    match op {
-        "contribution_create" => {
-            // A CONTRIBUTION commit is a `NewContribution` wrapper DTO, JSON only.
-            let body = negotiate::decode::json_value(h, &parts.body)?;
-            let resp = state
-                .backend()
-                .demographic_contribution_create(body)
-                .await?;
-            // 201_demographic_CONTRIBUTION + ETag(contribution_uid)/Location;
-            // body per Prefer (oneOf[Contribution, Identifier]).
-            Ok(write_shared(
-                h,
-                &base,
-                "contribution",
-                StatusCode::CREATED,
-                StatusCode::CREATED,
-                &resp,
-            ))
-        }
-        "contribution_get" => {
-            let p = parts.decode(
-                ContributionGetParams::from_request,
-                ContributionGetParams::PARAMS,
-            )?;
-            let uid = p.contribution_uid.clone();
-            let resp = state
-                .backend()
-                .demographic_contribution_get(crate::overview::version_id::parse_uuid(
-                    &p.contribution_uid,
-                    "contribution id",
-                )?)
-                .await?;
-            // Weak ETag (the contribution uid — the same identity the 201's
-            // ETag carries) + Last-Modified from `audit.time_committed`,
-            // mirroring the EHR sibling's adjudicated reading of the
-            // overview §"ETag and Last-Modified" SHOULD (a CONTRIBUTION is
-            // immutable and uniquely identified; the released 200_CONTRIBUTION
-            // declares neither header).
-            let mut meta = ferroehr::service::response::ResourceMeta::new(String::new(), uid);
-            if let Some(at) = resp
-                .body
-                .get("audit")
-                .and_then(|a| a.get("time_committed"))
-                .and_then(|t| t.get("value"))
-                .and_then(serde_json::Value::as_str)
-                .and_then(|raw| raw.parse::<jiff::Timestamp>().ok())
-            {
-                meta = meta.with_last_modified(at);
-            }
-            let mut out = negotiate::body::respond(h, StatusCode::OK, &resp.body);
-            negotiate::resource::set_versioning_headers(&mut out, &meta, Tree::Demographic);
-            Ok(out)
-        }
-        other => Err(RestError::from(ApiError::Internal(format!(
-            "unrouted demographic contribution operation: {other}"
-        )))),
+/// The `contribution_get` operation.
+pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let p = parts.decode(
+        ContributionGetParams::from_request,
+        ContributionGetParams::PARAMS,
+    )?;
+    let uid = p.contribution_uid.clone();
+    let resp = state
+        .backend()
+        .demographic_contribution_get(crate::overview::version_id::parse_uuid(
+            &p.contribution_uid,
+            "contribution id",
+        )?)
+        .await?;
+    // Weak ETag (the contribution uid — the same identity the 201's
+    // ETag carries) + Last-Modified from `audit.time_committed`,
+    // mirroring the EHR sibling's adjudicated reading of the
+    // overview §"ETag and Last-Modified" SHOULD (a CONTRIBUTION is
+    // immutable and uniquely identified; the released 200_CONTRIBUTION
+    // declares neither header).
+    let mut meta = ferroehr::service::response::ResourceMeta::new(String::new(), uid);
+    if let Some(at) = resp
+        .body
+        .get("audit")
+        .and_then(|a| a.get("time_committed"))
+        .and_then(|t| t.get("value"))
+        .and_then(serde_json::Value::as_str)
+        .and_then(|raw| raw.parse::<jiff::Timestamp>().ok())
+    {
+        meta = meta.with_last_modified(at);
     }
+    let mut out = negotiate::body::respond(h, StatusCode::OK, &resp.body);
+    negotiate::resource::set_versioning_headers(&mut out, &meta, Tree::Demographic);
+    Ok(out)
 }
 
 /// A create response for a JSON-only payload (CONTRIBUTION), honouring `Prefer`

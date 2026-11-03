@@ -85,12 +85,9 @@ pub(crate) async fn admin_access_opt_out(
     State(state): State<AppState>,
     request: Request,
 ) -> Response {
-    super::body::handle(
-        state,
-        request,
-        "admin_access_opt_out",
-        super::body::dispatch::<OptOutRoutes>,
-    )
+    super::body::handle(state, request, "admin_access_opt_out", |state, parts| {
+        super::body::gated(state, parts, opt_out)
+    })
     .await
 }
 
@@ -116,7 +113,7 @@ pub(crate) async fn admin_access_opt_out_register(
         state,
         request,
         "admin_access_opt_out_register",
-        super::body::dispatch::<OptOutRoutes>,
+        |state, parts| super::body::gated(state, parts, register),
     )
     .await
 }
@@ -152,50 +149,53 @@ pub(crate) async fn admin_reverse_access_opt_out(
         state,
         request,
         "admin_reverse_access_opt_out",
-        super::body::dispatch::<OptOutRoutes>,
+        |state, parts| super::body::gated(state, parts, reverse),
     )
     .await
 }
 
-/// The access opt-out routes' operations.
-struct OptOutRoutes;
+/// The `admin_access_opt_out_register` operation.
+async fn register(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+    let rows = state
+        .backend()
+        .access_opt_out_register(parse_ehr_id(&required_query(&parts, "ehr_id")?)?)
+        .await?;
+    let register = serde_json::json!({ "access_opt_outs": rows });
+    Ok(negotiate::body::respond(
+        &parts.headers,
+        StatusCode::OK,
+        &register,
+    ))
+}
 
-impl super::body::RegisterRoutes for OptOutRoutes {
-    async fn run(state: &AppState, op: &str, parts: &RequestParts) -> Result<Response, RestError> {
-        if op == "admin_access_opt_out_register" {
-            let rows = state
-                .backend()
-                .access_opt_out_register(parse_ehr_id(&required_query(parts, "ehr_id")?)?)
-                .await?;
-            let register = serde_json::json!({ "access_opt_outs": rows });
-            return Ok(negotiate::body::respond(
-                &parts.headers,
-                StatusCode::OK,
-                &register,
-            ));
-        }
-        let backend = state.backend();
-        let body = negotiate::decode::json_value(&parts.headers, &parts.body)?;
-        let ehr_id = required_str(&body, "ehr_id")?;
-        if op == "admin_access_opt_out" {
-            let declared = &state.config().rbac.access_service_roles;
-            if declared.iter().all(|role| role.trim().is_empty()) {
-                return Err(RestError::from(ApiError::BadRequest(
-                    "this deployment declares no EHDS Art. 10 access-service caller \
-                     ([authz.rbac] access_service_roles is empty), so an opt-out would hold for \
-                     nobody; declare the roles of the access services first"
-                        .to_owned(),
-                )));
-            }
-            let note = optional_str(&body, "note")?;
-            backend
-                .record_access_opt_out(parse_ehr_id(ehr_id)?, note)
-                .await?;
-        } else {
-            backend
-                .reverse_access_opt_out(parse_ehr_id(ehr_id)?)
-                .await?;
-        }
-        Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
+/// The `admin_access_opt_out` operation.
+async fn opt_out(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+    let body = negotiate::decode::json_value(&parts.headers, &parts.body)?;
+    let ehr_id = required_str(&body, "ehr_id")?;
+    let declared = &state.config().rbac.access_service_roles;
+    if declared.iter().all(|role| role.trim().is_empty()) {
+        return Err(RestError::from(ApiError::BadRequest(
+            "this deployment declares no EHDS Art. 10 access-service caller \
+             ([authz.rbac] access_service_roles is empty), so an opt-out would hold for \
+             nobody; declare the roles of the access services first"
+                .to_owned(),
+        )));
     }
+    let note = optional_str(&body, "note")?;
+    state
+        .backend()
+        .record_access_opt_out(parse_ehr_id(ehr_id)?, note)
+        .await?;
+    Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
+}
+
+/// The `admin_reverse_access_opt_out` operation.
+async fn reverse(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+    let body = negotiate::decode::json_value(&parts.headers, &parts.body)?;
+    let ehr_id = required_str(&body, "ehr_id")?;
+    state
+        .backend()
+        .reverse_access_opt_out(parse_ehr_id(ehr_id)?)
+        .await?;
+    Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
 }

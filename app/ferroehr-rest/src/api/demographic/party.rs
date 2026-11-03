@@ -34,117 +34,118 @@ use ferroehr::error::ServiceError;
 use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::response::ServiceResponse;
 
-/// The per-kind CRUD operations (`create`/`get`/`update`/`delete`).
-pub(super) async fn run(
+/// The `create` operation.
+pub(crate) async fn create(
     state: AppState,
     kind: PartyKind,
-    action: &str,
     parts: RequestParts,
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
     let base = state.config().rest.base_path.clone();
-    let seg = kind.segment();
-
     // Demographic PARTY types are not templated → no Simplified-Formats
     // mapping; reject a simplified Content-Type/Accept uniformly.
     crate::formats::dispatch::guard_non_templated(h)?;
+    // All per-kind `*CreateParams` are field-identical; reuse one.
+    let _p = parts.decode(AgentCreateParams::from_request, AgentCreateParams::PARAMS)?;
+    let body = decode_party_body(kind, h, &parts.body, state.config().spec_profile)?;
+    let pending_tags = item_tags::pending(h)?;
+    let mut resp = state
+        .backend()
+        .party_create(
+            kind,
+            crate::overview::committal::write_request(
+                h,
+                ferroehr::versioning::committer::request_committer(),
+                body,
+                None,
+            )?,
+        )
+        .await?;
+    // The party must exist first (`item_tag.target_vo_id` FK), so the
+    // request-header tags are persisted after the create.
+    persist_request_tags(&state, kind, pending_tags, &mut resp).await?;
+    let mut out = write_party(
+        kind,
+        h,
+        &base,
+        StatusCode::CREATED,
+        StatusCode::CREATED,
+        &resp,
+    );
+    super::set_item_tag_headers(&mut out, &resp);
+    Ok(out)
+}
 
-    match action {
-        "create" => {
-            // All per-kind `*CreateParams` are field-identical; reuse one.
-            let _p = parts.decode(AgentCreateParams::from_request, AgentCreateParams::PARAMS)?;
-            let body = decode_party_body(kind, h, &parts.body, state.config().spec_profile)?;
-            let pending_tags = item_tags::pending(h)?;
-            let mut resp = state
-                .backend()
-                .party_create(
-                    kind,
-                    crate::overview::committal::write_request(
-                        h,
-                        ferroehr::versioning::committer::request_committer(),
-                        body,
-                        None,
-                    )?,
-                )
-                .await?;
-            // The party must exist first (`item_tag.target_vo_id` FK), so the
-            // request-header tags are persisted after the create.
+/// The `update` operation.
+pub(crate) async fn update(
+    state: AppState,
+    kind: PartyKind,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let base = state.config().rest.base_path.clone();
+    // Demographic PARTY types are not templated → no Simplified-Formats
+    // mapping; reject a simplified Content-Type/Accept uniformly.
+    crate::formats::dispatch::guard_non_templated(h)?;
+    let p = parts.decode(AgentUpdateParams::from_request, AgentUpdateParams::PARAMS)?;
+    let body = decode_party_body(kind, h, &parts.body, state.config().spec_profile)?;
+    // Judged before the commit, so a defective tag refuses the request
+    // while nothing is durable.
+    let pending_tags = item_tags::pending(h)?;
+    let request = crate::overview::committal::write_request(
+        h,
+        ferroehr::versioning::committer::request_committer(),
+        body,
+        None,
+    )?;
+    let (vo_id, precondition) = super::update_target(&p.uid_based_id, &p.if_match)?;
+    match state
+        .backend()
+        .party_update(kind, vo_id, precondition, request)
+        .await
+    {
+        Ok(mut resp) => {
             persist_request_tags(&state, kind, pending_tags, &mut resp).await?;
             let mut out = write_party(
                 kind,
                 h,
                 &base,
-                StatusCode::CREATED,
-                StatusCode::CREATED,
+                StatusCode::NO_CONTENT,
+                StatusCode::OK,
                 &resp,
             );
             super::set_item_tag_headers(&mut out, &resp);
             Ok(out)
         }
-        "get" => run_get(&state, kind, &parts).await,
-        "update" => {
-            let p = parts.decode(AgentUpdateParams::from_request, AgentUpdateParams::PARAMS)?;
-            let body = decode_party_body(kind, h, &parts.body, state.config().spec_profile)?;
-            // Judged before the commit, so a defective tag refuses the request
-            // while nothing is durable.
-            let pending_tags = item_tags::pending(h)?;
-            let request = crate::overview::committal::write_request(
-                h,
-                ferroehr::versioning::committer::request_committer(),
-                body,
-                None,
-            )?;
-            let (vo_id, precondition) = super::update_target(&p.uid_based_id, &p.if_match)?;
-            match state
+        // person_update.yaml: `If-Match` mismatch → 412 + latest version_uid.
+        Err(e) if super::is_precondition(&e) => {
+            let meta = state
                 .backend()
-                .party_update(kind, vo_id, precondition, request)
+                .demographic_latest_meta(kind, vo_id)
                 .await
-            {
-                Ok(mut resp) => {
-                    persist_request_tags(&state, kind, pending_tags, &mut resp).await?;
-                    let mut out = write_party(
-                        kind,
-                        h,
-                        &base,
-                        StatusCode::NO_CONTENT,
-                        StatusCode::OK,
-                        &resp,
-                    );
-                    super::set_item_tag_headers(&mut out, &resp);
-                    Ok(out)
-                }
-                // person_update.yaml: `If-Match` mismatch → 412 + latest version_uid.
-                Err(e) if super::is_precondition(&e) => {
-                    let meta = state
-                        .backend()
-                        .demographic_latest_meta(kind, vo_id)
-                        .await
-                        .ok()
-                        .flatten();
-                    Ok(negotiate::resource::error_with_meta(
-                        crate::overview::service_error::api_error(e),
-                        meta.as_ref(),
-                        Tree::Demographic,
-                    ))
-                }
-                Err(e) => Err(RestError::from(e)),
-            }
+                .ok()
+                .flatten();
+            Ok(negotiate::resource::error_with_meta(
+                crate::overview::service_error::api_error(e),
+                meta.as_ref(),
+                Tree::Demographic,
+            ))
         }
-        "delete" => run_delete(&state, kind, &parts).await,
-        other => Err(RestError::from(ApiError::Internal(format!(
-            "unrouted demographic party operation: {seg}_{other}"
-        )))),
+        Err(e) => Err(RestError::from(e)),
     }
 }
 
 /// Reads a party (`person_get.yaml`): a deleted current version is `204`, and
 /// a stable-profile read carries `reverse_relationships` in canonical JSON and
 /// XML alike ([`serves_reverse_relationships`]).
-async fn run_get(
-    state: &AppState,
+pub(crate) async fn get(
+    state: AppState,
     kind: PartyKind,
-    parts: &RequestParts,
+    parts: RequestParts,
 ) -> Result<Response, RestError> {
+    // Demographic PARTY types are not templated → no Simplified-Formats
+    // mapping; reject a simplified Content-Type/Accept uniformly.
+    crate::formats::dispatch::guard_non_templated(&parts.headers)?;
     let h = &parts.headers;
     let p = parts.decode(AgentGetParams::from_request, AgentGetParams::PARAMS)?;
     let address = parse_uid_based_id(&p.uid_based_id)?;
@@ -236,11 +237,14 @@ async fn persist_request_tags(
 /// an `If-Match` header. Responses: `204_version_deleted`,
 /// `400_already_deleted`, `404`, and `409_PERSON_with_uid_based_id` when the
 /// supplied uid is not the latest version.
-async fn run_delete(
-    state: &AppState,
+pub(crate) async fn delete(
+    state: AppState,
     kind: PartyKind,
-    parts: &RequestParts,
+    parts: RequestParts,
 ) -> Result<Response, RestError> {
+    // Demographic PARTY types are not templated → no Simplified-Formats
+    // mapping; reject a simplified Content-Type/Accept uniformly.
+    crate::formats::dispatch::guard_non_templated(&parts.headers)?;
     let h = &parts.headers;
     // All per-kind delete params are field-identical; reuse one.
     let p = parts.decode(AgentDeleteParams::from_request, AgentDeleteParams::PARAMS)?;

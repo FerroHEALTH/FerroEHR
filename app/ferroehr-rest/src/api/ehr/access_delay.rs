@@ -16,13 +16,13 @@
 //! release what is held from them. No openEHR ITS-REST operation governs it.
 
 use axum::extract::{Request, State};
-use axum::response::{IntoResponse, Response};
+use axum::response::Response;
 use http::StatusCode;
 use openehr_its::rest::runtime::ApiError;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
-use crate::api::{BoxResponse, RequestParts, guarded_dispatch};
+use crate::api::{RequestParts, guarded_dispatch};
 use crate::extensions::access::authn::current_principal;
 use crate::extensions::access::delay;
 use crate::negotiate;
@@ -71,16 +71,10 @@ pub(crate) async fn composition_access_delay_update(
     request: Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, RELEASE, parts, dispatch).await
-}
-
-fn dispatch(state: AppState, _op: &'static str, parts: RequestParts) -> BoxResponse {
-    Box::pin(async move {
-        match run(&state, &parts).await {
-            Ok(response) => response,
-            Err(error) => error.into_response(),
-        }
+    guarded_dispatch(state, RELEASE, parts, |state, parts| async move {
+        run(&state, &parts).await
     })
+    .await
 }
 
 async fn run(state: &AppState, parts: &RequestParts) -> Result<Response, RestError> {

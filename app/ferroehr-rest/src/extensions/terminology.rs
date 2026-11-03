@@ -30,7 +30,7 @@
 )]
 
 use axum::extract::State;
-use axum::response::{IntoResponse, Response};
+use axum::response::Response;
 use http::StatusCode;
 use serde_json::json;
 use utoipa_axum::router::OpenApiRouter;
@@ -38,7 +38,7 @@ use utoipa_axum::routes;
 
 use openehr_its::rest::runtime::ApiError;
 
-use crate::api::{BoxResponse, RequestParts, guarded_dispatch};
+use crate::api::{RequestParts, guarded_dispatch};
 use crate::overview::error::RestError;
 
 use crate::state::AppState;
@@ -47,7 +47,7 @@ use crate::{negotiate, params};
 /// The terminology extension routes as a native `utoipa-axum` router: each
 /// `#[utoipa::path]` handler single-sources its route and its `OpenAPI` path.
 /// Group-relative paths (nested under the extensions root); every
-/// operation is served through [`guarded_dispatch`] → [`dispatch`], so the
+/// operation is served through [`guarded_dispatch`] onto its handler, so the
 /// wire behaviour is identical to the generated groups' `mount` adapter.
 pub(crate) fn routes() -> OpenApiRouter<AppState> {
     // One `routes!` per PATH (handlers in a single call must share the path;
@@ -88,7 +88,10 @@ pub(crate) async fn terminology_ids(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "terminology_ids", parts, dispatch).await
+    guarded_dispatch(state, "terminology_ids", parts, |state, parts| async move {
+        ids(&state, &parts)
+    })
+    .await
 }
 
 /// One terminology's descriptor, which also answers whether it exists
@@ -112,7 +115,13 @@ pub(crate) async fn terminology_description(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "terminology_description", parts, dispatch).await
+    guarded_dispatch(
+        state,
+        "terminology_description",
+        parts,
+        |state, parts| async move { description(&state, &parts) },
+    )
+    .await
 }
 
 /// A term definition
@@ -141,7 +150,7 @@ pub(crate) async fn terminology_get_term(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "terminology_get_term", parts, dispatch).await
+    guarded_dispatch(state, "terminology_get_term", parts, get_term).await
 }
 
 /// Strict subsumption test
@@ -170,7 +179,7 @@ pub(crate) async fn terminology_subsumes(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "terminology_subsumes", parts, dispatch).await
+    guarded_dispatch(state, "terminology_subsumes", parts, subsumes).await
 }
 
 /// A value set's extract, which also answers whether it exists
@@ -197,7 +206,7 @@ pub(crate) async fn terminology_value_set(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "terminology_value_set", parts, dispatch).await
+    guarded_dispatch(state, "terminology_value_set", parts, value_set).await
 }
 
 /// Value-set membership test
@@ -227,94 +236,118 @@ pub(crate) async fn terminology_value_set_validate(
     request: axum::extract::Request,
 ) -> Response {
     let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "terminology_value_set_validate", parts, dispatch).await
+    guarded_dispatch(
+        state,
+        "terminology_value_set_validate",
+        parts,
+        value_set_validate,
+    )
+    .await
 }
 
-pub(crate) fn dispatch(state: AppState, op: &'static str, parts: RequestParts) -> BoxResponse {
-    Box::pin(async move {
-        run(state, op, parts)
-            .await
-            .unwrap_or_else(IntoResponse::into_response)
-    })
-}
-
-async fn run(
-    state: AppState,
-    op: &'static str,
-    parts: RequestParts,
-) -> Result<Response, RestError> {
-    // Config gate: the terminology extension is opt-in. When disabled every
-    // route answers 404 (as if unmounted) without consulting the backend.
-    if !state.config().terminology_api_enabled {
-        return Err(RestError::from(ApiError::NotFound(
-            "terminology API is disabled".to_owned(),
-        )));
+/// The config gate: the terminology extension is opt-in, and while it is off
+/// every route answers `404` (as if unmounted) without consulting the backend.
+///
+/// # Errors
+/// The `404` while the extension is disabled.
+fn enabled(state: &AppState) -> Result<(), RestError> {
+    if state.config().terminology_api_enabled {
+        return Ok(());
     }
+    Err(RestError::from(ApiError::NotFound(
+        "terminology API is disabled".to_owned(),
+    )))
+}
 
+/// The `terminology_ids` operation.
+pub(crate) fn ids(state: &AppState, parts: &RequestParts) -> Result<Response, RestError> {
+    enabled(state)?;
+    let h = &parts.headers;
+    let ok = StatusCode::OK;
+    let ids = ferroehr::service::terminology::bundle::terminology_ids();
+    Ok(negotiate::body::respond(
+        h,
+        ok,
+        &json!({ "terminology_ids": ids }),
+    ))
+}
+
+/// The `terminology_description` operation.
+pub(crate) fn description(state: &AppState, parts: &RequestParts) -> Result<Response, RestError> {
+    enabled(state)?;
+    let h = &parts.headers;
+    let ok = StatusCode::OK;
+    let tid = path_get(parts, "terminology_id")?;
+    // An unknown terminology → NotFound (404).
+    let desc = ferroehr::service::terminology::bundle::terminology_description(&tid)?;
+    Ok(negotiate::body::respond(h, ok, &desc))
+}
+
+/// The `terminology_get_term` operation.
+pub(crate) async fn get_term(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+    enabled(&state)?;
     let h = &parts.headers;
     let q = parts.query.as_deref();
     let ok = StatusCode::OK;
+    let tid = path_get(&parts, "terminology_id")?;
+    let code = path_get(&parts, "code")?;
+    let at_date = params::query_param(q, "at_date");
+    // NOTE: no specification governs this extension: our own design; no
+    // attribute allow-list is surfaced on the wire.
+    let extract = state.backend().get_term(&tid, &code, None, at_date).await?;
+    Ok(negotiate::body::respond(h, ok, &extract))
+}
 
-    match op {
-        "terminology_ids" => {
-            let ids = ferroehr::service::terminology::bundle::terminology_ids();
-            Ok(negotiate::body::respond(
-                h,
-                ok,
-                &json!({ "terminology_ids": ids }),
-            ))
-        }
-        "terminology_description" => {
-            let tid = path_get(&parts, "terminology_id")?;
-            // An unknown terminology → NotFound (404).
-            let desc = ferroehr::service::terminology::bundle::terminology_description(&tid)?;
-            Ok(negotiate::body::respond(h, ok, &desc))
-        }
-        "terminology_get_term" => {
-            let tid = path_get(&parts, "terminology_id")?;
-            let code = path_get(&parts, "code")?;
-            let at_date = params::query_param(q, "at_date");
-            // NOTE: no specification governs this extension: our own design; no
-            // attribute allow-list is surfaced on the wire.
-            let extract = state.backend().get_term(&tid, &code, None, at_date).await?;
-            Ok(negotiate::body::respond(h, ok, &extract))
-        }
-        "terminology_subsumes" => {
-            let tid = path_get(&parts, "terminology_id")?;
-            let ref_code = require_query(q, "ref_code")?;
-            let candidate = require_query(q, "candidate")?;
-            let subsumes = state
-                .backend()
-                .subsumes(&tid, &ref_code, &candidate)
-                .await?;
-            Ok(negotiate::body::respond(
-                h,
-                ok,
-                &json!({ "subsumes": subsumes }),
-            ))
-        }
-        "terminology_value_set" => {
-            let tid = path_get(&parts, "terminology_id")?;
-            let value_set_id = path_get(&parts, "value_set_id")?;
-            // An unknown value set → NotFound (404).
-            let extract = state.backend().get_value_set(&tid, &value_set_id).await?;
-            Ok(negotiate::body::respond(h, ok, &extract))
-        }
-        "terminology_value_set_validate" => {
-            let tid = path_get(&parts, "terminology_id")?;
-            let value_set_id = path_get(&parts, "value_set_id")?;
-            let candidate_code = require_query(q, "candidate_code")?;
-            let at_date = params::query_param(q, "at_date");
-            let valid = state
-                .backend()
-                .value_set_validate(&tid, &value_set_id, &candidate_code, at_date)
-                .await?;
-            Ok(negotiate::body::respond(h, ok, &json!({ "valid": valid })))
-        }
-        other => Err(RestError::from(ApiError::Internal(format!(
-            "unrouted terminology operation: {other}"
-        )))),
-    }
+/// The `terminology_subsumes` operation.
+pub(crate) async fn subsumes(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+    enabled(&state)?;
+    let h = &parts.headers;
+    let q = parts.query.as_deref();
+    let ok = StatusCode::OK;
+    let tid = path_get(&parts, "terminology_id")?;
+    let ref_code = require_query(q, "ref_code")?;
+    let candidate = require_query(q, "candidate")?;
+    let subsumes = state
+        .backend()
+        .subsumes(&tid, &ref_code, &candidate)
+        .await?;
+    Ok(negotiate::body::respond(
+        h,
+        ok,
+        &json!({ "subsumes": subsumes }),
+    ))
+}
+
+/// The `terminology_value_set` operation.
+pub(crate) async fn value_set(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+    enabled(&state)?;
+    let h = &parts.headers;
+    let ok = StatusCode::OK;
+    let tid = path_get(&parts, "terminology_id")?;
+    let value_set_id = path_get(&parts, "value_set_id")?;
+    // An unknown value set → NotFound (404).
+    let extract = state.backend().get_value_set(&tid, &value_set_id).await?;
+    Ok(negotiate::body::respond(h, ok, &extract))
+}
+
+/// The `terminology_value_set_validate` operation.
+pub(crate) async fn value_set_validate(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    enabled(&state)?;
+    let h = &parts.headers;
+    let q = parts.query.as_deref();
+    let ok = StatusCode::OK;
+    let tid = path_get(&parts, "terminology_id")?;
+    let value_set_id = path_get(&parts, "value_set_id")?;
+    let candidate_code = require_query(q, "candidate_code")?;
+    let at_date = params::query_param(q, "at_date");
+    let valid = state
+        .backend()
+        .value_set_validate(&tid, &value_set_id, &candidate_code, at_date)
+        .await?;
+    Ok(negotiate::body::respond(h, ok, &json!({ "valid": valid })))
 }
 
 /// Read a matched path parameter (guaranteed present by the route template; an
