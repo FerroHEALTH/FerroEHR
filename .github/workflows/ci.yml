@@ -3083,6 +3083,22 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
+  # No tracked file keeps an unresolved merge conflict (#4900; no
+  # specification governs the guard: our own design).
+  conflict-markers:
+    name: conflict-markers
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: The guard refuses each marker and skips the vendored trees
+        run: bash scripts/checks/conflict-markers.sh --self-test
+      - run: bash scripts/checks/conflict-markers.sh
+
   # ── The one-check aggregate gate (the rust-analyzer/ruff pattern) ───────────
   # A single job that needs everything and passes iff nothing failed — skipped
   # jobs count as satisfied, exactly like branch protection treats them. Point
@@ -3165,6 +3181,7 @@ jobs:
       - chart-version
       - chart-appversion
       - chart-boot
+      - conflict-markers
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions: {}
