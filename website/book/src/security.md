@@ -708,7 +708,8 @@ permits vacuously, because there is nothing to decide about.
 > so it denies.
 >
 > When a patient claim is configured, a local subject gate also rejects access to
-> another patient's EHR before any policy call. An EHR Extract export by
+> another patient's EHR before any policy call. The EHR Extract import routes
+> are checked as EHR writes, and the export routes as EHR reads. An export by
 > manifest (`POST /message/export`) holds every EHR it names to that gate, and
 > one EHR of another patient refuses the whole export.
 
