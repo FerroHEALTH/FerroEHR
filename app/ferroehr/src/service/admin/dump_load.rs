@@ -944,6 +944,60 @@ fn resolve_versions(
     Ok(())
 }
 
+/// Refuse an archive any of whose `EHR_ACCESS` versions carries settings the
+/// CONTRIBUTION write path would refuse
+/// ([`check_written_settings`](crate::service::ehr::access_types::check_written_settings)),
+/// naming the setting and its EHR. A canonical-XML payload that cannot be read
+/// is left to the per-record report the load gives it.
+///
+/// # Errors
+/// The refusal of `check_written_settings`, prefixed with the EHR, and the
+/// [`ServiceError::BadRequest`] of a segment that is absent or does not parse.
+fn refuse_unreadable_access_settings(
+    archive: &mut ArchiveReader,
+    dir: &Path,
+    segments: &[String],
+    format: ExportFormat,
+) -> Result<(), ServiceError> {
+    for segment in segments {
+        let bytes = archive.read(segment)?;
+        let records: Vec<EhrRecord> =
+            serde_json::from_slice(&bytes).map_err(|e| archive_refusal(dir, segment, e))?;
+        for mut record in records {
+            record.versions.retain(|v| v.kind == "EHR_ACCESS");
+            if format == ExportFormat::OpenehrCanonicalXml
+                && resolve_version_documents(archive, &mut record).is_err()
+            {
+                continue;
+            }
+            let ehr_id = record.ehr.id;
+            for version in &record.versions {
+                let Some(settings) = version.body.get("settings").filter(|s| !s.is_null()) else {
+                    continue;
+                };
+                crate::service::ehr::access_types::check_written_settings(settings)
+                    .map_err(|e| for_archived_ehr(e, ehr_id))?;
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Name the archived EHR a settings refusal is about.
+fn for_archived_ehr(error: ServiceError, ehr_id: EhrId) -> ServiceError {
+    match error {
+        ServiceError::BadRequest(mut refusal) => {
+            refusal.message = format!("archived EHR {ehr_id}: {}", refusal.message);
+            ServiceError::BadRequest(refusal)
+        }
+        ServiceError::Unprocessable { kind, violation } => ServiceError::Unprocessable {
+            kind,
+            violation: violation.with_path(format!("archived EHR {ehr_id}")),
+        },
+        other => other,
+    }
+}
+
 impl FerroEhrService {
     /// Exports every EHR to an archive under `file_sys_loc`.
     ///
@@ -1095,6 +1149,9 @@ impl FerroEhrService {
     ///   segment or a blob entry is absent, truncated or does not parse as this
     ///   archive format, or the manifest declares a logical format that names
     ///   no `EXPORT_FORMAT` member.
+    /// - [`ServiceError::BadRequest`] (`400`) naming the setting and its EHR —
+    ///   an `EHR_ACCESS` version carries settings of this server's scheme that
+    ///   do not parse; nothing of the archive is written.
     /// - `precondition_violation` (`400`) — the archive predates the storage
     ///   rewrite (an `archive_version` below the floor this server reads), or
     ///   it carries externalized multimedia blobs but this server has no
@@ -1131,6 +1188,10 @@ impl FerroEhrService {
             .format
             .parse()
             .map_err(|()| unknown_format(dir, &manifest.format))?;
+
+        // Settings that do not parse would hold their EHR closed once stored,
+        // so the archive is refused for them before anything is written.
+        refuse_unreadable_access_settings(&mut archive, dir, &manifest.segments, format)?;
 
         // Our own extension: re-populate the object store from the archive's
         // `blobs/` entries before loading versions that reference them.
