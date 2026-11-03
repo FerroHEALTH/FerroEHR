@@ -15,7 +15,8 @@
 //! (BASE `architecture_overview/master07-security.adoc` §Access Control).
 //!
 //! There are three evaluation points: the per-EHR gate on every authenticated
-//! request to an `/ehr/{ehr_id}`-scoped route (`master07` access list), the
+//! request to an `/ehr/{ehr_id}`-scoped route and on every EHR a manifest
+//! export names (`enforce_each`) (`master07` access list), the
 //! composition privacy ceiling on Composition reads (`master07` privacy levels),
 //! and the gate-keeper preflight on CONTRIBUTION commits carrying an
 //! `EHR_ACCESS` version (`master07` gate-keeper; RM ehr
@@ -230,28 +231,9 @@ pub(crate) async fn enforce(
     let subject = principal.as_ref().map(|p| p.subject.as_str());
     let roles = principal.as_ref().map_or(&[][..], |p| p.roles.as_slice());
 
-    let settings = match state
-        .backend()
-        .current_ehr_access_settings(EhrId(ehr_id))
-        .await
-    {
-        Ok(s) => s,
-        Err(e) => {
-            return Err(Box::new(server_error(
-                principal.as_ref(),
-                &format!("EHR_ACCESS settings unavailable: {e}"),
-            )));
-        }
-    };
+    // 1. The per-EHR gate (every EHR-scoped route).
+    let settings = enforce_ehr(state, principal.as_ref(), EhrId(ehr_id)).await?;
     let settings = (*settings).as_ref();
-
-    // 1. The per-EHR gate (every EHR-scoped route). A setting-less EHR falls
-    // back to the configured server-wide disposition, whether or not the RBAC
-    // gate is on; no handle means that disposition is `open`.
-    let authz = state.authz();
-    let (server_default, admin_role) = server_disposition(authz.as_deref());
-    EhrAccessGate::ehr_gate(settings, subject, roles, server_default, admin_role)
-        .map_err(|reason| Box::new(forbidden(principal.as_ref(), &reason)))?;
 
     // 2. The Composition privacy ceiling (Composition read routes).
     if operation(op).is_some_and(Operation::reads_composition)
@@ -270,6 +252,52 @@ pub(crate) async fn enforce(
     }
 
     Ok(())
+}
+
+/// Enforce the per-EHR gate on every EHR an operation names in its body, such
+/// as the manifest of `POST /message/export`, before any of their content is
+/// read: the first EHR the caller may not reach refuses the whole operation
+/// with the `403` or fail-closed `500` its path route would answer.
+pub(crate) async fn enforce_each(state: &AppState, ehr_ids: &[EhrId]) -> Result<(), Box<Response>> {
+    let principal = current_principal();
+    for ehr_id in ehr_ids {
+        enforce_ehr(state, principal.as_ref(), *ehr_id).await?;
+    }
+    Ok(())
+}
+
+/// The per-EHR gate for one EHR, returning its settings for the gates that
+/// follow. A setting-less EHR falls back to the configured server-wide
+/// disposition, whether or not the RBAC gate is on; no handle means that
+/// disposition is `open`. Settings that cannot be read fail closed with `500`.
+async fn enforce_ehr(
+    state: &AppState,
+    principal: Option<&Principal>,
+    ehr_id: EhrId,
+) -> Result<std::sync::Arc<Option<EhrAccessSettings>>, Box<Response>> {
+    let subject = principal.map(|p| p.subject.as_str());
+    let roles = principal.map_or(&[][..], |p| p.roles.as_slice());
+    let settings = state
+        .backend()
+        .current_ehr_access_settings(ehr_id)
+        .await
+        .map_err(|e| {
+            Box::new(server_error(
+                principal,
+                &format!("EHR_ACCESS settings unavailable: {e}"),
+            ))
+        })?;
+    let authz = state.authz();
+    let (server_default, admin_role) = server_disposition(authz.as_deref());
+    EhrAccessGate::ehr_gate(
+        (*settings).as_ref(),
+        subject,
+        roles,
+        server_default,
+        admin_role,
+    )
+    .map_err(|reason| Box::new(forbidden(principal, &reason)))?;
+    Ok(settings)
 }
 
 /// The per-EHR decision for an AQL execution: the EHRs the authenticated caller

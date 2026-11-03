@@ -750,3 +750,77 @@ async fn a_write_of_settings_that_do_not_parse_is_refused() {
         "and the committed settings now restrict the EHR"
     );
 }
+
+/// A `POST /message/export` manifest naming `ehr_ids`, for `user`.
+fn manifest_export(ehr_ids: &[&str], user: &str) -> Request<Body> {
+    let entities: Vec<Value> = ehr_ids
+        .iter()
+        .map(|id| json!({ "_type": "EXTRACT_ENTITY_MANIFEST", "extract_id_key": id, "ehr_id": id }))
+        .collect();
+    let spec = json!({
+        "_type": "EXTRACT_SPEC",
+        "extract_type": coded("803", "openEHR EHR"),
+        "include_multimedia": false,
+        "priority": 0,
+        "link_depth": 0,
+        "manifest": { "_type": "EXTRACT_MANIFEST", "entities": entities }
+    });
+    req(
+        "POST",
+        "/message/export",
+        Some(&basic(user)),
+        &spec.to_string(),
+    )
+}
+
+/// Every EHR a manifest export names passes the gate a read of it passes:
+/// one the caller may not reach refuses the whole export with `403`, whatever
+/// else the manifest names, and a caller the access list names is served
+/// every extract. Before, the manifest form passed no `EHR_ACCESS` gate.
+#[tokio::test]
+async fn a_manifest_export_passes_the_gate_for_every_named_ehr() {
+    let (_pg, app) = query_app_with(None).await;
+
+    assert_eq!(
+        status(&app, manifest_export(&[OPEN_EHR_ID, EHR_ID], "carol")).await,
+        StatusCode::FORBIDDEN,
+        "carol may not read the restricted EHR, so the export is refused"
+    );
+    assert_eq!(
+        status(&app, manifest_export(&[EHR_ID], "carol")).await,
+        StatusCode::FORBIDDEN,
+        "the restricted EHR alone is refused too"
+    );
+
+    let (code, extracts) =
+        common::send_json(&app, manifest_export(&[OPEN_EHR_ID, EHR_ID], "bob")).await;
+    assert_eq!(code, StatusCode::OK, "{extracts}");
+    assert_eq!(
+        extracts.as_array().map(Vec::len),
+        Some(2),
+        "bob is listed: one extract per entity"
+    );
+    let (code, extracts) = common::send_json(&app, manifest_export(&[OPEN_EHR_ID], "carol")).await;
+    assert_eq!(code, StatusCode::OK, "{extracts}");
+    assert_eq!(extracts.as_array().map(Vec::len), Some(1));
+}
+
+/// A manifest naming an EHR held closed by settings that do not parse is
+/// refused with `500` for every caller, as a read of that EHR is.
+#[tokio::test]
+async fn a_manifest_export_naming_a_held_closed_ehr_is_refused() {
+    let (_pg, app) = query_app_with(Some("bogus")).await;
+
+    for user in ["bob", "carol"] {
+        assert_eq!(
+            status(&app, manifest_export(&[OPEN_EHR_ID, EHR_ID], user)).await,
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "the export naming the held-closed EHR is refused to {user}"
+        );
+    }
+    assert_eq!(
+        status(&app, manifest_export(&[OPEN_EHR_ID], "carol")).await,
+        StatusCode::OK,
+        "a manifest naming only the EHR beside it is served"
+    );
+}

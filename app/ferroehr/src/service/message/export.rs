@@ -222,6 +222,28 @@ impl FerroEhrService {
         Ok(out)
     }
 
+    /// The EHR each manifest entity names, in manifest order, for the access
+    /// decision the protocol adapter takes on every one of them before
+    /// [`Self::export_ehr_extracts`] reads any content.
+    ///
+    /// # Errors
+    /// - `precondition_violation` (`400`) — an entity whose `ehr_id` is not a
+    ///   UUID, or one naming neither `ehr_id` nor `subject_id`.
+    /// - `ehr_id_does_not_exist` — no EHR holds an entity's `subject_id`.
+    pub async fn manifest_ehr_ids(
+        &self,
+        extract_spec: &ExtractSpec,
+    ) -> Result<Vec<EhrId>, ServiceError> {
+        let mut ids = Vec::with_capacity(extract_spec.manifest.entities.len());
+        for entity in &extract_spec.manifest.entities {
+            ids.push(
+                named_entity_ehr(self, entity.ehr_id.as_deref(), entity.subject_id.as_deref())
+                    .await?,
+            );
+        }
+        Ok(ids)
+    }
+
     /// Follows `link_depth` levels of `DV_LINK` targets, appending each
     /// newly-reached versioned object as a non-primary content item.
     ///
@@ -982,46 +1004,52 @@ fn push_link_target_uuids(link: &Value, out: &mut Vec<VoId>) {
 /// Resolve an `EXTRACT_ENTITY_MANIFEST` to a concrete EHR id: prefer `ehr_id`,
 /// else look the EHR up by `subject_id` (`master04-common_package.adoc`
 /// `EXTRACT_ENTITY_MANIFEST`).
+/// The EHR an entity names, by its `ehr_id` or the EHR holding its
+/// `subject_id`, before the EHR is read.
 #[expect(
     clippy::map_err_ignore,
     reason = "the mapped error already names the resource and echoes the \
               rejected token; the discarded `uuid::Error` adds only its own \
               wording, which is not part of the wire contract"
 )]
-async fn resolve_entity_ehr(
+async fn named_entity_ehr(
     svc: &FerroEhrService,
     ehr_id: Option<&str>,
     subject_id: Option<&str>,
 ) -> Result<EhrId, ServiceError> {
     if let Some(raw) = ehr_id {
-        let id: EhrId = raw.parse().map_err(|_| {
+        return raw.parse().map_err(|_| {
             ServiceError::precondition(format!(
                 "EXTRACT_ENTITY_MANIFEST.ehr_id {raw:?} is not a UUID"
             ))
-        })?;
-        if svc.extract_ehr_exists(id).await? {
-            return Ok(id);
-        }
-        return Err(ServiceError::not_found(
-            Missing::Ehr,
-            format!("no EHR with id {id}"),
-        ));
+        });
     }
     if let Some(subject) = subject_id {
-        let id = ehr_repo::ehr_id_by_subject_id(&svc.pool, subject).await?;
-        if let Some(id) = id
-            && svc.extract_ehr_exists(id).await?
-        {
-            return Ok(id);
-        }
-        return Err(ServiceError::not_found(
-            Missing::Ehr,
-            "no EHR names the requested subject_id",
-        ));
+        return ehr_repo::ehr_id_by_subject_id(&svc.pool, subject)
+            .await?
+            .ok_or_else(|| {
+                ServiceError::not_found(Missing::Ehr, "no EHR names the requested subject_id")
+            });
     }
     Err(ServiceError::precondition(
         "EXTRACT_ENTITY_MANIFEST identifies no entity (neither ehr_id nor subject_id)",
     ))
+}
+
+/// The EHR an entity names, which must exist.
+async fn resolve_entity_ehr(
+    svc: &FerroEhrService,
+    ehr_id: Option<&str>,
+    subject_id: Option<&str>,
+) -> Result<EhrId, ServiceError> {
+    let id = named_entity_ehr(svc, ehr_id, subject_id).await?;
+    if svc.extract_ehr_exists(id).await? {
+        return Ok(id);
+    }
+    Err(match ehr_id {
+        Some(_) => ServiceError::not_found(Missing::Ehr, format!("no EHR with id {id}")),
+        None => ServiceError::not_found(Missing::Ehr, "no EHR names the requested subject_id"),
+    })
 }
 
 /// The access marks the current request enforces, which every extract read
