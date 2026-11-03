@@ -6,7 +6,7 @@
 //! `admin-*.openapi.yaml` OAS group (generated into `openehr_its::rest`).
 //!
 //! `operations` implements the generated operation contract over the
-//! `ferroehr-sm` native API.
+//! `FerroEhrService` methods it calls.
 //!
 //! Four further groups sit beside it under the same `/admin/` prefix and the
 //! same gates — **our own extensions, governed by no ITS-REST operation**.

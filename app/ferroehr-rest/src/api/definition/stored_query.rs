@@ -9,7 +9,7 @@
 //! Governing spec text:
 //! `docs/specs/openehr/ITS-REST/specifications/docs/definition/`.
 //!
-//! Queries route through the wire-shaped `DefinitionAdapter`
+//! Queries route through the wire-shaped `FerroEhrService` methods
 //! (`query_list`/`query_version_get`/`query_store`) — the native query store
 //! exchanges `QUERY_DESCRIPTOR`s, while the wire
 //! returns/accepts the ITS-REST `StoredQuery` shapes. A store success is
@@ -91,7 +91,7 @@ pub(super) async fn store(state: &AppState, parts: &RequestParts) -> Result<Resp
     // MUST), an absent `Content-Type` declares nothing to refuse.
     negotiate::decode::require_text_plain(h)?;
     let body = negotiate::decode::text_body(&parts.body)?;
-    // The `DefinitionAdapter::query_store` impl honours `query_type`: an AQL
+    // `FerroEhrService::query_store` honours `query_type`: an AQL
     // formalism runs the syntactic check, while an unsupported non-AQL
     // formalism is rejected as a distinct unsupported-formalism `400`
     // (`QUERY_DESCRIPTOR.formalism`, `parameters/query/query_type.yaml`).
