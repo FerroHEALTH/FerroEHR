@@ -256,6 +256,10 @@ crate::locale::messages! {
         ConfigIdle = "config-idle",
         /// `A session ends after this long without a request.`
         ConfigIdleLine = "config-idle-line",
+        /// `Session lifetime`
+        ConfigLifetime = "config-lifetime",
+        /// `A session ends this long after sign-in, even while it is in use.`
+        ConfigLifetimeLine = "config-lifetime-line",
         /// `Integrations`
         ConfigIntegrations = "config-integrations",
         /// `Language`

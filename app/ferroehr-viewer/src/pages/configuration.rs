@@ -289,6 +289,8 @@ struct Own {
     oidc_secret: OwnSecret,
     /// `session.idle_minutes`.
     idle_minutes: u64,
+    /// `session.absolute_minutes`.
+    absolute_minutes: u64,
     /// `session.secret_file` or `secret`.
     session_secret: OwnSecret,
     /// `ui.locale`.
@@ -314,6 +316,7 @@ fn read_own() -> Option<Own> {
             &config.auth.oidc.client_secret,
         ),
         idle_minutes: config.session.idle_minutes,
+        absolute_minutes: config.session.absolute_minutes,
         session_secret: OwnSecret::of(&config.session.secret_file, &config.session.secret),
         locale: config.ui.locale.clone(),
     })
@@ -370,6 +373,15 @@ fn viewer_settings(loaded: Option<Own>) -> Vec<Setting> {
             t(crate::locale::tr_with(
                 ConsoleMsg::ConfigMinutes,
                 &[("count", config.idle_minutes.into())],
+            )),
+        ),
+        own(
+            ConsoleMsg::ConfigLifetime,
+            ConsoleMsg::ConfigLifetimeLine,
+            "session.absolute_minutes",
+            t(crate::locale::tr_with(
+                ConsoleMsg::ConfigMinutes,
+                &[("count", config.absolute_minutes.into())],
             )),
         ),
         own(

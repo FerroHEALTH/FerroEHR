@@ -499,6 +499,16 @@ impl Harness {
         .expect("mark the window");
     }
 
+    /// Runs `script` in the page, as another part of the page would.
+    ///
+    /// # Panics
+    /// When the browser refuses the script.
+    pub(crate) async fn run_script(&self, script: &str) {
+        bounded("execute(script)", self.driver.execute(script, Vec::new()))
+            .await
+            .expect("run the script");
+    }
+
     /// Whether the window still carries the mark of [`Self::mark_document`].
     ///
     /// # Panics

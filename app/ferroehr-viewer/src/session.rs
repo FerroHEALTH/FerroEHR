@@ -11,13 +11,15 @@
 //! instance holding the same key can read it — the viewer runs
 //! multi-instance on serverless platforms, keeps no database by mandate,
 //! and gets no sticky sessions there. The browser stores ciphertext
-//! only: CDR credentials never reach a drawn page or a readable cookie. Idle expiry is a timestamp INSIDE the sealed payload,
-//! so a stolen clock-limited cookie cannot be revived by editing its
-//! attributes. The anchor SLIDES on any authenticated request:
-//! [`crate::server::login_guard`] re-seals the cookie on every authenticated
-//! response, and that includes requests the browser makes by itself — the
-//! shell's own health poll among them — so the window measures traffic from
-//! this session, not deliberate user activity.
+//! only: CDR credentials never reach a drawn page or a readable cookie. Both
+//! expiries are timestamps INSIDE the sealed payload, so a stolen cookie
+//! cannot be revived by editing its attributes. The idle anchor SLIDES on
+//! every authenticated request ([`crate::server::login_guard`] re-seals the
+//! cookie) except a read of the session route, which the page's session
+//! watch makes on its own; the sign-in time never moves, so the absolute
+//! lifetime (`session.absolute_minutes`) ends the session whatever the
+//! activity (OWASP Session Management Cheat Sheet, idle and absolute
+//! timeouts).
 
 use std::collections::BTreeMap;
 
@@ -25,6 +27,9 @@ use base64::Engine;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
+use ferrohealth_ui::view::session::Left;
+
+use crate::config::SessionConfig;
 use crate::error::ViewerError;
 
 /// The [`ViewerSession`] record's entry key inside the sealed cookie payload.
@@ -133,10 +138,15 @@ pub struct ViewerSession {
     pub scopes: Vec<String>,
 }
 
-/// The sealed payload: keyed entries plus the sliding idle anchor.
+/// The sealed payload: keyed entries, the sliding idle anchor and the fixed
+/// sign-in time the absolute lifetime counts from.
+///
+/// Both times are required, so a cookie sealed before the sign-in time
+/// existed does not open and its user signs in again.
 #[derive(Debug, Serialize, Deserialize)]
 struct Envelope {
     touched: i64,
+    signed_in: i64,
     // Each entry is its own JSON text — values decode straight to their
     // types, so no untyped-carrier seam exists here.
     entries: BTreeMap<String, String>,
@@ -149,6 +159,11 @@ struct Envelope {
 #[derive(Debug, Default)]
 pub struct CookieSession {
     entries: BTreeMap<String, String>,
+    /// When the payload was last sealed, `None` for a session no cookie
+    /// carried.
+    touched: Option<i64>,
+    /// When the session's user signed in, `None` until a sealing stamps it.
+    signed_in: Option<i64>,
 }
 
 impl CookieSession {
@@ -183,6 +198,56 @@ impl CookieSession {
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
+
+    /// Signs `viewer` in: stores it under [`SESSION_KEY`] and starts the
+    /// absolute lifetime again at the next sealing.
+    ///
+    /// # Errors
+    /// [`ViewerError::Internal`] when the value does not serialize (a bug).
+    pub fn sign_in(&mut self, viewer: &ViewerSession) -> Result<(), ViewerError> {
+        self.insert(SESSION_KEY, viewer)?;
+        self.signed_in = None;
+        Ok(())
+    }
+
+    /// Moves the idle anchor to now, as the sealing of this request's answer
+    /// will.
+    pub fn touch(&mut self) {
+        self.touched = Some(now_seconds());
+    }
+
+    /// What the signed-in session has left under `config`, as it was last
+    /// sealed or [`touched`](Self::touch); `None` with nobody signed in or
+    /// once either timeout has passed.
+    #[must_use]
+    pub fn left(&self, config: &SessionConfig) -> Option<Left> {
+        self.left_at(config, now_seconds())
+    }
+
+    /// [`Self::left`] at `now`.
+    fn left_at(&self, config: &SessionConfig, now: i64) -> Option<Left> {
+        if !self.entries.contains_key(SESSION_KEY) {
+            return None;
+        }
+        let absolute_end = self
+            .signed_in?
+            .saturating_add(seconds(config.absolute_minutes));
+        let idle_end = self
+            .touched?
+            .saturating_add(seconds(config.idle_minutes))
+            .min(absolute_end);
+        let absolute = absolute_end.saturating_sub(now);
+        let idle = idle_end.saturating_sub(now);
+        (idle > 0).then(|| Left {
+            idle: u32::try_from(idle).unwrap_or(u32::MAX),
+            absolute: u32::try_from(absolute).unwrap_or(u32::MAX),
+        })
+    }
+}
+
+/// `minutes` in seconds, saturating.
+fn seconds(minutes: u64) -> i64 {
+    i64::try_from(minutes.saturating_mul(60)).unwrap_or(i64::MAX)
 }
 
 /// Current wall-clock seconds (jiff is the one time library).
@@ -192,12 +257,27 @@ fn now_seconds() -> i64 {
 
 /// Decode the session from a request's headers.
 ///
-/// Absent, unparsable, tampered, wrong-key and idle-expired cookies all
-/// decode to the empty session: on this seam every defect means the same
-/// thing — no authenticated caller — and the guard turns that into a
+/// Absent, unparsable, tampered, wrong-key, idle-expired and
+/// lifetime-expired cookies all decode to the empty session, and so does a
+/// cookie sealed without a sign-in time: on this seam every defect means the
+/// same thing — no authenticated caller — and the guard turns that into a
 /// redirect or a typed `Unauthenticated`, never a 500.
 #[must_use]
-pub fn unseal(keys: &SessionKeys, headers: &http::HeaderMap, idle_minutes: u64) -> CookieSession {
+pub fn unseal(
+    keys: &SessionKeys,
+    headers: &http::HeaderMap,
+    config: &SessionConfig,
+) -> CookieSession {
+    unseal_at(keys, headers, config, now_seconds())
+}
+
+/// [`unseal`] at `now`.
+fn unseal_at(
+    keys: &SessionKeys,
+    headers: &http::HeaderMap,
+    config: &SessionConfig,
+    now: i64,
+) -> CookieSession {
     let Some(sealed) = cookie_value(headers) else {
         return CookieSession::default();
     };
@@ -210,12 +290,15 @@ pub fn unseal(keys: &SessionKeys, headers: &http::HeaderMap, idle_minutes: u64) 
         return CookieSession::default();
     };
     // Inclusive, so a zero-minute idle window admits no session at all.
-    let idle = i64::try_from(idle_minutes.saturating_mul(60)).unwrap_or(i64::MAX);
-    if now_seconds().saturating_sub(envelope.touched) >= idle {
+    if now.saturating_sub(envelope.touched) >= seconds(config.idle_minutes)
+        || now.saturating_sub(envelope.signed_in) >= seconds(config.absolute_minutes)
+    {
         return CookieSession::default();
     }
     CookieSession {
         entries: envelope.entries,
+        touched: Some(envelope.touched),
+        signed_in: Some(envelope.signed_in),
     }
 }
 
@@ -230,10 +313,12 @@ fn cookie_value(headers: &http::HeaderMap) -> Option<String> {
     })
 }
 
-/// Seal a session into a `Set-Cookie` value (fresh idle anchor).
+/// Seal a session into a `Set-Cookie` value (fresh idle anchor, the sign-in
+/// time kept, or stamped now for a session that has none yet).
 ///
-/// An empty session seals to the REMOVAL cookie (`Max-Age=0`), so "save an
-/// emptied session" and "sign out" are the same operation.
+/// The cookie lives until the first of the two timeouts. An empty session
+/// seals to the REMOVAL cookie (`Max-Age=0`), so "save an emptied session"
+/// and "sign out" are the same operation.
 ///
 /// # Errors
 /// [`ViewerError::Internal`] when the payload does not serialize or the
@@ -241,21 +326,36 @@ fn cookie_value(headers: &http::HeaderMap) -> Option<String> {
 pub fn set_cookie(
     keys: &SessionKeys,
     session: &CookieSession,
-    cookie_secure: bool,
-    idle_minutes: u64,
+    config: &SessionConfig,
+) -> Result<http::HeaderValue, ViewerError> {
+    set_cookie_at(keys, session, config, now_seconds())
+}
+
+/// [`set_cookie`] at `now`.
+fn set_cookie_at(
+    keys: &SessionKeys,
+    session: &CookieSession,
+    config: &SessionConfig,
+    now: i64,
 ) -> Result<http::HeaderValue, ViewerError> {
     let cookie = if session.is_empty() {
-        removal_cookie(cookie_secure)
+        removal_cookie(config.cookie_secure)
     } else {
+        let signed_in = session.signed_in.unwrap_or(now);
         let envelope = Envelope {
-            touched: now_seconds(),
+            touched: now,
+            signed_in,
             entries: session.entries.clone(),
         };
         let payload = serde_json::to_string(&envelope)
             .map_err(|e| ViewerError::Internal(format!("session serialization: {e}")))?;
+        let lifetime_left = signed_in
+            .saturating_add(seconds(config.absolute_minutes))
+            .saturating_sub(now);
+        let max_age = seconds(config.idle_minutes).min(lifetime_left).max(0);
         let mut jar = cookie::CookieJar::new();
         jar.private_mut(&keys.key)
-            .add(base_cookie(payload, cookie_secure, Some(idle_minutes)));
+            .add(base_cookie(payload, config.cookie_secure, Some(max_age)));
         let Some(sealed) = jar.get(SESSION_COOKIE) else {
             return Err(ViewerError::Internal(
                 "session sealing produced no cookie".to_owned(),
@@ -276,17 +376,15 @@ pub fn set_cookie(
 fn base_cookie(
     value: String,
     cookie_secure: bool,
-    max_age_minutes: Option<u64>,
+    max_age_seconds: Option<i64>,
 ) -> cookie::Cookie<'static> {
     let mut builder = cookie::Cookie::build((SESSION_COOKIE, value))
         .path("/")
         .http_only(true)
         .secure(cookie_secure)
         .same_site(cookie::SameSite::Lax);
-    if let Some(minutes) = max_age_minutes {
-        builder = builder.max_age(cookie::time::Duration::seconds(
-            i64::try_from(minutes.saturating_mul(60)).unwrap_or(i64::MAX),
-        ));
+    if let Some(max_age) = max_age_seconds {
+        builder = builder.max_age(cookie::time::Duration::seconds(max_age));
     }
     builder.build()
 }
@@ -307,7 +405,7 @@ pub fn http_session() -> Result<CookieSession, ViewerError> {
         unseal(
             &scope.state.session_keys,
             &scope.parts.headers,
-            scope.state.config.session.idle_minutes,
+            &scope.state.config.session,
         )
     })
     .ok_or_else(outside_request)
@@ -327,12 +425,7 @@ pub fn outside_request() -> ViewerError {
 /// [`ViewerError::Internal`] outside a request or on a sealing failure.
 pub fn commit(session: &CookieSession) -> Result<(), ViewerError> {
     let state = crate::scope::state()?;
-    let header = set_cookie(
-        &state.session_keys,
-        session,
-        state.config.session.cookie_secure,
-        state.config.session.idle_minutes,
-    )?;
+    let header = set_cookie(&state.session_keys, session, &state.config.session)?;
     crate::scope::with(|scope| scope.answer(|answer| answer.cookies.push(header)))
         .ok_or_else(outside_request)
 }
@@ -365,8 +458,20 @@ mod tests {
 
     use super::{
         CookieSession, Credential, SESSION_COOKIE, SESSION_KEY, SessionKeys, ViewerSession,
-        set_cookie, unseal,
+        set_cookie, set_cookie_at, unseal, unseal_at,
     };
+    use crate::config::SessionConfig;
+    use ferrohealth_ui::view::session::Left;
+
+    /// The session settings with `idle_minutes`, the default lifetime and
+    /// the `Secure` flag as `secure` says.
+    fn config(secure: bool, idle_minutes: u64) -> SessionConfig {
+        SessionConfig {
+            idle_minutes,
+            cookie_secure: secure,
+            ..SessionConfig::default()
+        }
+    }
 
     fn keys() -> SessionKeys {
         // 96 zero bytes, base64 — a fixed key so tests are deterministic.
@@ -411,18 +516,18 @@ mod tests {
     #[test]
     fn seals_and_unseals_across_instances_sharing_the_key() {
         let sealing = keys();
-        let header = set_cookie(&sealing, &session_with_viewer(), true, 60).unwrap();
+        let header = set_cookie(&sealing, &session_with_viewer(), &config(true, 60)).unwrap();
         // A DIFFERENT SessionKeys value from the same secret — the
         // multi-instance property under test.
         let other_instance = SessionKeys::from_secret(&base64_of(&[0u8; 96])).unwrap();
-        let restored = unseal(&other_instance, &headers_with(&header), 60);
+        let restored = unseal(&other_instance, &headers_with(&header), &config(true, 60));
         let restored_session: ViewerSession = restored.get(SESSION_KEY).unwrap();
         assert_eq!(restored_session.identity, "demo");
     }
 
     #[test]
     fn the_cookie_is_ciphertext_with_the_hardening_attributes() {
-        let header = set_cookie(&keys(), &session_with_viewer(), true, 60).unwrap();
+        let header = set_cookie(&keys(), &session_with_viewer(), &config(true, 60)).unwrap();
         let text = header.to_str().unwrap();
         assert!(!text.contains("hunter2"), "credential visible: {text}");
         assert!(!text.contains("demo"), "identity visible: {text}");
@@ -434,9 +539,9 @@ mod tests {
 
     #[test]
     fn a_wrong_key_and_a_tampered_value_both_read_as_no_session() {
-        let header = set_cookie(&keys(), &session_with_viewer(), false, 60).unwrap();
+        let header = set_cookie(&keys(), &session_with_viewer(), &config(false, 60)).unwrap();
         let stranger = SessionKeys::from_secret(&base64_of(&[7u8; 96])).unwrap();
-        assert!(unseal(&stranger, &headers_with(&header), 60).is_empty());
+        assert!(unseal(&stranger, &headers_with(&header), &config(false, 60)).is_empty());
 
         let mut headers = headers_with(&header);
         let tampered = headers[http::header::COOKIE]
@@ -447,23 +552,109 @@ mod tests {
             http::header::COOKIE,
             http::HeaderValue::from_str(&tampered).unwrap(),
         );
-        assert!(unseal(&keys(), &headers, 60).is_empty());
+        assert!(unseal(&keys(), &headers, &config(false, 60)).is_empty());
     }
 
     #[test]
     fn an_idle_expired_payload_reads_as_no_session() {
         let sealing = keys();
-        let header = set_cookie(&sealing, &session_with_viewer(), false, 60).unwrap();
+        let header = set_cookie(&sealing, &session_with_viewer(), &config(false, 60)).unwrap();
         // idle_minutes = 0 makes any positive age expired.
-        assert!(unseal(&sealing, &headers_with(&header), 0).is_empty());
+        assert!(unseal(&sealing, &headers_with(&header), &config(false, 0)).is_empty());
     }
 
     #[test]
     fn an_emptied_session_seals_to_the_removal_cookie() {
-        let header = set_cookie(&keys(), &CookieSession::default(), true, 60).unwrap();
+        let header = set_cookie(&keys(), &CookieSession::default(), &config(true, 60)).unwrap();
         let text = header.to_str().unwrap();
         assert!(text.contains("Max-Age=0"), "not a removal cookie: {text}");
         assert!(text.starts_with(&format!("{SESSION_COOKIE}=;")));
+    }
+
+    /// One sign-in at `T0`, then a request every half hour: the absolute
+    /// lifetime still ends the session twelve hours after the sign-in.
+    #[test]
+    fn activity_never_carries_a_session_past_its_absolute_lifetime() {
+        const T0: i64 = 1_800_000_000;
+        let config = config(false, 60);
+        let lifetime = 720 * 60;
+        let mut header = set_cookie_at(&keys(), &session_with_viewer(), &config, T0).unwrap();
+        let mut at = T0;
+        while at + 1800 < T0 + lifetime {
+            at += 1800;
+            let open = unseal_at(&keys(), &headers_with(&header), &config, at);
+            assert!(!open.is_empty(), "the session ended early, at {}", at - T0);
+            header = set_cookie_at(&keys(), &open, &config, at).unwrap();
+        }
+        assert!(
+            unseal_at(&keys(), &headers_with(&header), &config, T0 + lifetime).is_empty(),
+            "the session outlived its absolute lifetime"
+        );
+    }
+
+    /// Ten minutes before the lifetime ends, an extend leaves ten minutes,
+    /// never the hour of the idle window, and the cookie dies with it.
+    #[test]
+    fn an_extend_cannot_pass_the_absolute_end() {
+        const T0: i64 = 1_800_000_000;
+        let config = config(false, 60);
+        let late = T0 + 710 * 60;
+        let mut header = set_cookie_at(&keys(), &session_with_viewer(), &config, T0).unwrap();
+        for at in (T0..late).step_by(1800).skip(1).chain([late]) {
+            let open = unseal_at(&keys(), &headers_with(&header), &config, at);
+            header = set_cookie_at(&keys(), &open, &config, at).unwrap();
+        }
+        let open = unseal_at(&keys(), &headers_with(&header), &config, late);
+        assert_eq!(
+            Some(Left {
+                idle: 600,
+                absolute: 600
+            }),
+            open.left_at(&config, late)
+        );
+        assert!(
+            header.to_str().unwrap().contains("Max-Age=600"),
+            "the cookie outlives the session: {header:?}"
+        );
+    }
+
+    /// A read of what is left changes nothing: only a sealing slides the
+    /// idle anchor.
+    #[test]
+    fn what_is_left_counts_down_from_the_last_sealing() {
+        const T0: i64 = 1_800_000_000;
+        let config = config(false, 60);
+        let header = set_cookie_at(&keys(), &session_with_viewer(), &config, T0).unwrap();
+        let open = unseal_at(&keys(), &headers_with(&header), &config, T0 + 600);
+        assert_eq!(
+            Some(Left {
+                idle: 3000,
+                absolute: 720 * 60 - 600
+            }),
+            open.left_at(&config, T0 + 600)
+        );
+        assert_eq!(None, CookieSession::default().left_at(&config, T0));
+    }
+
+    /// A cookie sealed before the sign-in time was carried does not open,
+    /// so its user signs in again.
+    #[test]
+    fn a_cookie_sealed_without_a_sign_in_time_reads_as_no_session() {
+        let viewer = serde_json::to_string(&session_with_viewer().entries[SESSION_KEY]).unwrap();
+        let payload = format!(
+            r#"{{"touched":{},"entries":{{"{SESSION_KEY}":{viewer}}}}}"#,
+            jiff::Timestamp::now().as_second()
+        );
+        let mut jar = cookie::CookieJar::new();
+        jar.private_mut(&keys().key)
+            .add(cookie::Cookie::new(SESSION_COOKIE, payload));
+        let sealed = jar.get(SESSION_COOKIE).unwrap().to_string();
+        let mut headers = http::HeaderMap::new();
+        headers.insert(
+            http::header::COOKIE,
+            http::HeaderValue::from_str(&sealed).unwrap(),
+        );
+        assert!(unseal(&keys(), &headers, &config(false, 60)).is_empty());
     }
 
     #[test]
