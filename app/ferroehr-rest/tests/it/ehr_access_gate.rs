@@ -757,6 +757,11 @@ fn manifest_export(ehr_ids: &[&str], user: &str) -> Request<Body> {
         .iter()
         .map(|id| json!({ "_type": "EXTRACT_ENTITY_MANIFEST", "extract_id_key": id, "ehr_id": id }))
         .collect();
+    manifest_of(&entities, user)
+}
+
+/// A `POST /message/export` of a manifest carrying `entities`, for `user`.
+fn manifest_of(entities: &[Value], user: &str) -> Request<Body> {
     let spec = json!({
         "_type": "EXTRACT_SPEC",
         "extract_type": coded("803", "openEHR EHR"),
@@ -822,5 +827,75 @@ async fn a_manifest_export_naming_a_held_closed_ehr_is_refused() {
         status(&app, manifest_export(&[OPEN_EHR_ID], "carol")).await,
         StatusCode::OK,
         "a manifest naming only the EHR beside it is served"
+    );
+}
+
+/// A manifest entity named by `subject_id` passes the same gate: the EHR the
+/// subject resolves to is refused to a caller off its access list, with `403`
+/// for the whole export, and served to a listed one.
+#[tokio::test]
+async fn a_manifest_export_by_subject_id_passes_the_gate() {
+    const SUBJECT: &str = "subject-4871";
+    let (_pg, pool) = common::migrated_pool().await;
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    let ehr_id: ferroehr::ids::EhrId = EHR_ID.parse().expect("valid ehr uuid");
+    let ehr_status: openehr_rm::prelude::EhrStatus =
+        openehr_its::json::from_canonical_value(&json!({
+            "_type": "EHR_STATUS",
+            "archetype_node_id": "openEHR-EHR-EHR_STATUS.generic.v1",
+            "archetype_details": {
+                "_type": "ARCHETYPED",
+                "archetype_id": { "_type": "ARCHETYPE_ID",
+                                  "value": "openEHR-EHR-EHR_STATUS.generic.v1" },
+                "rm_version": "1.2.0"
+            },
+            "name": { "_type": "DV_TEXT", "value": "EHR Status" },
+            "subject": {
+                "_type": "PARTY_SELF",
+                "external_ref": {
+                    "_type": "PARTY_REF",
+                    "id": { "_type": "HIER_OBJECT_ID", "value": SUBJECT },
+                    "namespace": "test.patients",
+                    "type": "PERSON"
+                }
+            },
+            "is_queryable": true,
+            "is_modifiable": true
+        }))
+        .expect("a canonical EHR_STATUS");
+    Box::pin(svc.create_ehr_with_id_meta(ehr_id, WriteRequest::new(Some(ehr_status))))
+        .await
+        .expect("create ehr");
+    let scheme = json!({
+        "_type": "FERROEHR_ACCESS_CONTROL_V1",
+        "default_access": "restricted",
+        "access_list": [ { "principal": "user:bob", "access": "full" } ]
+    });
+    seed_scheme(&svc, ehr_id, &scheme).await;
+    let app = ferroehr_rest::build_full(
+        rest_config(true),
+        Arc::new(svc),
+        None,
+        Observability::default(),
+    )
+    .await
+    .expect("build app");
+    let by_subject = || {
+        vec![json!({
+            "_type": "EXTRACT_ENTITY_MANIFEST", "extract_id_key": SUBJECT, "subject_id": SUBJECT
+        })]
+    };
+
+    assert_eq!(
+        status(&app, manifest_of(&by_subject(), "carol")).await,
+        StatusCode::FORBIDDEN,
+        "carol may not read the EHR the subject resolves to"
+    );
+    let (code, extracts) = common::send_json(&app, manifest_of(&by_subject(), "bob")).await;
+    assert_eq!(code, StatusCode::OK, "{extracts}");
+    assert_eq!(
+        extracts.as_array().map(Vec::len),
+        Some(1),
+        "bob is listed: the subject's EHR is exported"
     );
 }
