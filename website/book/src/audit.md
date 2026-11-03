@@ -315,6 +315,23 @@ been adopted. When they are, this mapping is re-verified against them rather
 than assumed to still hold; see the
 [EHDS readiness page](https://ferrohealth.eu/docs/ehds/readiness.html).
 
+### Access through FerroBRIDGE's FHIR facade
+
+The openEHR REST API carries no end-user identity on a read, so when
+FerroBRIDGE's FHIR facade reads or writes through FerroEHR, FerroEHR's record
+names the bridge's credential under (b) and cannot name the natural person
+behind the FHIR request. From FerroBRIDGE 0.0.16 the bridge records each
+facade access itself when its `[audit]` section is on: it writes the Annex II
+3.2 record with the person, the categories, the time and the origin through
+the same `ehds-logging` crate, and sends it as an IHE BALP `AuditEvent`
+through `ihe-atna` over the ITI-20 FHIR feed to the Audit Record Repository
+you configure there. The bridge refuses a facade access whose record it
+cannot take. Read the two records together: FerroEHR's says which data left
+the CDR and to which client, and FerroBRIDGE's says which person asked for
+it. FerroBRIDGE's
+[access record](https://ferrobridge.eu/docs/operate/access-record.html) page
+describes its record and its configuration.
+
 ### Emergency access (EHDS Art. 11(5))
 
 A natural person may restrict health professionals' access to parts of their
