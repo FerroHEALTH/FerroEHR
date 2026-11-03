@@ -28,7 +28,7 @@ use serde_json::Value;
 use sqlx::postgres::PgRow;
 use sqlx::{PgPool, Row};
 
-use crate::db::acquire::acquire;
+use crate::db::acquire::{acquire, lease};
 use crate::ids::{EhrId, VoId};
 use crate::storage::error::StorageError;
 
@@ -521,6 +521,11 @@ pub async fn current_vo(
 /// the ones whose settings it understands. A logically deleted version has no
 /// body and is skipped.
 ///
+/// Every query loads this through one cache entry, and each waiting request
+/// starts the load again when the one running it is abandoned, so it runs on
+/// a [`lease`]: an abandoned load closes its connection instead of holding a
+/// pool slot until the statement ends.
+///
 /// # Errors
 /// Returns [`StorageError::Database`] on a driver failure.
 pub async fn ehr_access_bodies_with_settings(
@@ -530,9 +535,8 @@ pub async fn ehr_access_bodies_with_settings(
                        FROM version \
                        JOIN vo_head h ON h.vo_id = version.vo_id AND h.trunk_head_sys_version = version.sys_version \
                        WHERE version.kind = 'EHR_ACCESS' AND strpos(version.body, '\"settings\"') > 0";
-    let rows = sqlx::query(SQL)
-        .fetch_all(&mut *acquire(pool).await?)
-        .await?;
+    let mut leased = lease(pool).await?;
+    let rows = leased.run(|conn| sqlx::query(SQL).fetch_all(conn)).await?;
     rows.iter()
         .map(|row| Ok((row.try_get("ehr_id")?, row.try_get("body")?)))
         .collect()
