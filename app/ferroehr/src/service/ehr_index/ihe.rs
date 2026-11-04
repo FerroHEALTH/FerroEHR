@@ -19,6 +19,7 @@ use std::time::Duration;
 
 use ferrohealth_server::tls_client::{TlsClient, TlsClientError};
 use ihe_atna::user::OnBehalfOf;
+use ihe_iti::authorizer::Authorizable as _;
 use ihe_iti::pixm::error::{InvalidInput, PixmError};
 use ihe_iti::pixm::identifier::{CrossReference, SourceIdentifier, TargetSystem};
 use ihe_iti::pixm::{Invocation, PixmClient};

@@ -1036,7 +1036,9 @@ patient is possible only through the [audit trail](audit.md).
   log consumers see only structured lines.
 - **Traces** export to any OpenTelemetry collector (Tempo, Jaeger, and so on)
   over OTLP, but only when you configure `[telemetry.otlp]`. Each request's
-  span is named by route template, never by a path containing ids. A client's
+  span is a server span named `{method} {route}`, such as
+  `GET /ferroehr/rest/openehr/v1/ehr/{ehr_id}`, never by a path containing
+  ids, and its status is an error on a 5xx answer. A client's
   `traceparent` is never read: every request starts a trace of the server's
   own.
 - **Metrics** come from **one** OpenTelemetry meter provider with up to two
@@ -1044,7 +1046,8 @@ patient is possible only through the [audit trail](audit.md).
   `[telemetry.otlp]` and `metrics = true`) a periodic OTLP reader. Every
   instrument reaches both by construction, so a family can never exist on the
   scrape surface and be missing from the push. The catalogue covers HTTP
-  request duration (`http.server.request.duration`); authentication failures
+  request duration (`http.server.request.duration`) and the requests in flight
+  (`http.server.active_requests`); authentication failures
   and authorization decisions (Cedar and remote-PDP); database pool state,
   acquire latency and transaction counts; AQL query counts, latency and plan-
   cache events; compositions committed (by openEHR audit change type);
