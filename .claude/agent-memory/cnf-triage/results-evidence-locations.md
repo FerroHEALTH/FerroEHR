@@ -8,7 +8,7 @@ metadata:
 Reference text only where it cites the Service Model: SM is not an authority
 (owner ruling 2026-10-27); an SM line here grounds no verdict and no feature.
 
-For the committed ferroehr run (a Veredictum 0.4.0 released-profile record, judged on the stable profile),
+For the committed ferroehr run (a Veredictum 0.4.1 released-profile record, judged on the stable profile),
 per-row observation is in `docs/conformance/ferroehr/results.json` under
 `rows[]`: each entry has `case`, `row`, `status` (passed, failed, warning,
 errored, skipped), its `inputs`, and for a skipped row `skip.reason` with the

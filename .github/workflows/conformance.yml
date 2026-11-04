@@ -319,7 +319,7 @@ jobs:
           printf '## Released profile: the record of record\n\nThe catalogue read against the frozen openEHR release. This run is the verdict of this job.\n\n' >> "$GITHUB_STEP_SUMMARY"
       - id: released
         if: ${{ !cancelled() && steps.compose.outcome == 'success' }}
-        uses: Vernum-Projecten/Veredictum@6a043b4612875939e9f30f7e23515866546d13df # v0.4.0
+        uses: Vernum-Projecten/Veredictum@993447ca427ef92daa27771ee3929af4afceb563 # v0.4.1
         # The verdict step below fails the job on this run's exit-code output,
         # after the views of both runs are uploaded.
         continue-on-error: true
@@ -340,7 +340,7 @@ jobs:
           profile: released
           out-dir: conformance-results/released
           badge-branch: veredictum-badges
-          image: ghcr.io/vernum-projecten/veredictum@sha256:b97feaa201820f717c67771c9880fb9d9ad8b3ec17cc078edba6e3d6275daf19
+          image: ghcr.io/vernum-projecten/veredictum@sha256:4416e6701883fba427a97d05b915ed9552253edf5b010cc30ad9eebd5271687e
       # Fresh volumes again, so the development run starts on the ground the
       # released run had.
       - id: recompose
@@ -358,7 +358,7 @@ jobs:
           printf '## Development profile: published beside the record\n\nThe same catalogue read against the pinned master of each openEHR repository. It is never counted toward the released record and is no verdict of this job.\n\n' >> "$GITHUB_STEP_SUMMARY"
       - id: development
         if: ${{ !cancelled() && steps.recompose.outcome == 'success' }}
-        uses: Vernum-Projecten/Veredictum@6a043b4612875939e9f30f7e23515866546d13df # v0.4.0
+        uses: Vernum-Projecten/Veredictum@993447ca427ef92daa27771ee3929af4afceb563 # v0.4.1
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -377,7 +377,7 @@ jobs:
           profile: development
           out-dir: conformance-results/development
           badge-branch: veredictum-badges-development
-          image: ghcr.io/vernum-projecten/veredictum@sha256:b97feaa201820f717c67771c9880fb9d9ad8b3ec17cc078edba6e3d6275daf19
+          image: ghcr.io/vernum-projecten/veredictum@sha256:4416e6701883fba427a97d05b915ed9552253edf5b010cc30ad9eebd5271687e
       # The views each run's outputs name, one directory per profile, so the
       # two are never mixed. recording.har is never among them.
       - name: Collect the views the Action wrote

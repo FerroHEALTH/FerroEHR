@@ -94,6 +94,6 @@
     "signatory": "Ruben Talstra, for Cadasto B.V.",
     "role": "Owner",
     "date": "2026-11-02",
-    "statement": "We declare the capabilities and option arms above for FerroEHR against the Veredictum 0.4.0 catalogue; each arm states what the server does in the deployment scripts/conformance.sh composes."
+    "statement": "We declare the capabilities and option arms above for FerroEHR against the Veredictum 0.4.1 catalogue; each arm states what the server does in the deployment scripts/conformance.sh composes."
   }
 }
