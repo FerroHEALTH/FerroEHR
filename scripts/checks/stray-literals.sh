@@ -79,12 +79,13 @@ self_test() {
   # Writes a Rust file at src/$1 holding $2 literals a reader sees, beside a
   # key the guard passes over.
   literals() {
-    awk -v n="$2" 'BEGIN {
+    local file="$1" count="$2"
+    awk -v n="$count" 'BEGIN {
       print "pub fn level() -> String {"
       print "    \"fatal\".to_owned()"
       print "}"
       for (i = 1; i <= n; i++) printf "pub fn text%d() -> String {\n    let s = \"Words number %d\";\n    s.to_owned()\n}\n", i, i
-    }' >"$project/src/$1"
+    }' >"$project/src/$file"
   }
   run() {
     status=0
@@ -92,12 +93,14 @@ self_test() {
     printf '%s\n' "$status"
   }
   baseline_of() {
-    awk -v f="src/$1" '$2 == f { print $1 }' "$project/scripts/checks/stray-literals.baseline"
+    local file="$1"
+    awk -v f="src/$file" '$2 == f { print $1 }' "$project/scripts/checks/stray-literals.baseline"
   }
   write_baseline() {
+    local rows="$1"
     {
       printf '# The miniature baseline.\n'
-      if [[ -n "$1" ]]; then printf '%s\n' "$1"; fi
+      if [[ -n "$rows" ]]; then printf '%s\n' "$rows"; fi
     } >"$project/scripts/checks/stray-literals.baseline"
   }
 
@@ -179,6 +182,7 @@ case "${1:-}" in
     echo "usage: scripts/checks/stray-literals.sh [--update] [ROOT...] | --files <f.rs>... | --self-test" >&2
     exit 2
     ;;
+  *) ;;
 esac
 if [[ "$named" -eq 1 && "$update" -eq 1 ]]; then
   echo "stray-literals: --update measures whole trees and takes no --files" >&2

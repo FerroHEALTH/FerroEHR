@@ -44,7 +44,8 @@ readonly IMAGE_REPO="ghcr.io/vernum-projecten/veredictum"
 
 # Reads one assignment `NAME="value"` from the pin file $1.
 read_assignment() {
-  sed -nE "s/^$2=\"([^\"]*)\"\$/\\1/p" "$1" | sed -n 1p
+  local file="$1" name="$2"
+  sed -nE "s/^$name=\"([^\"]*)\"\$/\\1/p" "$file" | sed -n 1p
 }
 
 # Checks the tree under $1 without the network. Prints `<version> <sha>
@@ -118,13 +119,13 @@ remote_commit() {
 
 # The digest ghcr.io serves for the release image tag $1.
 remote_digest() {
-  local token
+  local tag="$1" token
   token="$(curl -fsS --retry 3 --retry-all-errors \
     "https://ghcr.io/token?scope=repository:vernum-projecten/veredictum:pull" | jq -er .token)"
   curl -fsSI --retry 3 --retry-all-errors \
     -H "Authorization: Bearer $token" \
     -H "Accept: application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json" \
-    "https://ghcr.io/v2/vernum-projecten/veredictum/manifests/$1" |
+    "https://ghcr.io/v2/vernum-projecten/veredictum/manifests/$tag" |
     tr -d '\r' | sed -nE 's/^[Dd]ocker-[Cc]ontent-[Dd]igest:[[:space:]]*(sha256:[0-9a-f]{64})$/\1/p'
 }
 

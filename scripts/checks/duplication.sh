@@ -71,7 +71,8 @@ export LC_ALL=C
 # The pin of the row whose first cell is `$1` in the CI tools table of
 # docs/VERSIONS.md: the first backticked span of its second cell.
 pin_of() {
-  awk -F'|' -v key="\`$1\`" '
+  local tool="$1"
+  awk -F'|' -v key="\`$tool\`" '
     NF >= 4 {
       name = $2
       gsub(/^[ \t]+|[ \t]+$/, "", name)
@@ -240,22 +241,25 @@ keyed_blocks() {
 
 # The keys the baseline file $1 carries, one per line, without its comments.
 carried_keys() {
-  [[ -f "$1" ]] || return 0
-  awk '/^[[:space:]]*(#|$)/ { next } { print }' "$1"
+  local baseline="$1"
+  [[ -f "$baseline" ]] || return 0
+  awk '/^[[:space:]]*(#|$)/ { next } { print }' "$baseline"
 }
 
 # Each block of the keyed listing $1 as it reads, with NEW in front of one
 # whose key the baseline file $2 does not carry. A key that stands twice in
 # the listing needs two lines in the baseline.
 blocks() {
-  [[ -n "$1" ]] || return 0
+  local found="$1" baseline="$2"
+  [[ -n "$found" ]] || return 0
   awk -F'\t' '
     FILENAME == ARGV[1] { carried[$0]++; next }
     { if (carried[$2] > 0) { carried[$2]--; print $1 } else { print "NEW " $1 } }
-  ' <(carried_keys "$2") - <<<"$1"
+  ' <(carried_keys "$baseline") - <<<"$found"
 }
 
 write_baseline() {
+  local baseline="$1" found="$2"
   {
     # REUSE-IgnoreStart
     printf '# SPDX-FileCopyrightText: Cadasto B.V.\n'
@@ -264,27 +268,29 @@ write_baseline() {
     printf '# The key of every block scripts/checks/duplication.sh counts, written\n'
     printf '# by --update: both places of the block, each as its path and the\n'
     printf '# sha256 of the text of its lines, the two sorted.\n'
-    if [[ -n "$2" ]]; then
-      cut -f2 <<<"$2" | sort
+    if [[ -n "$found" ]]; then
+      cut -f2 <<<"$found" | sort
     fi
-  } >"$1"
+  } >"$baseline"
 }
 
 # Prints each line of $1 two spaces in, without its NEW mark.
 indented() {
-  local line
+  local lines="$1" line
   while IFS= read -r line; do
     printf '  %s\n' "${line#NEW }"
-  done <<<"$1"
+  done <<<"$lines"
 }
 
 # The committed count in the file $1, or nothing when it holds none.
 committed_count() {
-  [[ -f "$1" ]] || return 0
-  awk '/^[[:space:]]*(#|$)/ { next } { print; exit }' "$1" | tr -d '[:space:]'
+  local count_file="$1"
+  [[ -f "$count_file" ]] || return 0
+  awk '/^[[:space:]]*(#|$)/ { next } { print; exit }' "$count_file" | tr -d '[:space:]'
 }
 
 write_count() {
+  local count_file="$1" count="$2"
   {
     # REUSE-IgnoreStart
     printf '# SPDX-FileCopyrightText: Cadasto B.V.\n'
@@ -294,8 +300,8 @@ write_count() {
     printf '# app/*/src/, crates/*/src/ and tools/*/src/. It may fall and never\n'
     printf '# rise; --update writes a lower one, and a higher one is a hand edit\n'
     printf '# that says why.\n'
-    printf '%s\n' "$2"
-  } >"$1"
+    printf '%s\n' "$count"
+  } >"$count_file"
 }
 
 # Measures the tree $1 against the count file $2 and the baseline $3. With
@@ -482,9 +488,10 @@ if [[ "${1:-}" == "--self-test" ]]; then
   # sees only the PATH and the local list it is handed.
   stubs="$work/stubs"
   stub() {
-    mkdir -p "$(dirname "$1")"
-    printf '#!%s\n%s\n' "$BASH" "$2" >"$1"
-    chmod +x "$1"
+    local path="$1" body="$2"
+    mkdir -p "$(dirname "$path")"
+    printf '#!%s\n%s\n' "$BASH" "$body" >"$path"
+    chmod +x "$path"
   }
   stub "$stubs/pinned/jscpd" "echo 'jscpd $JSCPD_VERSION'"
   stub "$stubs/other/jscpd" "echo 'jscpd 0.0.1'"
@@ -535,8 +542,8 @@ if [[ "${1:-}" == "--self-test" ]]; then
   grep -Fq -- '--install' "$work/answer" ||
     fail "a machine with no detector was not told how to install one: $(cat "$work/answer")"
   run() {
-    local status=0
-    ratchet "$tree" "$count_file" "$baseline" "$1" >"$work/answer" 2>&1 || status=$?
+    local mode="$1" status=0
+    ratchet "$tree" "$count_file" "$baseline" "$mode" >"$work/answer" 2>&1 || status=$?
     printf '%s\n' "$status"
   }
 

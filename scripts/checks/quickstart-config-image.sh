@@ -34,13 +34,15 @@ fail=0
 
 # Pull an image, or report that it is not published; exit status 0 = pulled.
 pulled() {
-  docker pull --quiet "$1" >/dev/null 2>&1
+  local image="$1"
+  docker pull --quiet "$image" >/dev/null 2>&1
 }
 
 # Every name=value of a service's environment that carries a value, one per
 # line, the usage report switched off whatever the file says.
 service_env() {
-  jq -r --arg s "$1" '.services[$s].environment // {}
+  local service="$1"
+  jq -r --arg s "$service" '.services[$s].environment // {}
     | to_entries[] | select(.value != null) | "\(.key)=\(.value)"' "$work/compose.json" \
     | grep -v -e '^FERROEHR__USAGE_REPORT__ENABLED=' -e '^FERROPIX__USAGE_REPORT__ENABLED=' || true
 }
@@ -89,6 +91,10 @@ if pulled "$pix_image"; then
     case "$source" in
       ferropix-config) args+=(-v "$work/ferropix.toml:$target:ro") ;;
       ferropix-db-url) args+=(-v "$work/db-url:$target:ro") ;;
+      *)
+        echo "::error file=docker-compose.yml::ferropix mounts the config $source, which this check does not stage" >&2
+        exit 1
+        ;;
     esac
   done < <(jq -r '.services.ferropix.configs[] | "\(.source)\t\(.target)"' "$work/compose.json")
   key_dir="$(jq -r '.services.ferropix.volumes[] | select(.source == "ferropix-key") | .target' "$work/compose.json")"

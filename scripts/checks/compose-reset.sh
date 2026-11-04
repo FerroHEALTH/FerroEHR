@@ -35,7 +35,8 @@ command -v jq >/dev/null || { echo "compose-reset: jq is required" >&2; exit 1; 
 
 # The keys a compose file removes with `!reset`, one per line.
 reset_keys() {
-  sed -nE 's/^[[:space:]]*([A-Za-z0-9_.-]+):[[:space:]]*!reset([[:space:]].*)?$/\1/p' "$1"
+  local file="$1"
+  sed -nE 's/^[[:space:]]*([A-Za-z0-9_.-]+):[[:space:]]*!reset([[:space:]].*)?$/\1/p' "$file"
 }
 
 # check <service> <keys file> <compose args…>: 0 when the merged model's

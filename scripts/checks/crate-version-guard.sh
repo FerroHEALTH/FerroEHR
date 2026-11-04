@@ -67,20 +67,22 @@ refuse() {
 # The `[package]` table's own version of a manifest's text, bare; never a
 # dependency's `version =`.
 manifest_version() {
-  awk -F'"' '/^\[package\]/{p=1; next} /^\[/{p=0} p && /^version[[:space:]]*=/{print $2; exit}' <<<"$1"
+  local manifest="$1"
+  awk -F'"' '/^\[package\]/{p=1; next} /^\[/{p=0} p && /^version[[:space:]]*=/{print $2; exit}' <<<"$manifest"
 }
 
 # A manifest at a commit, or nothing when the file is absent there.
 manifest_at() {
-  git show "$1:$2" 2>/dev/null || true
+  local rev="$1" path="$2"
+  git show "$rev:$path" 2>/dev/null || true
 }
 
 # The internal `path = "../openehr-*", version = "…"` requirements at a
 # commit, one `<file>: <requirement>` per line, sorted.
 internal_requirements() {
-  local grepped
-  grepped="$(git grep -oE 'path = "\.\./openehr-[a-z]+", version = "[^"]+"' "$1" -- 'crates/*/Cargo.toml' || true)"
-  sed -E "s/^$1://" <<<"$grepped" | sort
+  local rev="$1" grepped
+  grepped="$(git grep -oE 'path = "\.\./openehr-[a-z]+", version = "[^"]+"' "$rev" -- 'crates/*/Cargo.toml' || true)"
+  sed -E "s/^$rev://" <<<"$grepped" | sort
 }
 
 # Whether a root Cargo.toml change moves a [workspace.dependencies] or

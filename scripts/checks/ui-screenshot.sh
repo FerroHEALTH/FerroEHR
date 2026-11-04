@@ -46,10 +46,11 @@ verdict() {
 
 # Commit one file change in the scratch repository.
 commit_file() {
-  mkdir -p "$(dirname "$1")"
-  printf '%s\n' "$2" >"$1"
-  git add "$1"
-  git -c user.name=self-test -c user.email=self-test@invalid -c commit.gpgsign=false commit -qm "$1"
+  local path="$1" content="$2"
+  mkdir -p "$(dirname "$path")"
+  printf '%s\n' "$content" >"$path"
+  git add "$path"
+  git -c user.name=self-test -c user.email=self-test@invalid -c commit.gpgsign=false commit -qm "$path"
 }
 
 # Every case forks a branch from `fork`, then moves main past it, so each
