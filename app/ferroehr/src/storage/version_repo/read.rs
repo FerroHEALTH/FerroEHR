@@ -175,7 +175,7 @@ macro_rules! version_select {
             "v.signature_client_supplied, v.wrapped_original, v.stable_compatible, v.origins, ",
             "v.body, h.restricted_at, h.access_restricted_at, (h.person_withheld_until > now()) IS TRUE AS person_withheld, ",
             "(SELECT COALESCE(n.data->>'archetype_node_id', ext.node_archetype_node_id(n.archetype, n.rm_version)) FROM node n WHERE n.tier = v.tier AND n.vo_id = v.vo_id ",
-            "AND n.sys_version = v.sys_version AND n.num = 0) AS root_archetype, ",
+            "AND n.sys_version = COALESCE(v.content_sys_version, v.sys_version) AND n.num = 0) AS root_archetype, ",
             "a.system_id, a.change_type, a.description, a.committer, a.attestation, ",
             "a.time_committed, ",
             "att.attestations_at_committal, att.attestations_after_committal ",
@@ -705,7 +705,7 @@ pub async fn content_of_objects(
              SELECT v.ehr_id, v.kind, v.template_id, COALESCE(n.data->>'archetype_node_id', ext.node_archetype_node_id(n.archetype, n.rm_version)) AS archetype \
              FROM version v \
              LEFT JOIN node n ON n.tier = v.tier AND n.vo_id = v.vo_id \
-                  AND n.sys_version = v.sys_version AND n.num = 0 \
+                  AND n.sys_version = COALESCE(v.content_sys_version, v.sys_version) AND n.num = 0 \
              WHERE v.vo_id = a.vo_id AND v.body IS NOT NULL \
              ORDER BY v.sys_version DESC LIMIT 1 \
          ) c \
@@ -733,7 +733,7 @@ pub async fn content_of_contribution(
              SELECT p.template_id, COALESCE(n.data->>'archetype_node_id', ext.node_archetype_node_id(n.archetype, n.rm_version)) AS archetype \
              FROM version p \
              LEFT JOIN node n ON n.tier = p.tier AND n.vo_id = p.vo_id \
-                  AND n.sys_version = p.sys_version AND n.num = 0 \
+                  AND n.sys_version = COALESCE(p.content_sys_version, p.sys_version) AND n.num = 0 \
              WHERE p.vo_id = v.vo_id AND p.sys_version <= v.sys_version \
                AND p.body IS NOT NULL \
              ORDER BY p.sys_version DESC LIMIT 1 \
@@ -782,7 +782,7 @@ pub async fn read_served(
     let row = sqlx::query(
         "WITH s AS ( \
              SELECT v.tier, v.vo_id, v.sys_version, v.ehr_id, v.kind, v.template_id, \
-                    v.origins, v.creating_system_id \
+                    v.origins, v.creating_system_id, v.content_sys_version \
              FROM unnest($1::uuid[], $2::int[]) AS a(vo_id, sys_version) \
              JOIN version v ON v.vo_id = a.vo_id AND v.sys_version = a.sys_version \
          ), o AS ( \
@@ -793,7 +793,7 @@ pub async fn read_served(
              SELECT DISTINCT s.ehr_id, s.kind, s.template_id, \
                     COALESCE(n.data->>'archetype_node_id', ext.node_archetype_node_id(n.archetype, n.rm_version)) AS archetype \
              FROM s LEFT JOIN node n ON n.tier = s.tier AND n.vo_id = s.vo_id \
-                  AND n.sys_version = s.sys_version AND n.num = 0 \
+                  AND n.sys_version = COALESCE(s.content_sys_version, s.sys_version) AND n.num = 0 \
          ) \
          SELECT (SELECT count(*) FROM o) AS total, \
                 (SELECT coalesce(jsonb_agg(x.origin ORDER BY x.origin), '[]'::jsonb) \

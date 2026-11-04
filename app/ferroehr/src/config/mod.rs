@@ -33,6 +33,7 @@ pub mod management;
 pub mod profile;
 pub mod rest;
 pub mod smart;
+pub mod versioning;
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -123,6 +124,8 @@ pub struct FerroEhrConfig {
     pub usage_report: ferrohealth_usage_report::section::UsageReportSection,
     /// `[access_delay]` — the EHDS Art. 3(3) delay of the person's own access.
     pub access_delay: access_delay::AccessDelayConfig,
+    /// `[versioning]` — the opt-in answer to an identical re-send (#4415).
+    pub versioning: versioning::VersioningConfig,
 }
 
 impl Default for FerroEhrConfig {
@@ -165,6 +168,7 @@ impl Default for FerroEhrConfig {
             ehr_index: crate::service::ehr_index::config::EhrIndexConfig::default(),
             usage_report: ferrohealth_usage_report::section::UsageReportSection::default(),
             access_delay: access_delay::AccessDelayConfig::default(),
+            versioning: versioning::VersioningConfig::default(),
         }
     }
 }

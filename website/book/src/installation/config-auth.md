@@ -498,3 +498,27 @@ a chart Secret at mode `0440`, and that volume holds the private key, so it is
 never world-readable inside the container. **To go back to `digest`**, set
 `mode: digest` and drop the key material; versions already signed keep their
 signatures and still verify.
+
+## `[versioning]`
+
+What a commit stores is not a setting: a version whose content equals the
+current version's is committed like any other, with its own commit audit,
+contribution, version id and `ETag`, and the content is stored once (the new
+version reads its predecessor's node rows). The one setting here is the
+answer to a repeated send of the same content.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `skip_identical_resend` | bool | `false` | When `true`, a `PUT` whose content equals the current version's commits nothing and answers like a successful update with the existing version: `200` (or `204` under `Prefer: return=minimal`), and that version's `ETag` and `Location`. |
+
+Turn it on only for the integration that needs it: with the rule on, the
+repeated send leaves no commit audit and no contribution, so who confirmed
+the content and when is not recorded, where the default records every
+committal as the RM asks (RM common `master06` §Committal and Audits). The
+openEHR REST API does not govern skipping an identical commit; the answer
+is FerroEHR's own, chosen to match what a client sees from Cadasto.
+
+```toml
+[versioning]
+skip_identical_resend = true
+```

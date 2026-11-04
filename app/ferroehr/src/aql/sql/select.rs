@@ -18,7 +18,7 @@ use crate::aql::error::{AqlError, SqlError};
 use crate::aql::ir::{
     AggFunc, Coercion, LeafPath, PathTarget, QueryIr, SelectColumn, SelectValue, StructureStep,
 };
-use crate::db::iden::Node;
+use crate::db::iden::{Node, VersionRow};
 
 use super::expr::{col, leaf_path_string, literal_value, order_coercion, to_jsonb, type_cond};
 use super::from::BoundEdge;
@@ -187,9 +187,19 @@ impl Builder<'_> {
         let cols = ["vo", "sv", "num", "cap"];
         let node_cols = ["vo_id", "sys_version", "num", "num_cap"];
         let mut sql_cols = Vec::with_capacity(4);
+        // The locator names the VERSION: a root anchor reads that version's
+        // body, and a subtree anchor resolves the content key through its row
+        // (`crate::storage::node_repo::read_subtrees_canonical`, #4415), so a
+        // version sharing its predecessor's rows still serves its own uid.
+        let version_alias = self
+            .version_alias_of(leaf.source.0)
+            .or_else(|| self.ehr_status_vo.get(&leaf.source.0).cloned());
         for (suffix, ncol) in cols.iter().zip(node_cols) {
             let sql_col = format!("col{i}_{suffix}");
-            let locator = col(&anchor, ncol);
+            let locator = match (ncol, &version_alias) {
+                ("sys_version", Some(voa)) => col(voa, VersionRow::SysVersion),
+                _ => col(&anchor, ncol),
+            };
             let expr: Expr = match (&root_cond, ncol) {
                 (Some(cond), "vo_id") => sea_query::CaseStatement::new()
                     .case(cond.clone(), locator)

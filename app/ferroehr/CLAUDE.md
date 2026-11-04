@@ -41,7 +41,10 @@ module.**
   are the vendored specs and official external docs — NEVER an internal doc.
 - **Storage is greenfield PG18, second generation:** an APPEND-ONLY `version`
   table (no validity interval, no close-out statement — validity is derived
-  from `committed_at`), one mutable `vo_head` row per versioned object whose
+  from `committed_at`; a version whose content equals the preceding tip's
+  shares that tip's node rows through `content_sys_version`, so every
+  version-to-node join reads `coalesce(content_sys_version, sys_version)`,
+  never `sys_version`, #4415), one mutable `vo_head` row per versioned object whose
   updated columns are in NO index so the per-commit UPDATE is heap-only, and
   one `node` table (nested-set interval index, canonical JSON fragments — no
   aliasing, no synthetic fields — of which a row stores only what its columns

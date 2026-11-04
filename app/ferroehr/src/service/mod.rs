@@ -179,6 +179,9 @@ pub struct FerroEhrService {
     /// [`Self::new`] so a bare service (tests, embeddings) never silently drops
     /// an event; the binary sets the real gate via [`Self::with_outbox_enabled`].
     outbox_enabled: bool,
+    /// `[versioning] skip_identical_resend` (#4415); the binary sets it via
+    /// [`Self::with_skip_identical_resend`].
+    skip_identical_resend: bool,
     /// The `[origins]` register: which origin a direct commit by a registered
     /// client is stamped with, and which origins a retention period may name
     /// (EHDS Annex II 3.4). Empty in [`Self::new`]; the binary sets it via
@@ -272,6 +275,7 @@ impl FerroEhrService {
             query_timeout: None,
             query_result_ceiling: None,
             outbox_enabled: true,
+            skip_identical_resend: false,
             origins: Arc::default(),
             created_ehr_repr: moka::future::Cache::builder()
                 .max_capacity(4096)
@@ -478,6 +482,15 @@ impl FerroEhrService {
         &self.origins
     }
 
+    /// Sets `[versioning] skip_identical_resend` (#4415): an update whose
+    /// content equals the current version's answers with that version and
+    /// commits nothing.
+    #[must_use]
+    pub fn with_skip_identical_resend(mut self, skip: bool) -> Self {
+        self.skip_identical_resend = skip;
+        self
+    }
+
     /// Set whether the transactional event outbox is written on commit. The
     /// binary calls this with whether `[outbox] readers` names a reader, so the
     /// `event_outbox` INSERT is skipped when no reader will ever read it. No
@@ -535,6 +548,7 @@ impl FerroEhrService {
             multimedia: self.multimedia.as_deref(),
             identifiers: self.identifiers.as_deref(),
             outbox_enabled: self.outbox_enabled,
+            skip_identical_resend: self.skip_identical_resend,
             access_delay: self.access_delay.as_deref(),
             direct_origin: self.origins.direct_origin(
                 crate::versioning::committer::current_committer()

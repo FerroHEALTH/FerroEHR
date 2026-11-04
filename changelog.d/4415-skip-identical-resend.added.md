@@ -1,0 +1,1 @@
+- `[versioning] skip_identical_resend` (default `false`): when on, an update whose content equals the current version's commits nothing and answers like a successful update with the existing version's `ETag` and `Location`. The book names the audit consequence: no commit audit and no contribution record the repeated send.

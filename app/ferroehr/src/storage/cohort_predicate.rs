@@ -109,7 +109,8 @@ macro_rules! predicate_statement {
                ON a.tier = e.tier AND a.vo_id = e.vo_id AND a.sys_version = e.sys_version \
                AND e.num BETWEEN a.num AND a.num_cap \
              JOIN version v \
-               ON v.tier = e.tier AND v.vo_id = e.vo_id AND v.sys_version = e.sys_version \
+               ON v.tier = e.tier AND v.vo_id = e.vo_id \
+               AND COALESCE(v.content_sys_version, v.sys_version) = e.sys_version \
              JOIN vo_head h \
                ON h.vo_id = v.vo_id AND h.trunk_head_sys_version = v.sys_version \
              WHERE e.tier = 'hot' \

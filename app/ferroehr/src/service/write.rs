@@ -152,7 +152,9 @@ impl FerroEhrService {
                     committed
                 }
             };
-            record_commit(&committed);
+            if !committed.skipped {
+                record_commit(&committed);
+            }
             Ok(committed)
         })
     }

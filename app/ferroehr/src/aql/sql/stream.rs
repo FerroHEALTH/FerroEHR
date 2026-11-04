@@ -18,7 +18,7 @@ use crate::db::iden::{Ehr, Node, VersionRow};
 
 use super::Builder;
 use super::expr::{col, hot, hot_unaliased};
-use super::from::{is_vo_root_type, strict_descendant};
+use super::from::{content_key, is_vo_root_type, strict_descendant};
 
 /// The streaming-shape plan: the linear containment chain eligible for the
 /// LIMIT-streaming FROM (see [`Builder::build_from_streaming`]).
@@ -319,7 +319,7 @@ impl Builder<'_> {
                 // versioned object, so strict containment in it is version
                 // membership minus the root row itself (`num = 0`).
                 sub.and_where(col(&inner, Node::VoId).eq(col(&v, VersionRow::VoId)))
-                    .and_where(col(&inner, Node::SysVersion).eq(col(&v, VersionRow::SysVersion)))
+                    .and_where(col(&inner, Node::SysVersion).eq(content_key(&v)))
                     .and_where(col(&inner, Node::Num).gt(0));
             }
             self.q.join_lateral(
@@ -419,7 +419,7 @@ impl Builder<'_> {
             .from(Node::Table)
             .and_where(hot_unaliased())
             .and_where(Expr::col(Node::VoId).eq(col(v, VersionRow::VoId)))
-            .and_where(Expr::col(Node::SysVersion).eq(col(v, VersionRow::SysVersion)))
+            .and_where(Expr::col(Node::SysVersion).eq(content_key(v)))
             .and_where(Expr::col(Node::Num).eq(Expr::val(0)))
             .offset(0);
         self.q.join_lateral(

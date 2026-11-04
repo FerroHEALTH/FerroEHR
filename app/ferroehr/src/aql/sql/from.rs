@@ -222,6 +222,21 @@ fn trunk_at_instant(version_alias: &str, at: Expr) -> Expr {
         .and(Expr::exists(sub).not())
 }
 
+/// The node rows a version row `voa` reads: its own, or the rows of the
+/// version `content_sys_version` names when its content equalled its
+/// predecessor's at commit (#4415). Every join from a version row to node
+/// rows compares `node.sys_version` with this, never with `voa.sys_version`;
+/// a node-to-node join stays on the node key, both rows lying in one tree.
+pub(super) fn content_key(voa: &str) -> Expr {
+    Expr::cust_with_exprs(
+        "COALESCE($1, $2)",
+        [
+            col(voa, VersionRow::ContentSysVersion),
+            col(voa, VersionRow::SysVersion),
+        ],
+    )
+}
+
 /// Whether `child` is a STRICT nested-set descendant of `parent` within one
 /// stored version: same `(vo_id, sys_version)`, `parent.num < num <=
 /// parent.num_cap`.
@@ -632,7 +647,7 @@ impl Builder<'_> {
             Ok(vec![
                 hot(inner, VersionRow::Tier),
                 col(inner, VersionRow::VoId).eq(col(&node, Node::VoId)),
-                col(inner, VersionRow::SysVersion).eq(col(&node, Node::SysVersion)),
+                content_key(inner).eq(col(&node, Node::SysVersion)),
             ])
         })?;
         self.node_alias.insert(sid, node.clone());
@@ -878,7 +893,7 @@ impl Builder<'_> {
             self.q
                 .and_where(col(&node, Node::VoId).eq(col(&voa, VersionRow::VoId)));
             self.q
-                .and_where(col(&node, Node::SysVersion).eq(col(&voa, VersionRow::SysVersion)));
+                .and_where(col(&node, Node::SysVersion).eq(content_key(&voa)));
             // A class that occurs only as its object's root is the `num = 0`
             // row, so the node probe is one primary-key row, not a scan of the
             // whole version's nodes filtered by type (#4089).
@@ -1004,9 +1019,7 @@ impl Builder<'_> {
                         sub.from_as(VersionRow::Table, Alias::new(voa.as_str()));
                         sub.and_where(hot(&voa, VersionRow::Tier));
                         sub.and_where(col(alias, Node::VoId).eq(col(&voa, VersionRow::VoId)));
-                        sub.and_where(
-                            col(alias, Node::SysVersion).eq(col(&voa, VersionRow::SysVersion)),
-                        );
+                        sub.and_where(col(alias, Node::SysVersion).eq(content_key(&voa)));
                         match scope {
                             VersionScope::Latest => {
                                 bind_head(sub, &voa, true, self.gates, false);
@@ -1034,9 +1047,7 @@ impl Builder<'_> {
                         sub.from_as(VersionRow::Table, Alias::new(voa.as_str()));
                         sub.and_where(hot(&voa, VersionRow::Tier));
                         sub.and_where(col(alias, Node::VoId).eq(col(&voa, VersionRow::VoId)));
-                        sub.and_where(
-                            col(alias, Node::SysVersion).eq(col(&voa, VersionRow::SysVersion)),
-                        );
+                        sub.and_where(col(alias, Node::SysVersion).eq(content_key(&voa)));
                         match scope {
                             VersionScope::Latest => {
                                 bind_head(sub, &voa, true, self.gates, false);
@@ -1062,7 +1073,7 @@ impl Builder<'_> {
                 sub.from_as(VersionRow::Table, Alias::new(voa.as_str()));
                 sub.and_where(hot(&voa, VersionRow::Tier));
                 sub.and_where(col(alias, Node::VoId).eq(col(&voa, VersionRow::VoId)));
-                sub.and_where(col(alias, Node::SysVersion).eq(col(&voa, VersionRow::SysVersion)));
+                sub.and_where(col(alias, Node::SysVersion).eq(content_key(&voa)));
                 sub.and_where(col(alias, Node::EhrId).eq(col(e, Ehr::Id)));
                 // Same version-spine mirror as the FROM path (see above):
                 // lets the planner bound the EXISTS by the EHR instead of the
@@ -1319,7 +1330,7 @@ impl Builder<'_> {
         let vo_link = col(&vo, VersionRow::EhrId).eq(col(&ehr, Ehr::Id));
         let node_link = col(&node, Node::VoId)
             .eq(col(&vo, VersionRow::VoId))
-            .and(col(&node, Node::SysVersion).eq(col(&vo, VersionRow::SysVersion)));
+            .and(col(&node, Node::SysVersion).eq(content_key(&vo)));
         if self.streaming {
             self.q.join_as(
                 JoinType::Join,

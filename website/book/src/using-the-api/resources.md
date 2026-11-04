@@ -176,7 +176,13 @@ curl -u ferroehr:ferroehr -X DELETE \
 ```
 
 `PUT` returns **200**/**204** (per `Prefer`) with the new version id, **412** on
-an `If-Match` mismatch, **422** on validation failure. `DELETE` is a *logical*
+an `If-Match` mismatch, **422** on validation failure. A `PUT` whose content
+equals the current version's still creates a version, with its own commit
+audit, contribution and id, and stores the content once (the new version
+reads its predecessor's rows); a deployment that prefers Cadasto's answer to
+a repeated send turns on `[versioning] skip_identical_resend`
+([Authentication & access](../installation/config-auth.md#versioning)), and
+the server then answers with the existing version's id and commits nothing. `DELETE` is a *logical*
 delete (the history is retained), returning **204** with the new deleted
 version's `ETag`; deleting something already deleted returns **400**, and a
 version id that is not the latest returns **409**.

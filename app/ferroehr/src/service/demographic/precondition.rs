@@ -108,6 +108,9 @@ mod tests {
             branch_version: 0,
             creating_system_id: "openEHRSys.example.com".to_owned(),
             lifecycle_state: "532".to_owned(),
+            committed_at: jiff::Timestamp::UNIX_EPOCH,
+            content_digest: None,
+            content_key: trunk,
             open: true,
         }
     }

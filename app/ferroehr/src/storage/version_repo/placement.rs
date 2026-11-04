@@ -40,6 +40,14 @@ pub struct TipRow {
     pub creating_system_id: String,
     /// The `version_lifecycle_state` numeric code.
     pub lifecycle_state: String,
+    /// The tip's commit instant (`version.committed_at`).
+    pub committed_at: jiff::Timestamp,
+    /// The tip's `content_digest`; `None` on a logical delete and on a row
+    /// written before the column existed, which is never shared.
+    pub content_digest: Option<Vec<u8>>,
+    /// The version whose node rows hold the tip's content: its own, or the
+    /// one it shares (`coalesce(content_sys_version, sys_version)`, #4415).
+    pub content_key: i32,
     /// Whether this version is still the tip of its own lineage: no later
     /// commit ordinal exists under the same branch number (RM common master06
     /// §The 'Virtual Version Tree' — a branch fork does not supersede the
@@ -66,6 +74,11 @@ fn tip_from_row(row: &sqlx::postgres::PgRow) -> Result<Option<TipRow>, StorageEr
         branch_version: row.try_get("branch_version")?,
         creating_system_id: row.try_get("creating_system_id")?,
         lifecycle_state: row.try_get("lifecycle_state")?,
+        committed_at: row
+            .try_get::<jiff_sqlx::Timestamp, _>("tip_committed_at")?
+            .to_jiff(),
+        content_digest: row.try_get("content_digest")?,
+        content_key: row.try_get("content_key")?,
         open: row.try_get("open")?,
     }))
 }
@@ -145,17 +158,19 @@ pub async fn next_placement(
             concat!(
                 thaw_cte!(),
                 "src AS (SELECT vo_id, ehr_id, kind, sys_version, trunk_version, branch_number, ",
-                "               branch_version, creating_system_id, lifecycle_state ",
+                "               branch_version, creating_system_id, lifecycle_state, committed_at, ",
+                "               content_digest, COALESCE(content_sys_version, sys_version) AS content_key ",
                 "        FROM version WHERE vo_id = $1) ",
                 "SELECT o.next_ordinal, now() AS ts, tip.ehr_id, tip.kind, tip.sys_version, ",
                 "tip.trunk_version, tip.branch_number, tip.branch_version, ",
-                "tip.creating_system_id, tip.lifecycle_state, tip.open ",
+                "tip.creating_system_id, tip.lifecycle_state, tip.open, ",
+                "tip.committed_at AS tip_committed_at, tip.content_digest, tip.content_key ",
                 "FROM (SELECT (COALESCE(MAX(sys_version), 0) + 1)::int AS next_ordinal ",
                 "      FROM src) o ",
                 "LEFT JOIN LATERAL ( ",
                 "    SELECT t.ehr_id, t.kind, t.sys_version, t.trunk_version, ",
                 "           t.branch_number, t.branch_version, t.creating_system_id, ",
-                "           t.lifecycle_state, ",
+                "           t.lifecycle_state, t.committed_at, t.content_digest, t.content_key, ",
                 is_lineage_tip!(),
                 " AS open ",
                 "    FROM src t WHERE ",
@@ -277,11 +292,13 @@ pub async fn update_placement(
     const SQL: &str = concat!(
         thaw_cte!(),
         "src AS (SELECT vo_id, ehr_id, kind, sys_version, trunk_version, branch_number, ",
-        "               branch_version, creating_system_id, lifecycle_state, committed_at ",
+        "               branch_version, creating_system_id, lifecycle_state, committed_at, ",
+        "               content_digest, COALESCE(content_sys_version, sys_version) AS content_key ",
         "        FROM version WHERE vo_id = $1) ",
         "SELECT o.next_ordinal, now() AS ts, tip.ehr_id, tip.kind, tip.sys_version, ",
         "tip.trunk_version, tip.branch_number, tip.branch_version, ",
         "tip.creating_system_id, tip.lifecycle_state, tip.open, ",
+        "tip.committed_at AS tip_committed_at, tip.content_digest, tip.content_key, ",
         "tip.committed_at AS time_committed, e.is_modifiable, tb.stored_template, ",
         "fv.found AS first_found, fv.ani AS first_ani, fv.category AS first_category ",
         "FROM (SELECT (COALESCE(MAX(sys_version), 0) + 1)::int AS next_ordinal ",
@@ -289,7 +306,7 @@ pub async fn update_placement(
         "LEFT JOIN LATERAL ( ",
         "    SELECT t.ehr_id, t.kind, t.sys_version, t.trunk_version, ",
         "           t.branch_number, t.branch_version, t.creating_system_id, ",
-        "           t.lifecycle_state, t.committed_at, ",
+        "           t.lifecycle_state, t.committed_at, t.content_digest, t.content_key, ",
         is_lineage_tip!(),
         " AS open ",
         "    FROM src t WHERE t.branch_number = 0 ",
