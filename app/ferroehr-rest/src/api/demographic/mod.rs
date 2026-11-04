@@ -175,6 +175,17 @@ fn commit_time(body: &serde_json::Value) -> Option<jiff::Timestamp> {
     raw.parse::<jiff::Timestamp>().ok()
 }
 
+/// Renders a demographic read whose versioning headers ride the service's
+/// response metadata (overview §"`ETag` and Last-Modified"), with no
+/// `Location` (§Location restricts it to creation and redirect responses).
+fn respond_versioned(h: &HeaderMap, resp: &ServiceResponse) -> Response {
+    let mut out = crate::overview::negotiate::body::respond(h, http::StatusCode::OK, &resp.body);
+    if let Some(meta) = resp.meta.as_ref() {
+        set_versioning_headers(&mut out, meta, Tree::Demographic);
+    }
+    out
+}
+
 /// Render a demographic read that the service returns without metadata, with
 /// the versioning headers derived from the served body ([`read_meta`]).
 fn read_versioned(h: &HeaderMap, versioned_object_uid: &str, body: &serde_json::Value) -> Response {

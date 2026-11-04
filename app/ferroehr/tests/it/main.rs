@@ -77,6 +77,7 @@ mod manufacturer;
 mod multimedia_s3;
 mod node_compact;
 mod node_header;
+mod node_readers;
 mod one_schema_per_statement;
 mod opt_resource_meta;
 mod outbox_feed;

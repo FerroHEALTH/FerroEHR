@@ -209,8 +209,6 @@ pub(crate) async fn tags_update(
     parts: RequestParts,
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let ok = StatusCode::OK;
-    let no_content = StatusCode::NO_CONTENT;
     // EHR_STATUS is not templated → no Simplified-Formats mapping; reject a
     // simplified Content-Type/Accept uniformly (see `formats::dispatch`).
     crate::formats::dispatch::guard_non_templated(h)?;
@@ -218,25 +216,11 @@ pub(crate) async fn tags_update(
         EhrStatusTagsUpdateParams::from_request,
         EhrStatusTagsUpdateParams::PARAMS,
     )?;
-    let ehr_id = parse_ehr_id(&p.ehr_id)?;
-    let body = negotiate::decode::typed_json(h, &parts.body, "JSON array body")?;
-    let tags = state
-        .backend()
-        .target_tags_replace(
-            ehr_id,
-            parse_uid_based_id(&p.uid_based_id)?,
-            "EHR_STATUS",
-            body,
-        )
-        .await?;
-    // ehr_status_tags_update.yaml: 200 on `Prefer: return=representation`,
-    // 204 when `Prefer` is missing or `return=minimal` (overview §Prefer).
-    Ok(negotiate::prefer::write_collection(
-        h,
-        no_content,
-        ok,
-        &openehr_its::json::to_canonical_value(&tags),
-    ))
+    let target = item_tags::TagTarget::EhrContent {
+        ehr_id: parse_ehr_id(&p.ehr_id)?,
+        target_type: "EHR_STATUS",
+    };
+    item_tags::replace(&state, target, p.uid_based_id, &parts).await
 }
 
 /// The `ehr_status_tags_delete` operation.

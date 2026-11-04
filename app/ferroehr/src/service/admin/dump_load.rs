@@ -1481,7 +1481,7 @@ impl FerroEhrService {
         let mut conn = acquire(&self.demographic_pool).await?;
         let mut tx = conn.begin().await?;
         dump_repo::write::insert_audits(&mut tx, &commons.audits, StoredAudit::Keep).await?;
-        dump_repo::write::insert_demographic_contributions(&mut tx, &commons.contributions).await?;
+        dump_repo::write::insert_contributions(&mut tx, None, &commons.contributions).await?;
         tx.commit().await?;
         Ok(())
     }
@@ -1647,7 +1647,8 @@ impl FerroEhrService {
                 other => ServiceError::Storage(other),
             })?;
         dump_repo::write::insert_audits(&mut tx, &record.audits, StoredAudit::Refuse).await?;
-        dump_repo::write::insert_ehr_contributions(&mut tx, ehr_id, &record.contributions).await?;
+        dump_repo::write::insert_contributions(&mut tx, Some(ehr_id), &record.contributions)
+            .await?;
 
         load_versions(&mut tx, &self.privacy, Some(ehr_id), record.versions).await?;
 

@@ -148,7 +148,7 @@ pub(crate) fn operation(id: &str) -> Option<&'static Operation> {
 }
 
 /// [`OPERATIONS`] by id.
-static BY_ID: LazyLock<HashMap<&'static str, &'static Operation>> =
+static BY_ID: LazyLock<HashMap<&str, &Operation>> =
     LazyLock::new(|| OPERATIONS.iter().map(|op| (op.id, op)).collect());
 
 /// Builds [`OPERATIONS`], one row per line: id, verb, RBAC class, ABAC kind,

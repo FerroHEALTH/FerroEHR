@@ -10,42 +10,10 @@
 //! `org.openehr.rm.ehr.ehr.adoc` `EHR.tags` + master04 §Tags ("Tag `_target_`
 //! values can only be within the same EHR").
 
-use crate::fixtures::committer;
+use crate::fixtures::{committer, uv};
 use ferroehr::error::ServiceError;
-use ferroehr::service::version_update::{change_type_coded, lifecycle_state_coded};
-use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData, UpdateVersion};
-use openehr_rm::prelude::PartyProxy;
 use serde_json::{Value, json};
 use uuid::Uuid;
-
-fn uv<T: serde::de::DeserializeOwned, R: crate::fixtures::Envelope<T>>(
-    data: &Value,
-    change_code: &str,
-    preceding: Option<&str>,
-) -> R {
-    R::from_version({
-        UpdateVersion {
-            preceding_version_uid: preceding.map(|p| p.parse().expect("OBJECT_VERSION_ID")),
-            lifecycle_state: lifecycle_state_coded("532"),
-            attestations: None,
-            data: openehr_its::json::from_canonical_value(data)
-                .expect("the fixture commit body decodes as its RM type"),
-            commit_audit: UpdateAudit::UpdateAudit(UpdateAuditData {
-                _type: None,
-                system_id: None,
-                change_type: change_type_coded(change_code),
-                description: None,
-                committer: openehr_its::json::from_canonical_value::<PartyProxy>(&json!(
-                    committer("ehr-package tester")
-                ))
-                .expect("committer"),
-                additional_properties: std::collections::BTreeMap::new(),
-            }),
-            signature: None,
-            additional_properties: std::collections::BTreeMap::new(),
-        }
-    })
-}
 
 /// A minimal *valid* RM COMPOSITION with a chosen archetype + category.
 fn composition(archetype: &str, category_code: &str, category_label: &str) -> Value {

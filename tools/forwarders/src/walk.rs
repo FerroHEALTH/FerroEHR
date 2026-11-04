@@ -8,6 +8,7 @@
 //! file under a `tests` directory, and a file only a `#[cfg(test)] mod`
 //! declaration reaches.
 
+use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -134,10 +135,7 @@ fn collect(dir: &Path, files: &mut Vec<PathBuf>) -> Result<()> {
 /// directory for a crate root or a `mod.rs`, else the directory named after it.
 fn module_dir(file: &Path) -> PathBuf {
     let parent = file.parent().unwrap_or(Path::new(""));
-    let name = file
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or("");
+    let name = file.file_name().and_then(OsStr::to_str).unwrap_or("");
     let in_bin = parent.file_name().is_some_and(|dir| dir == "bin");
     if matches!(name, "lib.rs" | "main.rs" | "mod.rs") || in_bin {
         parent.to_path_buf()

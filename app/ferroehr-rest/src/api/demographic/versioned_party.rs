@@ -15,7 +15,6 @@
 //! §"Deprecated headers" deprecates on `GET`.
 
 use axum::response::Response;
-use http::StatusCode;
 
 use openehr_its::rest::generated::demographic::{
     VersionedPartyGetParams, VersionedPartyVersionGetAtTimeParams,
@@ -25,15 +24,12 @@ use openehr_its::rest::generated::demographic::{
 use ferroehr::versioning::object_version_id::parse_version_uid;
 
 use crate::api::RequestParts;
-use crate::negotiate;
 use crate::overview::error::RestError;
-use crate::overview::negotiate::resource::Tree;
 use crate::state::AppState;
 
 /// The `versioned_party_get` operation.
 pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let ok = StatusCode::OK;
     let p = parts.decode(
         VersionedPartyGetParams::from_request,
         VersionedPartyGetParams::PARAMS,
@@ -48,11 +44,7 @@ pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response
     // named outright; the instant is the version spine's, never
     // scraped from the container body, which exposes no commit
     // audit — the EHR-side container reads' pattern).
-    let mut out = negotiate::body::respond(h, ok, &resp.body);
-    if let Some(meta) = resp.meta.as_ref() {
-        negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Demographic);
-    }
-    Ok(out)
+    Ok(super::respond_versioned(h, &resp))
 }
 
 /// The `versioned_party_revision_history` operation.
@@ -81,7 +73,6 @@ pub(crate) async fn version_get_at_time(
     parts: RequestParts,
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let ok = StatusCode::OK;
     let p = parts.decode(
         VersionedPartyVersionGetAtTimeParams::from_request,
         VersionedPartyVersionGetAtTimeParams::PARAMS,
@@ -95,11 +86,7 @@ pub(crate) async fn version_get_at_time(
             p.version_at_time,
         )
         .await?;
-    let mut out = negotiate::body::respond(h, ok, &resp.body);
-    if let Some(meta) = resp.meta.as_ref() {
-        negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Demographic);
-    }
-    Ok(out)
+    Ok(super::respond_versioned(h, &resp))
 }
 
 /// The `versioned_party_version_get_by_id` operation.

@@ -22,12 +22,12 @@ use sqlx::PgPool;
 use ferroehr::config::versioning::RESEND_OPERATION;
 use ferroehr::ids::{EhrId, VoId};
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::query::request::AqlQueryRequest;
 use ferroehr::storage::integrity::StorageParityScope;
 use ferroehr::system_log::config::{AuditConfig, StoreConfig};
 use ferroehr::system_log::sender;
 
 use crate::fixtures::{base_composition, create_ehr, uv};
+use crate::node_readers::aql_answers;
 
 /// The AQL statements whose answers must not move when a version shares its
 /// predecessor's rows: every version with its own uid, the whole object and
@@ -176,24 +176,7 @@ async fn served(pool: &PgPool, svc: &FerroEhrService, chain: &Chain) -> Served {
         );
         nodes.push(serde_json::to_string(&rows).expect("serializable"));
     }
-    let mut aql = Vec::new();
-    for query in QUERIES {
-        let result = svc
-            .execute_aql(query, None, &AqlQueryRequest::default())
-            .await
-            .map_err(|e| format!("{query}: {e:?}"))
-            .expect("the AQL statement runs")
-            .result_set;
-        let mut rows: Vec<String> = result
-            .get("rows")
-            .and_then(Value::as_array)
-            .expect("rows array")
-            .iter()
-            .map(|row| serde_json::to_string(row).expect("serializable"))
-            .collect();
-        rows.sort();
-        aql.push(rows);
-    }
+    let aql = aql_answers(svc, &QUERIES).await;
     Served { bodies, nodes, aql }
 }
 

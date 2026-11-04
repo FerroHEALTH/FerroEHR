@@ -27,7 +27,6 @@ use std::collections::BTreeMap;
 
 use serde_json::{Value, json};
 
-use openehr_rm::prelude::PartyProxy;
 use uuid::Uuid;
 
 use ferroehr::error::ServiceError;
@@ -36,49 +35,15 @@ use ferroehr::service::FerroEhrService;
 use ferroehr::service::query::config::QueryConfig;
 use ferroehr::service::query::request::AqlQueryRequest;
 
-use ferroehr::service::version_update::{change_type_coded, lifecycle_state_coded};
-use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData, UpdateVersion};
-
 use crate::adl2_fixture::adl2_source;
 use crate::fixtures::base_composition;
 use crate::fixtures::committer;
 use crate::fixtures::set_not_queryable;
+use crate::fixtures::uv;
 
 const OBS_ARCHETYPE: &str = "openEHR-EHR-OBSERVATION.minimal.v1";
 /// The magnitude leaf path used throughout (bp.v1-style descent to the ELEMENT).
 const MAG_PATH: &str = "data[at0001]/events[at0002]/data[at0003]/items[at0004]/value/magnitude";
-
-/// The `UPDATE_VERSION` commit envelope for a bare-RM write, mirroring the
-/// adapter's `committal::write_request` (the RM object is the `data`, `If-Match` is the
-/// `preceding_version_uid`, and the audit carries the change type + committer).
-fn uv<T: serde::de::DeserializeOwned, R: crate::fixtures::Envelope<T>>(
-    data: &Value,
-    change_code: &str,
-    preceding: Option<&str>,
-) -> R {
-    R::from_version({
-        UpdateVersion {
-            preceding_version_uid: preceding.map(|p| p.parse().expect("OBJECT_VERSION_ID")),
-            lifecycle_state: lifecycle_state_coded("532"),
-            attestations: None,
-            data: openehr_its::json::from_canonical_value(data)
-                .expect("the fixture commit body decodes as its RM type"),
-            commit_audit: UpdateAudit::UpdateAudit(UpdateAuditData {
-                _type: None,
-                system_id: None,
-                change_type: change_type_coded(change_code),
-                description: None,
-                committer: openehr_its::json::from_canonical_value::<PartyProxy>(&json!(
-                    committer("conformance tester")
-                ))
-                .expect("committer"),
-                additional_properties: BTreeMap::new(),
-            }),
-            signature: None,
-            additional_properties: BTreeMap::new(),
-        }
-    })
-}
 
 /// A composition variant with the given display name and leaf magnitude.
 fn composition(name: &str, magnitude: f64) -> Value {

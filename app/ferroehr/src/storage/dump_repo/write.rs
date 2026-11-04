@@ -88,40 +88,16 @@ pub async fn insert_audits(
     Ok(())
 }
 
-/// Insert an EHR record's contributions in one `unnest` statement.
-///
-/// # Errors
-/// [`StorageError::Database`] on a driver failure.
-pub async fn insert_ehr_contributions(
-    tx: &mut PgConnection,
-    ehr_id: EhrId,
-    contributions: &[ContributionRow],
-) -> Result<(), StorageError> {
-    if contributions.is_empty() {
-        return Ok(());
-    }
-    let ids: Vec<Uuid> = contributions.iter().map(|c| c.id).collect();
-    let audits: Vec<Uuid> = contributions.iter().map(|c| c.commit_audit_id).collect();
-    sqlx::query(
-        "INSERT INTO contribution (id, ehr_id, commit_audit_id) \
-         SELECT t.id, $2, t.commit_audit_id FROM unnest($1::uuid[], $3::uuid[]) \
-         AS t(id, commit_audit_id)",
-    )
-    .bind(ids)
-    .bind(ehr_id)
-    .bind(audits)
-    .execute(tx)
-    .await?;
-    Ok(())
-}
-
-/// Insert the ehr-less contributions in one `unnest` statement, leaving an id
+/// Insert contributions in one `unnest` statement: an EHR record's under
+/// `Some(ehr_id)`, each new, or the ehr-less ones under `None`, leaving an id
 /// already stored as it is.
 ///
 /// # Errors
-/// [`StorageError::Database`] on a driver failure.
-pub async fn insert_demographic_contributions(
+/// [`StorageError::Database`] on a driver failure, a stored id under
+/// `Some(ehr_id)` included.
+pub async fn insert_contributions(
     tx: &mut PgConnection,
+    ehr_id: Option<EhrId>,
     contributions: &[ContributionRow],
 ) -> Result<(), StorageError> {
     if contributions.is_empty() {
@@ -129,15 +105,24 @@ pub async fn insert_demographic_contributions(
     }
     let ids: Vec<Uuid> = contributions.iter().map(|c| c.id).collect();
     let audits: Vec<Uuid> = contributions.iter().map(|c| c.commit_audit_id).collect();
-    sqlx::query(
-        "INSERT INTO contribution (id, ehr_id, commit_audit_id) \
-         SELECT t.id, NULL, t.commit_audit_id FROM unnest($1::uuid[], $2::uuid[]) \
-         AS t(id, commit_audit_id) ON CONFLICT (id) DO NOTHING",
-    )
-    .bind(ids)
-    .bind(audits)
-    .execute(tx)
-    .await?;
+    let sql = match ehr_id {
+        Some(_) => {
+            "INSERT INTO contribution (id, ehr_id, commit_audit_id) \
+             SELECT t.id, $2, t.commit_audit_id FROM unnest($1::uuid[], $3::uuid[]) \
+             AS t(id, commit_audit_id)"
+        }
+        None => {
+            "INSERT INTO contribution (id, ehr_id, commit_audit_id) \
+             SELECT t.id, $2, t.commit_audit_id FROM unnest($1::uuid[], $3::uuid[]) \
+             AS t(id, commit_audit_id) ON CONFLICT (id) DO NOTHING"
+        }
+    };
+    sqlx::query(sql)
+        .bind(ids)
+        .bind(ehr_id)
+        .bind(audits)
+        .execute(tx)
+        .await?;
     Ok(())
 }
 

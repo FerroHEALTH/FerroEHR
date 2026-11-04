@@ -452,32 +452,15 @@ pub(crate) async fn tags_update(
     state: AppState,
     parts: RequestParts,
 ) -> Result<Response, RestError> {
-    let h = &parts.headers;
-    let ok = StatusCode::OK;
-    let no_content = StatusCode::NO_CONTENT;
     let p = parts.decode(
         CompositionTagsUpdateParams::from_request,
         CompositionTagsUpdateParams::PARAMS,
     )?;
-    let ehr_id = parse_ehr_id(&p.ehr_id)?;
-    let body = negotiate::decode::typed_json(h, &parts.body, "JSON array body")?;
-    let tags = state
-        .backend()
-        .target_tags_replace(
-            ehr_id,
-            parse_uid_based_id(&p.uid_based_id)?,
-            "COMPOSITION",
-            body,
-        )
-        .await?;
-    // composition_tags_update.yaml: 200 on `Prefer: return=representation`,
-    // 204 when `Prefer` is missing or `return=minimal` (overview §Prefer).
-    Ok(negotiate::prefer::write_collection(
-        h,
-        no_content,
-        ok,
-        &openehr_its::json::to_canonical_value(&tags),
-    ))
+    let target = item_tags::TagTarget::EhrContent {
+        ehr_id: parse_ehr_id(&p.ehr_id)?,
+        target_type: "COMPOSITION",
+    };
+    item_tags::replace(&state, target, p.uid_based_id, &parts).await
 }
 
 /// `composition_tags_delete` — remove one item tag of a COMPOSITION.
