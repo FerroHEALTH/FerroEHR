@@ -124,3 +124,55 @@ fn walk_constraints_obj(obj: &CObject, f: &mut impl FnMut(&str, &str)) {
         _ => {}
     }
 }
+
+/// Removes every `property` constraint from a `DV_QUANTITY` node, recording
+/// each one in `log` with its path and constraint.
+///
+/// AOM 1.4 `C_DV_QUANTITY.property` constrains the physical property, but no
+/// RM release defines a `DV_QUANTITY.property` attribute, so an ADL 2
+/// `property` attribute fails VCARM; the units already imply the property.
+// NOTE: RM `UML/classes/org.openehr.rm.data_types.dv_quantity.adoc` (no `property`) and
+// `data_types/master06-quantity_package.adoc` §Quantity package ("A valid units string
+// always implies a measured property") outrank `ADL2/master04.4` §Tuple Constraints.
+pub(super) fn drop_quantity_properties(
+    cco: &mut CComplexObject,
+    path: &str,
+    log: &mut crate::adl14::log::ConversionLog,
+) {
+    let Some(d) = cco_data_mut(cco) else { return };
+    let here = format!("{path}[{}]", d.node_id);
+    if d.rm_type_name == "DV_QUANTITY"
+        && let Some(attributes) = d.attributes.as_mut()
+    {
+        attributes.retain(|attr| {
+            if attr.rm_attribute_name != "property" {
+                return true;
+            }
+            let constraint = attr
+                .children
+                .iter()
+                .flatten()
+                .find_map(|child| match child {
+                    CObject::CTerminologyCode(tc) => Some(tc.constraint.clone()),
+                    _ => None,
+                })
+                .unwrap_or_else(|| "(none)".to_owned());
+            log.note(format!(
+                "DV_QUANTITY property constraint {constraint:?} at {here}/property dropped: \
+                 RM DV_QUANTITY defines no property attribute, and its units imply the property"
+            ));
+            false
+        });
+        if attributes.is_empty() {
+            d.attributes = None;
+        }
+    }
+    for attr in d.attributes.iter_mut().flatten() {
+        let attr_path = format!("{here}/{}", attr.rm_attribute_name);
+        for child in attr.children.iter_mut().flatten() {
+            if let CObject::CComplexObject(child) = child {
+                drop_quantity_properties(child, &attr_path, log);
+            }
+        }
+    }
+}

@@ -892,3 +892,35 @@ fn a_converted_slot_assertion_takes_the_id_coded_primitive_node_id() {
     assert!(!ids.is_empty(), "the archetype carries a slot include");
     assert!(ids.iter().all(|id| id == "id9999"), "{ids:?}");
 }
+
+/// A 1.4 `C_DV_QUANTITY` `property` converts to no `DV_QUANTITY.property`
+/// attribute, which no RM release defines (VCARM), and the dropped constraint
+/// is reported in the conversion log.
+#[test]
+fn a_quantity_property_is_dropped_and_reported() {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/corpus/adl14-cadl/openEHR-EHR-CLUSTER.heterogeneous_quantity_rows.v1.adl");
+    let src = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {path:?}: {e}"));
+    let mut log = ConversionLog::default();
+    let converted = parse_and_convert(&src, &ConvertConfig::default(), &mut log).expect("convert");
+    assert!(
+        log.notes
+            .iter()
+            .any(|note| note.contains("DV_QUANTITY property constraint")),
+        "the dropped property is logged: {:?}",
+        log.notes
+    );
+    let adl2 = openehr_adl::print::print(&converted).expect("print");
+    assert!(!adl2.contains("property matches"), "{adl2}");
+    let vcarm: Vec<_> = openehr_adl::validate::validate_source(
+        &adl2,
+        None,
+        &openehr_adl::validate::rm::ProductionRmModel,
+        &openehr_adl::validate::bindings::NoTerminologyResolver,
+    )
+    .expect("the printed ADL 2 parses")
+    .into_iter()
+    .filter(|issue| issue.code == openehr_adl::validate::catalogue::ValidationCode::Vcarm)
+    .collect();
+    assert!(vcarm.is_empty(), "{vcarm:?}");
+}
