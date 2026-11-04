@@ -78,6 +78,10 @@ fn major_key(major: &str) -> String {
 impl ArchetypeRepository {
     /// Register a parsed archetype under its namespace, family and major
     /// version, replacing an artefact of the same full version.
+    ///
+    /// The repository holds ADL2 artefacts: an ADL 1.4 source enters through
+    /// [`crate::adl14::convert::convert`] first, since the 1.4-shaped parse
+    /// keeps constraints such as `[openehr::433]` that ADL2 has no syntax for.
     pub fn insert(&mut self, archetype: Archetype) {
         let hrid = view(&archetype).archetype_id;
         let held = self.by_key.entry(ArtefactKey::of(hrid)).or_default();

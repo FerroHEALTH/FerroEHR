@@ -43,6 +43,7 @@ mod nesting_bounds;
 mod opt14_conversion;
 mod opt_archetype_scope;
 mod opt_spec;
+mod opt_term_constraint;
 mod repository_versions;
 mod rules_parse;
 mod template_constituents;

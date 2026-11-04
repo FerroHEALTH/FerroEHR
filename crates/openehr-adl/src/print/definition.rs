@@ -26,7 +26,7 @@ use openehr_base::prelude::{
 };
 
 use crate::aom::build::cobject_to_primitive;
-use crate::codes::NodeCoding;
+use crate::codes::{CodePrefix, NodeCoding, parse_code};
 use crate::odin::regex_of;
 use crate::print::odin::quoted;
 use crate::print::rules::assertion_str;
@@ -57,7 +57,7 @@ impl Printer {
             CObject::CComplexObjectProxy(pr) => self.proxy(&head, pr, depth),
             CObject::ArchetypeSlot(s) => self.slot(&head, s, depth)?,
             // Primitives with a real node id are regular primitive objects.
-            other => self.primitive_object(&head, other, depth),
+            other => self.primitive_object(&head, other, depth)?,
         }
         Ok(())
     }
@@ -87,7 +87,7 @@ impl Printer {
             self.attribute(a, depth + 1)?;
         }
         for t in d.attribute_tuples.iter().flatten() {
-            self.attribute_tuple(t, depth + 1);
+            self.attribute_tuple(t, depth + 1)?;
         }
         if let Some(dv) = &d.default_value {
             self.default_value(dv, depth + 1);
@@ -100,15 +100,23 @@ impl Printer {
     /// and a value (only reached inside an attribute body), else as a
     /// node-identified object with its `matches` value, if any. A body-less
     /// `Type[id9999]` has no short form, so it keeps the regular one.
-    fn primitive_object(&mut self, head: &str, obj: &CObject, depth: usize) {
+    ///
+    /// # Errors
+    /// [`PrintError`] from a primitive with no ADL2 spelling.
+    fn primitive_object(
+        &mut self,
+        head: &str,
+        obj: &CObject,
+        depth: usize,
+    ) -> Result<(), PrintError> {
         let Some(prim) = cobject_to_primitive(obj) else {
-            return;
+            return Ok(());
         };
         let (ty, node_id) = prim_type_and_node(obj);
-        let value = primitive_inline(&prim);
+        let value = primitive_inline(&prim)?;
         if NodeCoding::is_primitive_node_id(&node_id) && !value.is_empty() {
             self.line(depth, &format!("{head}{value}"));
-            return;
+            return Ok(());
         }
         if value.is_empty() {
             self.line(depth, &format!("{head}{ty}{}", node_bracket(&node_id)));
@@ -118,6 +126,7 @@ impl Printer {
                 &format!("{head}{ty}{} matches {{{value}}}", node_bracket(&node_id)),
             );
         }
+        Ok(())
     }
 
     fn attribute(&mut self, a: &CAttribute, depth: usize) -> Result<(), PrintError> {
@@ -153,7 +162,7 @@ impl Printer {
         if let [child] = a.children.as_deref().unwrap_or_default()
             && let Some(prim) = cobject_to_primitive(child)
             && NodeCoding::is_primitive_node_id(&prim_type_and_node(child).1)
-            && let value = primitive_inline(&prim)
+            && let value = primitive_inline(&prim)?
             && !value.is_empty()
         {
             self.line(depth, &format!("{head} matches {{{value}}}"));
@@ -167,7 +176,7 @@ impl Printer {
         Ok(())
     }
 
-    fn attribute_tuple(&mut self, t: &CAttributeTuple, depth: usize) {
+    fn attribute_tuple(&mut self, t: &CAttributeTuple, depth: usize) -> Result<(), PrintError> {
         let members = t
             .members
             .iter()
@@ -180,20 +189,27 @@ impl Printer {
         // (',' c_primitive_tuple)*`); emit a trailing comma on all but the last.
         let last = t.tuples.as_ref().map_or(0, Vec::len).saturating_sub(1);
         for (idx, row) in t.tuples.iter().flatten().enumerate() {
-            self.tuple_row(row, depth + 1, idx != last);
+            self.tuple_row(row, depth + 1, idx != last)?;
         }
         self.line(depth, "}");
+        Ok(())
     }
 
-    fn tuple_row(&mut self, row: &CPrimitiveTuple, depth: usize, comma: bool) {
+    fn tuple_row(
+        &mut self,
+        row: &CPrimitiveTuple,
+        depth: usize,
+        comma: bool,
+    ) -> Result<(), PrintError> {
         let items = row
             .members
             .iter()
-            .map(|m| format!("{{{}}}", primitive_inline(m)))
-            .collect::<Vec<_>>()
+            .map(|m| primitive_inline(m).map(|value| format!("{{{value}}}")))
+            .collect::<Result<Vec<_>, _>>()?
             .join(", ");
         let sep = if comma { "," } else { "" };
         self.line(depth, &format!("[{items}]{sep}"));
+        Ok(())
     }
 
     fn archetype_root(
@@ -232,7 +248,7 @@ impl Printer {
             self.attribute(a, depth + 1)?;
         }
         for t in r.attribute_tuples.iter().flatten() {
-            self.attribute_tuple(t, depth + 1);
+            self.attribute_tuple(t, depth + 1)?;
         }
         self.line(depth, "}");
         Ok(())
@@ -392,8 +408,12 @@ pub(super) fn cstring_inline(c: &CString) -> String {
 /// The inline value text of a primitive constraint (`55`, `|0..100|`,
 /// `"x", "y"; "z"`, `yyyy-mm-??`, `[ac1]`, …) — the body a `matches { … }`
 /// wraps. Mirrors `cadl2_primitives.g4`.
-pub(super) fn primitive_inline(prim: &CPrimitiveObject) -> String {
-    match prim {
+///
+/// # Errors
+/// [`PrintError::TerminologyConstraint`] for a terminology code with no ADL2
+/// spelling.
+pub(super) fn primitive_inline(prim: &CPrimitiveObject) -> Result<String, PrintError> {
+    Ok(match prim {
         CPrimitiveObject::CBoolean(c) => {
             let mut s = c
                 .constraint
@@ -445,34 +465,68 @@ pub(super) fn primitive_inline(prim: &CPrimitiveObject) -> String {
             c.constraint.as_deref().unwrap_or_default(),
             c.assumed_value.as_ref().map(|v| v.value.as_str()),
         ),
-        CPrimitiveObject::CTerminologyCode(c) => terminology_code_inline(c),
-    }
+        CPrimitiveObject::CTerminologyCode(c) => terminology_code_inline(c)?,
+    })
 }
 
 /// The inline `[ac…]` / `required [at…; at…]` body of a `C_TERMINOLOGY_CODE`.
-fn terminology_code_inline(c: &CTerminologyCode) -> String {
+///
+/// # Errors
+/// [`PrintError::TerminologyConstraint`] when the constraint is no at- or
+/// ac-code with an optional `@terminology`, or the assumed value no at-code.
+fn terminology_code_inline(c: &CTerminologyCode) -> Result<String, PrintError> {
     // A fully unconstrained terminology code renders as nothing — the caller
     // prints the bare (any-allowed) node instead of an unparseable `{[]}`.
     if c.constraint.is_empty() && c.assumed_value.is_none() && c.constraint_status.is_none() {
-        return String::new();
+        return Ok(String::new());
+    }
+    let assumed = c.assumed_value.as_ref().map(|a| a.code_string.as_str());
+    // NOTE: ADL2 `master04.5-cadl_primitive_types.adoc` §Formal Terminology Constraint
+    // and §Operational Binding Constraints spell only `[atN]`, `[acN]`, `[acN; atN]`, `[xxN@t]`.
+    if !is_term_constraint(&c.constraint) || assumed.is_some_and(|a| !is_at_code(a)) {
+        return Err(PrintError::TerminologyConstraint {
+            node_id: c.node_id.clone(),
+            constraint: c.constraint.clone(),
+            assumed_value: assumed.map(str::to_owned),
+        });
     }
     let mut s = String::new();
     if let Some(status) = &c.constraint_status {
         s.push_str(strength_keyword(*status));
         s.push(' ');
     }
-    let _ = write!(s, "[{}]", c.constraint);
-    if let Some(assumed) = &c.assumed_value {
-        // A `[ac…; at…]` assumed value re-uses the bracket form.
-        let inner = format!("{}; {}", c.constraint, assumed.code_string);
-        s = String::new();
-        if let Some(status) = &c.constraint_status {
-            s.push_str(strength_keyword(*status));
-            s.push(' ');
-        }
-        let _ = write!(s, "[{inner}]");
-    }
-    s
+    let _ = match assumed {
+        Some(at) => write!(s, "[{}; {at}]", c.constraint),
+        None => write!(s, "[{}]", c.constraint),
+    };
+    Ok(s)
+}
+
+/// True for an at- or ac-code, optionally followed by the `@terminology`
+/// of an operational binding.
+fn is_term_constraint(constraint: &str) -> bool {
+    let (code, terminology) = match constraint.split_once('@') {
+        Some((code, terminology)) => (code, Some(terminology)),
+        None => (constraint, None),
+    };
+    let code_ok =
+        parse_code(code).is_some_and(|c| matches!(c.prefix, CodePrefix::At | CodePrefix::Ac));
+    code_ok && terminology.is_none_or(is_identifier)
+}
+
+/// True for an at-code (`AT_CODE` of the cADL lexer).
+fn is_at_code(code: &str) -> bool {
+    parse_code(code).is_some_and(|c| c.prefix == CodePrefix::At)
+}
+
+/// True for a cADL identifier (`ALPHA_UC_ID` or `ALPHA_LC_ID`), the token the
+/// parser reads after `@`.
+fn is_identifier(s: &str) -> bool {
+    let mut chars = s.chars();
+    chars
+        .next()
+        .is_some_and(|first| first.is_ascii_alphabetic())
+        && chars.all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
 }
 
 /// The binding-strength keyword of a `CONSTRAINT_STATUS`.

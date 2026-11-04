@@ -127,27 +127,31 @@ fn expression_str(e: &Expression) -> Result<String, PrintError> {
             let cond = expression_str(&fa.condition.expression)?;
             format!("for_all $x : {collection} | {cond}")
         }
-        Expression::ExprConstraint(c) => constraint_leaf_str(c),
+        Expression::ExprConstraint(c) => constraint_leaf_str(c)?,
     })
 }
 
 /// The RHS of a `matches` operator: the cADL primitive/regex, wrapped in braces.
 fn constraint_rhs(e: &Expression) -> Result<String, PrintError> {
     match e {
-        Expression::ExprConstraint(c) => Ok(constraint_leaf_str(c)),
+        Expression::ExprConstraint(c) => constraint_leaf_str(c),
         other => expression_str(other),
     }
 }
 
 /// A brace-wrapped constraint leaf: an inline primitive, or the archetype-id
 /// regex matcher of a slot assertion.
-fn constraint_leaf_str(c: &ExprConstraint) -> String {
-    match c {
-        ExprConstraint::ExprConstraint(d) => format!("{{{}}}", primitive_inline(&d.item)),
+///
+/// # Errors
+///
+/// Refuses a primitive with no ADL2 spelling ([`primitive_inline`]).
+fn constraint_leaf_str(c: &ExprConstraint) -> Result<String, PrintError> {
+    Ok(match c {
+        ExprConstraint::ExprConstraint(d) => format!("{{{}}}", primitive_inline(&d.item)?),
         // A C_STRING regex matcher (`master04.3` §Slots based on Lexical
         // Archetype Identifiers).
         ExprConstraint::ExprArchetypeIdConstraint(a) => format!("{{{}}}", cstring_inline(&a.item)),
-    }
+    })
 }
 
 /// The path text of a value reference (an archetype path or a named leaf).
@@ -194,7 +198,7 @@ fn expr_value_str(v: &ExprValue, target: &str) -> Result<String, PrintError> {
         ExprValue::ExprLiteral(l) => literal_str(&l.item),
         ExprValue::ExprValueRef(r) => value_ref_str(r)?,
         ExprValue::ExprVariableRef(v) => format!("${}", v.item.name),
-        ExprValue::ExprConstraint(c) => constraint_leaf_str(c),
+        ExprValue::ExprConstraint(c) => constraint_leaf_str(c)?,
         // NOTE: no released grammar spells EXTERNAL_QUERY — neither
         // `LANG/docs/BEL/masterAppA-syntax.adoc` nor
         // `AM/docs/ADL2/masterAppB-syntax_spec.adoc` has a production for it.
