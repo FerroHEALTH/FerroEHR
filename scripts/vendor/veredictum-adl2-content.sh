@@ -15,8 +15,8 @@
 set -euo pipefail
 
 REPO="Vernum-Projecten/Veredictum"
-TAG="v0.4.0"
-COMMIT="6a043b4612875939e9f30f7e23515866546d13df"
+TAG="v0.4.1"
+COMMIT="993447ca427ef92daa27771ee3929af4afceb563"
 DEST="$(cd "$(dirname "$0")/../.." && pwd)/corpus/veredictum/adl2-content"
 
 command -v gh >/dev/null 2>&1 || { echo "gh not found on PATH" >&2; exit 1; }
