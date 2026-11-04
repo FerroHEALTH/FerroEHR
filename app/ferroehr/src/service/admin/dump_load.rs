@@ -1649,7 +1649,6 @@ impl FerroEhrService {
         dump_repo::write::insert_audits(&mut tx, &record.audits, StoredAudit::Refuse).await?;
         dump_repo::write::insert_contributions(&mut tx, Some(ehr_id), &record.contributions)
             .await?;
-
         load_versions(&mut tx, &self.privacy, Some(ehr_id), record.versions).await?;
 
         // Once the version and contribution rows they reference exist: an

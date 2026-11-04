@@ -252,7 +252,7 @@ async fn write(
 
 /// Answers a dedicated `ITEM_TAG` update operation (`composition_tags_update`,
 /// `ehr_status_tags_update`, `{kind}_tags_update`): decodes the list body,
-/// replaces the target's list through [`write`], and answers `200` with the
+/// replaces the target's list through [`write()`], and answers `200` with the
 /// stored list on `Prefer: return=representation`, `204` when `Prefer` is
 /// missing or `return=minimal` (overview §Prefer, `person_tags_update.yaml`).
 ///
