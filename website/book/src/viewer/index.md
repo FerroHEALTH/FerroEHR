@@ -83,7 +83,7 @@ configuration and renders anyway, and the outage then surfaces on the login
 attempt instead of hiding the page. A username or password the CDR refuses
 brings you back to the sign-in card with the refusal under the password.
 
-![Sign in](img/login/login.png)
+![Sign in](img/login/sign-in.png)
 
 The viewer verifies the CDR and the OIDC issuer against the platform trust
 store and the extra certificate authorities its configuration names: a CDR or
