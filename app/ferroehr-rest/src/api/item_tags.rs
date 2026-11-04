@@ -17,7 +17,7 @@
 //! [`crate::overview::negotiate::decode::typed_json`] over `UpdateItemTag`.
 
 use axum::response::Response;
-use http::{HeaderMap, HeaderName};
+use http::{HeaderMap, HeaderName, StatusCode};
 
 use openehr_base::prelude::ObjectVersionId;
 use openehr_its::rest::generated::common::UpdateItemTag;
@@ -28,6 +28,7 @@ use ferroehr::service::demographic::types::PartyKind;
 
 use ferroehr::versioning::object_version_id::parse_uid_based_id;
 
+use crate::api::RequestParts;
 use crate::overview::error::RestError;
 use crate::overview::params::{
     H_ITEM_TAG, H_VERSION_ITEM_TAG, ItemTagHeaderEntry, emit_item_tag_header,
@@ -247,6 +248,32 @@ async fn write(
         }
         TagTarget::Party(kind) => state.backend().party_tags_update(kind, uid, tags).await?,
     })
+}
+
+/// Answers a dedicated `ITEM_TAG` update operation (`composition_tags_update`,
+/// `ehr_status_tags_update`, `{kind}_tags_update`): decodes the list body,
+/// replaces the target's list through [`write()`], and answers `200` with the
+/// stored list on `Prefer: return=representation`, `204` when `Prefer` is
+/// missing or `return=minimal` (overview §Prefer, `person_tags_update.yaml`).
+///
+/// # Errors
+/// The body rejections [`crate::overview::negotiate::decode::typed_json`]
+/// states, a `400` for a malformed `uid`, and the service refusals.
+pub(crate) async fn replace(
+    state: &AppState,
+    target: TagTarget,
+    uid: String,
+    parts: &RequestParts,
+) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let body = crate::overview::negotiate::decode::typed_json(h, &parts.body, "JSON array body")?;
+    let tags = write(state, target, uid, body).await?;
+    Ok(crate::overview::negotiate::prefer::write_collection(
+        h,
+        StatusCode::NO_CONTENT,
+        StatusCode::OK,
+        &openehr_its::json::to_canonical_value(&tags),
+    ))
 }
 
 /// Echoes stored `ITEM_TAG` lists onto a response: "Servers MAY include the

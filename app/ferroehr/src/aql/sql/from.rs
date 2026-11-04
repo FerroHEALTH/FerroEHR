@@ -1010,26 +1010,8 @@ impl Builder<'_> {
                         // needs the child's own version spine + scope, which a
                         // by-value descendant satisfies too by sharing the
                         // parent's spine row.
-                        let voa = format!("xv{}", self.next_ctr());
-                        sub.from_as(VersionRow::Table, Alias::new(voa.as_str()));
-                        sub.and_where(hot(&voa, VersionRow::Tier));
-                        sub.and_where(col(alias, Node::VoId).eq(col(&voa, VersionRow::VoId)));
-                        sub.and_where(col(alias, Node::SysVersion).eq(content_key(&voa)));
-                        match scope {
-                            VersionScope::Latest => {
-                                bind_head(sub, &voa, true, self.gates, false);
-                            }
-                            VersionScope::All => {
-                                bind_head(sub, &voa, false, self.gates, false);
-                            }
-                            VersionScope::Predicate(_) => {
-                                return Err(SqlError::Unsupported(
-                                    "a version predicate on an OR/NOT-CONTAINS branch VO"
-                                        .to_owned(),
-                                )
-                                .into());
-                            }
-                        }
+                        let voa = self.branch_spine(sub, alias);
+                        self.bind_branch_scope(sub, &voa, scope)?;
                         sub.and_where(
                             strict_descendant(alias, parent).or(folder_items_exists(parent, alias)),
                         );
@@ -1038,59 +1020,62 @@ impl Builder<'_> {
                         // The child is its own versioned object: bind its
                         // version spine + scope (the Ehr arm's shape), then
                         // the reference edge over the anchor folder's subtree.
-                        let voa = format!("xv{}", self.next_ctr());
-                        sub.from_as(VersionRow::Table, Alias::new(voa.as_str()));
-                        sub.and_where(hot(&voa, VersionRow::Tier));
-                        sub.and_where(col(alias, Node::VoId).eq(col(&voa, VersionRow::VoId)));
-                        sub.and_where(col(alias, Node::SysVersion).eq(content_key(&voa)));
-                        match scope {
-                            VersionScope::Latest => {
-                                bind_head(sub, &voa, true, self.gates, false);
-                            }
-                            VersionScope::All => {
-                                bind_head(sub, &voa, false, self.gates, false);
-                            }
-                            VersionScope::Predicate(_) => {
-                                return Err(SqlError::Unsupported(
-                                    "a version predicate on an OR/NOT-CONTAINS branch VO"
-                                        .to_owned(),
-                                )
-                                .into());
-                            }
-                        }
+                        let voa = self.branch_spine(sub, alias);
+                        self.bind_branch_scope(sub, &voa, scope)?;
                         sub.and_where(folder_items_exists(parent, alias));
                     }
                 }
                 Ok(())
             }
             ExistsAnchor::Ehr(e) => {
-                let voa = format!("xv{}", self.next_ctr());
-                sub.from_as(VersionRow::Table, Alias::new(voa.as_str()));
-                sub.and_where(hot(&voa, VersionRow::Tier));
-                sub.and_where(col(alias, Node::VoId).eq(col(&voa, VersionRow::VoId)));
-                sub.and_where(col(alias, Node::SysVersion).eq(content_key(&voa)));
+                let voa = self.branch_spine(sub, alias);
                 sub.and_where(col(alias, Node::EhrId).eq(col(e, Ehr::Id)));
                 // Same version-spine mirror as the FROM path (see above):
                 // lets the planner bound the EXISTS by the EHR instead of the
                 // corpus. Identical semantics by construction.
                 sub.and_where(col(&voa, VersionRow::EhrId).eq(col(e, Ehr::Id)));
-                match scope {
-                    VersionScope::Latest => {
-                        bind_head(sub, &voa, true, self.gates, false);
-                    }
-                    VersionScope::All => {
-                        bind_head(sub, &voa, false, self.gates, false);
-                    }
-                    VersionScope::Predicate(_) => {
-                        return Err(SqlError::Unsupported(
-                            "a version predicate on an OR/NOT-CONTAINS branch VO".to_owned(),
-                        )
-                        .into());
-                    }
-                }
-                Ok(())
+                self.bind_branch_scope(sub, &voa, scope)
             }
         }
+    }
+
+    /// Joins the operand node's own version row into an `EXISTS` subquery: a
+    /// hot-tier row of the node's versioned object whose content key is the
+    /// node's `sys_version`, and returns that row's alias.
+    fn branch_spine(&mut self, sub: &mut SelectStatement, alias: &str) -> String {
+        let voa = format!("xv{}", self.next_ctr());
+        sub.from_as(VersionRow::Table, Alias::new(voa.as_str()));
+        sub.and_where(hot(&voa, VersionRow::Tier));
+        sub.and_where(col(alias, Node::VoId).eq(col(&voa, VersionRow::VoId)));
+        sub.and_where(col(alias, Node::SysVersion).eq(content_key(&voa)));
+        voa
+    }
+
+    /// Binds the version scope of an `OR`/`NOT CONTAINS` branch's own version
+    /// row `voa` through [`bind_head`]: the trunk head under `LATEST_VERSION`,
+    /// every version under `ALL_VERSIONS`.
+    ///
+    /// # Errors
+    /// [`SqlError::Unsupported`] for a version predicate, which a branch
+    /// versioned object cannot carry.
+    fn bind_branch_scope(
+        &self,
+        sub: &mut SelectStatement,
+        voa: &str,
+        scope: &VersionScope,
+    ) -> Result<(), AqlError> {
+        let latest = match scope {
+            VersionScope::Latest => true,
+            VersionScope::All => false,
+            VersionScope::Predicate(_) => {
+                return Err(SqlError::Unsupported(
+                    "a version predicate on an OR/NOT-CONTAINS branch VO".to_owned(),
+                )
+                .into());
+            }
+        };
+        bind_head(sub, voa, latest, self.gates, false);
+        Ok(())
     }
 
     /// Join the EHR's current `EHR_STATUS` versioned-object root node for an EHR

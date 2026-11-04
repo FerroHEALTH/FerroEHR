@@ -59,6 +59,10 @@ register over the 43 vendored BMM schemas) and `model_query.rs` (the
 model-query report pinned row-for-row) — on the decision-map argument: each
 "duplicated" run is a decided record, and compressing the rows hides the
 adjudication the file exists to carry.
+#4934 followed three splits out of excluded files with the files they made
+(`versioned_relationship.rs` from `relationship.rs`, `access_restriction.rs`
+from `marks.rs`, `xml_overrides.rs` from `overrides.rs`): the class is the
+content, so a file carved out of an excluded one keeps its entry.
 
 ## New Code = since the last release (#2657)
 

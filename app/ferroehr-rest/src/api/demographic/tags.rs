@@ -28,6 +28,7 @@ use openehr_its::rest::generated::demographic::{
 use ferroehr::versioning::object_version_id::parse_uid_based_id;
 
 use crate::api::RequestParts;
+use crate::api::item_tags;
 use crate::negotiate;
 use crate::overview::error::RestError;
 use crate::state::AppState;
@@ -76,7 +77,6 @@ pub(crate) async fn update(
     kind: PartyKind,
     parts: RequestParts,
 ) -> Result<Response, RestError> {
-    let h = &parts.headers;
     let uid_based_id = match kind {
         PartyKind::Agent => uid_based_id!(parts, AgentTagsUpdateParams),
         PartyKind::Group => uid_based_id!(parts, GroupTagsUpdateParams),
@@ -84,21 +84,13 @@ pub(crate) async fn update(
         PartyKind::Person => uid_based_id!(parts, PersonTagsUpdateParams),
         PartyKind::Role => uid_based_id!(parts, RoleTagsUpdateParams),
     };
-    let body = negotiate::decode::typed_json(h, &parts.body, "JSON array body")?;
-    let tags = state
-        .backend()
-        .party_tags_update(kind, parse_uid_based_id(&uid_based_id)?, body)
-        .await?;
-    // person_tags_update.yaml — 200 (200_PERSON_ItemTagList_updated)
-    // with the tag list on `Prefer: return=representation`; 204
-    // (204_updated) when `Prefer` is missing or `return=minimal`,
-    // with `Preference-Applied` declaring which.
-    Ok(negotiate::prefer::write_collection(
-        h,
-        StatusCode::NO_CONTENT,
-        StatusCode::OK,
-        &openehr_its::json::to_canonical_value(&tags),
-    ))
+    item_tags::replace(
+        &state,
+        item_tags::TagTarget::Party(kind),
+        uid_based_id,
+        &parts,
+    )
+    .await
 }
 
 /// The per-kind `ITEM_TAG` delete (`{kind}_tags_delete`).

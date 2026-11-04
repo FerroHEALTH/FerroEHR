@@ -11,7 +11,6 @@
 //! conformance-profile claim**.
 
 use axum::response::Response;
-use http::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -21,9 +20,7 @@ use openehr_its::rest::generated::demographic::{
 };
 
 use crate::api::{RequestParts, guarded_handler};
-use crate::negotiate;
 use crate::overview::error::RestError;
-use crate::overview::negotiate::resource::Tree;
 use crate::state::AppState;
 use ferroehr::versioning::object_version_id::parse_version_uid;
 
@@ -361,11 +358,7 @@ pub(crate) async fn version_get_at_time(
             p.version_at_time,
         )
         .await?;
-    let mut out = negotiate::body::respond(h, StatusCode::OK, &resp.body);
-    if let Some(meta) = resp.meta.as_ref() {
-        negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Demographic);
-    }
-    Ok(out)
+    Ok(super::respond_versioned(h, &resp))
 }
 
 /// The `party_relationship_version_get_by_id` operation.

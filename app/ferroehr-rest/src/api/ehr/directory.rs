@@ -49,10 +49,6 @@ pub(crate) async fn get_at_time(
 ) -> Result<Response, RestError> {
     // DIRECTORY is not templated, so it has no Simplified-Formats mapping.
     crate::formats::dispatch::guard_non_templated(&parts.headers)?;
-    let h = &parts.headers;
-    let q = parts.query.as_deref();
-    let ok = StatusCode::OK;
-    let no_content = StatusCode::NO_CONTENT;
     let p = parts.decode(
         DirectoryGetAtTimeParams::from_request,
         DirectoryGetAtTimeParams::PARAMS,
@@ -62,15 +58,32 @@ pub(crate) async fn get_at_time(
         .backend()
         .get_directory_at_time(ehr_id, p.version_at_time, p.path)
         .await?;
-    // A deleted directory is a 204
-    // (directory_get_at_time.yaml `204_because_deleted_at_time`).
+    serve_folder(&state, &parts, resp).await
+}
+
+/// Serves one directory read: a `204` for a directory deleted at the
+/// addressed point (`directory_get_at_time.yaml`
+/// `204_because_deleted_at_time`), otherwise the FOLDER with any requested
+/// multimedia expanded and the versioning headers its metadata carries.
+///
+/// # Errors
+/// The multimedia expansion's rejections.
+async fn serve_folder(
+    state: &AppState,
+    parts: &RequestParts,
+    mut resp: ServiceResponse,
+) -> Result<Response, RestError> {
     if resp.body.is_null() {
-        return Ok(negotiate::body::empty(no_content));
+        return Ok(negotiate::body::empty(StatusCode::NO_CONTENT));
     }
-    let mut resp = resp;
-    resp.body = super::expand_multimedia_if_requested(&state, q, resp.body).await?;
-    let mut out =
-        negotiate::body::respond_rm::<Folder>(h, ok, &resp.body, openehr_its::xml::LOCATABLE_ROOT);
+    resp.body =
+        super::expand_multimedia_if_requested(state, parts.query.as_deref(), resp.body).await?;
+    let mut out = negotiate::body::respond_rm::<Folder>(
+        &parts.headers,
+        StatusCode::OK,
+        &resp.body,
+        openehr_its::xml::LOCATABLE_ROOT,
+    );
     if let Some(meta) = &resp.meta {
         negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Ehr);
     }
@@ -265,10 +278,6 @@ pub(crate) async fn get_by_version_id(
 ) -> Result<Response, RestError> {
     // DIRECTORY is not templated, so it has no Simplified-Formats mapping.
     crate::formats::dispatch::guard_non_templated(&parts.headers)?;
-    let h = &parts.headers;
-    let q = parts.query.as_deref();
-    let ok = StatusCode::OK;
-    let no_content = StatusCode::NO_CONTENT;
     let p = parts.decode(
         DirectoryGetByVersionIdParams::from_request,
         DirectoryGetByVersionIdParams::PARAMS,
@@ -279,15 +288,5 @@ pub(crate) async fn get_by_version_id(
         .backend()
         .get_directory_at_version(ehr_id, ovid, p.path.as_deref())
         .await?;
-    if resp.body.is_null() {
-        return Ok(negotiate::body::empty(no_content));
-    }
-    let mut resp = resp;
-    resp.body = super::expand_multimedia_if_requested(&state, q, resp.body).await?;
-    let mut out =
-        negotiate::body::respond_rm::<Folder>(h, ok, &resp.body, openehr_its::xml::LOCATABLE_ROOT);
-    if let Some(meta) = &resp.meta {
-        negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Ehr);
-    }
-    Ok(out)
+    serve_folder(&state, &parts, resp).await
 }
