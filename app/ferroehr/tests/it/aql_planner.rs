@@ -2789,10 +2789,14 @@ fn a_composition_template_predicate_reads_the_version_column() {
         assert!(sql.contains(r#""v1"."template_id" = "#), "{q}");
         assert!(!sql.contains("jsonpath"), "{q}");
     }
-    // A projection still returns the stored leaf.
+    // A projection returns the leaf as the fragment serves it: since storage
+    // generation 5 a root's header leaves its fragment and is rebuilt with
+    // the version's template (#4904), so the read goes through the header
+    // rebuild rather than comparing the column.
     let sql =
         build_sql("SELECT c/archetype_details/template_id/value FROM EHR e CONTAINS COMPOSITION c");
-    assert!(!sql.contains(r#""v1"."template_id""#));
+    assert!(sql.contains("node_archetype_details("), "{sql}");
+    assert!(!sql.contains(r#""v1"."template_id" = "#), "{sql}");
 }
 
 // ── a lookup by an ELEMENT value (#4437) ─────────────────────────────────────

@@ -62,6 +62,10 @@ pub const NODE_VALUES: &str = include_str!("../../migrations/templates/node_valu
 /// encoding in (#4525).
 pub const NODE_HEADER: &str = include_str!("../../migrations/templates/node_header.sql.in");
 
+/// The node compact template: the four marker columns a row announces the
+/// keys it leaves out of its fragment with (#4904).
+pub const NODE_COMPACT: &str = include_str!("../../migrations/templates/node_compact.sql.in");
+
 /// The version-tree key template: `uq_version_tree` keyed with the object
 /// last, so the foreign-key lookup of a node row reads one version (#4340).
 pub const VERSION_TREE_KEY: &str =
@@ -197,6 +201,16 @@ mod tests {
             NODE_HEADER,
         ),
         ("migrations/party/0020_node_header.sql", PARTY, NODE_HEADER),
+        (
+            "migrations/clinical/0031_node_compact.sql",
+            CLINICAL,
+            NODE_COMPACT,
+        ),
+        (
+            "migrations/party/0024_node_compact.sql",
+            PARTY,
+            NODE_COMPACT,
+        ),
     ];
 
     /// Set to `1` to rewrite the committed files from the templates instead of

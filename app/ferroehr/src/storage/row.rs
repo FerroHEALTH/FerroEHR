@@ -19,7 +19,7 @@ use serde_json::Value;
 
 /// One decomposed `node` row to write (content columns only — the storage
 /// context `vo_id`/`sys_version`/`ehr_id` is added by
-/// [`crate::storage::node_repo::write_nodes`]).
+/// [`crate::storage::node_write::write_nodes`]).
 ///
 /// Carries the full set of promoted query columns (`rm_type`, `archetype`,
 /// `arch_*`, `name`, `name_code`, `name_terminology`) alongside the nested-set
@@ -69,7 +69,7 @@ pub struct NodeRow {
     /// The raw promoted-leaf text for this row, aligned to
     /// [`crate::storage::promoted::PROMOTED_LEAVES`] (entry `i` ↔ index `i`); `Some` only
     /// on a versioned-object root whose leaf is present, `None` elsewhere.
-    /// [`crate::storage::node_repo::write_nodes`] converts and writes each into
+    /// [`crate::storage::node_write::write_nodes`] converts and writes each into
     /// its promoted column. No openEHR spec governs promoted columns — our own
     /// storage design.
     pub promoted: Vec<Option<String>>,

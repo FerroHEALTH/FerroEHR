@@ -806,10 +806,16 @@ async fn a_protected_identifier_never_reaches_the_versioned_body() {
 
     // …nor the decomposed node rows, which are the same content a second time.
     let nodes: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM party.node WHERE vo_id = $1 \
-         AND ext.node_fragment(data, rm_type, archetype, name, name_code, name_terminology, \
-             value_type, value_num, value_text, value_code, value_terminology, rm_version, \
-             language, encoding)::text LIKE $2",
+        "SELECT count(*) FROM party.node n \
+         JOIN party.version v ON v.vo_id = n.vo_id AND v.sys_version = n.sys_version \
+         WHERE n.vo_id = $1 \
+         AND ext.node_fragment(n.data, n.rm_type, n.archetype, n.name, n.name_code, \
+             n.name_terminology, n.value_type, n.value_num, n.value_text, n.value_code, \
+             n.value_terminology, n.rm_version, n.language, n.encoding, n.origin_compact, \
+             n.time_compact, n.party_self, n.uid_derived, \
+             ext.version_uid(v.vo_id, v.creating_system_id, v.trunk_version, \
+             v.branch_number, v.branch_version), \
+                CASE WHEN n.num = 0 THEN v.template_id END)::text LIKE $2",
     )
     .bind(vo_id)
     .bind(format!("%{SYNTHETIC_BSN}%"))

@@ -47,8 +47,12 @@ module.**
   aliasing, no synthetic fields — of which a row stores only what its columns
   do not hold: `storage::slim` writes it, typed ELEMENT value columns hold the
   common value shapes, the header columns `rm_version`, `language` and
-  `encoding` hold a non-root row's archetype header and codes, and every reader goes through `ext.node_fragment` or the
-  AQL emitter's `fragment_source`, never bare `node.data`). `version`, `node` and `vo_attestation` are
+  `encoding` hold a row's archetype header and codes (the root's with its
+  version's `template_id`), the markers `origin_compact`, `time_compact`,
+  `party_self` and `uid_derived` say which key a row left out beyond those
+  (`storage::compact`, generation 5), and every reader goes through `ext.node_fragment` or the
+  AQL emitter's `fragment_source`, never bare `node.data`; a root row is read
+  with its `version` row, which its uid and template come back from). `version`, `node` and `vo_attestation` are
   partitioned `BY LIST (tier)` with `hot`/`cold` partitions, so archiving is
   `UPDATE … SET tier = 'cold'` and the foreign keys carry the referencing rows
   across with `ON UPDATE CASCADE`; there are no mirror tables and no `*_all`

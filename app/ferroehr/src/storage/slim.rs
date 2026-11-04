@@ -8,13 +8,17 @@
 //! (`rm_type`), a lowercase `archetype_node_id` (`archetype`), a plain or
 //! simply coded `name` (`name`, `name_code`, `name_terminology`), and on an
 //! `ELEMENT` a `value` of one of the common data value shapes, which the typed
-//! value columns hold instead. Below the root, the `archetype_details` and
+//! value columns hold instead. The `archetype_details` and
 //! `archetype_node_id` an archetype root repeats, and the `language` and
-//! `encoding` every entry repeats, move to the [`Header`] columns. [`slim`]
-//! removes exactly those keys, only when the columns rebuild them byte for
-//! byte, and keeps everything else verbatim; [`rebuild`] and its SQL twins
-//! `ext.node_name`, `ext.node_value` and `ext.node_fragment` put the removed
-//! keys back on read. A fragment with nothing left is stored as SQL `NULL`.
+//! `encoding` every entry repeats, move to the [`Header`] columns, the root's
+//! template coming back from its version row. A plain `DV_DATE_TIME` `origin`
+//! or `time`, a bare `PARTY_SELF` `subject` and the root's `uid`, which is
+//! the version's `OBJECT_VERSION_ID`, leave under the [`Compact`] markers.
+//! [`slim`] removes exactly those keys, only when the columns rebuild them
+//! byte for byte, and keeps everything else verbatim; [`rebuild`] and its
+//! SQL twins `ext.node_name`, `ext.node_value` and `ext.node_fragment` put
+//! the removed keys back on read. A fragment with nothing left is stored as
+//! SQL `NULL`.
 //!
 //! No openEHR spec governs storage layout: our own design (RM common
 //! `master06-change_control_package.adoc` §Overview admits any physical
@@ -28,6 +32,7 @@
 
 use serde_json::{Map, Value};
 
+use crate::storage::compact::{Compact, RootIdentity};
 use crate::storage::header::{Header, code_phrase_of, restore, slim_header};
 
 /// An `ELEMENT.value` held in the typed value columns instead of the
@@ -66,8 +71,10 @@ pub struct Slim {
     pub data: Option<Value>,
     /// The `ELEMENT.value` the typed columns hold, if any.
     pub value: Option<TypedValue>,
-    /// The header keys the row's columns hold, empty on a root row.
+    /// The header keys the row's columns hold.
     pub header: Header,
+    /// The keys the row's markers stand for.
+    pub compact: Compact,
 }
 
 /// The data value types whose whole value is one string under `value`.
@@ -85,25 +92,24 @@ pub const STRING_VALUED: [&str; 7] = [
 /// rebuild.
 ///
 /// `rm_type` is the row's `rm_type` column (the fragment's `_type`), and
-/// `root` whether the row is the versioned object's root (`num = 0`), whose
-/// header keys stay in its fragment.
+/// `root` the version identity of the versioned object's root row
+/// (`num = 0`), whose `uid` and template the version row holds, or `None`
+/// below it.
 #[must_use]
-pub fn slim(rm_type: &str, root: bool, data: Value) -> Slim {
+pub fn slim(rm_type: &str, root: Option<&RootIdentity<'_>>, data: Value) -> Slim {
     let Value::Object(mut map) = data else {
         return Slim {
             data: Some(data),
             value: None,
             header: Header::default(),
+            compact: Compact::default(),
         };
     };
     if map.get("_type").and_then(Value::as_str) == Some(rm_type) {
         map.shift_remove("_type");
     }
-    let header = if root {
-        Header::default()
-    } else {
-        slim_header(&mut map)
-    };
+    let header = slim_header(&mut map, root);
+    let compact = crate::storage::compact::compact(&mut map, root);
     if map
         .get("archetype_node_id")
         .and_then(Value::as_str)
@@ -125,6 +131,7 @@ pub fn slim(rm_type: &str, root: bool, data: Value) -> Slim {
         data: (!map.is_empty()).then_some(Value::Object(map)),
         value,
         header,
+        compact,
     }
 }
 
@@ -148,6 +155,10 @@ pub struct Columns<'a> {
     pub language: Option<&'a str>,
     /// `encoding`, the code of the `encoding` the fragment omits.
     pub encoding: Option<&'a str>,
+    /// The four marker columns ([`Compact`]).
+    pub compact: Compact,
+    /// The version identity of a root row (`num = 0`), `None` below it.
+    pub root: Option<RootIdentity<'a>>,
 }
 
 /// The whole canonical fragment of a stored row: what it stores, with every
@@ -167,6 +178,11 @@ pub fn rebuild(
         Some(other) => return Some(other),
         None => Map::new(),
     };
+    let restored = crate::storage::compact::restore(
+        &mut map,
+        columns.compact,
+        columns.root.map(|root| root.version_uid),
+    );
     restore(
         &mut map,
         columns.archetype,
@@ -175,6 +191,8 @@ pub fn rebuild(
             language: columns.language.map(str::to_owned),
             encoding: columns.encoding.map(str::to_owned),
         },
+        columns.root.and_then(|root| root.template_id),
+        restored,
     );
     map.insert("_type".to_owned(), Value::from(columns.rm_type));
     if let (Some(archetype), false) = (columns.archetype, map.contains_key("archetype_node_id")) {
@@ -374,6 +392,24 @@ mod tests {
         archetyped: usize,
         language: usize,
         encoding: usize,
+        date_times: usize,
+        subjects: usize,
+        uids: usize,
+    }
+
+    /// The version identity the root of `composition` would be stored under:
+    /// the uid and template the example carries, so both leave when present.
+    fn identity(composition: &Value) -> (String, Option<String>) {
+        let uid = composition
+            .pointer("/uid/value")
+            .and_then(Value::as_str)
+            .unwrap_or("a::b::1")
+            .to_owned();
+        let template = composition
+            .pointer("/archetype_details/template_id/value")
+            .and_then(Value::as_str)
+            .map(str::to_owned);
+        (uid, template)
     }
 
     /// `value` with every object's keys in jsonb order, as PostgreSQL hands a
@@ -429,10 +465,26 @@ mod tests {
     /// Every row of `composition` rebuilds to the fragment the codec cut, and
     /// serializes with the keys in the order a read served before the header
     /// columns existed.
-    fn assert_round_trip(composition: Value, tally: &mut Tally) {
+    fn assert_round_trip(mut composition: Value, tally: &mut Tally) {
+        // The commit path stamps the version's uid into the root before the
+        // decomposition, so a corpus example without one gets the test's.
+        if let Some(root) = composition.as_object_mut()
+            && !root.contains_key("uid")
+        {
+            root.insert(
+                "uid".to_owned(),
+                json!({"_type": "OBJECT_VERSION_ID", "value": "a::b::1"}),
+            );
+        }
+        let (version_uid, template_id) = identity(&composition);
+        let identity = RootIdentity {
+            version_uid: &version_uid,
+            template_id: template_id.as_deref(),
+        };
         let rows = decompose(composition).expect("the composition decomposes");
         for row in &rows {
-            let stored = slim(&row.rm_type, row.num == 0, row.data.clone());
+            let root = (row.num == 0).then_some(&identity);
+            let stored = slim(&row.rm_type, root, row.data.clone());
             let columns = Columns {
                 rm_type: &row.rm_type,
                 archetype: row.archetype.as_deref(),
@@ -442,6 +494,8 @@ mod tests {
                 rm_version: stored.header.rm_version.as_deref(),
                 language: stored.header.language.as_deref(),
                 encoding: stored.header.encoding.as_deref(),
+                compact: stored.compact,
+                root: root.copied(),
             };
             let from_db = stored.data.as_ref().map(jsonb_ordered);
             let rebuilt = rebuild(from_db.clone(), &columns, stored.value.as_ref())
@@ -460,6 +514,10 @@ mod tests {
             tally.archetyped += usize::from(stored.header.rm_version.is_some());
             tally.language += usize::from(stored.header.language.is_some());
             tally.encoding += usize::from(stored.header.encoding.is_some());
+            tally.date_times +=
+                usize::from(stored.compact.origin) + usize::from(stored.compact.time);
+            tally.subjects += usize::from(stored.compact.party_self);
+            tally.uids += usize::from(stored.compact.uid_derived);
         }
     }
 
@@ -500,6 +558,9 @@ mod tests {
             archetyped,
             language,
             encoding,
+            date_times,
+            subjects,
+            uids,
         } = tally;
         assert!(
             empty * 4 > rows,
@@ -509,8 +570,9 @@ mod tests {
             typed * 10 > rows,
             "only {typed} of {rows} rows hold a typed value"
         );
-        // The CKM examples carry 625 non-root archetype roots, 19 of them with
-        // an id the recasing does not give back, and 270 entries.
+        // The CKM examples carry 625 archetype roots below the root, 19 of
+        // them with an id the recasing does not give back, their own roots,
+        // and 270 entries.
         assert!(
             archetyped >= 600,
             "only {archetyped} archetype headers moved"
@@ -519,6 +581,12 @@ mod tests {
             language >= 270 && encoding >= 270,
             "{language} languages, {encoding} encodings"
         );
+        // Every entry names its subject, and every history and event its time.
+        assert!(
+            subjects >= 200 && date_times >= 200,
+            "{subjects} bare subjects, {date_times} plain date-times"
+        );
+        assert!(uids > 0, "no root uid left with its version");
     }
 
     #[test]
@@ -546,7 +614,7 @@ mod tests {
     fn the_keys_the_columns_hold_are_left_out() {
         let stored = slim(
             "ELEMENT",
-            false,
+            None,
             json!({"_type": "ELEMENT", "archetype_node_id": "at0004",
                 "name": {"_type": "DV_TEXT", "value": "Systolic"},
                 "value": {"_type": "DV_QUANTITY", "magnitude": 120.0, "units": "mm[Hg]"}}),
@@ -574,7 +642,7 @@ mod tests {
             "name": {"_type": "DV_TEXT", "value": "x", "mappings": []},
             "value": {"_type": "DV_QUANTITY", "magnitude": 1, "units": "1", "precision": 0},
             "null_flavour": {"_type": "DV_CODED_TEXT", "value": "unknown"}});
-        let stored = slim("ELEMENT", false, fragment.clone());
+        let stored = slim("ELEMENT", None, fragment.clone());
         let mut expected = fragment;
         expected.as_object_mut().map(|m| m.shift_remove("_type"));
         assert_eq!(stored.data, Some(expected));
@@ -585,7 +653,7 @@ mod tests {
     fn a_value_off_an_element_is_never_typed() {
         let stored = slim(
             "CLUSTER",
-            false,
+            None,
             json!({"_type": "CLUSTER", "value": {"_type": "DV_TEXT", "value": "x"}}),
         );
         assert_eq!(stored.value, None);
@@ -599,14 +667,14 @@ mod tests {
     fn a_boolean_and_an_ordinal_are_typed() {
         let flag = slim(
             "ELEMENT",
-            false,
+            None,
             json!({"_type": "ELEMENT",
             "value": {"_type": "DV_BOOLEAN", "value": false}}),
         );
         assert_eq!(flag.value.map(|v| v.text), Some(Some("false".to_owned())));
         let ordinal = slim(
             "ELEMENT",
-            false,
+            None,
             json!({"_type": "ELEMENT",
             "value": {"_type": "DV_ORDINAL", "value": 2, "symbol": {"_type": "DV_CODED_TEXT",
                 "value": "moderate", "defining_code": {"_type": "CODE_PHRASE",

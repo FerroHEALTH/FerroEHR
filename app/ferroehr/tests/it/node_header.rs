@@ -73,10 +73,15 @@ async fn served(pool: &PgPool, svc: &FerroEhrService) -> Served {
         .map(|row| serde_json::to_string(&row.data).expect("serializable"))
         .collect();
     let sql = sqlx::query_scalar(
-        "SELECT ext.node_fragment(data, rm_type, archetype, name, name_code, name_terminology, \
-                value_type, value_num, value_text, value_code, value_terminology, rm_version, \
-                language, encoding)::text \
-           FROM node ORDER BY vo_id, sys_version, num",
+        "SELECT ext.node_fragment(n.data, n.rm_type, n.archetype, n.name, n.name_code, \
+                n.name_terminology, n.value_type, n.value_num, n.value_text, n.value_code, \
+                n.value_terminology, n.rm_version, n.language, n.encoding, n.origin_compact, \
+                n.time_compact, n.party_self, n.uid_derived, \
+                ext.version_uid(v.vo_id, v.creating_system_id, v.trunk_version, \
+                v.branch_number, v.branch_version), \
+                CASE WHEN n.num = 0 THEN v.template_id END)::text \
+           FROM node n JOIN version v ON v.vo_id = n.vo_id AND v.sys_version = n.sys_version \
+           ORDER BY n.vo_id, n.sys_version, n.num",
     )
     .fetch_all(pool)
     .await
@@ -125,7 +130,10 @@ async fn header_columns_serve_the_bytes_the_whole_fragment_served() {
         "the seed must exercise the header columns: {archetyped} archetype headers, \
          {languages} languages, {encodings} encodings"
     );
-    assert_eq!(at_root, 0, "a root row keeps its header in its fragment");
+    assert!(
+        at_root > 0,
+        "a root row keeps its header in its columns too"
+    );
 
     let now = served(&pool, &svc).await;
     for (query, rows) in QUERIES.iter().zip(&now.aql) {
@@ -136,18 +144,21 @@ async fn header_columns_serve_the_bytes_the_whole_fragment_served() {
     }
 
     // The shape the writer stored before the header columns: the keys in
-    // `data`, the columns empty.
+    // `data`, the columns empty; a root's header names the version's template.
     let rewritten = sqlx::query(
-        "UPDATE node SET data = COALESCE(data, '{}'::jsonb) \
-             || CASE WHEN rm_version IS NULL THEN '{}'::jsonb ELSE jsonb_build_object( \
-                  'archetype_details', ext.node_archetype_details(archetype, rm_version), \
-                  'archetype_node_id', ext.node_archetype_node_id(archetype, rm_version)) END \
-             || CASE WHEN language IS NULL THEN '{}'::jsonb ELSE jsonb_build_object( \
-                  'language', ext.node_code_phrase('ISO_639-1', language)) END \
-             || CASE WHEN encoding IS NULL THEN '{}'::jsonb ELSE jsonb_build_object( \
-                  'encoding', ext.node_code_phrase('IANA_character-sets', encoding)) END, \
+        "UPDATE node n SET data = COALESCE(n.data, '{}'::jsonb) \
+             || CASE WHEN n.rm_version IS NULL THEN '{}'::jsonb ELSE jsonb_build_object( \
+                  'archetype_details', ext.node_archetype_details(n.archetype, n.rm_version, \
+                      CASE WHEN n.num = 0 THEN v.template_id END), \
+                  'archetype_node_id', ext.node_archetype_node_id(n.archetype, n.rm_version)) END \
+             || CASE WHEN n.language IS NULL THEN '{}'::jsonb ELSE jsonb_build_object( \
+                  'language', ext.node_code_phrase('ISO_639-1', n.language)) END \
+             || CASE WHEN n.encoding IS NULL THEN '{}'::jsonb ELSE jsonb_build_object( \
+                  'encoding', ext.node_code_phrase('IANA_character-sets', n.encoding)) END, \
              rm_version = NULL, language = NULL, encoding = NULL \
-         WHERE rm_version IS NOT NULL OR language IS NOT NULL OR encoding IS NOT NULL",
+         FROM version v \
+         WHERE v.vo_id = n.vo_id AND v.sys_version = n.sys_version \
+           AND (n.rm_version IS NOT NULL OR n.language IS NOT NULL OR n.encoding IS NOT NULL)",
     )
     .execute(&pool)
     .await
