@@ -55,7 +55,9 @@ ALTER TABLE vo_head ADD CONSTRAINT ck_vo_head_trunk_head_content_key
 
 COMMENT ON COLUMN vo_head.trunk_head_content_key IS 'The trunk head''s version.content_key: the sys_version whose node rows hold the head''s content. A LATEST_VERSION read joins the node rows on it. Our own storage design.';
 
--- Half as many distinct objects as version rows: two versions an object.
+-- NOTE: a vo_id-only version probe must never be priced at one row, or the
+-- planner reaches a shared tree through every version of its chain (#4944);
+-- no specification governs planner statistics: our own design.
 ALTER TABLE version_hot ALTER COLUMN vo_id SET (n_distinct = -0.5);
 ALTER TABLE version_cold ALTER COLUMN vo_id SET (n_distinct = -0.5);
 

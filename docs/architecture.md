@@ -121,9 +121,13 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   marks. `trunk_head_content_key` is the trunk head's `content_key`, and a
   `LATEST_VERSION` read joins the node rows on it, so a node row an
   identical-content chain shares links to the one head and reaches the
-  version row through the head's key; the version partitions declare a
-  `vo_id` distinct count of half their rows, so the planner never prices a
-  probe of one object's versions by `vo_id` alone at one row (#4944). None of the columns a commit changes appears in an index, which is the
+  version row through the head's key. The version partitions declare a
+  `vo_id` distinct count of half their rows (`n_distinct = -0.5`, PostgreSQL
+  18, ALTER TABLE), so the planner never prices a probe of one object's
+  versions by `vo_id` alone at one row: the head join alone left that probe
+  open, because the node's, the head's and the version's `vo_id` are one
+  equivalence class (#4944). No specification governs planner statistics:
+  our own design. None of the columns a commit changes appears in an index, which is the
   condition PostgreSQL 18 §"Heap-Only Tuples (HOT)" states for a heap-only
   update; `fillfactor = 90` reserves the same-page room.
 - **`node`** — one unified table for all versioned-object content
