@@ -33,9 +33,8 @@ use crate::service::write::{Mode, Resolved};
 use crate::storage::version_repo::read::VersionAt;
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
-use crate::versioning::change::{
-    Change, Committed, Write, ensure_preceding, lock_current, tip_uid,
-};
+use crate::versioning::change::precondition::{ensure_preceding, lock_current, tip_uid};
+use crate::versioning::change::{Change, Committed, Write};
 use crate::versioning::object_version_id::{TreeId, VersionIdError, components, parse_tree_id};
 use crate::versioning::read::VersionRead;
 use crate::versioning::wire::{revision_history, versioned_object};
@@ -489,7 +488,7 @@ impl FerroEhrService {
             // is_modifiable = False forbids content writes (RM ehr master04 §EHR
             // Active Status), after the deleted 404 and before the template 422.
             if pre.is_modifiable == Some(false) {
-                return Err(crate::versioning::change::not_modifiable_error(ehr_id));
+                return Err(crate::versioning::change::precondition::not_modifiable_error(ehr_id));
             }
             // An update declaring a *different* template than the version it
             // supersedes is a semantic 422.
@@ -659,7 +658,7 @@ impl FerroEhrService {
         // Active Status), after the already-deleted 400 and before the
         // stale-precondition 409.
         if !current.is_modifiable {
-            return Err(crate::versioning::change::not_modifiable_error(ehr_id));
+            return Err(crate::versioning::change::precondition::not_modifiable_error(ehr_id));
         }
         self.commit_one(&self.pool, Mode::Transaction, async move |tx| {
             let placement = lock_current(tx, Some(ehr_id), vo_id, Kind::Composition).await?;
@@ -741,7 +740,7 @@ impl FerroEhrService {
         // `None` (no current EHR_STATUS) is treated as modifiable, so the guard
         // never spuriously blocks — identical to `ensure_content_writable`.
         if is_modifiable == Some(false) {
-            return Err(crate::versioning::change::not_modifiable_error(ehr_id));
+            return Err(crate::versioning::change::precondition::not_modifiable_error(ehr_id));
         }
         Ok(now)
     }

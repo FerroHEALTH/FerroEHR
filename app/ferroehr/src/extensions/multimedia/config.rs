@@ -23,7 +23,7 @@ use ferrohealth_secret::secret::Secret;
 use ferrohealth_secret::secret_url::SecretUrl;
 use serde::{Deserialize, Serialize};
 
-use crate::config::mask_if_url;
+use crate::config::redact::mask_if_url;
 use url::Url;
 
 /// DV_MULTIMEDIA externalization settings.

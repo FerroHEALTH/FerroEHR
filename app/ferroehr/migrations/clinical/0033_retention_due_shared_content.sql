@@ -8,9 +8,8 @@
 -- content-carrying version, read off that version's root node row. Since
 -- 0032 a version whose content equalled its predecessor's holds no node rows
 -- of its own and names the version whose rows it reads in
--- `content_sys_version`, so the join reaches the root through
--- coalesce(content_sys_version, sys_version), as every other read of a
--- version's rows does. The view is otherwise the 0020 text, replaced in
+-- `content_sys_version`, so the join reaches the root through the stored
+-- `content_key`, as every other read of a version's rows does. The view is otherwise the 0020 text, replaced in
 -- place so the grants 0010 gave it stay (PostgreSQL 18, CREATE VIEW,
 -- "CREATE OR REPLACE VIEW", https://www.postgresql.org/docs/18/sql-createview.html).
 --
@@ -42,7 +41,7 @@ CREATE OR REPLACE VIEW retention_due WITH (security_invoker = true) AS
                 FROM version v
                 LEFT JOIN node n
                   ON n.tier = v.tier AND n.vo_id = v.vo_id
-                 AND n.sys_version = coalesce(v.content_sys_version, v.sys_version) AND n.num = 0
+                 AND n.sys_version = v.content_key AND n.num = 0
                WHERE v.vo_id = h.vo_id AND v.lifecycle_state <> '523'
                ORDER BY v.sys_version DESC
                LIMIT 1

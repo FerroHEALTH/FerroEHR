@@ -155,11 +155,12 @@ pub enum VersionRow {
     CommittedAt,
     /// `body` — the canonical openEHR JSON bytes, verbatim.
     Body,
-    /// `content_sys_version` — the version in the same object whose node rows
-    /// hold this version's content, `NULL` when its own rows do; every join
-    /// from a version row to its node rows reads
-    /// `coalesce(content_sys_version, sys_version)` (#4415).
-    ContentSysVersion,
+    /// `content_key` — the version in the same object whose node rows hold
+    /// this version's content: `content_sys_version` where the content
+    /// equalled the preceding tip's at commit, else `sys_version`, stored by
+    /// the generated column; every join from a version row to its node rows
+    /// reads it (#4415).
+    ContentKey,
 }
 
 /// `vo_head` — the one mutable row per versioned object.

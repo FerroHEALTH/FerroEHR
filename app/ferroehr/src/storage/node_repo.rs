@@ -48,11 +48,11 @@ const ROOT_COLUMNS: &str = "CASE WHEN n.num = 0 THEN ext.version_uid(v.vo_id, \
 
 /// The join from a version row `v` to the node rows that hold its content:
 /// its own rows, or the rows of the version `content_sys_version` names when
-/// its content equalled its predecessor's at commit (#4415). Every read of a
-/// version's rows goes through this key, never through `v.sys_version`.
-pub(crate) const CONTENT_ROWS_JOIN: &str = "JOIN node n ON n.tier = v.tier AND n.vo_id = v.vo_id \
-                                           AND n.sys_version = COALESCE(v.content_sys_version, \
-                                                                        v.sys_version)";
+/// its content equalled its predecessor's at commit (#4415), the stored
+/// `content_key`. Every read of a version's rows goes through this key, never
+/// through `v.sys_version`.
+pub(crate) const CONTENT_ROWS_JOIN: &str =
+    "JOIN node n ON n.tier = v.tier AND n.vo_id = v.vo_id AND n.sys_version = v.content_key";
 
 /// The lean read-row statement: **only** the five columns
 /// [`crate::storage::codec::reassemble`] and the nested-set contract need, the

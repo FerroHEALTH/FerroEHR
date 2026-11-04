@@ -19,7 +19,7 @@
 )]
 
 use axum::Json;
-use ferroehr::config::mask_if_url;
+use ferroehr::config::redact::mask_if_url;
 use serde_json::Value;
 
 /// Substrings (case-insensitive) that mark a JSON key as naming a secret value.

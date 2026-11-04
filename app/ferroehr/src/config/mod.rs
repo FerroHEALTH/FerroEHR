@@ -31,6 +31,7 @@ pub mod authz;
 pub mod deployment;
 pub mod management;
 pub mod profile;
+pub mod redact;
 pub mod rest;
 pub mod smart;
 pub mod versioning;
@@ -39,7 +40,6 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use ferrohealth_config::loader::Loaded;
-use ferrohealth_secret::secret_url::RedactedUrl;
 use serde::{Deserialize, Serialize};
 
 use crate::config::loader::{ConfigError, ConfigErrors};
@@ -726,7 +726,7 @@ impl FerroEhrConfig {
     /// # Errors
     /// [`ConfigError`] if the tree cannot be serialized to TOML.
     pub fn to_redacted_table(&self) -> Result<toml::Table, ConfigError> {
-        toml::Table::try_from(without_nulls(self.to_redacted_json()?))
+        toml::Table::try_from(redact::without_nulls(self.to_redacted_json()?))
             .map_err(|e| ConfigError::semantic(format!("rendering config as TOML: {e}")))
     }
 
@@ -748,7 +748,7 @@ impl FerroEhrConfig {
     /// the `redacted_json_masks_every_secret_field` test enumerates the current
     /// secret set as the standing backstop. On top of the types, every string
     /// leaf of the tree that holds a URL passes `ferrohealth-secret`'s
-    /// [`RedactedUrl`], so a URL in a key
+    /// [`redact::mask_if_url`], so a URL in a key
     /// that is not typed `SecretUrl`, or in a configuration no validation has
     /// run over, is masked too. `[auth]` is the `ferrohealth-smart` section,
     /// whose serialization writes each Basic password hash as `***`.
@@ -760,48 +760,8 @@ impl FerroEhrConfig {
     pub fn to_redacted_json(&self) -> Result<serde_json::Value, ConfigError> {
         let mut tree = serde_json::to_value(self)
             .map_err(|e| ConfigError::semantic(format!("rendering config as JSON: {e}")))?;
-        mask_url_userinfo(&mut tree);
+        redact::mask_url_userinfo(&mut tree);
         Ok(tree)
-    }
-}
-
-/// Returns `text` masked by `ferrohealth-secret`'s [`RedactedUrl`] when it
-/// holds `://`, and as written otherwise: text without `://` has no userinfo
-/// to mask, where [`RedactedUrl`] would mask it whole.
-#[must_use]
-pub fn mask_if_url(text: &str) -> String {
-    if text.contains("://") {
-        RedactedUrl(text).to_string()
-    } else {
-        text.to_owned()
-    }
-}
-
-/// Masks every URL string in `tree`, recursively, by [`mask_if_url`].
-fn mask_url_userinfo(tree: &mut serde_json::Value) {
-    match tree {
-        serde_json::Value::String(text) => *text = mask_if_url(text),
-        serde_json::Value::Array(items) => items.iter_mut().for_each(mask_url_userinfo),
-        serde_json::Value::Object(members) => members.values_mut().for_each(mask_url_userinfo),
-        serde_json::Value::Null | serde_json::Value::Bool(_) | serde_json::Value::Number(_) => {}
-    }
-}
-
-/// Returns `tree` without its `null` object members, the unset keys a TOML
-/// rendering leaves out (TOML has no null value).
-fn without_nulls(tree: serde_json::Value) -> serde_json::Value {
-    match tree {
-        serde_json::Value::Object(members) => serde_json::Value::Object(
-            members
-                .into_iter()
-                .filter(|(_, value)| !value.is_null())
-                .map(|(key, value)| (key, without_nulls(value)))
-                .collect(),
-        ),
-        serde_json::Value::Array(items) => {
-            serde_json::Value::Array(items.into_iter().map(without_nulls).collect())
-        }
-        leaf => leaf,
     }
 }
 
@@ -1697,11 +1657,11 @@ mod tests {
     #[test]
     fn mask_if_url_masks_only_a_url() {
         assert_eq!(
-            mask_if_url("postgres://u:Qz7@db:5432/x?password=Qz7"),
+            redact::mask_if_url("postgres://u:Qz7@db:5432/x?password=Qz7"),
             "postgres://***@db:5432/x?***"
         );
         assert_eq!(
-            mask_if_url("s3.eu-west-1.amazonaws.com"),
+            redact::mask_if_url("s3.eu-west-1.amazonaws.com"),
             "s3.eu-west-1.amazonaws.com"
         );
     }

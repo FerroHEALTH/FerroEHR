@@ -103,8 +103,10 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   with the root `uid` removed, `version.content_digest`) writes its row, its
   audit, its contribution and its uid-stamped body as any other, and no node
   rows: `version.content_sys_version` names the version whose rows hold the
-  content, and every read of a version's rows joins `node` on
-  `coalesce(content_sys_version, sys_version)` (#4415), the root's `uid` and
+  content, and every read of a version's rows joins `node` on the stored
+  `version.content_key`, `coalesce(content_sys_version, sys_version)` kept
+  as a generated column so the planner joins on a plain column (#4415), the
+  root's `uid` and
   header coming back from the reading version's row. Nothing physical is
   ever deleted below the object, so a shared tree is never orphaned; the
   opt-in `[versioning] skip_identical_resend` answers an identical re-send

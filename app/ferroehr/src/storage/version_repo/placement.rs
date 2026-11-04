@@ -46,7 +46,7 @@ pub struct TipRow {
     /// written before the column existed, which is never shared.
     pub content_digest: Option<Vec<u8>>,
     /// The version whose node rows hold the tip's content: its own, or the
-    /// one it shares (`coalesce(content_sys_version, sys_version)`, #4415).
+    /// one it shares (`version.content_key`, #4415).
     pub content_key: i32,
     /// Whether this version is still the tip of its own lineage: no later
     /// commit ordinal exists under the same branch number (RM common master06
@@ -159,7 +159,7 @@ pub async fn next_placement(
                 thaw_cte!(),
                 "src AS (SELECT vo_id, ehr_id, kind, sys_version, trunk_version, branch_number, ",
                 "               branch_version, creating_system_id, lifecycle_state, committed_at, ",
-                "               content_digest, COALESCE(content_sys_version, sys_version) AS content_key ",
+                "               content_digest, content_key ",
                 "        FROM version WHERE vo_id = $1) ",
                 "SELECT o.next_ordinal, now() AS ts, tip.ehr_id, tip.kind, tip.sys_version, ",
                 "tip.trunk_version, tip.branch_number, tip.branch_version, ",
@@ -293,7 +293,7 @@ pub async fn update_placement(
         thaw_cte!(),
         "src AS (SELECT vo_id, ehr_id, kind, sys_version, trunk_version, branch_number, ",
         "               branch_version, creating_system_id, lifecycle_state, committed_at, ",
-        "               content_digest, COALESCE(content_sys_version, sys_version) AS content_key ",
+        "               content_digest, content_key ",
         "        FROM version WHERE vo_id = $1) ",
         "SELECT o.next_ordinal, now() AS ts, tip.ehr_id, tip.kind, tip.sys_version, ",
         "tip.trunk_version, tip.branch_number, tip.branch_version, ",

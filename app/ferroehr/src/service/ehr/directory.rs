@@ -41,7 +41,8 @@ use crate::service::write::{Mode, Resolved};
 use crate::storage::version_repo::read::VersionAt;
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
-use crate::versioning::change::{Change, Write, ensure_preceding, lock_current, tip_uid};
+use crate::versioning::change::precondition::{ensure_preceding, lock_current, tip_uid};
+use crate::versioning::change::{Change, Write};
 use crate::versioning::object_version_id::{TreeId, VersionIdError, components};
 
 use crate::service::datetime::parse_at_time;
@@ -251,7 +252,7 @@ impl FerroEhrService {
             // is_modifiable = False forbids content writes to the directory (RM
             // ehr master04 §EHR Active Status), after validate_folder's 422.
             if !is_modifiable {
-                return Err(crate::versioning::change::not_modifiable_error(ehr_id));
+                return Err(crate::versioning::change::precondition::not_modifiable_error(ehr_id));
             }
             Ok((resolved, folder))
         }
@@ -304,7 +305,9 @@ impl FerroEhrService {
                 // is_modifiable = False forbids content writes (RM ehr master04
                 // §EHR Active Status).
                 if !is_modifiable {
-                    return Err(crate::versioning::change::not_modifiable_error(ehr_id));
+                    return Err(
+                        crate::versioning::change::precondition::not_modifiable_error(ehr_id),
+                    );
                 }
                 // The committal request headers merge into the delete audit too
                 // (ITS-REST overview §"openehr-version and openehr-audit-details":

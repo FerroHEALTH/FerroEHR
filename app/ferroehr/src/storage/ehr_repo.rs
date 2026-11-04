@@ -130,8 +130,7 @@ pub async fn current_status_root(
          n.time_compact, n.party_self, n.uid_derived, \
          ext.version_uid(v.vo_id, v.creating_system_id, v.trunk_version, v.branch_number, \
          v.branch_version), v.template_id) FROM version v \
-         JOIN node n ON n.vo_id = v.vo_id \
-             AND n.sys_version = COALESCE(v.content_sys_version, v.sys_version) AND n.num = 0 \
+         JOIN node n ON n.vo_id = v.vo_id AND n.sys_version = v.content_key AND n.num = 0 \
          JOIN vo_head h ON h.vo_id = v.vo_id AND h.trunk_head_sys_version = v.sys_version \
          WHERE v.ehr_id = $1 AND v.kind = 'EHR_STATUS'",
     )
@@ -191,7 +190,7 @@ pub async fn ehrs_by_subject_ids(
          JOIN version v ON v.tier = h.tier AND v.vo_id = h.vo_id \
              AND v.sys_version = h.trunk_head_sys_version \
          JOIN node n ON n.tier = v.tier AND n.vo_id = v.vo_id \
-             AND n.sys_version = COALESCE(v.content_sys_version, v.sys_version) AND n.num = 0 \
+             AND n.sys_version = v.content_key AND n.num = 0 \
          WHERE e.subject_id = ANY($1) \
            AND ext.node_fragment(n.data, n.rm_type, n.archetype, n.name, n.name_code, \
                n.name_terminology, n.value_type, n.value_num, n.value_text, n.value_code, \
@@ -573,8 +572,7 @@ pub async fn live_folder_root_exists(
            SELECT 1 FROM ehr_folder f \
            JOIN version v ON v.vo_id = f.vo_id \
            JOIN vo_head h ON h.vo_id = v.vo_id AND h.trunk_head_sys_version = v.sys_version \
-           JOIN node n ON n.vo_id = v.vo_id \
-             AND n.sys_version = COALESCE(v.content_sys_version, v.sys_version) \
+           JOIN node n ON n.vo_id = v.vo_id AND n.sys_version = v.content_key \
              AND n.num = 0 \
            WHERE f.ehr_id = $1 AND v.lifecycle_state <> '523' \
              AND COALESCE(n.data->>'archetype_node_id', ext.node_archetype_node_id(n.archetype, n.rm_version)) = $2 \

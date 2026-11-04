@@ -43,7 +43,7 @@ module.**
   table (no validity interval, no close-out statement — validity is derived
   from `committed_at`; a version whose content equals the preceding tip's
   shares that tip's node rows through `content_sys_version`, so every
-  version-to-node join reads `coalesce(content_sys_version, sys_version)`,
+  version-to-node join reads the stored `content_key`,
   never `sys_version`, #4415), one mutable `vo_head` row per versioned object whose
   updated columns are in NO index so the per-commit UPDATE is heap-only, and
   one `node` table (nested-set interval index, canonical JSON fragments — no

@@ -11,13 +11,13 @@ use openehr_base::prelude::ObjectVersionId;
 use crate::error::ServiceError;
 use crate::ids::VoId;
 use crate::storage::version_repo::placement::TipRow;
-use crate::versioning::change::tip_uid;
+use crate::versioning::change::precondition::tip_uid;
 use crate::versioning::object_version_id::{
     TreeId, VersionIdError, expected_from_if_match, if_match_token,
 };
 
 /// A demographic write's version precondition, judged once against the tip
-/// the write locks (`versioning::change::lock_current`).
+/// the write locks (`versioning::change::precondition::lock_current`).
 ///
 /// The `If-Match` value arrives as a token: a full `OBJECT_VERSION_ID`, a
 /// bare `VERSION_TREE_ID` trunk number, or the RFC 9110 `*` wildcard. A
@@ -65,7 +65,10 @@ impl Precondition {
     /// # Errors
     /// [`ServiceError::VersionConflict`] on a mismatch.
     pub(super) fn check_full(&self, vo_id: VoId, tip: &TipRow) -> Result<(), ServiceError> {
-        crate::versioning::change::ensure_preceding(&tip_uid(vo_id, tip), self.full.as_ref())
+        crate::versioning::change::precondition::ensure_preceding(
+            &tip_uid(vo_id, tip),
+            self.full.as_ref(),
+        )
     }
 
     /// The version-tree half: a stale preceding version is a version
