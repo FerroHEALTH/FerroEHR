@@ -432,8 +432,8 @@ logged_query_parameters = []
 | `otlp.traces` | bool | `true` | Export FerroEHR's spans. |
 | `otlp.metrics` | bool | `true` | Push the metrics over OTLP beside the Prometheus pull surface. One meter provider feeds both. |
 | `otlp.sample_ratio` | float | `1.0` | The share of traces sampled (`0.1` is a common production start). A client's `traceparent` is never read: every request starts a trace of the server's own. |
-| `otlp.trust_roots_file` | path | unset | PEM trust roots the collector's certificate may chain to, beside the platform's. |
-| `otlp.client_identity_file` | path | unset | PEM client certificate chain and key, for mutual TLS with the collector. |
+| `otlp.trust_roots_file` | path | unset | PEM trust roots the collector's certificate may chain to, beside the platform's. Refused at boot beside an endpoint that is not `https://`, and when the file holds no PEM certificate. |
+| `otlp.client_identity_file` | path | unset | PEM client certificate chain and key, for mutual TLS with the collector. Refused at boot beside an endpoint that is not `https://`, and when the file lacks a PEM certificate or a PEM private key. |
 
 The `service.name` of every span and metric is `ferroehr`, and
 `service.version` is the release and its commit.
@@ -443,7 +443,9 @@ template, the status, the latency and the server's request id, never a body,
 the raw path or a header value. It records the `http.server.request.duration`
 histogram, scraped as `http_server_request_duration_seconds` with the
 `http_request_method`, `http_route`, `http_response_status_code` and
-`url_scheme` labels.
+`url_scheme` labels, and the `http.server.active_requests` counter of the
+requests in flight, scraped as `http_server_active_requests` with the
+`http_request_method` and `url_scheme` labels.
 
 > [!TIP]
 > The ASCII boot banner follows the rendering that is actually installed, not the

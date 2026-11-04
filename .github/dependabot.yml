@@ -12,8 +12,13 @@ updates:
     labels:
       - "dependencies"
       - "no-changelog"
+    # Daily, for the `ferrohealth-family` group below: a block's schedule is
+    # the schedule of every group in it, and the options reference allows one
+    # block per ecosystem and directory. The cooldown still holds every
+    # third-party crate for a week, so a day's run proposes a third-party bump
+    # no sooner than the weekly one did.
     schedule:
-      interval: "weekly"
+      interval: "daily"
     # A delay between a release being published and this bot proposing it, so a
     # compromised or yanked release has a window to be caught before it reaches a
     # pull request (the OWASP CI/CD Security Cheat Sheet's third-party-code
@@ -23,11 +28,36 @@ updates:
     # SECURITY updates are exempt by design — Dependabot applies no cooldown to
     # advisory-driven bumps, so an advisory still arrives immediately. That is
     # what makes a cooldown safe rather than a delay on getting fixes.
+    #
+    # The family crates are exempt too: FerroHEALTH publishes them from its
+    # own repositories, signed by Trusted Publishing, and the release that
+    # follows them is the reason to take them the day they publish.
     cooldown:
       default-days: 7
       semver-major-days: 14
+      exclude:
+        - "ferrohealth-*"
+        - "ferrobridge-*"
+        - "fhir-types"
+        - "ihe-*"
+        - "ehds-*"
+        - "nl-generic-functions"
     open-pull-requests-limit: 10
     groups:
+      # The FerroHEALTH family crates FerroEHR takes from crates.io, in ONE
+      # pull request for every update type, since a 0.x family release breaks
+      # its consumers on a minor and the crates move in lockstep (ihe-atna with
+      # ehds-logging, ferrobridge-term with fhir-types). Listed first: a
+      # dependency joins the first group whose pattern it matches. No
+      # `openehr-*` is here: every one FerroEHR uses is its own path crate.
+      ferrohealth-family:
+        patterns:
+          - "ferrohealth-*"
+          - "ferrobridge-*"
+          - "fhir-types"
+          - "ihe-*"
+          - "ehds-*"
+          - "nl-generic-functions"
       # ONE weekly PR for every minor/patch bump (#2434 — thirteen open
       # single-crate PRs at once is review theatre, not review). Lockstep
       # families (opentelemetry, serde, axum/tower, utoipa, sea-query) bump
