@@ -595,6 +595,7 @@ fn test_cx() -> RootCx {
         defined_acs: std::collections::BTreeSet::new(),
         extra_terms: Vec::new(),
         extra_bindings: Vec::new(),
+        slot_terms: Vec::new(),
         notes: BTreeMap::new(),
     }
 }

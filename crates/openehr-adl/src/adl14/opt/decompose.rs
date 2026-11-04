@@ -11,6 +11,7 @@ use openehr_am::v2_4::aom2::constraint_model::c_attribute::CAttribute;
 use openehr_am::v2_4::aom2::constraint_model::c_complex_object::CComplexObject;
 use openehr_am::v2_4::aom2::constraint_model::c_complex_object_proxy::CComplexObjectProxy;
 use openehr_am::v2_4::aom2::constraint_model::c_object::CObject;
+use openehr_am::v2_4::aom2::definitions::adl_code_definitions::AdlCodeDefinitionsData;
 use openehr_am::v2_4::aom2::terminology::archetype_term::ArchetypeTerm;
 use openehr_am::v2_4::aom2::terminology::archetype_terminology::ArchetypeTerminology;
 use openehr_its::opt14;
@@ -89,6 +90,7 @@ impl Decomposer<'_> {
             defined_acs,
             extra_terms: Vec::new(),
             extra_bindings: Vec::new(),
+            slot_terms: Vec::new(),
             notes: BTreeMap::new(),
         };
         // This root takes its place before the embedded roots the walk below
@@ -213,6 +215,8 @@ impl Decomposer<'_> {
                     child_archetype_id: child_id.clone(),
                 });
                 let includes = archetype_id_include(&child_id, &slot_node_id, cx);
+                let terms = self.concept_terms(child);
+                cx.slot_terms.push((slot_node_id.clone(), terms));
                 let slot = CObject::ArchetypeSlot(ArchetypeSlot {
                     parent: None,
                     soc_parent: None,
@@ -353,6 +357,8 @@ impl Decomposer<'_> {
                 .insert(code.clone(), uri.clone());
         }
 
+        self.define_slot_terms(&mut term_definitions, cx);
+        drop_unreadable_codes(&mut term_definitions, cx);
         drop_out_of_scope_bindings(&term_definitions, &mut term_bindings, cx);
         self.note_extra_languages(&term_definitions, cx);
 
@@ -369,6 +375,84 @@ impl Decomposer<'_> {
 }
 
 impl Decomposer<'_> {
+    /// The concept term of an embedded root per language: its inline term in
+    /// the OPT's language, and its flattened ontology's term in each language
+    /// that ontology carries.
+    fn concept_terms(
+        &self,
+        child: &opt14::types::CArchetypeRoot,
+    ) -> BTreeMap<String, ArchetypeTerm> {
+        let mut terms = BTreeMap::new();
+        if let Some(ont) = self.ontology_for(&child.archetype_id.value, false) {
+            for set in &ont.term_definitions {
+                if let Some(t) = set.items.iter().find(|t| t.code == child.node_id) {
+                    terms.insert(set.language.clone(), map_term(t));
+                }
+            }
+        }
+        if let Some(t) = child
+            .term_definitions
+            .iter()
+            .find(|t| t.code == child.node_id)
+        {
+            terms.insert(self.language.clone(), map_term(t));
+        }
+        terms
+    }
+
+    /// Defines each slot that replaced an embedded root in every language of
+    /// the root's terminology, with the embedded root's concept term.
+    ///
+    /// The slot sits under a container attribute, and the identifiers of
+    /// nodes there must be defined in the terminology (AM
+    /// `ADL2/master04.3-cadl_complex_types.adoc` §Node Identifiers). A language
+    /// the embedded root has no term in takes the OPT language's term, recorded
+    /// in `conversion_details`. No openEHR spec governs 1.4 to 2 conversion:
+    /// our own design.
+    fn define_slot_terms(
+        &self,
+        term_definitions: &mut BTreeMap<String, BTreeMap<String, ArchetypeTerm>>,
+        cx: &mut RootCx,
+    ) {
+        let slot_terms = std::mem::take(&mut cx.slot_terms);
+        for (code, terms) in slot_terms {
+            let fallback = terms
+                .get(&self.language)
+                .or_else(|| terms.values().next())
+                .cloned()
+                .unwrap_or_else(|| ArchetypeTerm {
+                    code: code.clone(),
+                    text: "Archetype slot".to_owned(),
+                    description: "The slot an embedded archetype root filled in the \
+                                  operational template"
+                        .to_owned(),
+                    other_items: None,
+                });
+            for (language, by_code) in term_definitions.iter_mut() {
+                let term = if let Some(term) = terms.get(language) {
+                    term.clone()
+                } else {
+                    cx.note(
+                        format!("slot_term.{code}.{language}"),
+                        format!(
+                            "slot {code} has no term in language {language} in the operational \
+                             template {}; it carries the term of language {}",
+                            self.template_id, self.language
+                        ),
+                    );
+                    fallback.clone()
+                };
+                by_code.insert(
+                    code.clone(),
+                    ArchetypeTerm {
+                        code: code.clone(),
+                        ..term
+                    },
+                );
+            }
+        }
+    }
+
     /// Records each language the root's terminology carries beside the OPT's
     /// own as a `conversion_details` entry naming the source OPT.
     ///
@@ -396,6 +480,34 @@ impl Decomposer<'_> {
                 ),
             );
         }
+    }
+}
+
+/// Drops every term definition whose code is no local code, recording each in
+/// `conversion_details`.
+///
+/// ADL 1.4 local codes are prefixed `at` (node and value codes) or `ac`
+/// (constraint codes) (AM `ADL1.4/master08-adl.adoc` §Local Constraint Codes),
+/// so a term keyed otherwise, such as a tool's `°C` unit label, names nothing
+/// the definition can reference and has no ADL 2 code to convert to.
+pub(super) fn drop_unreadable_codes(
+    term_definitions: &mut BTreeMap<String, BTreeMap<String, ArchetypeTerm>>,
+    cx: &mut RootCx,
+) {
+    for (language, by_code) in term_definitions.iter_mut() {
+        by_code.retain(|code, _| {
+            let local = AdlCodeDefinitionsData::is_valid_code(code);
+            if !local {
+                cx.notes.insert(
+                    format!("dropped_term.{language}.{code}"),
+                    format!(
+                        "term definition {code:?} in language {language} is no at- or ac-code; \
+                         dropped at OPT decomposition"
+                    ),
+                );
+            }
+            local
+        });
     }
 }
 
