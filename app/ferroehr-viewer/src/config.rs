@@ -211,7 +211,8 @@ pub struct AuthConfig {
     pub oidc_enabled: bool,
     /// The externally visible base URL of the viewer, e.g.
     /// `http://localhost:3000`: the origin the same-origin check compares a
-    /// post with, and the base of `oidc.redirect_uri` when that is not set.
+    /// post with, and the base of `oidc.redirect_uri` and
+    /// `oidc.post_logout_redirect_uri` when they are not set.
     pub public_base_url: String,
 }
 
@@ -359,9 +360,24 @@ fn finish(mut cfg: ViewerConfig) -> Result<ViewerConfig, ConfigError> {
                 })?
                 .to_string();
         }
+        // NOTE: OpenID Connect RP-Initiated Logout 1.0 §3: the provider returns the operator to the
+        // registered URI, here the viewer's own signed-out page.
+        if cfg.oidc.post_logout_redirect_uri.is_none() {
+            cfg.oidc.post_logout_redirect_uri = Some(
+                public
+                    .join(crate::session::SIGNED_OUT_PAGE)
+                    .map_err(|_unjoined| {
+                        ConfigError::Invalid(format!(
+                            "auth.public_base_url `{}` takes no signed-out path",
+                            cfg.auth.public_base_url
+                        ))
+                    })?
+                    .to_string(),
+            );
+        }
     }
 
-    // NOTE: ferrohealth-session 0.2.0 `config`: a sealed store with no key, a key beside a
+    // NOTE: ferrohealth-session 0.2.1 `config`: a sealed store with no key, a key beside a
     // memory store and an absolute lifetime shorter than the idle one refuse the start.
     if cfg.auth.oidc_enabled {
         cfg.session.check(&cfg.oidc.check()?)?;
@@ -699,6 +715,11 @@ mod tests {
         assert_eq!(
             loaded.oidc.redirect_uri,
             "http://localhost:3000/auth/callback"
+        );
+        assert_eq!(
+            loaded.oidc.post_logout_redirect_uri.as_deref(),
+            Some("http://localhost:3000/sign-in?signed-out=1"),
+            "RP-Initiated Logout 1.0 §3"
         );
         let mut unsafe_issuer = env;
         unsafe_issuer.insert(

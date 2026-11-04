@@ -29,7 +29,8 @@ pub const COOKIE_BASE: &str = "ferroehr_viewer";
 /// The path of the viewer's own sign-in page, which is never a return path.
 pub const SIGN_IN_PAGE: &str = "/sign-in";
 
-/// Where a sign-out lands when the provider has no end-session endpoint.
+/// Where a sign-out lands: at once when it ends no session at the provider,
+/// and through the provider as `oidc.post_logout_redirect_uri` when it does.
 pub const SIGNED_OUT_PAGE: &str = "/sign-in?signed-out=1";
 
 /// The viewer's cookie names.

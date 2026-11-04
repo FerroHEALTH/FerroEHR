@@ -103,7 +103,7 @@ fn check_clients(config: &ViewerConfig) -> anyhow::Result<()> {
 async fn serve(config: ViewerConfig, telemetry: &Telemetry) -> anyhow::Result<()> {
     let request_log = crate::telemetry::request_log(&config, telemetry);
     let cdr = crate::cdr::CdrClient::new(&config.cdr)?;
-    // NOTE: ferrohealth-session 0.2.0 `config::OidcSettings::relying_party`: the provider's
+    // NOTE: ferrohealth-session 0.2.1 `config::OidcSettings::relying_party`: the provider's
     // metadata is discovered at the start, so a broken provider refuses it.
     let party = if config.auth.oidc_enabled {
         Some(config.oidc.check()?.relying_party().await?)

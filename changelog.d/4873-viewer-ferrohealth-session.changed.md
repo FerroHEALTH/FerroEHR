@@ -1,16 +1,19 @@
 - The viewer signs in and keeps its session through `ferrohealth-session`
-  0.2.0, FerroAUTH's console sign-in (#4873). Its own OpenID Connect client
+  0.2.1, FerroAUTH's console sign-in (#4873). Its own OpenID Connect client
   and sealed-session code are gone. The sign-in page moves to `/sign-in`, and
   the sign-in routes are `/login` (which begins the OpenID Connect sign-in),
-  `/auth/callback`, `POST /logout` (which now also revokes the token and uses
-  the provider's end-session endpoint when it has one) and `/session`, the
+  `/auth/callback`, `POST /logout` (which now also revokes the token and, for an
+  OpenID Connect session, uses the provider's end-session endpoint when it
+  has one) and `/session`, the
   session watch. Sessions are kept in the viewer process by default
   (`session.store = "memory"`), and in one sealed cookie with
   `session.store = "sealed"` and a key. A sealed store without a key refuses
   the start, so there is no ephemeral key any more. FerroEHR pins
   `ferrohealth-smart` 0.8.8. **Upgrade note:**
   - The provider must allow the redirect URI `<public_base_url>/auth/callback`
-    in place of `/auth/oidc/callback`.
+    in place of `/auth/oidc/callback`, and the post-logout redirect URI
+    `<public_base_url>/sign-in?signed-out=1`, where an OpenID Connect
+    sign-out returns. A Basic sign-out lands there directly.
   - `[auth.oidc]` becomes `[oidc]`. `enabled` moves to `auth.oidc_enabled` and
     `public_base_url` to `auth.public_base_url`. `tls.trust_roots_file` becomes
     `oidc.ca_file`, and `resolve = "host=ip:port"` becomes
