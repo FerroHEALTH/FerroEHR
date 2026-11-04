@@ -1,0 +1,170 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=90d4a5d2-facb-4729-87e5-d32175fbfa05; build_uid=771584a0-ab56-4a4f-bca4-f3426f141acf)
+    openEHR-EHR-OBSERVATION.physical_activity_screening_questionnaire.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Cheng Yexuan">
+        ["organisation"] = <"ZJU">
+        ["email"] = <"3160100913@zju.edu.cn">
+        ["date"] = <"2021-07-27">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"00D4EF29FDD2714531AF2ABDBE55782E">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the responses to a screening questionnaire for physical activity.">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Physical activity screening questionnaire
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    CLUSTER[at0006] matches {    -- Specific physical activity
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0007] occurrences matches {1} matches {    -- Physical activity name
+                                                value matches {
+                                                    DV_TEXT[at9001]
+                                                }
+                                            }
+                                            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Participating?
+                                                value matches {
+                                                    DV_CODED_TEXT[at9002] matches {
+                                                        defining_code matches {[ac9000]}    -- Participating? (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            allow_archetype CLUSTER[at0016] matches {    -- Additional detailed questions
+                                                include
+                                                    archetype_id/value matches {/.*/}
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0009] occurrences matches {0..1} matches {    -- Specific episode
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Episode pattern?
+                                                value matches {
+                                                    DV_TEXT[at9003]
+                                                }
+                                            }
+                                            ELEMENT[at0018] occurrences matches {0..1} matches {    -- Typical exercise
+                                                value matches {
+                                                    DV_QUANTITY[at9004]
+                                                }
+                                            }
+                                            allow_archetype CLUSTER[at0017] matches {    -- Additional detailed questions
+                                                include
+                                                    archetype_id/value matches {/.*/}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0014] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0015] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Physical activity screening questionnaire">
+                description = <"A screeing questionnaire for physical activity.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Specific physical activity">
+                description = <"Grouping of data elements related to screening for a specific type of physical activity.">
+            >
+            ["at0007"] = <
+                text = <"Physical activity name">
+                description = <"Name of the physical activity being screened.">
+            >
+            ["at0008"] = <
+                text = <"Participating?">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Specific episode">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Episode pattern?">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Yes">
+                description = <"The object is participating the specific physical activity.">
+            >
+            ["at0012"] = <
+                text = <"No">
+                description = <"The object is not participating the specific physical activity.">
+            >
+            ["at0013"] = <
+                text = <"Unknown">
+                description = <"It is not known whether the object is participating the specific physical activity.">
+            >
+            ["at0015"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0016"] = <
+                text = <"Additional detailed questions">
+                description = <"Additional questionnaire questions directly related to the specific physical.">
+            >
+            ["at0017"] = <
+                text = <"Additional detailed questions">
+                description = <"Additional questionnaire questions directly related to the specific episode.">
+            >
+            ["at0018"] = <
+                text = <"Typical exercise">
+                description = <"Typical hour of exercise.">
+            >
+            ["ac9000"] = <
+                text = <"Participating? (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0011", "at0012", "at0013">
+        >
+    >

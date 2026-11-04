@@ -1,0 +1,716 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=e2c3697a-6163-4bc7-86d0-519dd6b954f9; build_uid=65ccbf2e-5ce5-4a7f-9f1c-5ce8d7dc31c4)
+    openEHR-EHR-CLUSTER.media_file.v1.0.6
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["pt-pt"] = <
+            language = <[ISO_639-1::pt-pt]>
+            author = <
+                ["name"] = <"Hugo Silva">
+                ["organisation"] = <"University of Minho">
+                ["email"] = <"pg50416@uminho.pt">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Åsa Skagerhult, Erik Sundvall, Manna Vosta, Oscar Karlsson, Jörgen Kuylenstierna">
+                ["organisation"] = <"Region Östergötland, Karolinska University Hospital, eWeave AB">
+                ["email"] = <"asa.skagerhult@regionostergotland.se, erik.sundvall@regionostergotland.se, manna.vosta@regionstockholm.se, jorgen.kuylenstierna@solvikshalsan.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Liv Laugen, John Tore Valand">
+                ["organisation"] = <"​Oslo University Hospital, Norway, Helse Bergen">
+                ["email"] = <"liv.laugen@ous-hf.no, john.tore.valand@helse-bergen.no">
+            >
+        >
+        ["sk"] = <
+            language = <[ISO_639-1::sk]>
+            author = <
+                ["name"] = <"Maritn Kapinos">
+                ["organisation"] = <"PROSOFT Košice, a.s.">
+                ["email"] = <"kapinos.martin@prosoftke.sk">
+            >
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            author = <
+                ["name"] = <"Jonas Bucher">
+                ["organisation"] = <"Cistec AG">
+                ["email"] = <"jonas.bucher@cistec.com">
+            >
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            author = <
+                ["name"] = <"Jelte Zeilstra">
+                ["organisation"] = <"Nedap">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2019-12-10">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Michael Anywar, Universitätsklinikum SH, Germany", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Paulo Bandiera-Paiva, Federal University of Sao Paulo, Brazil", "itai Basel, Private, Israel", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Stefan Dubois, Dep't of Pathology and Genetics, University Hospitals of Lund and Malmö, Sweden", "Grant Forrest, Lunaria Ltd, United Kingdom", "Rosane Gotardo, Systema Ltda., Brazil", "Heather Grain, Llewelyn Grain Informatics, Australia", "Mikkel Johan Gaup Grønmo, Forvaltningssenter EPJ, Helse-Nord, Norway (openEHR Editor)", "Joost Holslag, Nedap, Netherlands", "Anjali Kulkarni, Karkinos, India", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Michael Lutz, BITsoft, Germany", "Manisha Mantri, C-DAC, India", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Arunakiry Natarajan, medondo, Germany", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Ana Pereira, CINTESIS, CUF-Porto, Portugal", "Sidharth Ramesh, Kasturba Medical College, India", "FREDERICO RIBEIRO, Hospital das Clínicas da UFPE, Brazil", "Saeed Samie, Pars Hospital, Iran", "Bjoern Schreiweis, UKSH, Germany", "Natalia Strauch, Medizinische Hochschule Hannover, Germany", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Nyree Taylor, Ocean Health Systems, Australia", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)", "Michael Zampaglione, Australia", "Wouter Zanen, Eurotranplant, Netherlands", "Lin Zhang, Taikang Insurance Group, China">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"HL7 FHIR Resource - Media v4.0.1 R4 [Internet]. Health Level Seven International; [accessed 2021 Jun 29]. Available from https://www.hl7.org/fhir/media.html.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, heather.leslie@atomicainformatics.com">
+        ["MD5-CAM-1.0.1"] = <"619A905601290A99C5F1601986DCEF64">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung einer Mediendatei erworbenen und verwendeten im Bereich des Gesundheitswesens sowie der Informationen zu den zugehörigen Metadaten.">
+            keywords = <"Bild", "Audio", "Text", "Video", "Anwendung", "Datei", "Multimedia", "DICOM", "digital", "Dokument", "Foto", "Sprachaufnahme">
+            use = <"Zur Darstellung einer Mediendatei erworbenen und verwendeten im Bereich des Gesundheitswesens sowie der Informationen zu den zugehörigen Metadaten.
+
+Die Absicht dieses Archetyps besteht nur darin, die Mediendatei und die Metadaten, die ihre Erfassung beschreiben, darzustellen. Dieser Archetyp wird in einen anderen Archetyp verschachtelt, normalerweise ein OBSERVATION- oder ACTION-Archetyp, der den Kontext und die Umstände im Zusammenhang mit der Erfassung der Mediendatei enthält. Zum Beispiel werden Details zu Modalität, Ansicht oder Aspekt eines Röntgenbildes und DICOM-Details im Archetyp OBSERVATION.imaging_exam_result dargestellt.
+
+Die Beispiele umfassen, sind aber nicht beschränkt auf:
+- Ein Foto einer Verletzung;
+- Ein Diagramm der Lokalisation eines bestimmten klinischen Befundes;
+- Ein digitales Ergebnis der Röntgen- oder CT-Aufnahme;
+- Eine Audio- oder Videoaufzeichnung eines Interviews;
+- Gescannte pathologische Schnitte;
+- Datenausgabe von einem klinischen Gerät, wie z.B. einem EKG-Gerät; oder
+- Ein gescanntes Bild von handgeschriebenen klinischen Notizen.
+
+Das Datenelement „Inhalt“ ermöglicht mithilfe des Multimedia-Datentyps die Erfassung und Speicherung der Mediendatei in der Gesundheitsakte. Der Multimedia-Datentyp hat viele RM-Attribute wie die Dateigröße und URI zu einer externen Quelle. Siehe https://specifications.openehr.org/releases/RM/latest/data_types.html#_dv_multimedia_class.
+
+Wenn mehr als eine Mediendatei erfasst wurde, z. B. „Vorher“- und „Nachher“-Bilder einer Wunde, verwenden Sie eine Instanz dieses Archetyps, um jede Mediendatei darzustellen.
+
+Wenn eine Reihe von Mediendateien als einzelnes Element dargestellt wird, z. B. ein CT-Scan, kann eine Instanz dieses Archetyps verwendet werden, um einen URI-Pfad zu der Gruppe darzustellen.
+
+
+
+">
+            misuse = <"Nicht zur Darstellung von Informationen, Lehr- oder Schulungsmaterial verwenden, die außerhalb des Gesundheitsprozesses generiert werden, z. B. Broschüren zur Patientenaufklärung, die dem Patienten oder der Pflegeperson zur Verfügung gestellt werden. Verwenden Sie für diesen Zweck den Archetyp CLUSTER.information_resource.
+
+Nicht zur Darstellung von Referenz auf eine externe digitale Ressource, die als Quelle für maßgebliche Informationen oder Experteninformationen verwendet wird. Verwenden Sie für diesen Zweck den Archetyp CLUSTER.knowledge_base_reference.">
+        >
+        ["pt-pt"] = <
+            language = <[ISO_639-1::pt-pt]>
+            purpose = <"Para registar um ficheiro de media adquirido ou utilizado como parte do processo médico e detalhes sobre os metadados associados.">
+            keywords = <"imagem", "áudio", "texto", "vídeo", "aplicação", "ficheiro", "multimédia", "áudio", "DICOM", "digital", "documento", "fotografia", "voz">
+            use = <"Utilize para registar um ficheiro de media adquirido ou utilizado como parte do processo médico e detalhes sobre os metadados associados.
+
+A intenção deste arquétipo é apenas armazenar o ficheiro de media e os metadados que descrevem a sua captura. Este arquétipo estará aninhado dentro de outro arquétipo, geralmente uma OBSERVATION ou ACTION que conterá o contexto e as circunstâncias relacionadas com a captura do ficheiro de media. Por exemplo, os detalhes sobre a modalidade, visualização ou aspeto de uma imagem radiográfica e detalhes DICOM serão captados no arquétipo OBSERVATION.imaging_exam_result.
+
+Os exemplos incluem, mas não estão limitados a:
+- Uma foto de uma lesão;
+- Um diagrama da localização de um achado clínico específico;
+- Uma imagem radiológica;
+- Uma gravação áudio ou vídeo de uma entrevista;
+- Lâmina de patologia digitalizada;
+- Saída de dados de um dispositivo clínico, como por exemplo uma máquina de ECG; ou
+- Uma imagem digitalizada de documentação em papel ou notas clínicas manuscritas.
+
+O elemento de dados 'Conteúdo' permite que o ficheiro de media seja capturado e armazenado no registo de saúde utilizando o tipo de dados Multimedia. O tipo de dados Multimedia tem muitos atributos, como o tamanho do ficheiro e URI para uma fonte externa. Consulte https://specifications.openehr.org/releases/RM/latest/data_types.html#_dv_multimedia_class.
+
+Se tiver sido capturado mais do que um ficheiro de media, como imagens “antes” e “depois” de uma ferida, utilize uma instância separada deste arquétipo para representar cada ficheiro de media.
+
+Se uma série de ficheiros de media for representada como um único item, como uma tomografia computorizada, uma instância desse arquétipo pode ser utilizada para representar um caminho URI para o grupo.">
+            misuse = <"Não deve ser utilizado para representar informações, materiais instrucionais ou educativos fornecidos a um indivíduo ou ao seu cuidador, por exemplo, folhetos educativos para doentes. Utilize o CLUSTER.information_resource para este fim.
+
+Não deve ser utilizado para registar uma referência para uma base de conhecimento - utilize CLUSTER.knowledge_base_reference para este fim.">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att registrera en mediefil som förvärvats eller använts som en del i en vårdprocess, samt detaljer om filens metadata.">
+            keywords = <"bild", "foto", "ljud", "text", "video", "film", "applikation", "fil", "multimedia", "DICOM", "digital", "dokument", "röst">
+            use = <"Används för att registrera en mediefil som förvärvats eller används som del i en vårdprocess, samt detaljer om filens metadata. 
+
+Avsikten med denna arketyp är att lagra mediefilen och dess metadata och beskriva hur den har skapats. Arketypen nästlas vanligtvis in i en OBSERVATION eller ACTION arketyp som innehåller information om kontexten och sammanhanget för skapandet av mediefilen. Till exempel kan detaljer om behandlingsmetod, synvinkel eller aspekt på en röntgenbild eller detaljer rörande DICOM-filer lagras i arketypen OBSERVATION.imaging_exam_result.
+
+Exempel inkluderar, men är inte begränsade till:
+-Ett foto av en skada
+-Ett diagram över anatomisk lokalisation av ett specifikt kliniskt fynd
+-En röntgenbild
+-En ljud- eller videoinspelning av en intervju
+-Inskannade histopatologiska objektglas
+-Data från medicinsk utrustning, så som en EKG-apparat, eller
+-Inskannat foto av pappersdokumentation eller handskrivna kliniska anteckningar
+
+Datafältet \"Innehåll\" tillåter mediefilen att förvärvas och lagras i journalen via datatypen Multimedia. Multimedia datatypen har flertalet Reference modell attribut som filstorlek och URI till en extern källa. Se https://specifications.openehr.org/releases/RM/latest/data_types.html#_dv_multimedia_class.
+
+Om mer än en mediefil har registrerats, såsom \"före\" och \"efter\" bilder av ett sår, använd separata instanser av denna arketyp för att representera varje mediefil.
+
+Om en serie av mediefiler representeras av ett enda objekt, till exempel en datortomografi, kan en instans av denna arketyp användas för att representera en URI sträng till filen.">
+            misuse = <"Ska inte användas för innehåll som information, instruktions- eller undervisningsmaterial som utdelats till en patient eller deras vårdgivare, till exempel som utbildningsbroschyrer. Använd CLUSTER.information_resource för detta syfte.
+
+Ska inte användas för att registrera en referens till en databas. Använd CLUSTER.knowledge_base_reference för detta syfte.
+
+">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å dokumentere detaljer om en mediafil, samt tilknyttede metadata, som er ervervet eller brukt i forbindelse med en helsetjeneste.">
+            keywords = <"bilde", "foto", "audio", "tekstfil", "video", "applikasjon", "fil", "multimedia", "DICOM", "digital", "dokument", "skannet", "scannet", "lyd">
+            use = <"Brukes for å dokumentere detaljer om en mediafil, samt tilknyttede metadata, som er ervervet eller brukt i forbindelse med en helsetjeneste.
+
+Hensikten med denne arketypen er kun å være en bærer for mediafilen og metadataene som beskriver innholdet i filen. Denne arketypen vil være nøstet i en annen arketype, vanligvis en OBSERVATION eller ACTION arketype, som vil inneholde konteksten og omstendighetene knyttet til hvordan innholdet ble dannet. For eksempel blir detaljer om modalitet, visning eller aspekt av et radiologisk bilde og DICOM-detaljer dokumentert i arketypen OBSERVATION.imaging_exam_result.
+
+Eksempler inkluderer, men er ikke begrenset til:
+- Et bilde av en skade;
+- Et diagram over plasseringen av et spesifikt klinisk funn;
+- Et digital radiologisk bilde;
+- Et lyd- eller videoopptak av et intervju;
+- Et skannet objektglass til mikroskopisk diagnostikk;
+- Data fra medisinsk utstyr, for eksempel en EKG-apparat;
+- Et skannet bilde av papirdokumentasjon eller håndskrevne kliniske notater.
+
+Dataelementet \"Innhold\" gjør det mulig å fange og lagre mediafiler i den elektroniske pasientjournalen (EPJ) ved hjelp av multimedia-datatypen. Multimedia-datatypen har mange RM-attributter, for eksempel filstørrelsen og URI til en ekstern kilde. Se https://specifications.openehr.org/releases/RM/latest/data_types.html#_dv_multimedia_class.
+
+Hvis mer enn én mediafil skal dokumenteres, for eksempel bilder før og etter behandling av et sår, bruk en forekomst av denne arketypen for hvert bilde.
+
+Hvis en serie mediafiler er representert som et enkelt element, for eksempel en CT-skanning, kan en forekomst av denne arketypen brukes til å representere en URI til gruppen/serien.">
+            misuse = <"Skal ikke brukes til å representere informasjon, instruksjons- eller utdanningsmateriale levert til en person, eller dens omsorgsperson, for eksempel brosjyrer for pasientopplæring. Bruk CLUSTER.information_resource til dette formålet.
+
+Skal ikke brukes til å registrere en referanse til en kunnskapsbase - bruk CLUSTER. Knowledge_base_reference for dette formålet.">
+        >
+        ["sk"] = <
+            language = <[ISO_639-1::sk]>
+            purpose = <"Na zaznamenanie mediálneho súboru, ktorý sa získa alebo použije ako súčasť procesu zdravotnej starostlivosti, a podrobností o súvisiacich metadátach.">
+            keywords = <"obrázky", "zvuky", "text", "video", "aplikácie", "súbory", "multimédiá", "zvuky", "DICOM", "digital", "dokument", "fotka", "hlasový záznam">
+            use = <"Používa sa na zaznamenanie mediálneho súboru, ktorý sa získa alebo použije ako súčasť procesu zdravotnej starostlivosti, a podrobností o súvisiacich metadátach.
+
+Zámerom tohto archetypu je iba uchovávať mediálny súbor a metadáta popisujúce jeho zachytenie. Tento archetyp bude vnorený do iného archetypu, zvyčajne POZOROVANIA alebo AKCIE, ktorá bude obsahovať kontext a okolnosti súvisiace so zachytením mediálneho súboru. Napríklad podrobnosti o modalite, zobrazení alebo aspekte rádiografickej snímky a podrobnosti DICOM budú zachytené v rámci archetypu OBSERVATION.imaging_exam_result.
+
+Príklady zahŕňajú, ale nie sú obmedzené na:
+- fotografia zranenia;
+- Schéma lokalizácie konkrétneho klinického nálezu;
+- rádiologický obraz;
+- audio alebo video záznam rozhovoru;
+- Naskenovaný patologický diapozitív;
+- Výstup údajov z klinického zariadenia, ako je EKG prístroj; alebo
+- Naskenovaný obraz papierovej dokumentácie alebo ručne písané klinické poznámky.
+
+Údajový prvok „Obsah“ umožňuje zaznamenať a uložiť mediálny súbor do zdravotného záznamu pomocou dátového typu Multimedia. Dátový typ Multimedia má veľa atribútov RM, ako je veľkosť súboru a URI pre externý zdroj. Pozrite si https://specifications.openehr.org/releases/RM/latest/data_types.html#_dv_multimedia_class.
+
+Ak bol zachytený viac ako jeden mediálny súbor, napríklad obrázky rany „pred“ a „po“, použite na reprezentáciu každého mediálneho súboru samostatnú inštanciu tohto archetypu.
+
+Ak je séria mediálnych súborov reprezentovaná ako jedna položka, ako napríklad CT sken, tak sa môže jedna inštancia tohto archetypu použiť na reprezentáciu cesty pomocou URI k skupine.">
+            misuse = <"Nesmie sa používať na reprezentáciu informácií, inštruktážnych alebo vzdelávacích materiálov dodávaných jednotlivcom alebo ich opatrovateľom, napríklad letáky s informáciami pre pacientov. Na tento účel použite CLUSTER.information_resource.
+
+Nesmie sa používať na zaznamenanie odkazu na bázu znalostí – na tento účel použite CLUSTER.knowledge_base_reference.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a media file that is acquired or used as part of the healthcare process, and details about associated metadata.">
+            keywords = <"image", "audio", "text", "video", "application", "file", "multimedia", "audio", "DICOM", "digital", "document", "photo", "voice">
+            use = <"Use to record a media file that is acquired or used as part of the healthcare process, and details about associated metadata.
+
+The intent of this archetype is only to hold the media file and the metadata describing its capture. This archetype will be nested within another archetype, usually an OBSERVATION or ACTION that will hold the context and circumstances related to the capture of the media file. For example, details about the modality, view or aspect of a radiographic image and DICOM details will be captured within the OBSERVATION.imaging_exam_result archetype. 
+
+Examples include, but are not limited to:
+- A photo of an injury;
+- A diagram of the location of a specific clinical finding;
+- A radiological image;
+- An audio or video recording of an interview;
+- Scanned pathology slide;
+- Data output from a clinical device, such as an ECG machine; or
+- A scanned image of paper documentation or hand-written clinical notes.
+
+The 'Content' data element allows for the media file to be captured and stored within the health record using the Multimedia data type. The Multimedia data type has many RM attributes such as the size of file and URI to an external source. See https://specifications.openehr.org/releases/RM/latest/data_types.html#_dv_multimedia_class.
+
+If more than one media file has been captured, such as 'before' and 'after' images of a wound, use a separate instance of this archetype to represent each media file.
+
+If a series of media files is represented as a single item, such as a CT scan, one instance of this archetype can be used to represent a URI path to the group.">
+            misuse = <"Not to be used to represent information, instructional or educational material supplied to an individual, or their carer, for example patient education leaflets. Use the CLUSTER.information_resource for this purpose.
+
+Not to be used to record a reference to a knowledge base - use CLUSTER.knowledge_base_reference for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            purpose = <"Pour enregistrer un fichier multimédia acquis ou utilisé dans le cadre du processus de soins, ainsi que les détails relatifs aux métadonnées associées.">
+            keywords = <"image", "audio", "texte", "vidéo", "application", "fichier", "multimédia", "audio", "DICOM", "numérique", "document", "photo", "voix">
+            use = <"À utiliser pour enregistrer un fichier multimédia acquis ou utilisé dans le cadre du processus de soins, ainsi que les détails relatifs aux métadonnées associées.
+
+Cet archétype a pour seul objectif de contenir le fichier multimédia et les métadonnées décrivant sa saisie. Il sera imbriqué dans un autre archétype, généralement un archétype OBSERVATION ou ACTION qui contiendra le contexte et les circonstances liées à la saisie du fichier multimédia. Par exemple, les détails concernant la modalité, la vue ou l’aspect d’une image radiographique ainsi que les informations DICOM seront enregistrés dans l’archétype OBSERVATION.imaging_exam_result. 
+
+Voici quelques exemples, sans que cette liste soit exhaustive :
+- Une photo d’une blessure ;
+- Un schéma indiquant l’emplacement d’un signe clinique spécifique ;
+- Une image radiologique ;
+- Un enregistrement audio ou vidéo d’un entretien ;
+- Une lame de pathologie numérisée ;
+- Des données issues d’un appareil clinique, tel qu’un électrocardiographe ; ou
+- Une image numérisée de documents papier ou de notes cliniques manuscrites.
+
+L’élément de données « Contenu » permet de capturer et de stocker le fichier multimédia au sein du dossier de santé à l’aide du type de données « Multimédia ». Le type de données « Multimédia » comporte de nombreux attributs RM, tels que la taille du fichier et l’URI vers une source externe. Voir https://specifications.openehr.org/releases/RM/latest/data_types.html#_dv_multimedia_class.
+
+Si plusieurs fichiers multimédias ont été enregistrés, par exemple des images « avant » et « après » d’une plaie, utilisez une instance distincte de cet archétype pour représenter chaque fichier multimédia.
+
+Si une série de fichiers multimédias est représentée sous la forme d’un seul élément, comme un scanner, une seule instance de cet archétype peut être utilisée pour représenter le chemin URI menant à l’ensemble.">
+            misuse = <"À ne pas utiliser pour enregister des informations, du matériel pédagogique ou éducatif fourni à une personne ou à son proche aidant, par exemple des brochures d’information destinées aux patients. Utilisez CLUSTER.information_resource à cette fin.
+
+À ne pas utiliser pour enregistrer une référence à une base de connaissances ; utilisez CLUSTER.knowledge_base_reference à cette fin.">
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            purpose = <"Om een mediabestand vast te leggen dat is verkregen of gebruikt als onderdeel van het zorgproces, en details over bijbehorende metadata.">
+            keywords = <"afbeelding", "audio", "tekst", "video", "applicatie", "bestand", "multimedia", "geluid", "DICOM", "digitaal", "document", "foto", "spraak">
+            use = <"Te gebruiken om een mediabestand vast te leggen dat is verkregen of gebruikt als onderdeel van het zorgproces, en details over bijbehorende metadata.
+
+Dit archetype is alleen bedoeld voor het mediabestand en de metadata die het vastleggen ervan beschrijven. Dit archetype wordt genest binnen een ander archetype, meestal een OBSERVATION of ACTION die de context en omstandigheden bevat die verband houden met het vastleggen van het mediabestand. Bijvoorbeeld, details over de modaliteit, weergave of aspect van een radiografisch beeld en DICOM-details worden vastgelegd in het archetype OBSERVATION.imaging_exam_result.
+
+Voorbeelden omvatten, maar zijn niet beperkt tot:
+- Een foto van een blessure;
+- Een diagram van de locatie van een specifieke klinische bevinding;
+- Een radiologisch beeld;
+- Een audio- of video-opname van een interview;
+- Gescande pathologiedia;
+- Gegevensuitvoer van een klinisch apparaat, zoals een ECG-apparaat; of
+- Een gescande afbeelding van papieren documentatie of handgeschreven klinische aantekeningen.
+
+Met het gegevenselement 'Inhoud' kan het mediabestand worden vastgelegd en opgeslagen in het gezondheidsdossier met behulp van het gegevenstype Multimedia. Het gegevenstype Multimedia heeft veel RM-attributen, zoals de grootte van het bestand en de URI naar een externe bron. Zie https://specifications.openehr.org/releases/RM/latest/data_types.html#_dv_multimedia_class.
+
+Als er meer dan één mediabestand is vastgelegd, zoals 'voor' en 'na' beelden van een wond, gebruik dan een afzonderlijke instantie van dit archetype om elk mediabestand te vertegenwoordigen.
+
+Als een reeks mediabestanden wordt weergegeven als een enkel item, zoals een CT-scan, kan één instantie van dit archetype worden gebruikt om een URI-pad naar de groep weer te vertegenwoordigen.">
+            misuse = <"Niet te gebruiken om informatie, instructie- of educatief materiaal weer te geven dat aan een persoon of hun verzorger wordt verstrekt, bijvoorbeeld folders voor patiënteneducatie. Gebruik hiervoor de CLUSTER.information_resource.
+
+Niet te gebruiken om een verwijzing naar een kennisbank op te nemen - gebruik hiervoor CLUSTER.knowledge_base_reference.">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Media file
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Content
+                value matches {
+                    DV_MULTIMEDIA[at9004]
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Content name
+                value matches {
+                    DV_TEXT[at9000]
+                }
+            }
+            ELEMENT[at0010] matches {    -- Identifier
+                value matches {
+                    DV_IDENTIFIER[at9001]
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Description
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Created
+                value matches {
+                    DV_DATE_TIME[at9006]
+                    DV_INTERVAL<DV_DATE_TIME>[at9007]
+                }
+            }
+            allow_archetype CLUSTER[at0012] matches {    -- Creator
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            allow_archetype CLUSTER[at0011] matches {    -- Source device
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.device\.v1\..*/}
+            }
+            allow_archetype CLUSTER[at0013] matches {    -- Additional details
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9008]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Mediendatei">
+                description = <"Eine Mediendatei mit zugehörigen Metadaten, die im Rahmen des Gesundheitsprozesses erworben oder verwendet wird.">
+            >
+            ["at0001"] = <
+                text = <"Inhalt">
+                description = <"Digitale Repräsentation der Mediendatei.">
+                comment = <"*If the file is stored locally, the actual content will be captured and stored using the Multimedia data type. For example: RTF or PDF for a document; JPG for an image; MP4 for a video; or WAV for an audio file. Full list of available media types: https://specifications.openehr.org/releases/TERM/latest/SupportTerminology.html#_media_types.  If the file is stored at a location outside of the health record, the detailed path to the file is captured using the URI attribute in the Multimedia data type. The Multimedia data type has many RM attributes such as the size of file and URI to an external source - see https://specifications.openehr.org/releases/RM/latest/data_types.html#_dv_multimedia_class. (en)">
+            >
+            ["at0002"] = <
+                text = <"Inhalt">
+                description = <"Beschreibender Name oder Titel für die Mediendatei.">
+                comment = <"Eine Beschreibung des Inhalts der Mediendatei. Verwenden Sie, falls verfügbar, eine vereinbarte standardisierte Namenskonvention. Zum Beispiel: „Verbrennung der rechten Hand Nr. 1“ oder „Videosprechstunde Kardiologie am 2. Mai“.">
+            >
+            ["at0004"] = <
+                text = <"Erstellt">
+                description = <"Datum/Uhrzeit, Teildatum oder Zeitraum, in dem die Mediendatei generiert oder verfasst wurde.">
+            >
+            ["at0005"] = <
+                text = <"Beschreibung">
+                description = <"Kurze Beschreibung der Mediendatei.">
+            >
+            ["at0007"] = <
+                text = <"Kommentar">
+                description = <"Zusätzliche Information zu der Mediendatei, die nicht in anderen Feldern erfasst wurde.">
+            >
+            ["at0010"] = <
+                text = <"Identifikator">
+                description = <"Eindeutige ID für die Mediendatei.">
+            >
+            ["at0011"] = <
+                text = <"Quellgerät">
+                description = <"Informationen zu dem Gerät, mit dem die Mediendatei generiert oder erzeugt wurde.">
+                comment = <"Zum Beispiel: Die Kamera, mit der ein Bild aufgenommen wurde.">
+            >
+            ["at0012"] = <
+                text = <"Urheber">
+                description = <"Informationen zu der Person oder Organisation, die die Mediendatei generiert oder verfasst hat.">
+            >
+            ["at0013"] = <
+                text = <"Zusätzliche Informationen">
+                description = <"Zusätzliche strukturierte Details zur Mediendatei.">
+            >
+        >
+        ["pt-pt"] = <
+            ["at0000"] = <
+                text = <"Ficheiro de media">
+                description = <"Um ficheiro de media adquirido ou utilizado como parte do processo médico e metadados associados.">
+            >
+            ["at0001"] = <
+                text = <"Conteúdo">
+                description = <"Representação digital do ficheiro de media.">
+                comment = <"*If the file is stored locally, the actual content will be captured and stored using the Multimedia data type. For example: RTF or PDF for a document; JPG for an image; MP4 for a video; or WAV for an audio file. Full list of available media types: https://specifications.openehr.org/releases/TERM/latest/SupportTerminology.html#_media_types.  If the file is stored at a location outside of the health record, the detailed path to the file is captured using the URI attribute in the Multimedia data type. The Multimedia data type has many RM attributes such as the size of file and URI to an external source - see https://specifications.openehr.org/releases/RM/latest/data_types.html#_dv_multimedia_class. (en)">
+            >
+            ["at0002"] = <
+                text = <"Nome do conteúdo">
+                description = <"Nome ou título descritivo do ficheiro de media.">
+                comment = <"Uma descrição do conteúdo do ficheiro de média. Utilize uma convenção de nomenclatura normalizada acordada, se disponível. Por exemplo: “Queimadura na mão direita nº 1” ou “Vídeo consulta de cardiologia no dia 2 de maio”.">
+            >
+            ["at0004"] = <
+                text = <"Criado">
+                description = <"A data/hora, data parcial ou período em que o ficheiro de média foi gerado ou criado.">
+            >
+            ["at0005"] = <
+                text = <"Descrição">
+                description = <"Descrição narrativa sobre o ficheiro de media.">
+            >
+            ["at0007"] = <
+                text = <"Comentário">
+                description = <"Narrativa adicional sobre o ficheiro de média não capturada noutros campos.">
+            >
+            ["at0010"] = <
+                text = <"Identificador">
+                description = <"ID único do ficheiro de media.">
+            >
+            ["at0011"] = <
+                text = <"Dispositivo de origem">
+                description = <"Detalhes sobre o dispositivo utilizado para gerar ou criar o ficheiro de média.">
+                comment = <"Por exemplo: a câmara utilizada para captar uma imagem.">
+            >
+            ["at0012"] = <
+                text = <"Criador">
+                description = <"Detalhes sobre o indivíduo ou organização que gerou ou criou o ficheiro de media.">
+            >
+            ["at0013"] = <
+                text = <"Detalhes adicionais">
+                description = <"Detalhes estruturados adicionais sobre o ficheiro de media.">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Mediefil">
+                description = <"En mediefil och dess metadata som förvärvats eller använts som del i en vårdprocess.">
+            >
+            ["at0001"] = <
+                text = <"Innehåll">
+                description = <"Digitalt åskådliggörande av mediefilen.">
+                comment = <"Om filen lagras lokalt kommer det faktiska innehållet att fångas och lagras med hjälp av datatypen Multimedia. Till exempel: RTF eller PDF för ett dokument; JPG för en bild; MP4 för en video; eller WAV för en ljudfil. Fullständig lista över tillgängliga mediatyper: https://specifications.openehr.org/releases/TERM/latest/SupportTerminology.html#_media_types. Om filen lagras på en plats utanför hälsojournalen, fångas den detaljerade sökvägen till filen med URI-attributet i datatypen Multimedia. Datatypen Multimedia har många Referens Modell-attribut som filstorlek och URI till en extern källa - se https://specifications.openehr.org/releases/RM/latest/data_types.html#_dv_multimedia_class.">
+            >
+            ["at0002"] = <
+                text = <"Innehållets namn">
+                description = <"Beskrivande namn eller titel för mediefilen.">
+                comment = <"En beskrivning av innehållet i mediefilen. Om tillgängligt, använd ett standardiserat sätt för att namnge filen. Till exempel: \"Höger hand brännskada #1\" eller \"Kardiologi video konsultation 2/5\".">
+            >
+            ["at0004"] = <
+                text = <"Skapad">
+                description = <"Datum och tid eller period då mediefilen skapades.">
+            >
+            ["at0005"] = <
+                text = <"Beskrivning">
+                description = <"Beskrivning av mediefilen.">
+            >
+            ["at0007"] = <
+                text = <"Kommentar">
+                description = <"Ytterligare redogörelse om mediefilen som inte beskrivits i andra fält.">
+            >
+            ["at0010"] = <
+                text = <"Identifierare">
+                description = <"Unikt ID för mediefilen.">
+            >
+            ["at0011"] = <
+                text = <"Källutrustning">
+                description = <"Detaljer om den utrustning som användes för att skapa mediefilen.">
+                comment = <"Till exempel: kameran som användes för att ta en bild.">
+            >
+            ["at0012"] = <
+                text = <"Skapare">
+                description = <"Detaljer om den individ eller organisation som skapade mediefilen.">
+            >
+            ["at0013"] = <
+                text = <"Ytterligare detaljer">
+                description = <"Ytterligare strukturerade detaljer om mediefilen.">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Mediafil">
+                description = <"En mediafil, samt tilknyttede metadata, som er ervervet eller brukt forbindelse med en helsetjeneste.">
+            >
+            ["at0001"] = <
+                text = <"Innhold">
+                description = <"Digital representasjon av mediafilen.">
+                comment = <"Hvis filen lagres lokalt, blir det faktiske innholdet lagret ved hjelp av datatypen Multimedia. For eksempel: RTF eller PDF for et dokument; JPG for et bilde; MP4 for en video; eller WAV for en lydfil. Full liste over tilgjengelige mediatyper: https://specifications.openehr.org/releases/TERM/latest/SupportTerminology.html#_media_types
+Hvis filen lagres et sted utenfor den elektroniske journalen, kan adressen til filen bli lagret ved hjelp av URI-attributtet i multimediedatatypen. Multimedia-datatypen har mange RM-attributter, for eksempel filstørrelse og URI til en ekstern kilde - se https://specifications.openehr.org/releases/RM/latest/data_types.html#_dv_multimedia_class.">
+            >
+            ["at0002"] = <
+                text = <"Navn på innhold">
+                description = <"Beskrivende navn eller tittel på mediafilen.">
+                comment = <"En beskrivelse av innholdet i mediafilen. For eksempel: \"Brannsår høyre hånd #1\" eller \"Kardiologisk videokonsultasjon 2. mai\". Bruk avtalt standardisert navnekonvensjon dersom det er mulig.">
+            >
+            ["at0004"] = <
+                text = <"Opprettet dato">
+                description = <"Dato/klokkeslett, delvis dato eller periode da multimediafilen ble generert eller laget.">
+            >
+            ["at0005"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstlig beskrivelse av mediafilen.">
+            >
+            ["at0007"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om mediafilen som ikke dekkes av andre elementer.">
+            >
+            ["at0010"] = <
+                text = <"ID">
+                description = <"Unik identifikator til mediafilen.">
+            >
+            ["at0011"] = <
+                text = <"Kildeenhet">
+                description = <"Detaljer om enheten som ble brukt til å generere eller skape mediafilen.">
+                comment = <"For eksempel: kamera som ble brukt til å ta bildet.">
+            >
+            ["at0012"] = <
+                text = <"Forfatter">
+                description = <"Detaljer om personen eller organisasjonen som genererte eller skapte mediafilen.">
+            >
+            ["at0013"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Ytterligere strukturerte detaljer om mediafilen.">
+            >
+        >
+        ["sk"] = <
+            ["at0000"] = <
+                text = <"Mediálny súbor">
+                description = <"Mediálny súbor, ktorý sa získava alebo používa ako súčasť procesu zdravotnej starostlivosti, a súvisiace metadáta">
+            >
+            ["at0001"] = <
+                text = <"Obsah">
+                description = <"Digitálna reprezentácia mediálneho súboru.">
+                comment = <"*If the file is stored locally, the actual content will be captured and stored using the Multimedia data type. For example: RTF or PDF for a document; JPG for an image; MP4 for a video; or WAV for an audio file. Full list of available media types: https://specifications.openehr.org/releases/TERM/latest/SupportTerminology.html#_media_types.  If the file is stored at a location outside of the health record, the detailed path to the file is captured using the URI attribute in the Multimedia data type. The Multimedia data type has many RM attributes such as the size of file and URI to an external source - see https://specifications.openehr.org/releases/RM/latest/data_types.html#_dv_multimedia_class. (en)">
+            >
+            ["at0002"] = <
+                text = <"Názov obsahu">
+                description = <"Popisný názov alebo názov pre mediálny súbor.">
+                comment = <"Popis obsahu mediálneho súboru. Použite dohodnutú štandardizovanú konvenciu pomenovania, ak je k dispozícii. Napríklad: „Popálenina pravej ruky č. 1“ alebo „Kardiologická videokonzultácia 2. mája“.">
+            >
+            ["at0004"] = <
+                text = <"Vytvorený">
+                description = <"Dátum/čas, čiastočný dátum alebo obdobie, kedy bol mediálny súbor vygenerovaný alebo vytvorený.">
+            >
+            ["at0005"] = <
+                text = <"Popis">
+                description = <"Naratívny popis o mediálnom súbore.">
+            >
+            ["at0007"] = <
+                text = <"Poznámky">
+                description = <"Dodatočné poznámky o mediálnom súbore nezachytené v iných poliach.">
+            >
+            ["at0010"] = <
+                text = <"Identifikátor">
+                description = <"Jedinečný identifikátor pre mediálny súbor.">
+            >
+            ["at0011"] = <
+                text = <"Zdrojový prístroj">
+                description = <"Podrobnosti o prístroji použitom na generovanie alebo vytvorenie mediálneho súboru.">
+                comment = <"Napríklad: fotoaparát použitý zachytenie snímky.">
+            >
+            ["at0012"] = <
+                text = <"Tvorca">
+                description = <"Podrobnosti o jednotlivcovi alebo organizácii, ktorá vygenerovala alebo vytvorila mediálny súbor.">
+            >
+            ["at0013"] = <
+                text = <"Ďalšie detaily">
+                description = <"Ďalšie štruktúrované detaily o mediálnom súbore.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Media file">
+                description = <"A media file that is acquired or used as part of the healthcare process, and associated metadata.">
+            >
+            ["at0001"] = <
+                text = <"Content">
+                description = <"Digital representation of the media file.">
+                comment = <"If the file is stored locally, the actual content will be captured and stored using the Multimedia data type. For example: RTF or PDF for a document; JPG for an image; MP4 for a video; or WAV for an audio file. Full list of available media types: https://specifications.openehr.org/releases/TERM/latest/SupportTerminology.html#_media_types.  If the file is stored at a location outside of the health record, the detailed path to the file is captured using the URI attribute in the Multimedia data type. The Multimedia data type has many RM attributes such as the size of file and URI to an external source - see https://specifications.openehr.org/releases/RM/latest/data_types.html#_dv_multimedia_class.">
+            >
+            ["at0002"] = <
+                text = <"Content name">
+                description = <"Descriptive name or title for the media file.">
+                comment = <"A description of the content of the media file. Use an agreed standardised naming convention, if available. For example: \"Right hand burn #1\" or \"Cardiology video consultation on May 2\".">
+            >
+            ["at0004"] = <
+                text = <"Created">
+                description = <"The date/time, partial date or period when the media file was generated or authored.">
+            >
+            ["at0005"] = <
+                text = <"Description">
+                description = <"Narrative description about the media file.">
+            >
+            ["at0007"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the media file not captured in other fields.">
+            >
+            ["at0010"] = <
+                text = <"Identifier">
+                description = <"Unique ID for the media file.">
+            >
+            ["at0011"] = <
+                text = <"Source device">
+                description = <"Details about the device used to generate or author the media file.">
+                comment = <"For example: the camera used to capture an image.">
+            >
+            ["at0012"] = <
+                text = <"Creator">
+                description = <"Details about the individual or organisation who generated or authored the media file.">
+            >
+            ["at0013"] = <
+                text = <"Additional details">
+                description = <"Additional structured details about the media file.">
+            >
+        >
+        ["fr"] = <
+            ["at0000"] = <
+                text = <"Fichier multimédia">
+                description = <"Un fichier multimédia acquis ou utilisé dans le cadre du processus de soins, ainsi que les métadonnées associées.">
+            >
+            ["at0001"] = <
+                text = <"Contenu">
+                description = <"Représentation numérique du fichier multimédia.">
+                comment = <"Si le fichier est stocké localement, son contenu réel sera capturé et stocké à l’aide du type de données « Multimédia ». Par exemple : RTF ou PDF pour un document ; JPG pour une image ; MP4 pour une vidéo ; ou WAV pour un fichier audio. Liste complète des types de fichiers multimédias disponibles : https://specifications.openehr.org/releases/TERM/latest/SupportTerminology.html#_media_types.  Si le fichier est stocké à un emplacement extérieur au dossier médical, le chemin d’accès détaillé vers le fichier est enregistré à l’aide de l’attribut URI du type de données « Multimédia ». Le type de données « Multimédia » comporte de nombreux attributs RM, tels que la taille du fichier et l’URI vers une source externe – voir https://specifications.openehr.org/releases/RM/latest/data_types.html#_dv_multimedia_class.">
+            >
+            ["at0002"] = <
+                text = <"Nom du contenu">
+                description = <"Nom ou titre descriptif du fichier multimédia.">
+                comment = <"Une description du contenu du fichier multimédia. Utilisez une convention de nommage standardisée et convenue, le cas échéant. Par exemple : « Brûlure à la main droite n° 1 » ou « Consultation vidéo en cardiologie du 2 mai ».">
+            >
+            ["at0004"] = <
+                text = <"Créé">
+                description = <"La date/heure, une date partielle ou une période correspondant à la création ou à la production du fichier multimédia.">
+            >
+            ["at0005"] = <
+                text = <"Description">
+                description = <"Description narrative du fichier multimédia.">
+            >
+            ["at0007"] = <
+                text = <"Commentaire">
+                description = <"Informations supplémentaires concernant le fichier multimédia qui ne sont pas reprises dans d’autres champs.">
+            >
+            ["at0010"] = <
+                text = <"Identifiant">
+                description = <"Identifiant unique du fichier multimédia.">
+            >
+            ["at0011"] = <
+                text = <"Appareil source">
+                description = <"Informations détaillées sur le dispositif utilisé pour générer ou créer le fichier multimédia.">
+                comment = <"Par exemple : l'appareil photo utilisé pour prendre une photo.">
+            >
+            ["at0012"] = <
+                text = <"Créateur">
+                description = <"Informations détaillées sur la personne ou l'organisme ayant généré ou créé le fichier multimédia.">
+            >
+            ["at0013"] = <
+                text = <"Détails supplémentaires">
+                description = <"Détails supplémentaires concernant le fichier multimédia.">
+            >
+        >
+        ["nl"] = <
+            ["at0000"] = <
+                text = <"Mediabestand">
+                description = <"Een mediabestand dat wordt verkregen of gebruikt als onderdeel van het zorgproces, en bijbehorende metadata.">
+            >
+            ["at0001"] = <
+                text = <"Inhoud">
+                description = <"Digitale representatie van het mediabestand.">
+                comment = <"*If the file is stored locally, the actual content will be captured and stored using the Multimedia data type. For example: RTF or PDF for a document; JPG for an image; MP4 for a video; or WAV for an audio file. Full list of available media types: https://specifications.openehr.org/releases/TERM/latest/SupportTerminology.html#_media_types.  If the file is stored at a location outside of the health record, the detailed path to the file is captured using the URI attribute in the Multimedia data type. The Multimedia data type has many RM attributes such as the size of file and URI to an external source - see https://specifications.openehr.org/releases/RM/latest/data_types.html#_dv_multimedia_class. (en)">
+            >
+            ["at0002"] = <
+                text = <"Naam inhoud">
+                description = <"Beschrijvende naam of titel voor het mediabestand.">
+                comment = <"Een beschrijving van de inhoud van het mediabestand. Gebruik een overeengekomen gestandaardiseerde naamgevingsconventie, indien beschikbaar. Bijvoorbeeld: \"Brandwond rechterhand #1\" of \"Videoconsult Cardiologie op 2 mei\".">
+            >
+            ["at0004"] = <
+                text = <"Aangemaakt op">
+                description = <"De datum/tijd, gedeeltelijke datum of periode waarop het mediabestand is gegenereerd of gemaakt.">
+            >
+            ["at0005"] = <
+                text = <"Beschrijving">
+                description = <"Verhalende beschrijving van het mediabestand.">
+            >
+            ["at0007"] = <
+                text = <"Opmerking">
+                description = <"Aanvullende beschrijving over het mediabestand dat niet in andere velden is vastgelegd.">
+            >
+            ["at0010"] = <
+                text = <"Identificatie">
+                description = <"Unieke identificatie voor het mediabestand.">
+            >
+            ["at0011"] = <
+                text = <"Bronapparaat">
+                description = <"Details over het apparaat dat is gebruikt om het mediabestand te genereren of te maken.">
+                comment = <"Bijvoorbeeld: de camera die wordt gebruikt om een beeld vast te leggen.">
+            >
+            ["at0012"] = <
+                text = <"Aangemaakt door">
+                description = <"Details over de persoon of organisatie die het mediabestand heeft gegenereerd of gemaakt.">
+            >
+            ["at0013"] = <
+                text = <"Aanvullende details">
+                description = <"Aanvullende gestructureerde details over het mediabestand.">
+            >
+        >
+    >

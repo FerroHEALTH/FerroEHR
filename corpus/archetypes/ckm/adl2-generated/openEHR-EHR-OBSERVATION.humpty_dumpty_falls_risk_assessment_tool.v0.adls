@@ -1,0 +1,761 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=aadbfa22-ad8c-495d-961c-60d7dbcbec49; build_uid=bc6c71d9-5765-452c-b4a9-75888e028f83)
+    openEHR-EHR-OBSERVATION.humpty_dumpty_falls_risk_assessment_tool.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            author = <
+                ["name"] = <"Alan D. March">
+                ["organisation"] = <"Hospital Universitario Austral, Pilar, Buenos Aires, Argentina">
+                ["email"] = <"alandmarch@gmail.com">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Osmeire Chamelette Sanzovo">
+                ["organisation"] = <"Hospital Sírio Libanês - SP">
+                ["email"] = <"osmeire.acsanzovo@hsl.org.br">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Alan D. March">
+        ["organisation"] = <"Hospital Universitario Austral, Pilar, Buenos Aires, Argentina.">
+        ["email"] = <"alandmarch@gmail.com">
+        ["date"] = <"2016-07-25">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Hill-Rodriguez D, Messmer PR, Wood ML (2007). Humpty Dumpty sat on a wall—developing a pediatric falls prevention program and scale. Paper presented at the 17th Annual">
+        ["2"] = <"Society of Pediatric Nurses 17th Annual Convention Milwaukee, WI.">
+        ["3"] = <"Hill-Rodriguez D, Williams PD, Zeller RA, Williams AR, Wood M, Henry M (2009). The Humpty Dumpty Falls Scale: a case-control study. J Spec Pediatr Nurs 2009 Jan;14(1):22-32.">
+        ["4"] = <"Pauley BJ, Houston LS, Cheng D, Johnston DM (2014). Clinical relevance of the Humpty Dumpty Falls Scale in a pediatric specialty hospital. Pediatr Nurs 2014 May-Jun;40(3):137-42.">
+    >
+    other_details = <
+        ["current_contact"] = <"Alan D. March <alandmarch@gmail.com>">
+        ["MD5-CAM-1.0.1"] = <"5A074FA124B4E1F5829777CF7DF80BB7">
+    >
+    details = <
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            purpose = <"Herramienta para la evaluación del riesgo de caídas en niños y adolescentes. Utiliza un escala multidimensional de 7 parámetros.">
+            keywords = <"caídas", "escala", "edad", "género", "diagnóstico", "déficit cognitivo", "factor ambiental", "cirugía", "sedación", "antestesia", "medicamento">
+            use = <"Se evaluan 7 parámetros a los cuales se asignan puntajes: Edad, Género, Diagnóstico, Déficits congitivos, Factores ambientales, Respuesta a cirugía/sedación/antestesia y Uso de medicamentos.">
+            misuse = <"No utilizar en pacientes mayores de 18 años.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Uma ferramenta para avaliação do risco de queda de crianças, baseados na mensuração de 7 parâmetros.">
+            keywords = <"queda", "escala", "idade", "gênero", "diagnóstico", "comprometimento cognitivo", "fator ambiental", "cirurgia", "sedação", "anestesia", "medicação">
+            use = <"*Seven parameters are evaluated and a numerical score is assigned to each: Age, Gender, Diagnosis, Cognitive impairments, Environmental factors, Response to surgery/sedation/anesthesia and Medication usage.(en)">
+            misuse = <"Não deve ser utilizado para pacientes com mais de 18 anos.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"A tool for the assesment of risk of falls in children, based on the measurement of 7 parameters.">
+            keywords = <"falls", "scale", "age", "gender", "diagnosis", "cognitive impairment", "environmental factor", "surgery", "sedation", "anesthesia", "medication">
+            use = <"Seven parameters are evaluated and a numerical score is assigned to each: Age, Gender, Diagnosis, Cognitive impairments, Environmental factors, Response to surgery/sedation/anesthesia and Medication usage.">
+            misuse = <"Not to be used in patients above 18 years of age.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Humpty dumpty falls scale
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Age
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0008]}],    -- 13 years and above
+                                                    [{2}, {[at0007]}],    -- 7 to less than 13 years old
+                                                    [{3}, {[at0006]}],    -- 3 to less than 7 years old
+                                                    [{4}, {[at0005]}]    -- Less than 3 years old
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Gender
+                                        value matches {
+                                            DV_ORDINAL[at9008] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0010]}],    -- Female
+                                                    [{2}, {[at0011]}]    -- Male
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Diagnosis
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0013]}],    -- Other diagnosis
+                                                    [{2}, {[at0014]}],    -- Psychological/behavioural diagnosis
+                                                    [{3}, {[at0015]}],    -- Alterations in oxygenation (respiratory diagnosis, dehydration, anemia, anorexia, syncope/dizziness, etc.)
+                                                    [{4}, {[at0016]}]    -- Neurological diagnosis
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Cognitive impairments
+                                        value matches {
+                                            DV_ORDINAL[at9010] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0018]}],    -- Oriented to own ability
+                                                    [{2}, {[at0019]}],    -- Forgets limitations
+                                                    [{3}, {[at0020]}]    -- Not aware of limitations
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Environmental factors
+                                        value matches {
+                                            DV_ORDINAL[at9011] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0022]}],    -- Outpatient area
+                                                    [{2}, {[at0023]}],    -- Patient placed in bed
+                                                    [{3}, {[at0024]}],    -- Patient uses assistive device or infant-toddler in crib or furniture/lighting (tripled room)
+                                                    [{4}, {[at0025]}]    -- History of falls or infant-toddler placed in bed
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0026] occurrences matches {0..1} matches {    -- Response to surgery/sedation/anesthesia
+                                        value matches {
+                                            DV_ORDINAL[at9012] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0027]}],    -- More than 48 hours/None
+                                                    [{2}, {[at0028]}],    -- Within 48 hours
+                                                    [{3}, {[at0029]}]    -- Within 24 hours
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0030] occurrences matches {0..1} matches {    -- Medication usage
+                                        value matches {
+                                            DV_ORDINAL[at9013] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0031]}],    -- Other medications/none
+                                                    [{2}, {[at0032]}],    -- One of the meds listed above
+                                                    [{3}, {[at0033]}]    -- Multiple usage of: sedatives (excluding ICU patients sedated and paralyzed), hypnotics, barbiturates, phenothiazines, antidepressants, laxatives/diuretics, narcotic
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0034] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9014] matches {
+                                                magnitude matches {|7..23|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0035] matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9015]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0038] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0037] matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9022]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0040] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0041] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["es-ar"] = <
+            ["at0000"] = <
+                text = <"Humpty dumpty falls scale">
+                description = <"Escala para la evaluación del riesgo de caídas en niños, Utiliza un escala multidimensional de 7 parámetros.">
+            >
+            ["at0002"] = <
+                text = <"*Any event(en)">
+                description = <"*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.(en)">
+            >
+            ["at0004"] = <
+                text = <"Edad">
+                description = <"Edad del paciente.">
+            >
+            ["at0005"] = <
+                text = <"Menos de 3 años">
+                description = <"El paciente tiene menos de 3 años.">
+            >
+            ["at0006"] = <
+                text = <"3 a menos de 7 años">
+                description = <"El paciente tiene 3 a menos de 7 años.">
+            >
+            ["at0007"] = <
+                text = <"7 a menos de 13 años">
+                description = <"El paciente tiene 7 a menos de 13 años.">
+            >
+            ["at0008"] = <
+                text = <"13 años o más">
+                description = <"El paciente tiene 13 años o más.">
+            >
+            ["at0009"] = <
+                text = <"*Gender(en)">
+                description = <"*Gender.(en)">
+            >
+            ["at0010"] = <
+                text = <"Femenino">
+                description = <"Paciente femenina.">
+            >
+            ["at0011"] = <
+                text = <"Masculino">
+                description = <"Paciente masculino.">
+            >
+            ["at0012"] = <
+                text = <"*Diagnosis(en)">
+                description = <"*Diagnosis.(en)">
+            >
+            ["at0013"] = <
+                text = <"*Other diagnosis(en)">
+                description = <"*Patient has.(en)">
+            >
+            ["at0014"] = <
+                text = <"Diagnósticos psicologicos o conductuales">
+                description = <"El paciente presenta diagnósticos psicologicos o conductuales.">
+            >
+            ["at0015"] = <
+                text = <"Alteraciones en la oxigenación (diagnósticos respiratorios, deshidratación, anemia, anorexia, síncope/mareos, etc.)">
+                description = <"El paciente presenta alteraciones en la oxigenación (diagnósticos respiratorios, deshidratación, anemia, anorexia, síncope/mareos, etc.).">
+            >
+            ["at0016"] = <
+                text = <"Diagnóstico neurológico">
+                description = <"El paciente presenta un diagnóstico neurológico.">
+            >
+            ["at0017"] = <
+                text = <"Déficits cognitivos">
+                description = <"Déficits cognitivos.">
+            >
+            ["at0018"] = <
+                text = <"Orientado en cuanto a capacidades propias">
+                description = <"Paciente orientado en cuanto a capacidades propias.">
+            >
+            ["at0019"] = <
+                text = <"Olvida sus limitaciones">
+                description = <"Paciente olvida sus limitaciones.">
+            >
+            ["at0020"] = <
+                text = <"No consciente de sus limitaciones">
+                description = <"Paciente no consciente de sus limitaciones.">
+            >
+            ["at0021"] = <
+                text = <"*Environmental factors(en)">
+                description = <"*Environmental factors.(en)">
+            >
+            ["at0022"] = <
+                text = <"Área ambulatoria">
+                description = <"Paciente en área ambulatoria.">
+            >
+            ["at0023"] = <
+                text = <"Paciente en cama">
+                description = <"Paciente en cama">
+            >
+            ["at0024"] = <
+                text = <"Paciente que utiliza dispositivos de asistencia o bebé en cuna o presencia de muebles/iluminación (habitación triple)">
+                description = <"Paciente que utiliza dispositivos de asistencia o bebé en cuna o presencia de muebles/iluminación (habitación triple)">
+            >
+            ["at0025"] = <
+                text = <"Antecedente de caídas o niño-bebé colocado en cama">
+                description = <"Paciente que presenta antecedente de caídas o es niño-bebé colocado en cama.">
+            >
+            ["at0026"] = <
+                text = <"Respuesta a cirugía/sedación/antestesia">
+                description = <"Respuesta a cirugía/sedación/antestesia">
+            >
+            ["at0027"] = <
+                text = <"Mas de 48 horas/Ninguna">
+                description = <"Paciente a mas de 48 horas o sin cirugia.">
+            >
+            ["at0028"] = <
+                text = <"*Within 48 hours(en)">
+                description = <"*Patient within 48 hours from surgery/sedation/anesthesia.(en)">
+            >
+            ["at0029"] = <
+                text = <"*Within 24 hours(en)">
+                description = <"*Patient within 24 hours  from surgery/sedation/anesthesia.(en)">
+            >
+            ["at0030"] = <
+                text = <"Uso de medicamentos">
+                description = <"Uso de medicamentos por parte del paciente.">
+            >
+            ["at0031"] = <
+                text = <"Otros medicamentos">
+                description = <"Paciente que recibe otros medicamentos.">
+            >
+            ["at0032"] = <
+                text = <"Uno solo de los medicamentos listados arriba">
+                description = <"Paciente que recibe uno solo de los medicamentos listados arriba.">
+            >
+            ["at0033"] = <
+                text = <"Uso de múltiples medicamentos (excluyendo pacientes sedados o paralizados en UCI, hipnóticos, barbitúricos, fenotiazinas, antidepresivos, laxantes/diuréticos, narcóticos">
+                description = <"Paciente que recibe múltiples medicamentos (excluyendo pacientes sedados o paralizados en UCI, hipnóticos, barbitúricos, fenotiazinas, antidepresivos, laxantes/diuréticos, narcóticos.">
+            >
+            ["at0034"] = <
+                text = <"Puntaje total">
+                description = <"Puntaje total">
+            >
+            ["at0035"] = <
+                text = <"Comentario">
+                description = <"Comentario">
+            >
+            ["at0037"] = <
+                text = <"*Confounding factors(en)">
+                description = <"*Any incidental factors related to the state of the subject which may affect clinical interpretation of the measurement.(en)">
+            >
+            ["at0041"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local context or to align with other reference models/formalisms.(en)">
+                comment = <"*For example: Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.(en)">
+            >
+            ["ac9016"] = <
+                text = <"Edad (synthesised)">
+                description = <"Edad del paciente. (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"*Gender(en) (synthesised)">
+                description = <"*Gender.(en) (synthesised)">
+            >
+            ["ac9018"] = <
+                text = <"*Diagnosis(en) (synthesised)">
+                description = <"*Diagnosis.(en) (synthesised)">
+            >
+            ["ac9019"] = <
+                text = <"Déficits cognitivos (synthesised)">
+                description = <"Déficits cognitivos. (synthesised)">
+            >
+            ["ac9020"] = <
+                text = <"*Environmental factors(en) (synthesised)">
+                description = <"*Environmental factors.(en) (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"Respuesta a cirugía/sedación/antestesia (synthesised)">
+                description = <"Respuesta a cirugía/sedación/antestesia (synthesised)">
+            >
+            ["ac9022"] = <
+                text = <"Uso de medicamentos (synthesised)">
+                description = <"Uso de medicamentos por parte del paciente. (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Escala de queda Humpty dumpty">
+                description = <"Uma ferramenta para avaliação do risco de queda de crianças, baseados na mensuração de 7 parâmetros.">
+            >
+            ["at0002"] = <
+                text = <"*Any event(en)">
+                description = <"*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.(en)">
+            >
+            ["at0004"] = <
+                text = <"Idade">
+                description = <"Idade do paciente">
+            >
+            ["at0005"] = <
+                text = <"Menor que 3 anos">
+                description = <"Paciente com idade menor que 3 anos.">
+            >
+            ["at0006"] = <
+                text = <"Entre 3 e 7 anos">
+                description = <"Paciente com idade entre 3 e 7 anos.">
+            >
+            ["at0007"] = <
+                text = <"Entre 7 e 13 anos">
+                description = <"Paciente com idade entre 7 e 13 anos.">
+            >
+            ["at0008"] = <
+                text = <"13 anos e acima">
+                description = <"Paciente com 13 anos ou mais.">
+            >
+            ["at0009"] = <
+                text = <"*Gender(en)">
+                description = <"*Gender.(en)">
+            >
+            ["at0010"] = <
+                text = <"Feminino">
+                description = <"Paciente é feminino.">
+            >
+            ["at0011"] = <
+                text = <"Masculino">
+                description = <"Paciente é masculino.">
+            >
+            ["at0012"] = <
+                text = <"*Diagnosis(en)">
+                description = <"*Diagnosis.(en)">
+            >
+            ["at0013"] = <
+                text = <"*Other diagnosis(en)">
+                description = <"*Patient has.(en)">
+            >
+            ["at0014"] = <
+                text = <"Diganóstico comportamental /psicológico">
+                description = <"Paciente tem outro diagnóstico.">
+            >
+            ["at0015"] = <
+                text = <"Alterações na oxigenação (diagnóstico respiratório, desidratação, anemia, anorexia, síncope/tonturas, etc.)">
+                description = <"Paciente tem alterações na oxigenação (diagnóstico respiratório, desidratação, anemia, anorexia, síncope/tonturas, etc.).">
+            >
+            ["at0016"] = <
+                text = <"Diagnóstico neurológico">
+                description = <"Paciente tem diagnóstico neurológico.">
+            >
+            ["at0017"] = <
+                text = <"Comprometimento cognitivo">
+                description = <"Comprometimento cognitivo.">
+            >
+            ["at0018"] = <
+                text = <"Consciente da sua capacidade">
+                description = <"Paciente é consciente da própria capacidade.">
+            >
+            ["at0019"] = <
+                text = <"Esquece das suas limitações">
+                description = <"Paciente esquece das suas limitações.">
+            >
+            ["at0020"] = <
+                text = <"Não ciente das suas limitações">
+                description = <"Paciente não é consciente das suas limitações.">
+            >
+            ["at0021"] = <
+                text = <"*Environmental factors(en)">
+                description = <"*Environmental factors.(en)">
+            >
+            ["at0022"] = <
+                text = <"Ambulatorial">
+                description = <"Paciente ambulatorial.">
+            >
+            ["at0023"] = <
+                text = <"Paciente acamado">
+                description = <"Paciente está acamado.">
+            >
+            ["at0024"] = <
+                text = <"Paciente utiliza: dispositivos de assistência ou criança pequena no berço ou mobiliário/iluminação">
+                description = <"Paciente utiliza: dispositivos de assistência ou criança pequena no berço ou mobiliário/iluminação.">
+            >
+            ["at0025"] = <
+                text = <"História de queda ou crianças pequenas colocadas na cama">
+                description = <"Paciente com história de queda ou crianças pequenas colocadas na cama.">
+            >
+            ["at0026"] = <
+                text = <"Resultados de cirurgia/sedação/anestesia">
+                description = <"A resposta do paciente a cirurgia/sedação/anestesia.">
+            >
+            ["at0027"] = <
+                text = <"Mais do que 48 horas/nenhum">
+                description = <"Paciente com cirurgia/sedação/anestesia há mais de 48 horas ou não teve.">
+            >
+            ["at0028"] = <
+                text = <"Com 48 horas">
+                description = <"Paciente com cirurgia/sedação/anestesia há 48 horas.">
+            >
+            ["at0029"] = <
+                text = <"Com 24 horas">
+                description = <"Paciente com cirurgia/sedação/anestesia há 24 horas.">
+            >
+            ["at0030"] = <
+                text = <"Uso de medicação">
+                description = <"Uso de medicação.">
+            >
+            ["at0031"] = <
+                text = <"Outra medicação/nenhuma">
+                description = <"Paciente recebe outra medicação ou nenhuma.">
+            >
+            ["at0032"] = <
+                text = <"Uma das medicações listadas acima">
+                description = <"Paciente recebe uma das medicações listadas acima.">
+            >
+            ["at0033"] = <
+                text = <"Uso múltiplo de sedativos (excluindo-se pacientes em UTI sedados ou paralisados), hipnóticos, barbitúricos, fenotiazinas, antidepressivos, laxantes/diuréticos, narcóticos.">
+                description = <"Uso múltiplo de sedativos (excluindo-se pacientes em UTI sedados ou paralisados), hipnóticos, barbitúricos, fenotiazinas, antidepressivos, laxantes/diuréticos, narcóticos.">
+            >
+            ["at0034"] = <
+                text = <"Escore total">
+                description = <"Escore total.">
+            >
+            ["at0035"] = <
+                text = <"Comentários">
+                description = <"Comentários.">
+            >
+            ["at0037"] = <
+                text = <"*Confounding factors(en)">
+                description = <"*Any incidental factors related to the state of the subject which may affect clinical interpretation of the measurement.(en)">
+            >
+            ["at0041"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local context or to align with other reference models/formalisms.(en)">
+                comment = <"*For example: Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.(en)">
+            >
+            ["ac9016"] = <
+                text = <"Idade (synthesised)">
+                description = <"Idade do paciente (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"*Gender(en) (synthesised)">
+                description = <"*Gender.(en) (synthesised)">
+            >
+            ["ac9018"] = <
+                text = <"*Diagnosis(en) (synthesised)">
+                description = <"*Diagnosis.(en) (synthesised)">
+            >
+            ["ac9019"] = <
+                text = <"Comprometimento cognitivo (synthesised)">
+                description = <"Comprometimento cognitivo. (synthesised)">
+            >
+            ["ac9020"] = <
+                text = <"*Environmental factors(en) (synthesised)">
+                description = <"*Environmental factors.(en) (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"Resultados de cirurgia/sedação/anestesia (synthesised)">
+                description = <"A resposta do paciente a cirurgia/sedação/anestesia. (synthesised)">
+            >
+            ["ac9022"] = <
+                text = <"Uso de medicação (synthesised)">
+                description = <"Uso de medicação. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Humpty dumpty falls scale">
+                description = <"A scale for the assesment of risk of falls in children, based on the measurement of 7 parameters.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Age">
+                description = <"Age of patient.">
+            >
+            ["at0005"] = <
+                text = <"Less than 3 years old">
+                description = <"Patient is less than 3 years old.">
+            >
+            ["at0006"] = <
+                text = <"3 to less than 7 years old">
+                description = <"Patient is 3 to less than 7 years old.">
+            >
+            ["at0007"] = <
+                text = <"7 to less than 13 years old">
+                description = <"Patient is 7 to less than 13 years old.">
+            >
+            ["at0008"] = <
+                text = <"13 years and above">
+                description = <"Patient is 13 years and above.">
+            >
+            ["at0009"] = <
+                text = <"Gender">
+                description = <"Gender.">
+            >
+            ["at0010"] = <
+                text = <"Female">
+                description = <"Patient is female.">
+            >
+            ["at0011"] = <
+                text = <"Male">
+                description = <"Patient is male.">
+            >
+            ["at0012"] = <
+                text = <"Diagnosis">
+                description = <"Diagnosis.">
+            >
+            ["at0013"] = <
+                text = <"Other diagnosis">
+                description = <"Patient has.">
+            >
+            ["at0014"] = <
+                text = <"Psychological/behavioural diagnosis">
+                description = <"Patient has other diagnosis.">
+            >
+            ["at0015"] = <
+                text = <"Alterations in oxygenation (respiratory diagnosis, dehydration, anemia, anorexia, syncope/dizziness, etc.)">
+                description = <"Patient has alterations in oxygenation (respiratory diagnosis, dehydration, anemia, anorexia, syncope/dizziness, etc.).">
+            >
+            ["at0016"] = <
+                text = <"Neurological diagnosis">
+                description = <"Patient has neurological diagnosis.">
+            >
+            ["at0017"] = <
+                text = <"Cognitive impairments">
+                description = <"Cognitive impairments.">
+            >
+            ["at0018"] = <
+                text = <"Oriented to own ability">
+                description = <"Patient is oriented to own ability.">
+            >
+            ["at0019"] = <
+                text = <"Forgets limitations">
+                description = <"Patient forgets limitations.">
+            >
+            ["at0020"] = <
+                text = <"Not aware of limitations">
+                description = <"Patient is not aware of limitations.">
+            >
+            ["at0021"] = <
+                text = <"Environmental factors">
+                description = <"Environmental factors.">
+            >
+            ["at0022"] = <
+                text = <"Outpatient area">
+                description = <"Patient is in outpatient area.">
+            >
+            ["at0023"] = <
+                text = <"Patient placed in bed">
+                description = <"Patient is placed in bed.">
+            >
+            ["at0024"] = <
+                text = <"Patient uses assistive device or infant-toddler in crib or furniture/lighting (tripled room)">
+                description = <"Patient uses assistive device or infant-toddler in crib or furniture/lighting (tripled room).">
+            >
+            ["at0025"] = <
+                text = <"History of falls or infant-toddler placed in bed">
+                description = <"Patient has history of falls or is an infant-toddler placed in bed.">
+            >
+            ["at0026"] = <
+                text = <"Response to surgery/sedation/anesthesia">
+                description = <"Patient's response to surgery/sedation/anesthesia.">
+            >
+            ["at0027"] = <
+                text = <"More than 48 hours/None">
+                description = <"Patient is more than 48 hours from surgery/sedation/anesthesia or has had none.">
+            >
+            ["at0028"] = <
+                text = <"Within 48 hours">
+                description = <"Patient within 48 hours from surgery/sedation/anesthesia.">
+            >
+            ["at0029"] = <
+                text = <"Within 24 hours">
+                description = <"Patient within 24 hours  from surgery/sedation/anesthesia.">
+            >
+            ["at0030"] = <
+                text = <"Medication usage">
+                description = <"Medication usage.">
+            >
+            ["at0031"] = <
+                text = <"Other medications/none">
+                description = <"Patient receives other medications or none.">
+            >
+            ["at0032"] = <
+                text = <"One of the meds listed above">
+                description = <"Patient receives one of the medications listed above.">
+            >
+            ["at0033"] = <
+                text = <"Multiple usage of: sedatives (excluding ICU patients sedated and paralyzed), hypnotics, barbiturates, phenothiazines, antidepressants, laxatives/diuretics, narcotic">
+                description = <"Multiple usage of: sedatives (excluding ICU patients sedated and paralyzed), hypnotics, barbiturates, phenothiazines, antidepressants, laxatives/diuretics, narcotic.">
+            >
+            ["at0034"] = <
+                text = <"Total score">
+                description = <"Total score.">
+            >
+            ["at0035"] = <
+                text = <"Comment">
+                description = <"Comments.">
+            >
+            ["at0037"] = <
+                text = <"Confounding factors">
+                description = <"Any incidental factors related to the state of the subject which may affect clinical interpretation of the measurement.">
+            >
+            ["at0041"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"For example: Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["ac9016"] = <
+                text = <"Age (synthesised)">
+                description = <"Age of patient. (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Gender (synthesised)">
+                description = <"Gender. (synthesised)">
+            >
+            ["ac9018"] = <
+                text = <"Diagnosis (synthesised)">
+                description = <"Diagnosis. (synthesised)">
+            >
+            ["ac9019"] = <
+                text = <"Cognitive impairments (synthesised)">
+                description = <"Cognitive impairments. (synthesised)">
+            >
+            ["ac9020"] = <
+                text = <"Environmental factors (synthesised)">
+                description = <"Environmental factors. (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"Response to surgery/sedation/anesthesia (synthesised)">
+                description = <"Patient's response to surgery/sedation/anesthesia. (synthesised)">
+            >
+            ["ac9022"] = <
+                text = <"Medication usage (synthesised)">
+                description = <"Medication usage. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9017"] = <
+            id = <"ac9017">
+            members = <"at0010", "at0011">
+        >
+        ["ac9016"] = <
+            id = <"ac9016">
+            members = <"at0008", "at0007", "at0006", "at0005">
+        >
+        ["ac9020"] = <
+            id = <"ac9020">
+            members = <"at0022", "at0023", "at0024", "at0025">
+        >
+        ["ac9022"] = <
+            id = <"ac9022">
+            members = <"at0031", "at0032", "at0033">
+        >
+        ["ac9021"] = <
+            id = <"ac9021">
+            members = <"at0027", "at0028", "at0029">
+        >
+        ["ac9019"] = <
+            id = <"ac9019">
+            members = <"at0018", "at0019", "at0020">
+        >
+        ["ac9018"] = <
+            id = <"ac9018">
+            members = <"at0013", "at0014", "at0015", "at0016">
+        >
+    >

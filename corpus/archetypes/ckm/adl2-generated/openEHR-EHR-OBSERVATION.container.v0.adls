@@ -1,0 +1,178 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=7f7cb1eb-b6d0-4712-b244-4bbf9f2fcc64; build_uid=8f9e36f3-9373-4b05-9a8c-5a9c789a55f7)
+    openEHR-EHR-OBSERVATION.container.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Viktor Bäckman, Åsa Skagerhult">
+                ["organisation"] = <"Linköpings Universitet, Region Östergötland">
+                ["email"] = <"vikba308@student.liu.se, asa.skagerhult@regionostergotland.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Vebjørn Arntzen">
+                ["organisation"] = <"Oslo University Hospital">
+                ["email"] = <"varntzen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2015-07-13">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics<heather.leslie@oceaninformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"D2DAC3686CCA50254BAE94AAACD4BB96">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung von klinischem Inhalt, der in bestehenden CLUSTER-Archetypen enthalten ist, als eigenständige Information in der Gesundheitsakte.">
+            keywords = <"generisch", "Container", "Slot">
+            use = <"Verwenden Sie diesen Archetyp, um den klinischen Inhalt, der in bestehenden CLUSTER-Archetypen enthalten ist und normalerweise im Kontext anderer Archetypen dargestellt wird, als eigenständige Daten in der Krankenakte darzustellen, wenn dies klinisch angemessen ist.
+
+Dieser Archetyp soll nur als Container-Archetyp fungieren, der den flexiblen Ausdruck bestehender CLUSTER-Archetypen unterstützt. Es ist nicht beabsichtigt, andere Inhalte als den unbeschränkten SLOT zu enthalten.
+
+Beispielsweise wird der Archetyp openEHR-EHR-CLUSTER.tnm am häufigsten verwendet, um eine klinischen Klassifikation und Stadieneinteilung von Malignomen mit den Archetypen EVALUATION.problem_diagnosis bereitzustellen, aber durch Einfügen in diese OBSERVATION kann er die Information außerhalb des Kontexts einer Diagnose dargestellt werden, wenn dies klinisch angemessen ist . In ähnlicher Weise wird CLUSTER.tos normalerweise von HNO-Ärzten im Rahmen einer Untersuchung mit CLUSTER.exam_tympanic_membrane dargestellt, aber durch Einfügen in diesen Archetyp kann er außerhalb des Kontexts von Untersuchungsbefunden dargestellt werden, wenn dies klinisch angemessen ist.">
+            misuse = <"Darf nicht zur Darstellung spezifischer klinischer Inhalte verwendet werden, die in diesem Archetyp definiert sind.">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Gör det möjligt att representera det kliniska innehållet i CLUSTER-arketyper som fristående data i patientjournaler.">
+            keywords = <"allmän", "behållare">
+            use = <"Används i CLUSTER-arketyper för att göra det möjligt att när så är kliniskt lämpligt representera kliniskt innehåll som fristående data i patientjournaler. 
+
+Denna arketyp är enbart tänkt att fungera som en behållare som stödjer flexibiliteten hos befintliga CLUSTER-arketyper. Arketypen är inte avsedd för annat innehåll än den ospärrade SLOT-arketypen.
+
+Exempelvis används arketypen CLUSTER.nyha_heart_failure vanligtvis med arketypen EVALUATION.problem_diagnosis för att dokumentera en standardiserad bedömning av hjärtsvikt; om så är kliniskt lämpligt kan den i stället infogas i denna OBSERVATION-arketyp och därigenom användas i en annan kontext än EVALUATION. På liknande sätt dokumenteras CLUSTER.tos vanligtvis med CLUSTER.exam_tympanic_membrane av en ÖNH-specialist under en undersökning; om så är kliniskt lämpligt kan den i stället infogas i denna arketyp och därigenom användas i en annan kontext än som ett undersökningsresultat.">
+            misuse = <"Ska inte användas för att representera specifikt kliniskt innehåll definierat i denna arketyp.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å legge til rette for at klinisk innhold som finnes i et eksisterende CLUSTER skal kunne representeres som stand alone data i pasientjournalen.">
+            keywords = <"generisk", "container", "slot">
+            use = <"Brukes for å la det kliniske innholdet i eksisterende CLUSTER-arketyper, og vanligvis representert i sammenheng med andre arketyper, representeres som frittstående data i helsejournalen når det er klinisk hensiktsmessig.
+
+Denne arketypen er kun ment å fungere som en beholderarketype som støtter fleksibelt uttrykk for eksisterende CLUSTER-arketyper. Det er ikke ment å inneholde annet innhold enn den ubegrensede SLOT.
+
+For eksempel er CLUSTER.nyha_heart_failure-arketypen mest brukt for å gi en standardisert vurdering av hjertesvikt med EVALUATION.problem_diagnosis-arketyper, men ved å sette den inn i denne OBSERVASJONEN kan den registreres som data utenfor konteksten av en diagnose, hvis det er klinisk hensiktsmessig. . Tilsvarende registreres CLUSTER.tos vanligvis av ØNH-spesialister i sammenheng med en undersøkelse ved bruk av CLUSTER.exam_tympanic_membrane, men ved å sette den inn i denne arketypen, gjør den at den kan registreres utenfor konteksten av undersøkelsesfunn, hvis det er klinisk hensiktsmessig.">
+            misuse = <"Not to be used to represent specific clinical content defined within this archetype.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To enable the clinical content held within existing CLUSTER archetypes to be represented as standalone data in the health record.">
+            keywords = <"generic", "container", "slot">
+            use = <"Use to enable the clinical content held within existing CLUSTER archetypes, and usually represented within the context of other archetypes, to be represented as standalone data in the health record when clinically appropriate. 
+
+This archetype is intended only to act as a container archetype that supports flexible expression of existing CLUSTER archetypes. It is not intended to hold any content other than the unconstrained SLOT.
+
+For example, the CLUSTER.nyha_heart_failure archetype is most commonly used to provide a standardised assessment of heart failure with EVALUATION.problem_diagnosis archetypes, but by inserting it within this OBSERVATION allows it to be recorded as data outside the context of a Diagnosis, if clinically appropriate. Similarly CLUSTER.tos is usually recorded by ENT specialists in the context of an examination using CLUSTER.exam_tympanic_membrane, but by inserting it into this archetype, it allows it to be recorded outside the context of examination findings, if clinically appropriate.">
+            misuse = <"Not to be used to represent specific clinical content defined within this archetype.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Container
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] occurrences matches {0..1} matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    allow_archetype CLUSTER[at0004] matches {    -- Detail
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.asa_status(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.nyha_heart_failure(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.sade_classification(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.tos_classification(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Container">
+                description = <"Generischer Archetyp zur Aufnahme vorhandener CLUSTER-Archetypen, die als eigenständige Daten dargestellt werden müssen.">
+            >
+            ["at0002"] = <
+                text = <"Beliebiges Ereignis">
+                description = <"Standardwert, ein undefinierter/s Zeitpunkt oder Intervallereignis, das explizit im Template oder zur Laufzeit der Anwendung definiert werden kann.">
+            >
+            ["at0004"] = <
+                text = <"Daten">
+                description = <"Klinische Details, die in CLUSTER-Archetypen enthalten sind.">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Behållare">
+                description = <"Allmän arketyp som kan innehålla sådana CLUSTER-arketyper som behöver representeras som fristående data.">
+            >
+            ["at0002"] = <
+                text = <"Ospecificerad händelse">
+                description = <"Ospecificerad standardhändelse vid en tidpunkt eller inom ett tidsintervall som explicit kan definieras i en mall eller genereras automatiskt av vissa IT-system.">
+            >
+            ["at0004"] = <
+                text = <"Detaljer">
+                description = <"Kliniska detaljer som finns i CLUSTER-arketyper.">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Kontainer">
+                description = <"Generisk arketype for å inneholde eksisterende CLUSTER-arketyper som må representeres som frittstående data.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i en template eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Detalj">
+                description = <"Kliniske detaljer holdt innenfor CLUSTER-arketyper.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Container">
+                description = <"Generic archetype to contain existing CLUSTER archetypes which need to be represented as standalone data.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Detail">
+                description = <"Clinical details held within CLUSTER archetypes.">
+            >
+        >
+    >

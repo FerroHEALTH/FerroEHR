@@ -1,0 +1,493 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=4850bc1a-b1bb-4eda-8390-776f77690ebb; build_uid=fee56c3f-54f5-4fb2-9f83-f1367d9d22a0)
+    openEHR-EHR-CLUSTER.imaging_exam_anomaly.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Peter Fedorcsak, Vebjørn Arntzen">
+                ["organisation"] = <"University of Oslo, Oslo University Hospital">
+                ["email"] = <"peterfe@uio.no, varntzen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-11-24">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Andreas Abildgaard, OUS, Norway", "Marit Alice Venheim, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Jesper Blomquist, Haraldsplass Diakonale Sykehus, Norway", "Randi Brendberg, Helse Nord RHF, Norway", "Gunn Elin Blakkisrud, DIPS ASA, Norway", "Peter Fedorcsak, University of Oslo, Norway (openEHR Editor)", "Kåre Flø, DIPS ASA, Norway", "Heather Grain, Llewelyn Grain Informatics, Australia", "Johan Gustav Bellika, Norwegian Centre for Integrated Care and Telemedicine, Norway", "Anca Heyd, DIPS ASA, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Mikkel Johan Gaup Grønmo, Regional forvaltning EPJ, Helse Nord, Norway (Nasjonal IKT redaktør)", "Anjali Kulkarni, Karkinos, India", "Kanika Kuwelker, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Hanne Marte Bårholm, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Arunakiry Natarajan, medondo, Germany", "Svenne Naumann, Finnmarkssykehuset, Norway", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Bjørn Næss, DIPS ASA, Norway", "Andre Smitt-Ingebretsen, Sørlandet sykehus HF, Norway", "Natalia Strauch, Medizinische Hochschule Hannover, Germany", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"B5ECCD7560C85A5F1ED4FEEB3388A128">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"*To record an incidental or ambiguous finding of a single anomaly on radiological examination that deviates from what is expected or normal within an identified body structure or region. (en)">
+            keywords = <"*lesion (en)", "*mass (en)", "*tumour (en)", "*tumor (en)", "*nodule (en)", "*cyst (en)", "*calculus (en)", "*thrombosus (en)", "*abnormality (en)", "*anomaly (en)">
+            use = <"*Use to record an incidental or ambiguous finding of a single anomaly on radiological examination that deviates from what is expected or normal within an identified body structure or region.
+
+If more than one anomaly has been identified within the context of the same body structure or region, use a separate instance of this archetype to describe each anomaly.
+
+The intended scope for this archetype is to record detailed findings about an anomaly using any modality. It is anticipated that specific CLUSTER archetypes will be developed in the future to record common abnormal radiological findings, such as fractures. If a specific archetype to record the anomaly is not available, use this generic archetype to record relevant findings.
+
+Until the specific archetypes are developed, current use cases include, but are not limited to:
+- a large, mixed solid/cystic lesion containing teeth and hair, identified within the ovary - for example, a dermoid cyst;
+- a solid mass identified within the right upper lobe of the lung - for example, a past infection scar or a tumour;
+- a calcified lesion identified within the left kidney - for example, a kidney calculus; or
+- a soft tissue mass identified within the heart - for example, a thrombosis.
+
+This archetype is designed to be nested within the 'Additional details' SLOT in any of the CLUSTER.imaging_exam family of archetypes which will provide the context for the anomaly, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. (en)">
+            misuse = <"*Not to be used to record normal or abnormal findings that are expected for a specified imaging examination. Use specialised archetypes from the CLUSTER.imaging_exam family or the generic CLUSTER.imaging_exam archetype for this purpose.
+
+Not to be used to record details related to the overall findings, context or technical details related to a complete imaging examination test result. Use the OBERSERVATION.imaging_exam_result for this purpose. For example, comments on the study quality, differential diagnoses, and overall impression. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere et tilfeldig eller tvetydig funn eller observasjon av en anomali som fraviker fra det som er forventet eller normalt i en identifisert kroppsstruktur eller region, gjort ved bildediagnostisk undersøkelse.">
+            keywords = <"lesjon", "masse", "oppfylning", "tumor", "svulst", "klump", "stein", "forkalkning", "trombe", "avvik", "abnormitet", "misdannelse">
+            use = <"Bruk for å registrere et tilfeldig eller tvetydig funn eller observasjon av en anomali som fraviker fra det som er forventet eller normalt i en identifisert kroppsstruktur eller region, gjort ved bildediagnostisk undersøkelse.
+
+Bruk en separat instans av denne arketypen for å beskrive hver enkelt anomali dersom det blir identifisert flere enn en anomali i samme kroppsstruktur eller region.
+
+Det tiltenkte omfanget for denne arketypen er å kunne registrere detaljerte funn om en anomali, uavhengig av modalitet. Det er forventet at det i fremtiden vil bli utviklet spesifikke CLUSTER-arketyper for å registrere funn av vanlige avvik ved radiologiske undersøkelser, som brudd. Dersom en slik spesifikk arketype for å registrere anomalien ikke finnes, bruk denne generiske arketypen for å registrere de relevante funnene.
+
+Inntil de spesifikke arketypene er utviklet, er det nåværende bruksområdet, men ikke begrenset til:
+- en stor blandet fast/cystisk lesjon som består av tenner og hår og som er funnet i en eggstokk
+- en dermoid cyste
+- en solid oppfylning i øvre høyre lungelapp, for eksempel en tumor eller arrvev fra infeksjon
+- en forkalkning funnet i venstre nyre, for eksempel en nyrestein
+- en bløtvevsmasse funnet i hjertet, for eksempel en trombe
+
+Denne arketypen er utformet til bruk i SLOT'et \"Strukturerte funn\" i enhver av arketypene innen gruppen CLUSTER.imaging_exam, som vil tilby konteksten for anomalien, men den kan også brukes i andre ENTRY- eller CLUSTER-arketyper der det er klinisk passende.">
+            misuse = <"Skal ikke brukes for å registrere normale eller unormale funn eller observasjoner som man kan forvente for en spesifisert bildediagnostisk undersøkelse. Bruk spesialiserte arketyper innen gruppen av CLUSTER.imaging_exam - arketyper for dette.
+
+Skal ikke brukes til å registrere overordnede undersøkelsesfunn, kontekst eller tekniske detaljer relatert til et fullstendig svar på billedundersøkelsen. Bruk arketypen OBSERVATION.imaging_exam_result (Bildediagnostisk svar) for å registrere dette, for eksempel kommentar om undersøkelseskvalitet, differensialdiagnose og overordnet konklusjon.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record an incidental or ambiguous finding of a single anomaly on radiological examination that deviates from what is expected or normal within an identified body structure or region.">
+            keywords = <"lesion", "mass", "tumour", "tumor", "nodule", "cyst", "calculus", "thrombosus", "abnormality", "anomaly">
+            use = <"Use to record an incidental or ambiguous finding of a single anomaly on radiological examination that deviates from what is expected or normal within an identified body structure or region.
+
+If more than one anomaly has been identified within the context of the same body structure or region, use a separate instance of this archetype to describe each anomaly.
+
+The intended scope for this archetype is to record detailed findings about an anomaly using any modality. It is anticipated that specific CLUSTER archetypes will be developed in the future to record common abnormal radiological findings, such as fractures. If a specific archetype to record the anomaly is not available, use this generic archetype to record relevant findings.
+
+Until the specific archetypes are developed, current use cases include, but are not limited to:
+- a large, mixed solid/cystic lesion containing teeth and hair, identified within the ovary - for example, a dermoid cyst;
+- a solid mass identified within the right upper lobe of the lung - for example, a past infection scar or a tumour;
+- a calcified lesion identified within the left kidney - for example, a kidney calculus; or
+- a soft tissue mass identified within the heart - for example, a thrombosis.
+
+This archetype is designed to be nested within the 'Additional details' SLOT in any of the CLUSTER.imaging_exam family of archetypes which will provide the context for the anomaly, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.">
+            misuse = <"Not to be used to record normal or abnormal findings that are expected for a specified imaging examination. Use specialised archetypes from the CLUSTER.imaging_exam family or the generic CLUSTER.imaging_exam archetype for this purpose.
+
+Not to be used to record details related to the overall findings, context or technical details related to a complete imaging examination test result. Use the OBERSERVATION.imaging_exam_result for this purpose. For example, comments on the study quality, differential diagnoses, and overall impression.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Imaging examination of an anomaly
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Body site
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            allow_archetype CLUSTER[at0003] matches {    -- Structured body site
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.anatomical_location_relative(-[a-zA-Z0-9_]+)*\.v2\..*|openEHR-EHR-CLUSTER\.anatomical_location_circle(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Imaging findings
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+            ELEMENT[at0006] matches {    -- Impression
+                value matches {
+                    DV_TEXT[at9005]
+                }
+            }
+            ELEMENT[at0035] occurrences matches {0..1} matches {    -- Label
+                value matches {
+                    DV_TEXT[at9007]
+                }
+            }
+            ELEMENT[at0036] occurrences matches {0..1} matches {    -- Type
+                value matches {
+                    DV_TEXT[at9008]
+                }
+            }
+            ELEMENT[at0038] occurrences matches {0..1} matches {    -- Shape
+                value matches {
+                    DV_TEXT[at9011]
+                }
+            }
+            allow_archetype CLUSTER[at0052] matches {    -- Physical properties
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            ELEMENT[at0039] occurrences matches {0..1} matches {    -- Texture
+                value matches {
+                    DV_TEXT[at9012]
+                }
+            }
+            ELEMENT[at0040] occurrences matches {0..1} matches {    -- Margin
+                value matches {
+                    DV_TEXT[at9013]
+                }
+            }
+            ELEMENT[at0041] occurrences matches {0..1} matches {    -- Calcification
+                value matches {
+                    DV_CODED_TEXT[at9014] matches {
+                        defining_code matches {[ac9002]}    -- Calcification (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0042] occurrences matches {0..1} matches {    -- Calcification description
+                value matches {
+                    DV_TEXT[at9015]
+                }
+            }
+            ELEMENT[at0043] occurrences matches {0..1} matches {    -- Effect
+                value matches {
+                    DV_TEXT[at9016]
+                }
+            }
+            ELEMENT[at0044] occurrences matches {0..1} matches {    -- Vascularisation description
+                value matches {
+                    DV_TEXT[at9017]
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9006]
+                }
+            }
+            allow_archetype CLUSTER[at0005] matches {    -- Additional details
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.imaging_exam-lymph_node(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-CLUSTER\.imaging_exam-lymph_node_group(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-CLUSTER\.imaging_exam-anomaly(-[a-zA-Z0-9_]+)*\.v0\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0039"] = <
+                text = <"Beschaffenheit">
+                description = <"*Description of the texture or consistency of the anomaly. (en)">
+            >
+            ["at0040"] = <
+                text = <"Rand">
+                description = <"*The border of the anomaly. (en)">
+                comment = <"Zum Beispiel: „Gut definiert“ oder „Diffus“.">
+            >
+            ["at0041"] = <
+                text = <"Kalzifizierung">
+                description = <"Vorhandensein von Verkalkung in der Anomalie.">
+            >
+            ["at0017"] = <
+                text = <"Vorhanden">
+                description = <"*Calcification is present. (en)">
+            >
+            ["at0018"] = <
+                text = <"Nicht vorhanden">
+                description = <"*Calcification is not present. (en)">
+            >
+            ["at0044"] = <
+                text = <"Beschreibung der Vaskularisierung.">
+                description = <"*Description about the blood flow related to to the anomaly. (en)">
+            >
+            ["at0000"] = <
+                text = <"Bildgebende Untersuchung einer Anomalie">
+                description = <"*An incidental or ambiguous finding of an anomaly on radiological examination that deviates from what is expected or normal within an identified body structure or region. (en)">
+                comment = <"Zum Beispiel: eine Zyste oder Masse, eine Thrombose, ein Polyp, ein Zahnstein oder ein Fremdkörper.">
+            >
+            ["at0002"] = <
+                text = <"Körperstelle">
+                description = <"Identifizierung des zu untersuchenden Bereichs des Körpers.">
+                comment = <"Zum Beispiel: eine Lymphknotengruppe (Körperstruktur), die sich in der „rechten Achselhöhle“ befindet. Eine Kodierung von „Körperstelle“ mit einer Terminologie, wie z. B. SNOMED CT, ist wünschenswert. Wenn die Körperstelle im Datenelement „Körperstruktur“ vollständig identifiziert wurde, wird dieses Datenelement überflüssig.">
+            >
+            ["at0003"] = <
+                text = <"Körperstelle strukturiert">
+                description = <"Strukturierte Angaben zum untersuchten Körperbereich.">
+                comment = <"Zum Beispiel: Angaben zu einer relativen anatomischen Lokalisation, wie z. B. „2 cm distal zum Blinddarm“. Wenn die Körperstelle in den Datenelementen „Körperstruktur“ oder „Körperstelle“ vollständig identifiziert wurde, wird dieser SLOT überflüssig.">
+            >
+            ["at0004"] = <
+                text = <"Bildgebende Befunde">
+                description = <"Beschreibung der bei dieser Untersuchung beobachteten bildgebenden Befunde.">
+            >
+            ["at0005"] = <
+                text = <"Zusätzliche Angaben">
+                description = <"Zusätzliche strukturierte Angaben zu bildgebenden Befunden für die identifizierte Körperstruktur oder -region oder befundbezogene Strukturen.">
+            >
+            ["at0006"] = <
+                text = <"Interpretation">
+                description = <"Einzelnes Wort, Satz oder kurze Beschreibung, die die klinische Bedeutung und Signifikanz aller bildgebenden Befunde für die identifizierte Körperstruktur darstellt.">
+                comment = <"Auch als „Eindruck“ oder „Meinung“ bezeichnet. Zum Beispiel: „Keine Anomalie erkannt“ oder „Freie Flüssigkeit vorhanden“. Eine Kodierung des „Interpretation“ mit einer Terminologie ist zulässig, sofern sinnvoll. Mehrere Vorkommen ermöglichen mehr als eine codierte Interpretation. Eine einfache Beschreibung kann gegebenenfalls einen Vergleich mit früheren Studien der identifizierten Körperstruktur beinhalten.">
+            >
+            ["at0007"] = <
+                text = <"Kommentar">
+                description = <"*Additional narrative about the imaging findings of the anomaly, not captured in other fields. (en)">
+            >
+            ["at0032"] = <
+                text = <"*Indeterminate (en)">
+                description = <"*It is not possible to determine if calcification is present or absent (en)">
+            >
+            ["at0035"] = <
+                text = <"*Label(en)">
+                description = <"*A label for the anomaly.(en)">
+                comment = <"*Use to differentiate one anomaly from another when there is more than one present within the context of the same body structure or region.(en)">
+            >
+            ["at0036"] = <
+                text = <"*Type">
+                description = <"*The type of anomaly.(en)">
+                comment = <"*Coding of the anomaly with an external terminology is preferred, where possible. For example, a cyst or nodule.(en)">
+            >
+            ["at0038"] = <
+                text = <"*Shape(en)">
+                description = <"*The contour or silhouette of the anomaly.(en)">
+            >
+            ["at0042"] = <
+                text = <"*Calcification description(en)">
+                description = <"*Description about the pattern of calcification observed.(en)">
+                comment = <"*The pattern of calcification can be coded if desired.(en)">
+            >
+            ["at0043"] = <
+                text = <"*Effect">
+                description = <"*Description about the effect of the anomaly on surrounding structures.(en)">
+                comment = <"*For example: presence of an echo shadow behind the anomaly or that it is distorting adjacent structures.(en)">
+            >
+            ["at0052"] = <
+                text = <"*Physical properties (en)">
+                description = <"*A physical properties of the anomaly. (en)">
+            >
+            ["ac9002"] = <
+                text = <"Kalzifizierung (synthesised)">
+                description = <"Vorhandensein von Verkalkung in der Anomalie. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Bildediagnostisk undersøkelse - anomali">
+                description = <"Et tilfeldig eller tvetydig funn eller observasjon av en anomali som fraviker fra det som er forventet eller normalt i en identifisert kroppsstruktur eller region, gjort ved bildediagnostisk undersøkelse.">
+                comment = <"For eksempel en cyste eller oppfylning, en trombe, en polypp, en nyrestein eller et fremmedlegeme.">
+            >
+            ["at0002"] = <
+                text = <"Anatomisk lokalisasjon">
+                description = <"Identifisering av organ eller kroppsdel.">
+                comment = <"For eksempel en lymfeknutegruppe (Kroppsstruktur) som er funnet i \"Høyre aksille\" (Anatomisk lokalisasjon). Det er ønskelig å kode \"Anatomisk lokalisasjon\" med en terminologi, som SNOMED CT. Dersom den anatomiske lokalisasjonen er fullt ut angitt i elementet \"Kroppsstruktur\" er det ikke nødvendig å bruke \"Anatomisk lokalisasjon\".">
+            >
+            ["at0003"] = <
+                text = <"Strukturert anatomisk lokalisasjon">
+                description = <"Strukturerte detaljer om organ eller kroppsdel.">
+                comment = <"For eksempel detaljert om en relativ anatomisk lokalisasjon, som \"2 cm distalt for appendix\". Dersom den nøyaktige eller relative anatomiske lokalisasjonen er fullt ut angitt i elementet \"Kroppsstruktur\" er det ikke nødvendig å bruke \"Strukturert anatomisk lokalisasjon\".">
+            >
+            ["at0004"] = <
+                text = <"Funn">
+                description = <"Fritekstlig beskrivelse av funn eller observasjoner på bilder tatt under denne undersøkelsen.">
+            >
+            ["at0005"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Ytterligere strukturerte detaljer om funn eller observasjoner på bilder for det definerte organet eller kroppsdelen, eller om funn eller observasjoner hos tilhørende kroppsstrukturer.">
+            >
+            ["at0006"] = <
+                text = <"Resymé">
+                description = <"Enkeltord, frase eller kortfattet beskrivelse som uttrykker den kliniske betydningen av alle funn og observasjoner for den definerte kroppsstrukturen.">
+                comment = <"Kan også kalles \"Tolkning\" eller \"Inntrykk\". For eksempel \"Uten anmerkning\" eller \"Fri væske\". Dersom det er nyttig, er det åpent for å kode \"Resymé\" med en terminologi. Flere svar kan kodes ved at elementet er åpent for å være gjentakende. En beskrivelse i fritektst kan også brukes og kan inneholde en sammenligning med tidligere undersøkelser av samme kroppsstruktur.">
+            >
+            ["at0007"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om funn eller observasjoner på bilder av anomalien og som ikke er fanget i andre felt.">
+            >
+            ["at0017"] = <
+                text = <"Tilstede">
+                description = <"Forkalning er tilstede.">
+            >
+            ["at0018"] = <
+                text = <"Fraværende">
+                description = <"Forkalkning er ikke tilstede.">
+            >
+            ["at0032"] = <
+                text = <"Ubestemmelig">
+                description = <"Det er ikke mulig å avgjøre om forkalkning er tilstede eller fraværende.">
+            >
+            ["at0035"] = <
+                text = <"Merkelapp">
+                description = <"Identifisering eller betegnelse for anomalien.">
+                comment = <"Brukes for å skille mellom en anomali fra en annen dersom det er flere anomaliser til stede innenfor samme kroppsstruktur eller region.">
+            >
+            ["at0036"] = <
+                text = <"Type">
+                description = <"Type anomali.">
+                comment = <"Det bør om mulig benyttes ekstern terminologi for å kode anomalien. For eksempel en cyste eller en knute.">
+            >
+            ["at0038"] = <
+                text = <"Form">
+                description = <"Anomaliens kontur eller silhuett.">
+            >
+            ["at0039"] = <
+                text = <"Tekstur">
+                description = <"Beskrivelse av anomaliens tekstur eller konsistens.">
+            >
+            ["at0040"] = <
+                text = <"Grenseflate">
+                description = <"Anomaliens rand.">
+                comment = <"For eksempel \"Veldefinert\" eller \"Diffus\".">
+            >
+            ["at0041"] = <
+                text = <"Forkalkning">
+                description = <"Tilstedeværelse av forkalkning i lesjonen.">
+            >
+            ["at0042"] = <
+                text = <"Beskrivelse av forkalkning">
+                description = <"Beskrivelse av mønsteret av forkalkning som er observert.">
+                comment = <"Mønsteret kan kodes om ønskelig.">
+            >
+            ["at0043"] = <
+                text = <"Effekt">
+                description = <"Beskrivelse av effekten av anomalien på omkringliggende strukturer.">
+                comment = <"For eksempel tilstedeværelse av ekkoskygge bak anomalien, eller at den forvrenger tilliggende strukturer.">
+            >
+            ["at0044"] = <
+                text = <"Beskrivelse av blodforsyning">
+                description = <"Beskrivelse av vaskulariseringen relatert til anomalien.">
+            >
+            ["at0052"] = <
+                text = <"Fysiske egenskaper">
+                description = <"Fysiske egenskaper til en anomali.">
+            >
+            ["ac9002"] = <
+                text = <"Forkalkning (synthesised)">
+                description = <"Tilstedeværelse av forkalkning i lesjonen. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0039"] = <
+                text = <"Texture">
+                description = <"Description of the texture or consistency of the anomaly.">
+            >
+            ["at0040"] = <
+                text = <"Margin">
+                description = <"The border of the anomaly.">
+                comment = <"For example: 'Well-defined' or 'Diffuse'.">
+            >
+            ["at0041"] = <
+                text = <"Calcification">
+                description = <"Presence of calcification in the anomaly.">
+            >
+            ["at0017"] = <
+                text = <"Present">
+                description = <"Calcification is present.">
+            >
+            ["at0018"] = <
+                text = <"Absent">
+                description = <"Calcification is not present.">
+            >
+            ["at0000"] = <
+                text = <"Imaging examination of an anomaly">
+                description = <"An incidental or ambiguous finding of an anomaly on radiological examination that deviates from what is expected or normal within an identified body structure or region.">
+                comment = <"For example: a cyst or mass; a thrombosis; a polyp; a calculus or a foreign body.">
+            >
+            ["at0044"] = <
+                text = <"Vascularisation description">
+                description = <"Description about the blood flow related to to the anomaly.">
+            >
+            ["at0002"] = <
+                text = <"Body site">
+                description = <"Identification of the area of the body under examination.">
+                comment = <"For example: a lymph node group (body structure) which found in the 'Right axilla'. Coding of 'Body site' with a terminology, such as SNOMED CT, is desirable. If the body site has been fully identified in the 'Body structure' data element, this data element becomes redundant.">
+            >
+            ["at0003"] = <
+                text = <"Structured body site">
+                description = <"Structured details about the area of the body under examination.">
+                comment = <"For example: details about a relative anatomical location, such as '2cm distal to the appendix'. If the body site has been fully identified in the 'Body structure' or 'Body site' data elements, then this SLOT becomes redundant.">
+            >
+            ["at0004"] = <
+                text = <"Imaging findings">
+                description = <"Narrative description of the imaging findings observed during this examination.">
+            >
+            ["at0005"] = <
+                text = <"Additional details">
+                description = <"Additional structured details about imaging findings for the identified body structure or region, or findings of related structures.">
+            >
+            ["at0006"] = <
+                text = <"Impression">
+                description = <"Single word, phrase or brief description that represents the clinical meaning and significance of all imaging findings for the identified body structure.">
+                comment = <"Also referred to as 'Interpretation' or 'Opinion'. For example: 'No abnormality detected' or 'Free fluid present'. Coding of the 'Impression' with a terminology is permitted, if useful. Multiple occurrences allow for more than one coded impression. A narrative description may include a comparison with previous studies of the identified body structure, if appropriate.">
+            >
+            ["at0007"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the imaging findings of the anomaly, not captured in other fields.">
+            >
+            ["at0032"] = <
+                text = <"Indeterminate">
+                description = <"It is not possible to determine if calcification is present or absent.">
+            >
+            ["at0035"] = <
+                text = <"Label">
+                description = <"A label for the anomaly.">
+                comment = <"Use to differentiate one anomaly from another when there is more than one present within the context of the same body structure or region.">
+            >
+            ["at0036"] = <
+                text = <"Type">
+                description = <"The type of anomaly.">
+                comment = <"Coding of the anomaly with an external terminology is preferred, where possible. For example, a cyst or nodule.">
+            >
+            ["at0038"] = <
+                text = <"Shape">
+                description = <"The contour or silhouette of the anomaly.">
+            >
+            ["at0042"] = <
+                text = <"Calcification description">
+                description = <"Description about the pattern of calcification observed.">
+                comment = <"The pattern of calcification can be coded if desired.">
+            >
+            ["at0043"] = <
+                text = <"Effect">
+                description = <"Description about the effect of the anomaly on surrounding structures.">
+                comment = <"For example: presence of an echo shadow behind the anomaly or that it is distorting adjacent structures.">
+            >
+            ["at0052"] = <
+                text = <"Physical properties">
+                description = <"A physical properties of the anomaly.">
+            >
+            ["ac9002"] = <
+                text = <"Calcification (synthesised)">
+                description = <"Presence of calcification in the anomaly. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0017", "at0018", "at0032">
+        >
+    >

@@ -1,0 +1,277 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=32209bd7-2307-4a15-8009-e32ff69ea895; build_uid=8876d267-4bd7-46fa-8f01-0a5e614e87b6)
+    openEHR-EHR-CLUSTER.imaging_exam-spine.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-CLUSTER.imaging_exam.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Vebjørn Arntzen, John Tore Valand">
+                ["organisation"] = <"Oslo University Hospital, Helse Bergen">
+                ["email"] = <"varntzen@ous-hf.no, john.tore.valand@helse-vest-ikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-11-24">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Andreas Abildgaard, OUS, Norway", "Marit Alice Venheim, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Randi Brendberg, Helse Nord RHF, Norway", "Gunn Elin Blakkisrud, DIPS ASA, Norway", "Peter Fedorcsak, University of Oslo, Norway (openEHR Editor)", "Kåre Flø, DIPS ASA, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Kija Indrearne, Helse Bergen, Norway", "Mikkel Johan Gaup Grønmo, Regional forvaltning EPJ, Helse Nord, Norway (Nasjonal IKT redaktør)", "Aud Jorunn Mjelstad, Helse Bergen, Norway", "Anjali Kulkarni, Karkinos, India", "Kanika Kuwelker, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Svenne Naumann, Finnmarkssykehuset, Norway", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Bjørn Næss, DIPS ASA, Norway", "Natalia Strauch, Medizinische Hochschule Hannover, Germany", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"https://radiopaedia.org/articles/sagittal-balance">
+        ["2"] = <"https:///www.ncbi.nlm.nih.gov/books/NBK534858">
+        ["3"] = <"https://unn.no/Documents/Kvalitetsregistre/Nasjonalt%20kvalitetsregister%20for%20ryggkirurgi/Brukermanualer/Praktisk%20veileder%20og%20Brukermanual%20ryggregisteret_V3.0_190529.pdf">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"0715FC75BDEED95C50F7053A93B1B484">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"*To record the findings on radiological examination of the entire spine, and their interpretation. (en)">
+            keywords = <"Befund, Ergebnis, Bildgebung, Körper, Organ, System, Struktur, Region, Beobachtung, Diagnostik, Radiologie, Bild", ...>
+            use = <"*Use to record the findings on radiological examinations that cover the entire spine, and their interpretation.
+
+The intended scope for this archetype is to eventually record all detailed findings on radiological examination of the entire spine using any modality. It is anticipated that further data elements may be added as requirements are identified and confirmed.
+
+This archetype and its related family of specialisations are designed to be nested within the 'Structured imaging findings' SLOT in the OBSERVATION.imaging_exam_result or within the 'Additional details' SLOT in other relevant CLUSTER.imaging_exam archetypes, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. If this archetype or its specialisations need to be extended with further levels of detailed findings, additional instances of the CLUSTER.imaging_exam or its specialisations can be nested in the 'Additional details' SLOT.
+
+ (en)">
+            misuse = <"*Not to be used to record imaging examination findings for any body structure or region other than the entire spine. Examinations on specific areas of the spine is to be record using other archetypes from the CLUSTER.imaging_exam family for this purpose. For example: CLUSTER.imaging_exam-cervical_spine or CLUSTER.imaging_exam-sacrum.
+
+Not to be used to record details related to the overall findings, context or technical details related to a complete imaging examination test result. Use the OBSERVATION.imaging_exam_result for this purpose. For example, comments on the study quality, differential diagnoses, and overall impression. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere funn eller observasjoner ved radiologisk undersøkelse av hele ryggraden.">
+            keywords = <"funn", "observasjon", "bildediagnostikk", "kropp", "organ", "kroppsstruktur", "diagnostisk", "radiologi", "bilde">
+            use = <"Bruk for å registrere funn og klinisk tolkning ved bildediagnostisk undersøkelse av hele ryggraden.
+
+Det tiltenkte omfanget for denne CLUSTER.imaging_exam (Bildediagnostisk undersøkelse) - arketypen er til slutt å kunne registrere alle detaljerte funn ved bildediagnostisk undersøkelse av pelvis uavhengig av modalitet. Det er forventet at flere dataelementer kan bli lagt til når krav til slike er identifisert og bekreftet.
+
+Denne arketypen er utformet for å bli nøstet i SLOT'et \"Ytterligere detaljer\" i SLOT'et \"Strukturerte funn\" i OBSERVATION.imaging_exam_result (Bildediagnostisk svar) eller i andre relevante Bildediagnostisk svar-arketyper, men kan også brukes innen andre ENTRY- og CLUSTER-arketyper der det er klinisk passende. Hvis denne arketypen, eller en spesialisering av denne, må utvides med flere nivåer med detaljerte funn eller observasjoner, kan flere forekomster av arketypen eller dens spesialiseringer nøstes i SLOT'et \"Ytterligere detaljer\".">
+            misuse = <"Skal ikke brukes til å registrere funn som er gjort utenom det definerte organet eller den definerte kroppsdelen. Bruk en egen instans av en eller flere arketyper innen gruppen av CLUSTER.imaging_exam - arketyper (Undersøkelsesfunn) for dette formålet.
+
+Skal ikke brukes til å registrere overordnede undersøkelsesfunn, kontekst eller tekniske detaljer relatert til bildeundersøkelsen. Bruk arketypen OBSERVATION.imaging_exam_result (Bildediagnostisk svar) for å registrere for eksempel kommentar om undersøkelseskvalitet, differensialdiagnose og overordnet konklusjon.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the findings on radiological examination of the entire spine, and their interpretation.">
+            keywords = <"finding, imaging, body, system, structure, region, observation, diagnostic, radiology, image", ...>
+            use = <"Use to record the findings on radiological examinations that cover the entire spine, and their interpretation.
+
+The intended scope for this archetype is to eventually record all detailed findings on radiological examination of the entire spine using any modality. It is anticipated that further data elements may be added as requirements are identified and confirmed.
+
+This archetype and its related family of specialisations are designed to be nested within the 'Structured imaging findings' SLOT in the OBSERVATION.imaging_exam_result or within the 'Additional details' SLOT in other relevant CLUSTER.imaging_exam archetypes, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. If this archetype or its specialisations need to be extended with further levels of detailed findings, additional instances of the CLUSTER.imaging_exam or its specialisations can be nested in the 'Additional details' SLOT.">
+            misuse = <"Not to be used to record imaging examination findings for any body structure or region other than the entire spine. Examinations on specific areas of the spine is to be record using other archetypes from the CLUSTER.imaging_exam family for this purpose. For example: CLUSTER.imaging_exam-cervical_spine or CLUSTER.imaging_exam-sacrum.
+
+Not to be used to record details related to the overall findings, context or technical details related to a complete imaging examination test result. Use the OBSERVATION.imaging_exam_result for this purpose. For example, comments on the study quality, differential diagnoses, and overall impression.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Imaging examination of the entire spine
+        items matches {
+            ELEMENT[at0001.1] matches {    -- Body structure
+                value matches {
+                    DV_CODED_TEXT[at0.9002] matches {
+                        defining_code matches {[at0.6]}    -- Spine
+                    }
+                }
+            }
+            ELEMENT[at0.1] occurrences matches {0..1} matches {    -- Sagittal vertical axis
+                value matches {
+                    DV_QUANTITY[at0.9003] matches {
+                        property matches {[at0.9000]}    -- Length
+                        units matches {"cm"}
+                    }
+                }
+            }
+            ELEMENT[at0.2] occurrences matches {0..1} matches {    -- C7 Plumb Line
+                value matches {
+                    DV_CODED_TEXT[at0.9004] matches {
+                        defining_code matches {[ac0.9001]}    -- C7 Plumb Line (synthesised)
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000.1"] = <
+                text = <"*Imaging examination of the entire spine (en)">
+                description = <"*Findings on radiological examination of the entire spine. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Sagittal vertical axis (en)">
+                description = <"*The measured length of a horizontal line connecting the posterior superior sacral endplate with a vertical plumb line from C7. (en)">
+                comment = <"*Positive values express that the vertical plumb line lies anterior to the posteosuperior corner of S1. Negative values express that the plumb line lies posteriorly. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*C7 Plumb Line (en)">
+                description = <"*The vertical line drawn from the center of the C7 vertebral body in a caudal direction. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Positive (en)">
+                description = <"*The plumb line passes more than 2 cm in front of the posterosuperior corner of the S1 vertebral body (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Neutral (en)">
+                description = <"*The plumb line passes within 2 cm of the posterosuperior corner of the S1 vertebral body (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Negative (en)">
+                description = <"*The plumb line passes more than 2 cm behind the posterosuperior corner of the S1 vertebral body (en)">
+            >
+            ["at0001.1"] = <
+                text = <"Körperstruktur">
+                description = <"Identifizierung der untersuchten Körperstruktur oder Region.">
+                comment = <"*For example: 'Liver', 'Right ankle' or 'Lymph node group'. Coding of the body structure with an appropriate terminology, such as SNOMED CT, is recommended. If the body structure has been fully identified in this 'Body structure' element, then the 'Body site' data element and 'Structured body site' SLOT become redundant. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Spine (en)">
+                description = <"">
+            >
+            ["at0.9000"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac0.9001"] = <
+                text = <"*C7 Plumb Line (en) (synthesised)">
+                description = <"*The vertical line drawn from the center of the C7 vertebral body in a caudal direction. (en) (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0.1"] = <
+                text = <"Sagittal vertikal akse">
+                description = <"Den målte lengden av en horisontal linje som forbinder den bakre øvre sakrale endeplaten med en vertikal loddlinje fra C7.">
+                comment = <"Omtales også som SVA.
+Positive verdier uttrykker at den vertikale loddlinjen ligger anteriort for det posteosuperiore hjørnet av S1. Negative verdier uttrykker at loddlinjen ligger posteriort.">
+            >
+            ["at0.2"] = <
+                text = <"C7 loddlinje">
+                description = <"Den vertikale linjen trukket fra midten av ryggvirvel C7 i kaudal retning.">
+            >
+            ["at0.3"] = <
+                text = <"Positiv">
+                description = <"Loddlinjen passerer mer enn 2 cm foran det posterosuperiore hjørnet av S1 virvelen.">
+            >
+            ["at0.4"] = <
+                text = <"Nøytral">
+                description = <"Loddlinjen passerer innenfor 2 cm fra det posterosuperiore hjørnet av S1 virvelen.">
+            >
+            ["at0.5"] = <
+                text = <"Negativ">
+                description = <"Loddlinjen passerer mer enn 2 cm bak det posterosuperiore hjørnet av S1 virvelen.">
+            >
+            ["at0.6"] = <
+                text = <"Ryggrad">
+                description = <"">
+            >
+            ["at0000.1"] = <
+                text = <"Bildediagnostisk undersøkelse - hele ryggraden">
+                description = <"Funn eller observasjoner ved radiologisk undersøkelse av hele ryggraden.">
+            >
+            ["at0001.1"] = <
+                text = <"Kroppsstruktur">
+                description = <"Identifisering av organet eller kroppsdelen som svaret gjelder.">
+                comment = <"For eksempel \"Lever\", \"Høyre ankel\" eller \"Lymfeknutegruppe\". Det er anbefalt å kode kroppsstruktur med en passende terminologi, som SNOMED CT. Dersom den aktuelle strukturen i kroppen er fullt ut angitt i dette \"Kroppsstruktur\"-elementet er det ikke nødvendig å bruke \"Anatomisk lokalisasjon\" eller \"Strukturert anatomisk lokalisasjon\".">
+            >
+            ["at0.9000"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac0.9001"] = <
+                text = <"C7 loddlinje (synthesised)">
+                description = <"Den vertikale linjen trukket fra midten av ryggvirvel C7 i kaudal retning. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0.1"] = <
+                text = <"Sagittal vertical axis">
+                description = <"The measured length of a horizontal line connecting the posterior superior sacral endplate with a vertical plumb line from C7.">
+                comment = <"Positive values express that the vertical plumb line lies anterior to the posteosuperior corner of S1. Negative values express that the plumb line lies posteriorly.">
+            >
+            ["at0.2"] = <
+                text = <"C7 Plumb Line">
+                description = <"The vertical line drawn from the center of the C7 vertebral body in a caudal direction.">
+            >
+            ["at0.3"] = <
+                text = <"Positive">
+                description = <"The plumb line passes more than 2 cm in front of the posterosuperior corner of the S1 vertebral body.">
+            >
+            ["at0.4"] = <
+                text = <"Neutral">
+                description = <"The plumb line passes within 2 cm of the posterosuperior corner of the S1 vertebral body.">
+            >
+            ["at0.5"] = <
+                text = <"Negative">
+                description = <"The plumb line passes more than 2 cm behind the posterosuperior corner of the S1 vertebral body.">
+            >
+            ["at0.6"] = <
+                text = <"Spine">
+                description = <"">
+            >
+            ["at0000.1"] = <
+                text = <"Imaging examination of the entire spine">
+                description = <"Findings on radiological examination of the entire spine.">
+            >
+            ["at0001.1"] = <
+                text = <"Body structure">
+                description = <"Identification of the body structure or region examined.">
+                comment = <"For example: 'Liver', 'Right ankle' or 'Lymph node group'. Coding of the body structure with an appropriate terminology, such as SNOMED CT, is recommended. If the body structure has been fully identified in this 'Body structure' element, then the 'Body site' data element and 'Structured body site' SLOT become redundant.">
+            >
+            ["at0.9000"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["ac0.9001"] = <
+                text = <"C7 Plumb Line (synthesised)">
+                description = <"The vertical line drawn from the center of the C7 vertebral body in a caudal direction. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at0.9000"] = <http://openehr.org/id/122>
+        >
+        ["SNOMED-CT"] = <
+            ["at0.6"] = <http://snomed.info/id/44300000>
+        >
+    >
+    value_sets = <
+        ["ac0.9001"] = <
+            id = <"ac0.9001">
+            members = <"at0.3", "at0.4", "at0.5">
+        >
+    >

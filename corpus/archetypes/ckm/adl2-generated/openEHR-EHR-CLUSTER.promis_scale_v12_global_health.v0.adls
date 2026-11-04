@@ -1,0 +1,898 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=91718c8d-9715-4e15-a450-68b97a4eea9d; build_uid=aaeed206-bd3c-4912-8b17-5369757ca152)
+    openEHR-EHR-CLUSTER.promis_scale_v12_global_health.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Sarah Ballout, Alina Rehberg">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"ballout.sarah@mh-hannover.de">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Silje Ljosland Bakke">
+        ["organisation"] = <"Helse Vest IKT AS">
+        ["email"] = <"silje.ljosland.bakke@helse-vest-ikt.no">
+        ["date"] = <"2020-06-04">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"https://www.healthmeasures.net/index.php?option=com_instruments&view=measure&id=778&Itemid=992">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"B3FBB5AFE060AD32CC2CEFD4FF814CD9">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Repräsentation der PROMIS-Skala v1.2 für globale Gesundheit.">
+            use = <"Zur Repräsentation der PROMIS-Skala v1.2 für globale Gesundheit.
+
+Dieser Archetyp wurde für die Verwendung innerhalb des OBSERVATION.promis-Archetyps und zusammen mit anderen PROMIS-Bank-Archetypen entwickelt, die auf die Darstellung eines bestimmten PROMIS-Profils wie PROMIS-29 beschränkt sind.
+
+Der Archetyp ist bei der anfänglichen Modellierung unvollständig und sollte erweitert werden, wenn zusätzliche Artikel aus der entsprechenden Artikelbank benötigt werden.
+
+Alle openEHR-Archetypen sind zwar unter einer offenen Lizenz frei verfügbar, der spezifische Inhalt dieses Archetyps ist jedoch urheberrechtlich geschützt. Jede Verwendung dieses Archetyps innerhalb von Implementierungen muss in Übereinstimmung mit den von den Urheberrechtsinhabern festgelegten Bedingungen erfolgen.
+
+Erklärung zum Urheberrecht: PROMIS-Tests, Testprotokolle, Testaufgaben, Normen, Normtabellen, Bewertungsprogramme, Bewertungsschlüssel (einschließlich Bewertungsalgorithmen, Skalendefinitionen, Skalenzugehörigkeit und Bewertungsrichtungen), Bewertungsberichte, Software und andere PROMIS-bezogene Materialien sind ©2006-2017 PROMIS Gesundheitsorganisation oder andere Personen/Einrichtungen, die Informationen und Materialien beigetragen haben, und werden mit Genehmigung der Urheberrechtsinhaber verwendet.
+
+Allgemeine Nutzungsbedingungen: https://www.healthmeasures.net/images/PROMIS/Terms_of_Use_HM_approved_1-12-17_-_Updated_Copyright_Notices.pdf.">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record PROMIS scale v1.2 for global health.">
+            use = <"Use to record PROMIS scale v1.2 for global health.
+
+This archetype has been designed to be used within the OBSERVATION.promis archetype, and along with other PROMIS bank archetypes constrained to represent a specific PROMIS profile such as PROMIS-29.
+
+The archetype is incomplete at initial modelling, and should be grown as additional items from the relevant item bank are required.
+
+While openEHR archetypes are all freely available under an open license, the specific content of this archetype is copyright protected. Any use of this archetype within implementations must be in compliance with the terms established by the copyright owners.
+
+Copyright statement: PROMIS tests, test protocols, test items, norms, norms tables, scoring programs, scoring keys (including scoring algorithms, scale definitions, scale membership, and scoring directions), score reports, software, and other PROMIS-related materials are ©2006-2017 PROMIS Health Organization or other individuals/entities that have contributed information and materials, and are being used with the permission of the copyright holders.
+
+Terms and conditions for use: https://www.healthmeasures.net/images/PROMIS/Terms_of_Use_HM_approved_1-12-17_-_Updated_Copyright_Notices.pdf">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- PROMIS Scale v1.2 - Global Health
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- In general, how would you rate your health?
+                value matches {
+                    DV_ORDINAL[at9010] matches {
+                        [value, symbol] matches {
+                            [{1}, {[at0040]}],    -- Excellent
+                            [{2}, {[at0041]}],    -- Very good
+                            [{3}, {[at0042]}],    -- Good
+                            [{4}, {[at0043]}],    -- Fair
+                            [{5}, {[at0044]}]    -- Poor
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- In general, how would you rate your quality of life?
+                value matches {
+                    DV_ORDINAL[at9011] matches {
+                        [value, symbol] matches {
+                            [{1}, {[at0030]}],    -- Excellent
+                            [{2}, {[at0031]}],    -- Very good
+                            [{3}, {[at0032]}],    -- Good
+                            [{4}, {[at0033]}],    -- Fair
+                            [{5}, {[at0034]}]    -- Poor
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0045] occurrences matches {0..1} matches {    -- In general, how would you rate your physical health?
+                value matches {
+                    DV_ORDINAL[at9012] matches {
+                        [value, symbol] matches {
+                            [{1}, {[at0052]}],    -- Excellent
+                            [{2}, {[at0053]}],    -- Very good
+                            [{3}, {[at0054]}],    -- Good
+                            [{4}, {[at0055]}],    -- Fair
+                            [{5}, {[at0056]}]    -- Poor
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0046] occurrences matches {0..1} matches {    -- In general, how would you rate your mental health, including your mood and your ability to think?
+                value matches {
+                    DV_ORDINAL[at9013] matches {
+                        [value, symbol] matches {
+                            [{1}, {[at0058]}],    -- Excellent
+                            [{2}, {[at0059]}],    -- Very good
+                            [{3}, {[at0060]}],    -- Good
+                            [{4}, {[at0061]}],    -- Fair
+                            [{5}, {[at0062]}]    -- Poor
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0047] occurrences matches {0..1} matches {    -- In general, how would you rate your satisfaction with your social activities and relationships?
+                value matches {
+                    DV_ORDINAL[at9014] matches {
+                        [value, symbol] matches {
+                            [{1}, {[at0063]}],    -- Excellent
+                            [{2}, {[at0064]}],    -- Very good
+                            [{3}, {[at0065]}],    -- Good
+                            [{4}, {[at0066]}],    -- Fair
+                            [{5}, {[at0067]}]    -- Poor
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0048] occurrences matches {0..1} matches {    -- In general, please rate how well you carry out your usual social activities and roles. (This includes activities at home, at work and in your community, and responsibilities as a parent, child, spouse, employee, friend, etc.)
+                value matches {
+                    DV_ORDINAL[at9015] matches {
+                        [value, symbol] matches {
+                            [{1}, {[at0068]}],    -- Excellent
+                            [{2}, {[at0069]}],    -- Very good
+                            [{3}, {[at0070]}],    -- Good
+                            [{4}, {[at0071]}],    -- Fair
+                            [{5}, {[at0072]}]    -- Poor
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0049] occurrences matches {0..1} matches {    -- To what extent are you able to carry out your everyday physical activities such as walking, climbing stairs, carrying groceries, or moving a chair?
+                value matches {
+                    DV_ORDINAL[at9016] matches {
+                        [value, symbol] matches {
+                            [{1}, {[at0073]}],    -- Completely
+                            [{2}, {[at0074]}],    -- Mostly
+                            [{3}, {[at0075]}],    -- Moderately
+                            [{4}, {[at0076]}],    -- A little
+                            [{5}, {[at0077]}]    -- Not at all
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0050] occurrences matches {0..1} matches {    -- In the past 7 days: How often have you been bothered by emotional problems such as feeling anxious, depressed or irritable?
+                value matches {
+                    DV_ORDINAL[at9017] matches {
+                        [value, symbol] matches {
+                            [{1}, {[at0078]}],    -- Never
+                            [{2}, {[at0079]}],    -- Rarely
+                            [{3}, {[at0080]}],    -- Sometimes
+                            [{4}, {[at0081]}],    -- Often
+                            [{5}, {[at0082]}]    -- Always
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0051] occurrences matches {0..1} matches {    -- In the past 7 days: How would you rate your fatigue on average?
+                value matches {
+                    DV_ORDINAL[at9018] matches {
+                        [value, symbol] matches {
+                            [{1}, {[at0083]}],    -- None
+                            [{2}, {[at0084]}],    -- Mild
+                            [{3}, {[at0085]}],    -- Moderate
+                            [{4}, {[at0086]}],    -- Severe
+                            [{5}, {[at0087]}]    -- Very severe
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- In the past 7 days: How would you rate your pain on average?
+                value matches {
+                    DV_ORDINAL[at9001] matches {
+                        [value, symbol] matches {
+                            [{0}, {[at0010]}],    -- No pain
+                            [{1}, {[at0016]}],    -- -
+                            [{2}, {[at0017]}],    -- -
+                            [{3}, {[at0018]}],    -- -
+                            [{4}, {[at0019]}],    -- -
+                            [{5}, {[at0020]}],    -- -
+                            [{6}, {[at0021]}],    -- -
+                            [{7}, {[at0022]}],    -- -
+                            [{8}, {[at0023]}],    -- -
+                            [{9}, {[at0024]}],    -- -
+                            [{10}, {[at0025]}]    -- Worst pain imaginable
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"PROMIS-Skala v1.2 - Globale Gesundheit">
+                description = <"Die PROMIS-Skala v1.2 für globale Gesundheit.">
+            >
+            ["at0001"] = <
+                text = <"In den letzten 7 Tagen: Wie stark waren durchschnittlich Ihre Schmerzen?">
+                description = <"Wie stark waren durchschnittlich Ihre Schmerzen?">
+                item_code = <"Global07r">
+            >
+            ["at0010"] = <
+                text = <"Keine Schmerzen">
+                description = <"*">
+            >
+            ["at0016"] = <
+                text = <"-">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"-">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"-">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"-">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"-">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"-">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"-">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"-">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"-">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Schlimmster vorstellbarer Schmerz">
+                description = <"">
+            >
+            ["at0002"] = <
+                text = <"Wie würden Sie Ihre Lebensqualität im Allgemeinen beurteilen?">
+                description = <"Wie würden Sie Ihre Lebensqualität im Allgemeinen beurteilen?">
+                item_code = <"Global02">
+            >
+            ["at0003"] = <
+                text = <"Wie würden Sie Ihren Gesundheitszustand im Allgemeinen beurteilen?">
+                description = <"Wie würden Sie Ihren Gesundheitszustand im Allgemeinen beurteilen?">
+                item_code = <"Global01">
+            >
+            ["at0030"] = <
+                text = <"Ausgezeichnet">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Sehr gut">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Gut">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Einigermaßen">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Schlecht">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Ausgezeichnet">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"Sehr gut">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"Gut">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"Einigermaßen">
+                description = <"">
+            >
+            ["at0044"] = <
+                text = <"Schlecht">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"Wie würden sie ihre körperliche Gesundheit im Allgemeinen beurteilen?">
+                description = <"Wie würden sie ihre körperliche Gesundheit im Allgemeinen beurteilen?">
+                item_code = <"Global03">
+            >
+            ["at0046"] = <
+                text = <"Wie würden sie ihre geistige Gesundheit  im Allgemeinen bewerten, einschließlich ihrer Stimmung und Fähigkeit zu denken?">
+                description = <"Wie würden sie ihre geistige Gesundheit  im Allgemeinen bewerten, einschließlich ihrer Stimmung und Fähigkeit zu denken?">
+                item_code = <"Global04">
+            >
+            ["at0047"] = <
+                text = <"Wie würden sie im Allgemeinen ihre Zufriedenheit mit Ihren sozialen Aktivitäten und Beziehungen bewerten?">
+                description = <"Wie würden sie im Allgemeinen ihre Zufriedenheit mit Ihren sozialen Aktivitäten und Beziehungen bewerten?">
+                item_code = <"Global05">
+            >
+            ["at0048"] = <
+                text = <"Wie gut können Sie im Allgemeinen Ihre üblichen sozialen Aktivitäten und Rollen ausführen? Dazu gehören Aktivitäten zu Hause, bei der Arbeit und in Ihrer Gemeinschaft sowie Verantwortlichkeiten als Elternteil, Kind, Ehepartner/in, Arbeitnehmer/in, Freund/in usw.">
+                description = <"Wie gut können Sie im Allgemeinen Ihre üblichen sozialen Aktivitäten und Rollen ausführen? Dazu gehören Aktivitäten zu Hause, bei der Arbeit und in Ihrer Gemeinschaft sowie Verantwortlichkeiten als Elternteil, Kind, Ehepartner/in, Arbeitnehmer/in, Freund/in usw.">
+                item_code = <"Global09r">
+            >
+            ["at0049"] = <
+                text = <"In welchem Ausmaß können Sie Ihre täglichen körperlichen Aktivitäten wie Gehen, Treppensteigen, Einkäufe tragen oder einen Stuhl bewegen ausführen?">
+                description = <"In welchem Ausmaß können Sie Ihre täglichen körperlichen Aktivitäten wie Gehen, Treppensteigen, Einkäufe tragen oder einen Stuhl bewegen ausführen?">
+                item_code = <"Global06">
+            >
+            ["at0050"] = <
+                text = <"In den letzten 7 Tagen: Wie oft wurden Sie durch emotionale Probleme wie Angst, Depression oder Reizbarkeit belastet?">
+                description = <"In den letzten 7 Tagen: Wie oft wurden Sie durch emotionale Probleme wie Angst, Depression oder Reizbarkeit belastet?">
+                item_code = <"Global10r">
+            >
+            ["at0051"] = <
+                text = <"In den letzten 7 Tagen: Wie stark war durchschnittlich Ihre Müdigkeit?">
+                description = <"In den letzten 7 Tagen: Wie stark war durchschnittlich Ihre Müdigkeit?">
+                item_code = <"Global08r">
+            >
+            ["at0052"] = <
+                text = <"Ausgezeichnet">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"Sehr gut">
+                description = <"">
+            >
+            ["at0054"] = <
+                text = <"Gut">
+                description = <"">
+            >
+            ["at0055"] = <
+                text = <"Einigermaßen">
+                description = <"">
+            >
+            ["at0056"] = <
+                text = <"Schlecht">
+                description = <"">
+            >
+            ["at0058"] = <
+                text = <"Ausgezeichnet">
+                description = <"">
+            >
+            ["at0059"] = <
+                text = <"Sehr gut">
+                description = <"">
+            >
+            ["at0060"] = <
+                text = <"Gut">
+                description = <"">
+            >
+            ["at0061"] = <
+                text = <"Einigermaßen">
+                description = <"">
+            >
+            ["at0062"] = <
+                text = <"Schlecht">
+                description = <"">
+            >
+            ["at0063"] = <
+                text = <"Ausgezeichnet">
+                description = <"">
+            >
+            ["at0064"] = <
+                text = <"Sehr gut">
+                description = <"">
+            >
+            ["at0065"] = <
+                text = <"Gut">
+                description = <"">
+            >
+            ["at0066"] = <
+                text = <"Einigermaßen">
+                description = <"">
+            >
+            ["at0067"] = <
+                text = <"Schlecht">
+                description = <"">
+            >
+            ["at0068"] = <
+                text = <"Ausgezeichnet">
+                description = <"">
+            >
+            ["at0069"] = <
+                text = <"Sehr gut">
+                description = <"">
+            >
+            ["at0070"] = <
+                text = <"Gut">
+                description = <"">
+            >
+            ["at0071"] = <
+                text = <"Einigermaßen">
+                description = <"">
+            >
+            ["at0072"] = <
+                text = <"Schlecht">
+                description = <"">
+            >
+            ["at0073"] = <
+                text = <"Vollständig">
+                description = <"">
+            >
+            ["at0074"] = <
+                text = <"Meistens">
+                description = <"">
+            >
+            ["at0075"] = <
+                text = <"Mäßig">
+                description = <"">
+            >
+            ["at0076"] = <
+                text = <"Ein wenig">
+                description = <"">
+            >
+            ["at0077"] = <
+                text = <"Überhaupt nicht">
+                description = <"">
+            >
+            ["at0078"] = <
+                text = <"Nie">
+                description = <"">
+            >
+            ["at0079"] = <
+                text = <"Selten">
+                description = <"">
+            >
+            ["at0080"] = <
+                text = <"Manchmal">
+                description = <"">
+            >
+            ["at0081"] = <
+                text = <"Oft">
+                description = <"">
+            >
+            ["at0082"] = <
+                text = <"Immer">
+                description = <"">
+            >
+            ["at0083"] = <
+                text = <"Keine">
+                description = <"">
+            >
+            ["at0084"] = <
+                text = <"Leicht">
+                description = <"">
+            >
+            ["at0085"] = <
+                text = <"Mäßig">
+                description = <"">
+            >
+            ["at0086"] = <
+                text = <"Stark">
+                description = <"">
+            >
+            ["at0087"] = <
+                text = <"Sehr stark">
+                description = <"">
+            >
+            ["ac9018"] = <
+                text = <"Wie würden Sie Ihren Gesundheitszustand im Allgemeinen beurteilen? (synthesised)">
+                description = <"Wie würden Sie Ihren Gesundheitszustand im Allgemeinen beurteilen? (synthesised)">
+            >
+            ["ac9019"] = <
+                text = <"Wie würden Sie Ihre Lebensqualität im Allgemeinen beurteilen? (synthesised)">
+                description = <"Wie würden Sie Ihre Lebensqualität im Allgemeinen beurteilen? (synthesised)">
+            >
+            ["ac9020"] = <
+                text = <"Wie würden sie ihre körperliche Gesundheit im Allgemeinen beurteilen? (synthesised)">
+                description = <"Wie würden sie ihre körperliche Gesundheit im Allgemeinen beurteilen? (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"Wie würden sie ihre geistige Gesundheit  im Allgemeinen bewerten, einschließlich ihrer Stimmung und Fähigkeit zu denken? (synthesised)">
+                description = <"Wie würden sie ihre geistige Gesundheit  im Allgemeinen bewerten, einschließlich ihrer Stimmung und Fähigkeit zu denken? (synthesised)">
+            >
+            ["ac9022"] = <
+                text = <"Wie würden sie im Allgemeinen ihre Zufriedenheit mit Ihren sozialen Aktivitäten und Beziehungen bewerten? (synthesised)">
+                description = <"Wie würden sie im Allgemeinen ihre Zufriedenheit mit Ihren sozialen Aktivitäten und Beziehungen bewerten? (synthesised)">
+            >
+            ["ac9023"] = <
+                text = <"Wie gut können Sie im Allgemeinen Ihre üblichen sozialen Aktivitäten und Rollen ausführen? Dazu gehören Aktivitäten zu Hause, bei der Arbeit und in Ihrer Gemeinschaft sowie Verantwortlichkeiten als Elternteil, Kind, Ehepartner/in, Arbeitnehmer/in, Freund/in usw. (synthesised)">
+                description = <"Wie gut können Sie im Allgemeinen Ihre üblichen sozialen Aktivitäten und Rollen ausführen? Dazu gehören Aktivitäten zu Hause, bei der Arbeit und in Ihrer Gemeinschaft sowie Verantwortlichkeiten als Elternteil, Kind, Ehepartner/in, Arbeitnehmer/in, Freund/in usw. (synthesised)">
+            >
+            ["ac9024"] = <
+                text = <"In welchem Ausmaß können Sie Ihre täglichen körperlichen Aktivitäten wie Gehen, Treppensteigen, Einkäufe tragen oder einen Stuhl bewegen ausführen? (synthesised)">
+                description = <"In welchem Ausmaß können Sie Ihre täglichen körperlichen Aktivitäten wie Gehen, Treppensteigen, Einkäufe tragen oder einen Stuhl bewegen ausführen? (synthesised)">
+            >
+            ["ac9025"] = <
+                text = <"In den letzten 7 Tagen: Wie oft wurden Sie durch emotionale Probleme wie Angst, Depression oder Reizbarkeit belastet? (synthesised)">
+                description = <"In den letzten 7 Tagen: Wie oft wurden Sie durch emotionale Probleme wie Angst, Depression oder Reizbarkeit belastet? (synthesised)">
+            >
+            ["ac9026"] = <
+                text = <"In den letzten 7 Tagen: Wie stark war durchschnittlich Ihre Müdigkeit? (synthesised)">
+                description = <"In den letzten 7 Tagen: Wie stark war durchschnittlich Ihre Müdigkeit? (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"In den letzten 7 Tagen: Wie stark waren durchschnittlich Ihre Schmerzen? (synthesised)">
+                description = <"Wie stark waren durchschnittlich Ihre Schmerzen? (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"PROMIS Scale v1.2 - Global Health">
+                description = <"The PROMIS scale v1.2 for global health.">
+            >
+            ["at0001"] = <
+                text = <"In the past 7 days: How would you rate your pain on average?">
+                description = <"How would you rate your pain on average?">
+                item_code = <"Global07r">
+            >
+            ["at0010"] = <
+                text = <"No pain">
+                description = <"*">
+            >
+            ["at0016"] = <
+                text = <"-">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"-">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"-">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"-">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"-">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"-">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"-">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"-">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"-">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Worst pain imaginable">
+                description = <"">
+            >
+            ["at0002"] = <
+                text = <"In general, how would you rate your quality of life?">
+                description = <"In general, how would you rate your quality of life?">
+                item_code = <"Global02">
+            >
+            ["at0003"] = <
+                text = <"In general, how would you rate your health?">
+                description = <"In general, how would you rate your health?">
+                item_code = <"Global01">
+            >
+            ["at0030"] = <
+                text = <"Excellent">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Very good">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Good">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Fair">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Poor">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Excellent">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"Very good">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"Good">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"Fair">
+                description = <"">
+            >
+            ["at0044"] = <
+                text = <"Poor">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"In general, how would you rate your physical health?">
+                description = <"In general, how would you rate your physical health?">
+                item_code = <"Global03">
+            >
+            ["at0046"] = <
+                text = <"In general, how would you rate your mental health, including your mood and your ability to think?">
+                description = <"In general, how would you rate your mental health, including your mood and your ability to think?">
+                item_code = <"Global04">
+            >
+            ["at0047"] = <
+                text = <"In general, how would you rate your satisfaction with your social activities and relationships?">
+                description = <"In general, how would you rate your satisfaction with your social activities and relationships?">
+                item_code = <"Global05">
+            >
+            ["at0048"] = <
+                text = <"In general, please rate how well you carry out your usual social activities and roles. (This includes activities at home, at work and in your community, and responsibilities as a parent, child, spouse, employee, friend, etc.)">
+                description = <"In general, please rate how well you carry out your usual social activities and roles. (This includes activities at home, at work and in your community, and responsibilities as a parent, child, spouse, employee, friend, etc.)">
+                item_code = <"Global09r">
+            >
+            ["at0049"] = <
+                text = <"To what extent are you able to carry out your everyday physical activities such as walking, climbing stairs, carrying groceries, or moving a chair?">
+                description = <"To what extent are you able to carry out your everyday physical activities such as walking, climbing stairs, carrying groceries, or moving a chair?">
+                item_code = <"Global06">
+            >
+            ["at0050"] = <
+                text = <"In the past 7 days: How often have you been bothered by emotional problems such as feeling anxious, depressed or irritable?">
+                description = <"How often have you been bothered by emotional problems such as feeling anxious, depressed or irritable?">
+                item_code = <"Global10r">
+            >
+            ["at0051"] = <
+                text = <"In the past 7 days: How would you rate your fatigue on average?">
+                description = <"How would you rate your fatigue on average?">
+                item_code = <"Global08r">
+            >
+            ["at0052"] = <
+                text = <"Excellent">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"Very good">
+                description = <"">
+            >
+            ["at0054"] = <
+                text = <"Good">
+                description = <"">
+            >
+            ["at0055"] = <
+                text = <"Fair">
+                description = <"">
+            >
+            ["at0056"] = <
+                text = <"Poor">
+                description = <"">
+            >
+            ["at0058"] = <
+                text = <"Excellent">
+                description = <"">
+            >
+            ["at0059"] = <
+                text = <"Very good">
+                description = <"">
+            >
+            ["at0060"] = <
+                text = <"Good">
+                description = <"">
+            >
+            ["at0061"] = <
+                text = <"Fair">
+                description = <"">
+            >
+            ["at0062"] = <
+                text = <"Poor">
+                description = <"">
+            >
+            ["at0063"] = <
+                text = <"Excellent">
+                description = <"">
+            >
+            ["at0064"] = <
+                text = <"Very good">
+                description = <"">
+            >
+            ["at0065"] = <
+                text = <"Good">
+                description = <"">
+            >
+            ["at0066"] = <
+                text = <"Fair">
+                description = <"">
+            >
+            ["at0067"] = <
+                text = <"Poor">
+                description = <"">
+            >
+            ["at0068"] = <
+                text = <"Excellent">
+                description = <"">
+            >
+            ["at0069"] = <
+                text = <"Very good">
+                description = <"">
+            >
+            ["at0070"] = <
+                text = <"Good">
+                description = <"">
+            >
+            ["at0071"] = <
+                text = <"Fair">
+                description = <"">
+            >
+            ["at0072"] = <
+                text = <"Poor">
+                description = <"">
+            >
+            ["at0073"] = <
+                text = <"Completely">
+                description = <"">
+            >
+            ["at0074"] = <
+                text = <"Mostly">
+                description = <"">
+            >
+            ["at0075"] = <
+                text = <"Moderately">
+                description = <"">
+            >
+            ["at0076"] = <
+                text = <"A little">
+                description = <"">
+            >
+            ["at0077"] = <
+                text = <"Not at all">
+                description = <"">
+            >
+            ["at0078"] = <
+                text = <"Never">
+                description = <"">
+            >
+            ["at0079"] = <
+                text = <"Rarely">
+                description = <"">
+            >
+            ["at0080"] = <
+                text = <"Sometimes">
+                description = <"">
+            >
+            ["at0081"] = <
+                text = <"Often">
+                description = <"">
+            >
+            ["at0082"] = <
+                text = <"Always">
+                description = <"">
+            >
+            ["at0083"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0084"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0085"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0086"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0087"] = <
+                text = <"Very severe">
+                description = <"">
+            >
+            ["ac9018"] = <
+                text = <"In general, how would you rate your health? (synthesised)">
+                description = <"In general, how would you rate your health? (synthesised)">
+            >
+            ["ac9019"] = <
+                text = <"In general, how would you rate your quality of life? (synthesised)">
+                description = <"In general, how would you rate your quality of life? (synthesised)">
+            >
+            ["ac9020"] = <
+                text = <"In general, how would you rate your physical health? (synthesised)">
+                description = <"In general, how would you rate your physical health? (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"In general, how would you rate your mental health, including your mood and your ability to think? (synthesised)">
+                description = <"In general, how would you rate your mental health, including your mood and your ability to think? (synthesised)">
+            >
+            ["ac9022"] = <
+                text = <"In general, how would you rate your satisfaction with your social activities and relationships? (synthesised)">
+                description = <"In general, how would you rate your satisfaction with your social activities and relationships? (synthesised)">
+            >
+            ["ac9023"] = <
+                text = <"In general, please rate how well you carry out your usual social activities and roles. (This includes activities at home, at work and in your community, and responsibilities as a parent, child, spouse, employee, friend, etc.) (synthesised)">
+                description = <"In general, please rate how well you carry out your usual social activities and roles. (This includes activities at home, at work and in your community, and responsibilities as a parent, child, spouse, employee, friend, etc.) (synthesised)">
+            >
+            ["ac9024"] = <
+                text = <"To what extent are you able to carry out your everyday physical activities such as walking, climbing stairs, carrying groceries, or moving a chair? (synthesised)">
+                description = <"To what extent are you able to carry out your everyday physical activities such as walking, climbing stairs, carrying groceries, or moving a chair? (synthesised)">
+            >
+            ["ac9025"] = <
+                text = <"In the past 7 days: How often have you been bothered by emotional problems such as feeling anxious, depressed or irritable? (synthesised)">
+                description = <"How often have you been bothered by emotional problems such as feeling anxious, depressed or irritable? (synthesised)">
+            >
+            ["ac9026"] = <
+                text = <"In the past 7 days: How would you rate your fatigue on average? (synthesised)">
+                description = <"How would you rate your fatigue on average? (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"In the past 7 days: How would you rate your pain on average? (synthesised)">
+                description = <"How would you rate your pain on average? (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9010"] = <
+            id = <"ac9010">
+            members = <"at0010", "at0016", "at0017", "at0018", "at0019", "at0020", "at0021", "at0022", "at0023", "at0024", "at0025">
+        >
+        ["ac9020"] = <
+            id = <"ac9020">
+            members = <"at0052", "at0053", "at0054", "at0055", "at0056">
+        >
+        ["ac9024"] = <
+            id = <"ac9024">
+            members = <"at0073", "at0074", "at0075", "at0076", "at0077">
+        >
+        ["ac9023"] = <
+            id = <"ac9023">
+            members = <"at0068", "at0069", "at0070", "at0071", "at0072">
+        >
+        ["ac9022"] = <
+            id = <"ac9022">
+            members = <"at0063", "at0064", "at0065", "at0066", "at0067">
+        >
+        ["ac9021"] = <
+            id = <"ac9021">
+            members = <"at0058", "at0059", "at0060", "at0061", "at0062">
+        >
+        ["ac9026"] = <
+            id = <"ac9026">
+            members = <"at0083", "at0084", "at0085", "at0086", "at0087">
+        >
+        ["ac9025"] = <
+            id = <"ac9025">
+            members = <"at0078", "at0079", "at0080", "at0081", "at0082">
+        >
+        ["ac9019"] = <
+            id = <"ac9019">
+            members = <"at0030", "at0031", "at0032", "at0033", "at0034">
+        >
+        ["ac9018"] = <
+            id = <"ac9018">
+            members = <"at0040", "at0041", "at0042", "at0043", "at0044">
+        >
+    >

@@ -1,0 +1,766 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=b57c71f2-ced6-48b6-9515-a5b9be58f4af; build_uid=45c591fd-f082-4b5e-82f5-553d702b55b1)
+    openEHR-EHR-OBSERVATION.fact_g.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Vanessa Pereira">
+        ["organisation"] = <"Pathfinder - Better">
+        ["email"] = <"vanessa.pereira@better.care">
+        ["date"] = <"2020-04-09">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Elodie Léost, Medtronic, France", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Cella D. Facit.org Questionnaires. [Internet]. FACIT; 2020. Available from: https://www.facit.org/FACITOrg/Questionnaires.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"a20ee249db7afcc16bcba44b8c4ef74f">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the results for each component parameter and their total sum for the FACT-G measure.">
+            keywords = <"FACT, cancer, QOL, quality of life, assessment", ...>
+            use = <"Use to record the results for each component parameter and their total sum for the FACT-G measure.
+
+Several of the score item response scores are reversed on scoring, to convert a low response on a negatively phrased question to a high quality of life score, or opposite. Reversal is performed by subtracting the item response from 4.
+
+The subscale scores are calculated by summing the item scores after reversing the relevant item responses, multiplying by the number of items in the subscale, and dividing by the number of items answered.
+
+While openEHR archetypes are all freely available under an open license, the specific content of this archetype is copyright protected. Any use of this archetype within implementations must be in compliance with the terms established by the copyright owners.
+Copyright statement: © Copyright 1987, 1997 David Cella, Ph.D
+Terms and conditions for use: https://www.facit.org/FACITOrg/AboutUs/Copyright">
+            misuse = <"Not to be used for recording any FACT measure for a specific tumour type such as FACT-C or FACT-Hep. Use an appropriate specialisation of this archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- FACT-G
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    INTERVAL_EVENT[at0002] occurrences matches {0..1} matches {    -- The past 7 days
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Lack of energy
+                                        value matches {
+                                            DV_ORDINAL[at9001] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0056]}],    -- Not at all
+                                                    [{1}, {[at0057]}],    -- A little bit
+                                                    [{2}, {[at0058]}],    -- Somewhat
+                                                    [{3}, {[at0059]}],    -- Quite a bit
+                                                    [{4}, {[at0060]}]    -- Very much
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Nausea
+                                        value matches {
+                                            DV_ORDINAL[at9002] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0056]}],    -- Not at all
+                                                    [{1}, {[at0057]}],    -- A little bit
+                                                    [{2}, {[at0058]}],    -- Somewhat
+                                                    [{3}, {[at0059]}],    -- Quite a bit
+                                                    [{4}, {[at0060]}]    -- Very much
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Trouble on meeting family needs due to physical condition
+                                        value matches {
+                                            DV_ORDINAL[at9003] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0056]}],    -- Not at all
+                                                    [{1}, {[at0057]}],    -- A little bit
+                                                    [{2}, {[at0058]}],    -- Somewhat
+                                                    [{3}, {[at0059]}],    -- Quite a bit
+                                                    [{4}, {[at0060]}]    -- Very much
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Pain
+                                        value matches {
+                                            DV_ORDINAL[at9004] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0056]}],    -- Not at all
+                                                    [{1}, {[at0057]}],    -- A little bit
+                                                    [{2}, {[at0058]}],    -- Somewhat
+                                                    [{3}, {[at0059]}],    -- Quite a bit
+                                                    [{4}, {[at0060]}]    -- Very much
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Bothered by side effects of treatment
+                                        value matches {
+                                            DV_ORDINAL[at9005] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0056]}],    -- Not at all
+                                                    [{1}, {[at0057]}],    -- A little bit
+                                                    [{2}, {[at0058]}],    -- Somewhat
+                                                    [{3}, {[at0059]}],    -- Quite a bit
+                                                    [{4}, {[at0060]}]    -- Very much
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Felt ill
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0056]}],    -- Not at all
+                                                    [{1}, {[at0057]}],    -- A little bit
+                                                    [{2}, {[at0058]}],    -- Somewhat
+                                                    [{3}, {[at0059]}],    -- Quite a bit
+                                                    [{4}, {[at0060]}]    -- Very much
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Forced to spend time in bed
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0056]}],    -- Not at all
+                                                    [{1}, {[at0057]}],    -- A little bit
+                                                    [{2}, {[at0058]}],    -- Somewhat
+                                                    [{3}, {[at0059]}],    -- Quite a bit
+                                                    [{4}, {[at0060]}]    -- Very much
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0061] occurrences matches {0..1} matches {    -- Physical well-being subscale score
+                                        value matches {
+                                            DV_COUNT[at9008] matches {
+                                                magnitude matches {|0..28|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Felt close to friends
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0056]}],    -- Not at all
+                                                    [{1}, {[at0057]}],    -- A little bit
+                                                    [{2}, {[at0058]}],    -- Somewhat
+                                                    [{3}, {[at0059]}],    -- Quite a bit
+                                                    [{4}, {[at0060]}]    -- Very much
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Got emotional support from family
+                                        value matches {
+                                            DV_ORDINAL[at9010] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0056]}],    -- Not at all
+                                                    [{1}, {[at0057]}],    -- A little bit
+                                                    [{2}, {[at0058]}],    -- Somewhat
+                                                    [{3}, {[at0059]}],    -- Quite a bit
+                                                    [{4}, {[at0060]}]    -- Very much
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Got support from friends
+                                        value matches {
+                                            DV_ORDINAL[at9011] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0056]}],    -- Not at all
+                                                    [{1}, {[at0057]}],    -- A little bit
+                                                    [{2}, {[at0058]}],    -- Somewhat
+                                                    [{3}, {[at0059]}],    -- Quite a bit
+                                                    [{4}, {[at0060]}]    -- Very much
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Family has accepted illness
+                                        value matches {
+                                            DV_ORDINAL[at9012] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0056]}],    -- Not at all
+                                                    [{1}, {[at0057]}],    -- A little bit
+                                                    [{2}, {[at0058]}],    -- Somewhat
+                                                    [{3}, {[at0059]}],    -- Quite a bit
+                                                    [{4}, {[at0060]}]    -- Very much
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Satisfied with family communication about illness
+                                        value matches {
+                                            DV_ORDINAL[at9013] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0056]}],    -- Not at all
+                                                    [{1}, {[at0057]}],    -- A little bit
+                                                    [{2}, {[at0058]}],    -- Somewhat
+                                                    [{3}, {[at0059]}],    -- Quite a bit
+                                                    [{4}, {[at0060]}]    -- Very much
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Felt close to partner
+                                        value matches {
+                                            DV_ORDINAL[at9014] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0056]}],    -- Not at all
+                                                    [{1}, {[at0057]}],    -- A little bit
+                                                    [{2}, {[at0058]}],    -- Somewhat
+                                                    [{3}, {[at0059]}],    -- Quite a bit
+                                                    [{4}, {[at0060]}]    -- Very much
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Satisfied with sex life
+                                        value matches {
+                                            DV_ORDINAL[at9015] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0056]}],    -- Not at all
+                                                    [{1}, {[at0057]}],    -- A little bit
+                                                    [{2}, {[at0058]}],    -- Somewhat
+                                                    [{3}, {[at0059]}],    -- Quite a bit
+                                                    [{4}, {[at0060]}]    -- Very much
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0062] occurrences matches {0..1} matches {    -- Social/family well-being subscale score
+                                        value matches {
+                                            DV_COUNT[at9016] matches {
+                                                magnitude matches {|0..28|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Felt sad
+                                        value matches {
+                                            DV_ORDINAL[at9017] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0056]}],    -- Not at all
+                                                    [{1}, {[at0057]}],    -- A little bit
+                                                    [{2}, {[at0058]}],    -- Somewhat
+                                                    [{3}, {[at0059]}],    -- Quite a bit
+                                                    [{4}, {[at0060]}]    -- Very much
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Satisfied with coping with illness
+                                        value matches {
+                                            DV_ORDINAL[at9018] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0056]}],    -- Not at all
+                                                    [{1}, {[at0057]}],    -- A little bit
+                                                    [{2}, {[at0058]}],    -- Somewhat
+                                                    [{3}, {[at0059]}],    -- Quite a bit
+                                                    [{4}, {[at0060]}]    -- Very much
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Losing hope to fight against illness
+                                        value matches {
+                                            DV_ORDINAL[at9019] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0056]}],    -- Not at all
+                                                    [{1}, {[at0057]}],    -- A little bit
+                                                    [{2}, {[at0058]}],    -- Somewhat
+                                                    [{3}, {[at0059]}],    -- Quite a bit
+                                                    [{4}, {[at0060]}]    -- Very much
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Felt nervous
+                                        value matches {
+                                            DV_ORDINAL[at9020] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0056]}],    -- Not at all
+                                                    [{1}, {[at0057]}],    -- A little bit
+                                                    [{2}, {[at0058]}],    -- Somewhat
+                                                    [{3}, {[at0059]}],    -- Quite a bit
+                                                    [{4}, {[at0060]}]    -- Very much
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Worried about dying
+                                        value matches {
+                                            DV_ORDINAL[at9021] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0056]}],    -- Not at all
+                                                    [{1}, {[at0057]}],    -- A little bit
+                                                    [{2}, {[at0058]}],    -- Somewhat
+                                                    [{3}, {[at0059]}],    -- Quite a bit
+                                                    [{4}, {[at0060]}]    -- Very much
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0023] occurrences matches {0..1} matches {    -- Worried that condition will get worse
+                                        value matches {
+                                            DV_ORDINAL[at9022] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0056]}],    -- Not at all
+                                                    [{1}, {[at0057]}],    -- A little bit
+                                                    [{2}, {[at0058]}],    -- Somewhat
+                                                    [{3}, {[at0059]}],    -- Quite a bit
+                                                    [{4}, {[at0060]}]    -- Very much
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0063] occurrences matches {0..1} matches {    -- Emotional well-being subscale score
+                                        value matches {
+                                            DV_COUNT[at9023] matches {
+                                                magnitude matches {|0..24|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0024] occurrences matches {0..1} matches {    -- Able to work (including work at home)
+                                        value matches {
+                                            DV_ORDINAL[at9024] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0056]}],    -- Not at all
+                                                    [{1}, {[at0057]}],    -- A little bit
+                                                    [{2}, {[at0058]}],    -- Somewhat
+                                                    [{3}, {[at0059]}],    -- Quite a bit
+                                                    [{4}, {[at0060]}]    -- Very much
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0025] occurrences matches {0..1} matches {    -- Felt that work was fulfilling
+                                        value matches {
+                                            DV_ORDINAL[at9025] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0056]}],    -- Not at all
+                                                    [{1}, {[at0057]}],    -- A little bit
+                                                    [{2}, {[at0058]}],    -- Somewhat
+                                                    [{3}, {[at0059]}],    -- Quite a bit
+                                                    [{4}, {[at0060]}]    -- Very much
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0026] occurrences matches {0..1} matches {    -- Able to enjoy life
+                                        value matches {
+                                            DV_ORDINAL[at9026] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0056]}],    -- Not at all
+                                                    [{1}, {[at0057]}],    -- A little bit
+                                                    [{2}, {[at0058]}],    -- Somewhat
+                                                    [{3}, {[at0059]}],    -- Quite a bit
+                                                    [{4}, {[at0060]}]    -- Very much
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0027] occurrences matches {0..1} matches {    -- Accepted illness
+                                        value matches {
+                                            DV_ORDINAL[at9027] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0056]}],    -- Not at all
+                                                    [{1}, {[at0057]}],    -- A little bit
+                                                    [{2}, {[at0058]}],    -- Somewhat
+                                                    [{3}, {[at0059]}],    -- Quite a bit
+                                                    [{4}, {[at0060]}]    -- Very much
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- Slept well
+                                        value matches {
+                                            DV_ORDINAL[at9028] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0056]}],    -- Not at all
+                                                    [{1}, {[at0057]}],    -- A little bit
+                                                    [{2}, {[at0058]}],    -- Somewhat
+                                                    [{3}, {[at0059]}],    -- Quite a bit
+                                                    [{4}, {[at0060]}]    -- Very much
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0029] occurrences matches {0..1} matches {    -- Enjoyed things usually done for fun
+                                        value matches {
+                                            DV_ORDINAL[at9029] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0056]}],    -- Not at all
+                                                    [{1}, {[at0057]}],    -- A little bit
+                                                    [{2}, {[at0058]}],    -- Somewhat
+                                                    [{3}, {[at0059]}],    -- Quite a bit
+                                                    [{4}, {[at0060]}]    -- Very much
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0030] occurrences matches {0..1} matches {    -- Content with quality of life right now
+                                        value matches {
+                                            DV_ORDINAL[at9030] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0056]}],    -- Not at all
+                                                    [{1}, {[at0057]}],    -- A little bit
+                                                    [{2}, {[at0058]}],    -- Somewhat
+                                                    [{3}, {[at0059]}],    -- Quite a bit
+                                                    [{4}, {[at0060]}]    -- Very much
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0064] occurrences matches {0..1} matches {    -- Functional well-being subscale score
+                                        value matches {
+                                            DV_COUNT[at9031] matches {
+                                                magnitude matches {|0..28|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0055] occurrences matches {0..1} matches {    -- FACT-G total score
+                                        value matches {
+                                            DV_COUNT[at9032] matches {
+                                                magnitude matches {|0..108|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        width matches {
+                            DV_DURATION[at9033] matches {
+                                value matches {P7D; P7D}
+                            }
+                        }
+                    }
+                    EVENT[at0065] matches {    -- Any event
+                        data matches {
+                            use_node ITEM_TREE[at9034] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0049] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0051] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"FACT-G">
+                description = <"Functional Assessment of Cancer Therapy-General, a 27-Item measure of physical, role, emotional, and social/family functioning, as well as global quality of life in patients with cancer.">
+            >
+            ["at0002"] = <
+                text = <"The past 7 days">
+                description = <"The standard \"past 7 days\" recording of FACT scores.">
+            >
+            ["at0004"] = <
+                text = <"Lack of energy">
+                description = <"I have a lack of energy">
+                Subscale = <"PWB">
+                Item_code = <"GP1">
+                comment = <"Section: Physical well-being.">
+                Question_number = <"1">
+            >
+            ["at0005"] = <
+                text = <"Nausea">
+                description = <"I have nausea">
+                Subscale = <"PWB">
+                Item_code = <"GP2">
+                comment = <"Section: Physical well-being.">
+                Question_number = <"2">
+            >
+            ["at0006"] = <
+                text = <"Trouble on meeting family needs due to physical condition">
+                description = <"Because of my physical condition, I have trouble meeting the needs of my family">
+                Subscale = <"PWB">
+                Item_code = <"GP3">
+                comment = <"Section: Physical well-being.">
+                Question_number = <"3">
+            >
+            ["at0007"] = <
+                text = <"Pain">
+                description = <"I have pain">
+                Subscale = <"PWB">
+                Item_code = <"GP4">
+                comment = <"Section: Physical well-being.">
+                Question_number = <"4">
+            >
+            ["at0008"] = <
+                text = <"Bothered by side effects of treatment">
+                description = <"I am bothered by side effects of treatment">
+                Subscale = <"PWB">
+                Item_code = <"GP5">
+                comment = <"Section: Physical well-being.">
+                Question_number = <"5">
+            >
+            ["at0009"] = <
+                text = <"Felt ill">
+                description = <"I feel ill">
+                Subscale = <"PWB">
+                Item_code = <"GP6">
+                comment = <"Section: Physical well-being.">
+                Question_number = <"6">
+            >
+            ["at0010"] = <
+                text = <"Forced to spend time in bed">
+                description = <"I am forced to spend time in bed">
+                Subscale = <"PWB">
+                Item_code = <"GP7">
+                comment = <"Section: Physical well-being.">
+                Question_number = <"7">
+            >
+            ["at0011"] = <
+                text = <"Felt close to friends">
+                description = <"I feel close to my friends">
+                Subscale = <"SWB">
+                Item_code = <"GS1">
+                comment = <"Section: Social/Family well-being.">
+                Question_number = <"8">
+            >
+            ["at0012"] = <
+                text = <"Got emotional support from family">
+                description = <"I get emotional support from my family">
+                Subscale = <"SWB">
+                Item_code = <"GS2">
+                comment = <"Section: Social/Family well-being.">
+                Question_number = <"9">
+            >
+            ["at0013"] = <
+                text = <"Got support from friends">
+                description = <"I get support from my friends">
+                Subscale = <"SWB">
+                Item_code = <"GS3">
+                comment = <"Section: Social/Family well-being.">
+                Question_number = <"10">
+            >
+            ["at0014"] = <
+                text = <"Family has accepted illness">
+                description = <"My family has accepted my illness">
+                Subscale = <"SWB">
+                Item_code = <"GS4">
+                comment = <"Section: Social/Family well-being.">
+                Question_number = <"11">
+            >
+            ["at0015"] = <
+                text = <"Satisfied with family communication about illness">
+                description = <"I am satisfied with family communication about my illness">
+                Subscale = <"SWB">
+                Item_code = <"GS5">
+                comment = <"Section: Social/Family well-being.">
+                Question_number = <"12">
+            >
+            ["at0016"] = <
+                text = <"Felt close to partner">
+                description = <"I feel close to my partner (or the person who is my main support)">
+                Subscale = <"SWB">
+                Item_code = <"GS6">
+                comment = <"Section: Social/Family well-being.">
+                Question_number = <"13">
+            >
+            ["at0017"] = <
+                text = <"Satisfied with sex life">
+                description = <"I am satisfied with my sex life">
+                Subscale = <"SWB">
+                Item_code = <"GS7">
+                comment = <"Section: Social/Family well-being.">
+                Question_number = <"14">
+            >
+            ["at0018"] = <
+                text = <"Felt sad">
+                description = <"I feel sad">
+                Subscale = <"EWB">
+                Item_code = <"GE1">
+                comment = <"Section: Emotional well-being.">
+                Question_number = <"15">
+            >
+            ["at0019"] = <
+                text = <"Satisfied with coping with illness">
+                description = <"I am satisfied with how I am coping with my illness">
+                Subscale = <"EWB">
+                Item_code = <"GE2">
+                comment = <"Section: Emotional well-being.">
+                Question_number = <"16">
+            >
+            ["at0020"] = <
+                text = <"Losing hope to fight against illness">
+                description = <"I am losing hope in the fight against my illness">
+                Subscale = <"EWB">
+                Item_code = <"GE3">
+                comment = <"Section: Emotional well-being.">
+                Question_number = <"17">
+            >
+            ["at0021"] = <
+                text = <"Felt nervous">
+                description = <"I feel nervous">
+                Subscale = <"EWB">
+                Item_code = <"GE4">
+                comment = <"Section: Emotional well-being.">
+                Question_number = <"18">
+            >
+            ["at0022"] = <
+                text = <"Worried about dying">
+                description = <"I worry about dying">
+                Subscale = <"EWB">
+                Item_code = <"GE5">
+                comment = <"Section: Emotional well-being.">
+                Question_number = <"19">
+            >
+            ["at0023"] = <
+                text = <"Worried that condition will get worse">
+                description = <"I worry that my condition will get worse">
+                Subscale = <"EWB">
+                Item_code = <"GE6">
+                comment = <"Section: Emotional well-being.">
+                Question_number = <"20">
+            >
+            ["at0024"] = <
+                text = <"Able to work (including work at home)">
+                description = <"I am able to work (include work at home)">
+                Subscale = <"FWB">
+                Item_code = <"GF1">
+                comment = <"Section: Functional well-being.">
+                Question_number = <"21">
+            >
+            ["at0025"] = <
+                text = <"Felt that work was fulfilling">
+                description = <"My work (include work at home) is fulfilling">
+                Subscale = <"FWB">
+                Item_code = <"GF2">
+                comment = <"Section: Functional well-being.">
+                Question_number = <"22">
+            >
+            ["at0026"] = <
+                text = <"Able to enjoy life">
+                description = <"I am able to enjoy life">
+                Subscale = <"FWB">
+                Item_code = <"GF3">
+                comment = <"Section: Functional well-being.">
+                Question_number = <"23">
+            >
+            ["at0027"] = <
+                text = <"Accepted illness">
+                description = <"I have accepted my illness">
+                Subscale = <"FWB">
+                Item_code = <"GF4">
+                comment = <"Section: Functional well-being.">
+                Question_number = <"24">
+            >
+            ["at0028"] = <
+                text = <"Slept well">
+                description = <"I am sleeping well">
+                Subscale = <"FWB">
+                Item_code = <"GF5">
+                comment = <"Section: Functional well-being.">
+                Question_number = <"25">
+            >
+            ["at0029"] = <
+                text = <"Enjoyed things usually done for fun">
+                description = <"I am enjoying the things I usually do for fun">
+                Subscale = <"FWB">
+                Item_code = <"GF6">
+                comment = <"Section: Functional well-being.">
+                Question_number = <"26">
+            >
+            ["at0030"] = <
+                text = <"Content with quality of life right now">
+                description = <"I am content with the quality of my life right now">
+                Subscale = <"FWB">
+                Item_code = <"GF7">
+                comment = <"Section: Functional well-being.">
+                Question_number = <"27">
+            >
+            ["at0051"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0055"] = <
+                text = <"FACT-G total score">
+                description = <"Total score from from the PWB, SWB, EWB and FWB subscales. The higher the score, the better the QOL.">
+                comment = <"Scored by summing the PWB, SWB, EWB and FWB subscale scores.">
+            >
+            ["at0056"] = <
+                text = <"Not at all">
+                description = <"">
+            >
+            ["at0057"] = <
+                text = <"A little bit">
+                description = <"">
+            >
+            ["at0058"] = <
+                text = <"Somewhat">
+                description = <"">
+            >
+            ["at0059"] = <
+                text = <"Quite a bit">
+                description = <"">
+            >
+            ["at0060"] = <
+                text = <"Very much">
+                description = <"">
+            >
+            ["at0061"] = <
+                text = <"Physical well-being subscale score">
+                description = <"The score for the physical well-being subscale.">
+                Subscale = <"PWB">
+                comment = <"All items are reversed for scoring.">
+            >
+            ["at0062"] = <
+                text = <"Social/family well-being subscale score">
+                description = <"The score for the social/family well-being subscale.">
+                Subscale = <"SWB">
+                comment = <"No items are reversed for scoring.">
+            >
+            ["at0063"] = <
+                text = <"Emotional well-being subscale score">
+                description = <"The score for the emotional well-being subscale.">
+                Subscale = <"EWB">
+                comment = <"All items except 'Satisfied with coping with illness' are reversed for scoring.">
+            >
+            ["at0064"] = <
+                text = <"Functional well-being subscale score">
+                description = <"The score for the functional well-being subscale.">
+                Subscale = <"FWB">
+                comment = <"No items are reversed for scoring.">
+            >
+            ["at0065"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["ac9034"] = <
+                text = <"Lack of energy (synthesised)">
+                description = <"I have a lack of energy (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9034"] = <
+            id = <"ac9034">
+            members = <"at0056", "at0057", "at0058", "at0059", "at0060">
+        >
+    >

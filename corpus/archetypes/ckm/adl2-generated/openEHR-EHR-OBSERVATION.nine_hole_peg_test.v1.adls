@@ -1,0 +1,508 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=08672c31-44ef-3bf6-9c97-b5d75d75d615; build_uid=eb8d3692-5c4a-43de-9c7e-cde39ba9a490)
+    openEHR-EHR-OBSERVATION.nine_hole_peg_test.v1.0.0
+
+language
+    original_language = <[ISO_639-1::de]>
+    translations = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            author = <
+                ["name"] = <"Michael Braun">
+                ["organisation"] = <"University Medical Center Freiburg, Germany">
+                ["email"] = <"braun@imbi.uni-freiburg.de">
+            >
+        >
+        ["zh-cn"] = <
+            language = <[ISO_639-1::zh-cn]>
+            author = <
+                ["name"] = <"Lin Zhang">
+                ["organisation"] = <"BIPH">
+                ["email"] = <"linforest@163.com">
+            >
+            accreditation = <"What goes here?">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Michael Braun">
+        ["organisation"] = <"University Medical Center Freiburg, Germany">
+        ["email"] = <"braun@imbi.uni-freiburg.de">
+        ["date"] = <"2012-06-25">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Sebastian Bischoff, gfnmediber GmbH, Germany", "Martin Boeker, University Medical Center Freiburg, Germany", "Alexander Brandt, gfnmediber GmbH, Germany", "Michael Braun, University Medical Center Freiburg, Germany (Editor)", "Sebastian Garde, Ocean Informatics, Germany", "Heather Leslie, Ocean Informatics, Australia", "Sebastian Mansow-Model, gfnmediber GmbH, Germany", "Catalina Martínez-Costa, Medical University of Graz, Austria", "Vyacheslav Mavrin, JSC Comsoft, Russia", "Ian McNicoll, Ocean Informatics, United Kingdom (Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Fischer JS, Jak AJ, Kniker JE, Rudick RA, Cutter G. Multiple Sclerosis Functional Composite (MSFC), Administration and Scoring Manual: National Multiple Sclerosis Society; 2001.">
+        ["2"] = <"Mathiowetz V, Weber K, Kashman N, Volland G. Adult Norms For The Nine Hole Peg Test Of Finger Dexterity. The Occupational Therapy Journal of Research 1985;(5):24–38.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"4D9986C5192F92E814B3822242049A7D">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Protokollierung der Messungen, die während eines Nine Hole Peg Test aufgezeichnet wurden, normalerweise als Teil der Testreihe des Multiple Sclerosis Functional Composite.">
+            keywords = <"NHPT", "9-Hole Peg Test", "9-HPT", "Multiple Sclerosis Functional Composite", "MSFC", "Multiple Sklerose", "MS", "Neurologie">
+            use = <"Verwendung zur Protokollierung der Messungen, die während eines Nine Hole Peg Test aufgezeichnet wurden. Dieser Test wird normalerweise als eine Komponente des Assessments des Multiple Sclerosis Functional Composite (MSFC) durchgeführt, kann jedoch auch unabhängig eingesetzt werden.  Sowohl die dominante als auch die nichtdominante Hand des Patienten werden zwei Mal getestet (zwei aufeinanderfolgende Testläufe der dominanten Hand, gefolgt von zwei aufeinanderfolgenden Testläufen der nichtdominanten Hand). Für jeden Testlauf werden neun Stifte einer nach dem anderen aus einem Behälter entnommen, in die Löcher auf einem Steckbrett platziert und dann einzeln wieder in den Behälter zurückgelegt. Der Proband darf in jedem Testlauf nur eine Hand einsetzen, darf das Lochbrett jedoch mit der freien Hand festhalten.
+
+Dieser Archetyp deckt Varianten des Tests ab. Nach Mathiowetz et al. (1985) wird für jede Hand ein Probelauf ohne Zeitmessung vor dem Testlauf mit Zeitmessung durchgeführt. Das MSFC-Handbuch schreibt zwei Testläufe mit Zeitmessung für jede Hand vor, jedoch keinen Probelauf. Für detaillierte Testanleitungen das MSFC-Handbuch verwenden oder siehe Mathiowetz et al. (1985). Der Test sollte nur von einer entsprechend geschulten Person durchgeführt werden.">
+            misuse = <"Nicht zur Bewertung von Patienten mit schwerwiegenden körperlichen Beeinträchtigungen einsetzen.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the measurements recorded during a Nine Hole Peg Test, normally as part of the Multiple Sclerosis Functional Composite suite of tests.">
+            keywords = <"NHPT", "9-Hole Peg Test", "9-HPT", "Multiple Sclerosis Functional Composite", "MSFC", "Multiple Sclerosis", "MS", "Neurology">
+            use = <"Use to record the measurements recorded during a Nine Hole Peg Test. This test is commonly carried out as one component of the Multiple Sclerosis Functional Composite (MSFC) assessment, but may be performed independently. Both the dominant and non-dominant hand of the patient are tested twice (two consecutive trials of the dominant hand, followed by two consecutive trials of the non-dominant hand). For each trial nine pegs are picked one by one from a container, placed in the holes on a pegboard and then separately returned to the container. The subject may only use one hand at each trial, but may hold the pegboard with the free hand.
+
+This archetype covers variations of the test. According to Mathiowetz et al. (1985) an untimed practice trial should be administered prior to the timed trial for each hand. The MSFC Manual stipulates two timed trials for each hand, but no practice trial. Use the MSFC Manual or see Mathiowetz et al. (1985) for detailed administration instructions. The test should only be administered by a suitably trained person.">
+            misuse = <"Not to be used for the assessment of patients with serious physical impairments.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["zh-cn"] = <
+            language = <[ISO_639-1::zh-cn]>
+            purpose = <"旨在用于记载九孔插棒测验过程中所记录的那些测试结果，且通常是作为多发性硬化症功能组合试验的组成部分。">
+            keywords = <"九孔插棒测验", "九孔插棒试验", "九孔插板试验", "9孔圆柱实验", "九孔手功能测试", "Nine-Hole Peg Test", "NHPT", "9-Hole Peg Test", "9-HPT", "多发性硬化症功能组合", "Multiple Sclerosis Functional Composite", "MSFC", "多发性硬化症", "多发性硬化", "Multiple Sclerosis", "MS", "神经病学">
+            use = <"用于记载九孔插棒测验过程中所记录的那些测试结果。该测验通常是作为多发性硬化症功能组合（Multiple Sclerosis Functional Composite，MSFC）评估的组成部分来完成的，但也可能独立进行。受检患者的优势手和非优势手均测试两次（针对优势手的两次连续测试，接着是针对非优势手的两次连续测试）。对于每次测试，均要求将九根插棒从容器（盒子）里逐个拿出来并分别插到测试板的小孔之中，随后再将它们分别收回容器（盒子）里。受检对象在每次测试过程中只能使用一只手，但可以用另一只手扶着测试板。
+本原始型涵盖了该测验的各种变种。依据文献Mathiowetz et al. (1985)，在每只手的计时测试之前，应当进行一次不计时的测试练习。《MSFC手册》（MSFC Manual）规定的是每只手进行两次计时测试，并不进行测试练习。关于详细的施用说明，请参见《MSFC手册》或文献Mathiowetz et al. (1985)。该测验应当仅仅由经过合适培训的人员来执行。">
+            misuse = <"并不用于评估那些存在严重身体缺陷的患者。">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Nine Hole Peg Test
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0074] matches {    -- Dominante Hand - Test 1
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0035] occurrences matches {0..1} matches {    -- Zwischenzeit
+                                        value matches {
+                                            DV_DURATION[at9001] matches {
+                                                value matches {PTS/|PT0S..PT16M40S|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Gesamtzeit
+                                        value matches {
+                                            DV_DURATION[at9002] matches {
+                                                value matches {PTS/|PT0S..PT16M40S|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0050] occurrences matches {0..1} matches {    -- Anzahl platzierter Stecker
+                                        value matches {
+                                            DV_COUNT[at9003] matches {
+                                                magnitude matches {|0..9|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0051] occurrences matches {0..1} matches {    -- Anzahl zurückgelegter Stecker
+                                        value matches {
+                                            DV_COUNT[at9004] matches {
+                                                magnitude matches {|0..9|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0080] occurrences matches {0..1} matches {    -- Testlauf nicht beendet?
+                                        value matches {
+                                            DV_BOOLEAN[at9005] matches {
+                                                value matches {True}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0081] matches {    -- Grund für Nichtbeenden
+                                        value matches {
+                                            DV_TEXT[at9006]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0004] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0064] matches {    -- Begleitumstände
+                                        value matches {
+                                            DV_TEXT[at9007]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    POINT_EVENT[at0075] matches {    -- Dominante Hand - Test 2
+                        data matches {
+                            use_node ITEM_TREE[at9008] /data[at0001]/events[at0074]/data[at0003]
+                        }
+                        state matches {
+                            use_node ITEM_TREE[at9009] /data[at0001]/events[at0074]/state[at0004]
+                        }
+                    }
+                    POINT_EVENT[at0076] matches {    -- Nichtdominante Hand - Test 1
+                        data matches {
+                            use_node ITEM_TREE[at9010] /data[at0001]/events[at0074]/data[at0003]
+                        }
+                        state matches {
+                            use_node ITEM_TREE[at9011] /data[at0001]/events[at0074]/state[at0004]
+                        }
+                    }
+                    POINT_EVENT[at0077] matches {    -- Nichtdominante Hand - Test 2
+                        data matches {
+                            use_node ITEM_TREE[at9012] /data[at0001]/events[at0074]/data[at0003]
+                        }
+                        state matches {
+                            use_node ITEM_TREE[at9013] /data[at0001]/events[at0074]/state[at0004]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0008] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0083] occurrences matches {0..1} matches {    -- Dominante Hand
+                        value matches {
+                            DV_CODED_TEXT[at9014] matches {
+                                defining_code matches {[ac9000]}    -- Dominante Hand (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Probelauf dominante Hand?
+                        value matches {
+                            DV_BOOLEAN[at9015]
+                        }
+                    }
+                    ELEMENT[at0082] occurrences matches {0..1} matches {    -- Probelauf nichtdominante Hand?
+                        value matches {
+                            DV_BOOLEAN[at9016]
+                        }
+                    }
+                    ELEMENT[at0087] occurrences matches {0..1} matches {    -- Mehr als zwei Anläufe?
+                        value matches {
+                            DV_BOOLEAN[at9017] matches {
+                                value matches {True}
+                            }
+                        }
+                    }
+                    ELEMENT[at0088] matches {    -- Grund für mehr als zwei Anläufe
+                        value matches {
+                            DV_TEXT[at9018]
+                        }
+                    }
+                    ELEMENT[at0084] occurrences matches {0..1} matches {    -- Stecker platziert aber nicht zurückgelegt
+                        value matches {
+                            DV_BOOLEAN[at9019] matches {
+                                value matches {True}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Nine Hole Peg Test">
+                description = <"Der Nine Hole Peg Test ist eine quantitative Messung der Funktion der oberen Extremitäten und dient zur schnellen Beurteilung der Fingerfertigkeit eines Probanden. Er bildet die zweite Komponente des Multiple Sclerosis Functional Composite (MSFC), einer Testreihe zur Verlaufsdokumentation von Multipler Sklerose. Er ist auch als NHTP, als 9-Hole Peg Test oder 9-HPT bekannt.">
+            >
+            ["at0013"] = <
+                text = <"Probelauf dominante Hand?">
+                description = <"Wurde mit der dominanten Hand ein Probelauf ohne Zeitmessung durchgeführt, vor dem Testlauf der dominanten Hand mit Zeitmessung?">
+                comment = <"Probeläufe sind nicht Teil der ursprünglichen Spezifikation des Multiple Sclerosis Functional Composite, aber obligatorisch bei manchen Varianten als Teil des Tests.">
+            >
+            ["at0017"] = <
+                text = <"Gesamtzeit">
+                description = <"Die Zeit, die zum erfolgreichen Abschließen eines Testlaufs mit einer Hand benötigt wird.">
+                comment = <"Die Messung kann nach 50 Sekunden gestoppt werden, falls der Testlauf noch nicht beendet wurde. (Die meisten gesunden Personen schließen einen Testlauf mit einer Hand in 18 Sekunden ab.)">
+            >
+            ["at0035"] = <
+                text = <"Zwischenzeit">
+                description = <"Zwischenzeit, gemessen nach der Platzierung des letzten Steckers auf dem Steckbrett, bevor diese in den Behälter zurückgelegt werden.">
+                comment = <"Zwischenzeit ist optional, wird verwendet um zusätzliche Informationen über die Leistung des Probanden zur sammeln.">
+            >
+            ["at0050"] = <
+                text = <"Anzahl platzierter Stecker">
+                description = <"Die Anzahl der Stecker, die erfolgreich auf dem Steckbrett platziert wurden.">
+            >
+            ["at0051"] = <
+                text = <"Anzahl zurückgelegter Stecker">
+                description = <"Die Anzahl der Stecker, die erfolgreich in den Behälter zurückgelegt wurden.">
+            >
+            ["at0064"] = <
+                text = <"Begleitumstände">
+                description = <"Angabe jedweder Umstände, welche die Leistung des Patienten beeinflusst haben könnten.">
+                comment = <"Beispiele für Begleitumstände schließen ein (sind jedoch nicht beschränkt auf): \"Der Patient ließ einen Stecker fallen\", \"Der Patient hat eine Erkältung\", \"Der Patient vergaß seine Brille und hatte Schwierigkeiten, die Stecker zu sehen\" oder \"Der Patient hat während der Aufgabe gesprochen\".">
+            >
+            ["at0074"] = <
+                text = <"Dominante Hand - Test 1">
+                description = <"Erster Testlauf der dominanten Hand.">
+            >
+            ["at0075"] = <
+                text = <"Dominante Hand - Test 2">
+                description = <"Zweiter Testlauf der dominanten Hand.">
+            >
+            ["at0076"] = <
+                text = <"Nichtdominante Hand - Test 1">
+                description = <"Erster Testlauf der nichtdominanten Hand.">
+            >
+            ["at0077"] = <
+                text = <"Nichtdominante Hand - Test 2">
+                description = <"Zweiter Testlauf der nichtdominanten Hand.">
+            >
+            ["at0080"] = <
+                text = <"Testlauf nicht beendet?">
+                description = <"Konnte der Testlauf nicht beendet werden?">
+            >
+            ["at0081"] = <
+                text = <"Grund für Nichtbeenden">
+                description = <"Wenn der Testlauf vorzeitig beendet wurde, jedwede Gründe angeben.">
+                comment = <"Beispielhafte Gründe für Nichtbeenden schließen ein (sind jedoch nicht beschränkt auf): \"Der Patient konnte den Testlauf aufgrund körperlicher Einschränkungen nicht beenden\" oder \"Der Patient weigerte sich, den Testlauf zu beenden\".">
+            >
+            ["at0082"] = <
+                text = <"Probelauf nichtdominante Hand?">
+                description = <"Wurde mit der nichtdominanten Hand ein Probelauf ohne Zeitmessung durchgeführt, vor dem Testlauf der nichtdominanten Hand mit Zeitmessung?">
+                comment = <"Probeläufe sind nicht Teil der ursprünglichen Spezifikation des Multiple Sclerosis Functional Composite, aber obligatorisch bei manchen Varianten als Teil des Tests.">
+            >
+            ["at0083"] = <
+                text = <"Dominante Hand">
+                description = <"Angabe der dominanten Hand (wenn der Proband beide Hände gleichrangig verwendet, die Hand die zum Schreiben bevorzugt wird).">
+            >
+            ["at0084"] = <
+                text = <"Stecker platziert aber nicht zurückgelegt">
+                description = <"Als Wahr kennzeichnen, wenn die Testläufe nur darin bestehen, die Stecker auf dem Steckbrett zu platzieren, d.h. ohne sie wieder in den Behälter zurückzulegen.">
+                comment = <"Manche Varianten des NHPT verlangen nicht, die Stecker in den Behälter zurückzulegen, nachdem sie auf dem Steckbrett platziert wurden. Dabei wird nur die Zeit für ihre Platzierung auf dem Brett gemessen, dies ist dann die Gesamtzeit.">
+            >
+            ["at0085"] = <
+                text = <"Rechte Hand dominant">
+                description = <"Die rechte Hand des Probanden ist dominant.">
+            >
+            ["at0086"] = <
+                text = <"Linke Hand dominant">
+                description = <"Die linke Hand des Probanden ist dominant.">
+            >
+            ["at0087"] = <
+                text = <"Mehr als zwei Anläufe?">
+                description = <"Wurden mehr als zwei Anläufe benötigt, um zwei erfolgreiche Testläufe für jede Hand zu bekommen?">
+                comment = <"Falls ja, bitte Gründe im Datenelement \"Grund für mehr als zwei Anläufe\" angeben.">
+            >
+            ["at0088"] = <
+                text = <"Grund für mehr als zwei Anläufe">
+                description = <"Falls mehrere Anläufe benötigt wurden, um die Testläufe abzuschließen, bitte Gründe angeben.">
+                comment = <"Mögliche Gründe für mehr als zwei Anläufe schließen ein (sind jedoch nicht beschränkt auf): \"Der Patient stieß die gesamte Apparatur auf den Boden\", \"Der Prüfer vergaß die Stoppuhr zu starten oder zu stoppen\" oder \"Der Prüfer vergaß zwischen den Tests die Stoppuhr zurückzusetzen\".">
+            >
+            ["ac9000"] = <
+                text = <"Dominante Hand (synthesised)">
+                description = <"Angabe der dominanten Hand (wenn der Proband beide Hände gleichrangig verwendet, die Hand die zum Schreiben bevorzugt wird). (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Nine Hole Peg Test">
+                description = <"The Nine Hole Peg Test is a quantitative measure of upper extremity function, and used for rapid assessment of finger dexterity of a subject. It is the second component of the Multiple Sclerosis Functional Composite (MSFC), a series of three tests to document the course of Multiple Sclerosis. It is also known as NHTP, as 9-Hole Peg Test, or 9-HPT.">
+            >
+            ["at0013"] = <
+                text = <"Practice Trial For Dominant Hand?">
+                description = <"Was an untimed practice trial conducted with the dominant hand prior to the timed dominant hand trial?">
+                comment = <"Practice trials are not part of the original Multiple Sclerosis Functional Composite specification, but mandatory for some variants as part of the test.">
+            >
+            ["at0017"] = <
+                text = <"Total Time">
+                description = <"The time taken to successfully complete the trial for one hand.">
+                comment = <"The measurement can be stopped after 50 seconds if the trial remains incomplete. (Most healthy people complete the trial in 18 seconds for one hand.)">
+            >
+            ["at0035"] = <
+                text = <"Interim Time">
+                description = <"Interim time measured after the placement of the last peg on the pegboard, before returning them to the container.">
+                comment = <"Interim time is optional, used to gather additional information about the subject's performance.">
+            >
+            ["at0050"] = <
+                text = <"Number Of Pegs Placed">
+                description = <"The number of pegs successfully placed on the pegboard.">
+            >
+            ["at0051"] = <
+                text = <"Number Of Pegs Returned">
+                description = <"The number of pegs successfully returned to the container.">
+            >
+            ["at0064"] = <
+                text = <"Confounding Factors">
+                description = <"Record any circumstances that are believed to have affected the patient's perfomance.">
+                comment = <"Example confounding factors include (but are not limited to): \"The patient dropped a peg\", \"The patient has a cold\", \"The Patient forgot eyeglasses and had difficulties seeing pegs\", or \"The patient talked during the task\".">
+            >
+            ["at0074"] = <
+                text = <"Dominant Hand - Trial 1">
+                description = <"First trial of the dominant hand.">
+            >
+            ["at0075"] = <
+                text = <"Dominant Hand - Trial 2">
+                description = <"Second trial of the dominant hand.">
+            >
+            ["at0076"] = <
+                text = <"Non-dominant Hand - Trial 1">
+                description = <"First trial of the non-dominant hand.">
+            >
+            ["at0077"] = <
+                text = <"Non-dominant Hand - Trial 2">
+                description = <"Second trial of the non-dominant hand.">
+            >
+            ["at0080"] = <
+                text = <"Trial Not Completed?">
+                description = <"Was the trial incomplete?">
+            >
+            ["at0081"] = <
+                text = <"Reason For Non-completion">
+                description = <"If the trial was terminated prematurely, record any reasons.">
+                comment = <"Example reasons for non-completion include (but are not limited to): \"The patient was unable to complete trial due physical limitations\", or \"The patient refused to complete trial\".">
+            >
+            ["at0082"] = <
+                text = <"Practice Trial For Non-dominant Hand?">
+                description = <"Was an untimed practice trial conducted with the non-dominant hand prior to the timed non-dominant hand trial?">
+                comment = <"Practice trials are not part of the original Multiple Sclerosis Functional Composite specification, but mandatory for some variants as part of the test.">
+            >
+            ["at0083"] = <
+                text = <"Dominant Hand">
+                description = <"Indication of the dominant hand (if the subject uses both hands equally, the hand that is prefered for writing).">
+            >
+            ["at0084"] = <
+                text = <"Pegs Placed But Not Returned">
+                description = <"Mark as true if the trial only consists in placing the pegs on the board, i.e. without returning them to the container.">
+                comment = <"Some variants of the NHPT do not require to return the pegs in the container after placing them on the pegboard. So just the time for their placement on the board is recorded, which is then the total time.">
+            >
+            ["at0085"] = <
+                text = <"Right hand dominant">
+                description = <"The subject's right hand is dominant.">
+            >
+            ["at0086"] = <
+                text = <"Left hand dominant">
+                description = <"The subject's left hand is dominant.">
+            >
+            ["at0087"] = <
+                text = <"More Than Two Attempts?">
+                description = <"Did it take more than two attempts to get two successful trials per hand? ">
+                comment = <"If Yes, please specify reasons in \"Reason For More Than Two Attempts\" data element.">
+            >
+            ["at0088"] = <
+                text = <"Reason For More Than Two Attempts">
+                description = <"If multiple attempts were needed to complete the trials, please specify reasons.">
+                comment = <"Example reasons for more than two attempts include (but are not limited to): \"The patient knocked entire apparatus on the floor\", \"The examiner forgot to start or stop stopwatch\", or \"The examiner forgot to reset stopwatch in between trials\".">
+            >
+            ["ac9000"] = <
+                text = <"Dominant Hand (synthesised)">
+                description = <"Indication of the dominant hand (if the subject uses both hands equally, the hand that is prefered for writing). (synthesised)">
+            >
+        >
+        ["zh-cn"] = <
+            ["at0000"] = <
+                text = <"九孔插棒测验">
+                description = <"九孔插棒测验是一项关于上肢功能的定量测试项目，用于快速评估受检对象的手指灵巧度。多发性硬化症功能组合（Multiple Sclerosis Functional Composite，MSFC）是由三种试验组成的系列评估项目，用于记载多发性硬化症的病程，而该测验正是其中的第二个组成试验。该测验又称为NHTP、九孔插板试验或9-HPT等等。">
+            >
+            ["at0013"] = <
+                text = <"是否进行优势手测试练习？">
+                description = <"在进行计时优势手测试之前是否进行了不计时优势手测试练习？">
+                comment = <"测试练习并不是多发性硬化症功能组合项目规范的组成部分，但对于该测验的某些变种，则是相应测试项目的必备内容。">
+            >
+            ["at0017"] = <
+                text = <"总时间">
+                description = <"一只手成功完成当次试验所花费的时间。
+">
+                comment = <"如果当次测试一直没有完成，则在50秒之后即可停止当次测试（大多数健康人可以在18秒之内完成一只手的一次测试）。">
+            >
+            ["at0035"] = <
+                text = <"过渡时间">
+                description = <"过渡时间是指从将最后一根插棒插到测试板上之后直至将所有插棒放回容器（盒子）里之前的时间。">
+                comment = <"过渡时间为可选参数，用于收集关于受检对象表现情况的额外信息。">
+            >
+            ["at0050"] = <
+                text = <"插入插棒数量">
+                description = <"成功插到测试板之上的插棒的数量。">
+            >
+            ["at0051"] = <
+                text = <"放回插棒数量">
+                description = <"成功放回容器（盒子）之中的插棒的数量。">
+            >
+            ["at0064"] = <
+                text = <"干扰因素">
+                description = <"记录任何被认为影响患者表现的情况/因素。">
+                comment = <"关于干扰因素的例子包括（但不仅限于）：“患者掉落了一根插棒”、“患者患有感冒”、“患者忘记带眼镜，从而难以看清插棒”或者是“患者在测试过程中说话”。">
+            >
+            ["at0074"] = <
+                text = <"优势手 - 试验 1">
+                description = <"针对优势手的第一次试验">
+            >
+            ["at0075"] = <
+                text = <"优势手 - 试验 2">
+                description = <"针对优势手的第二次试验">
+            >
+            ["at0076"] = <
+                text = <"非优势手 - 试验 1">
+                description = <"针对非优势手的第一次试验">
+            >
+            ["at0077"] = <
+                text = <"非优势手 - 试验 2">
+                description = <"针对非优势手的第二次试验">
+            >
+            ["at0080"] = <
+                text = <"未完成当次测试吗？">
+                description = <"没有完成当次测试吗？">
+            >
+            ["at0081"] = <
+                text = <"关于未完成的原因">
+                description = <"如果当次测试提前终止，请记录原因。">
+                comment = <"关于未完成的原因的例子包括（但不仅限于）：“患者因为身体限制而无法完成测试”或者“患者拒绝完成测试”。">
+            >
+            ["at0082"] = <
+                text = <"是否进行非优势手测试练习？">
+                description = <"在进行计时非优势手测试之前是否进行了不计时非优势手测试练习？">
+                comment = <"测试练习并不是多发性硬化症功能组合项目规范的组成部分，但对于该测验的某些变种，则是相应测试项目的必备内容。">
+            >
+            ["at0083"] = <
+                text = <"优势手">
+                description = <"优势手的标记（如果受检对象同等程度地试验两只手，则指的是偏爱/优先用于书写的那只手） 。">
+            >
+            ["at0084"] = <
+                text = <"插入但不放回插棒">
+                description = <"如果测试仅仅是将插棒插到测试板之上，也就是说，不包括将它们放回容器（盒子）里，则取值为true（真）。">
+                comment = <"在将插棒插到测试板之上之后，NHPT的某些变种并不要求将插棒放回容器（盒子）里。因此，这种情况下记录的仅仅是将插棒插到测试板之上所花费的时间，而这也是总时间。">
+            >
+            ["at0085"] = <
+                text = <"右手优势">
+                description = <"受检对象的右手为优势手。">
+            >
+            ["at0086"] = <
+                text = <"左手优势">
+                description = <"受检对象的左手为优势手。">
+            >
+            ["at0087"] = <
+                text = <"多于两次尝试吗？">
+                description = <"为了成功完成每只手的两次测试，是否进行了多于两次的尝试？">
+                comment = <"如果是，请在“关于多于两次尝试的原因”（Reason For More Than Two Attempts）数据元之中说明原因。">
+            >
+            ["at0088"] = <
+                text = <"关于多于两次尝试的原因">
+                description = <"如果需要多次尝试来完成测试，请说明原因。">
+                comment = <"关于多于两次尝试的原因的例子包括（但不仅限于）：“患者将整个装置碰落到了地板上”、“检查人员忘记启动或停止秒表”或者“检查人员忘记在测试之间重置秒表”。">
+            >
+            ["ac9000"] = <
+                text = <"优势手 (synthesised)">
+                description = <"优势手的标记（如果受检对象同等程度地试验两只手，则指的是偏爱/优先用于书写的那只手） 。 (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0085", "at0086">
+        >
+    >

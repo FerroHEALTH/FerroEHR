@@ -1,0 +1,237 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=d65a175e-00b9-4697-821e-0650696b1daf; build_uid=505525d3-bf2f-4bd3-8903-2e5d9e0e9abe)
+    openEHR-EHR-EVALUATION.estimated_date_delivery.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2020-02-04">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"D28B504C658928631CCF227477D825CB">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere estimert termindato for et svangerskap, beregnet ved ulike metoder.">
+            keywords = <"EDD, EDB, EDC, fødsel, termin", ...>
+            use = <"Brukes for å registrere estimert termindato (ETD), beregnet eller anslått ved ulike metoder på forskjellige tidspunkter i løpet av et svangerskap, inkludert den fastsatte ETD som legges til grunn for kliniske beslutninger.
+
+Etter hvert som svangerskapet utvikler seg, og den fastsatte ETD oppdateres eller endres, vil pasientjournalen vise den siste versjonen av fastsatt ETD til klinisk bruker, og alle tidligere versjoner skal være tilgjengelige i journalens versjonshistorikk.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record estimated due dated for a pregnancy, calculated or estimated by a variety of methods.">
+            keywords = <"EDD, EDB, EDC, birth, due date", ...>
+            use = <"Use to record the estimated date of delivery (EDD), calculated or estimated by various methods at different times during a single pregnancy, including the 'Agreed EDD' which is used as the basis for clinical decision-making. 
+
+As a pregnancy evolves, and the 'Agreed EDD' is updated or amended, the health record will present the latest version of 'Agreed EDD' to the clinical user, and all previous versions should be available in the health record version history.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Estimated date of delivery (EDD)
+        data matches {
+            ITEM_TREE[at0002] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- EDD by date of conception
+                        value matches {
+                            DV_DATE_TIME[at9000]
+                        }
+                    }
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- EDD by cycle
+                        value matches {
+                            DV_DATE_TIME[at9001]
+                        }
+                    }
+                    CLUSTER[at0006] matches {    -- By ultrasound
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Date of ultrasound
+                                value matches {
+                                    DV_DATE_TIME[at9002]
+                                }
+                            }
+                            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Gestation by scan
+                                value matches {
+                                    DV_DURATION[at9003]
+                                }
+                            }
+                            ELEMENT[at0008] occurrences matches {1} matches {    -- EDD by ultrasound
+                                value matches {
+                                    DV_DATE_TIME[at9004]
+                                }
+                            }
+                        }
+                    }
+                    CLUSTER[at0009] occurrences matches {0..1} matches {    -- Agreed EDD
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0010] occurrences matches {1} matches {    -- EDD
+                                value matches {
+                                    DV_DATE_TIME[at9005]
+                                }
+                            }
+                            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Rationale
+                                value matches {
+                                    DV_TEXT[at9006]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9007]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0012] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Termindato">
+                description = <"Estimert termindato for et svangerskap.">
+            >
+            ["at0003"] = <
+                text = <"Termindato basert på befruktningsdato">
+                description = <"Termindato beregnet ut fra kjent befruktningsdato.">
+                comment = <"Befruktningsdatoen vil vanligvis være registrert andre steder i pasientjournalen, for eksempel som en del av journalføringen ved en IVF-prosedyre.">
+            >
+            ["at0004"] = <
+                text = <"Termindato basert på syklus">
+                description = <"Termindato estimert ut fra første dag i siste normale menstruasjon ved hjelp av Naegeles regel.">
+                comment = <"Dato for 'siste menstruasjon' registreres andre steder ved bruk av arketypen EVALUATION.last_menstrual_period. I tillegg registreres nærmere opplysninger om typiske sykluser med arketypen EVALUATION.menstruation_summary, mens detaljer om en spesifikk menstruasjonssyklus registreres med arketypen OBSERVATION.menstruation.">
+            >
+            ["at0005"] = <
+                text = <"Dato for ultralyd">
+                description = <"Datoen ultralydundersøkelsen ble utført.">
+            >
+            ["at0006"] = <
+                text = <"Basert på ultralyd">
+                description = <"Detaljer om termindato estimert ut fra en ultralydundersøkelse.">
+                comment = <"Funn fra hver ultralyd registreres som en egen instans innenfor denne klyngen.">
+            >
+            ["at0007"] = <
+                text = <"Gestasjonsalder basert på ultralyd">
+                description = <"Svangerskapsalder estimert fra ultralyden.">
+            >
+            ["at0008"] = <
+                text = <"Termindato basert på ultralyd">
+                description = <"Detaljer om termindato estimert på grunnlag av funn ved ultralydundersøkelse i svangerskapet.">
+                comment = <"Kun én 'avtalt termindato' er gyldig til enhver tid. Dersom den avtalte termindatoen må revideres, skal dette registreres i en ny revisjon av denne arketypen i pasientjournalen.">
+            >
+            ["at0009"] = <
+                text = <"Avtalt termindato">
+                description = <"Detaljer om den termindatoen som brukes som grunnlag for kliniske beslutninger under svangerskapet.">
+                comment = <"Denne klyngen er begrenset til én forekomst som representerer gjeldende avtalt termindato. Endrede termindatoer skal lagres i pasientjournalen som tidligere versjoner av denne arketypen.">
+            >
+            ["at0010"] = <
+                text = <"Termindato">
+                description = <"Termindatoen som skal brukes som grunnlag for kliniske beslutninger.">
+                comment = <"Denne termindatoen kan endres under svangerskapet av helsepersonell for å reflektere tilgjengelig dokumentasjon og de spesifikke omstendighetene ved svangerskapet. For eksempel kan en termindato basert på usikre opplysninger om syklus oppdateres når tidlige ultralyddetaljer blir tilgjengelige.">
+            >
+            ["at0011"] = <
+                text = <"Begrunnelse">
+                description = <"Begrunnelsen for 'termindato'.">
+                comment = <"For eksempel: 'basert på en ultralydundersøkelse i uke 9'.">
+            >
+            ["at0012"] = <
+                text = <"Utvidelse">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0013"] = <
+                text = <"Sist oppdatert">
+                description = <"Datoen for siste oppdatering av en termindato.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Estimated date of delivery (EDD)">
+                description = <"Estimated date of delivery for a pregnancy.">
+            >
+            ["at0003"] = <
+                text = <"EDD by date of conception">
+                description = <"The EDD calculated from a known date of conception.">
+                comment = <"The date of conception will usually be recorded elsewhere in the health record, for example as part of the record for an IVF procedure.">
+            >
+            ["at0004"] = <
+                text = <"EDD by cycle">
+                description = <"The EDD estimated from the onset of the last normal menstrual period by Naegele's method.">
+                comment = <"The date of the 'Last menstrual period' will be captured elsewhere using the EVALUATION.last_menstrual_period archetype. In addition, further details about typical cycles will be recorded using the EVALUATION.menstruation_summary and details about a specific menstrual cycle will be recorded using the OBSERVATION.menstruation archetype.">
+            >
+            ["at0005"] = <
+                text = <"Date of ultrasound">
+                description = <"The date on which the ultrasound was carried out.">
+            >
+            ["at0006"] = <
+                text = <"By ultrasound">
+                description = <"Details about an EDD estimated from the findings on a pregnancy ultrasound.">
+                comment = <"The findings from each ultrasound will be captured as a separate instance within this CLUSTER.">
+            >
+            ["at0007"] = <
+                text = <"Gestation by scan">
+                description = <"The gestation estimated from the scan.">
+            >
+            ["at0008"] = <
+                text = <"EDD by ultrasound">
+                description = <"Details about an EDD estimated from the findings on a pregnancy ultrasound.">
+                comment = <"Only one 'Agreed EDD' is appropriate at any one time. If the agreed EDD needs to be revised then this should be captured in a new revision of this archetype within a health record.">
+            >
+            ["at0009"] = <
+                text = <"Agreed EDD">
+                description = <"Details about the EDD which is used as the basis for clinical decision-making during the pregnancy.">
+                comment = <"This CLUSTER has intentionally been constrained to a single occurrence representing the current agreed date. Amended EDDs should be stored in the health record as previous versions of this archetype. ">
+            >
+            ["at0010"] = <
+                text = <"EDD">
+                description = <"The EDD which is to be used as the basis for clinical decision-making.">
+                comment = <"This EDD may be amended during the pregnancy by the healthcare providers to reflect available evidence and the specific circumstances of the pregnancy. For example, an EDD based on an uncertain cycle information may be updated once early ultrasound details become available.">
+            >
+            ["at0011"] = <
+                text = <"Rationale">
+                description = <"The rationale for the 'EDD'.">
+                comment = <"For example, 'based on a 9 week ultrasound scan'.">
+            >
+            ["at0012"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR.">
+            >
+            ["at0013"] = <
+                text = <"Last updated">
+                description = <"The date any EDD was last updated.">
+            >
+        >
+    >

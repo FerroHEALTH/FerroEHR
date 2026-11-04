@@ -1,0 +1,1558 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=f86cd61b-0e0e-4a18-8c07-9c4e537bb4e4; build_uid=b0f08214-c8af-4437-9fdf-7ee6b24f83a1)
+    openEHR-EHR-CLUSTER.laboratory_test_analyte.v1.2.3
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Michael Lieser, Antje Wulff, Natalia Strauch, Alina Rehberg">
+                ["organisation"] = <"Department of Infectious Diseases, Heidelberg University Hospital, Medizinische Hochschule Hannover">
+                ["email"] = <"michael.lieser@med.uni-heidelberg.de, wulff.antje@mh-hannover.de, Strauch.Natalia@mh-hannover.de, rehberg.alina@mh-hannover.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Linda Aulin, Linda Aulin Lundeqvist">
+                ["organisation"] = <"Region Stockholm, Karolinska University Hospital, Karolinska University Hospital, Region Stockholm">
+                ["email"] = <"linda.aulin@sll.se, linda.aulin-lundeqvist@regionstockholm.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke, Liv Laugen">
+                ["organisation"] = <"Nasjonal IKT HF, ​Oslo University Hospital, Norway">
+                ["email"] = <"liv.laugen@ous-hf.no">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Adriana Kitajima, Débora Farage, Fernanda Maia, Laíse Figueiredo, Marivan Abrahão">
+                ["organisation"] = <"Core Consulting">
+                ["email"] = <"contato@coreconsulting.com.br">
+            >
+            accreditation = <"Hospital Alemão Oswaldo Cruz (HAOC)">
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            author = <
+                ["name"] = <"Jonas Bucher">
+                ["organisation"] = <"Cistec AG">
+                ["email"] = <"jonas.bucher@cistec.com">
+            >
+        >
+        ["zh-cn"] = <
+            language = <[ISO_639-1::zh-cn]>
+            author = <
+                ["name"] = <"Lin Zhang">
+                ["organisation"] = <"Freelancer">
+                ["email"] = <"linforest@163.com">
+            >
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            author = <
+                ["name"] = <"Joost Holslag">
+                ["organisation"] = <"Nedap">
+                ["email"] = <"joost.holslag@nedap.com">
+            >
+            accreditation = <"MD">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Julio de Sosa">
+                ["organisation"] = <"Servei Català de la Salut">
+                ["email"] = <"juliodesosa@catsalut.cat">
+            >
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            author = <
+                ["name"] = <"Manuel José Zafra Doménech">
+                ["organisation"] = <"TRADCREA, S.L.">
+                ["email"] = <"mzafra@tradcrea.com">
+            >
+            other_details = <
+                ["other_contributors"] = <"Servei Català de la Salut">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"freshEHR Clinical Informatics, UK">
+        ["email"] = <"ian@freshehr.com">
+        ["date"] = <"2015-07-20">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Heidi Aursand, Oslo universitetssykehus, Norway", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Fatemeh Chalabianloo, Helse Bergen, Norway", "Anca Heyd, DIPS ASA, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Nasjonal IKT, Norway", "Silje Kaada, Helse-Bergen, Avdeling for immunologi og transfusjonsmedisin, Norway", "Lars Morgan Karlsen, DIPS ASA, Norway", "Nils Kolstrup, Skansen Legekontor og Nasjonalt Senter for samhandling og telemedisin, Norway", "Liv Laugen, Oslo universitetssykehus, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Ole Martin Sand, DIPS ASA, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Paul Miller, SCIMP NHS Scotland, United Kingdom", "Andrej Orel, Marand d.o.o., Slovenia", "Jussara Rotzsch, Hospital Alemão Oswaldo Cruz, Brazil", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Line Sæle, Nasjonal IKT HF, Norway", "Nyree Taylor, Ocean Informatics, Australia", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Wouter Zanen, Eurotranplant, Netherlands", "Lin Zhang, Taikang Insurance Group, China">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Pathology Test Result, Draft Archetype [Internet]. Australian Digital Health Agency, Australian Digital Health Agency Clinical Knowledge Manager [cited: 2017-06-27]. No longer available.">
+        ["2"] = <"Pathology (Data Specifications) Version 1.0 [Internet]. Sydney, Australia: National E-Health Transition Authority; 2007 May 29 [cited 2011 Jul 11]; No longer available.">
+        ["3"] = <"Laboratory Technical Framework, Volume 3: Content, Revision 3.0 [Internet]. USA: IHE International; 2011 May 19; [cited 2011 Jul 11]. Available from: https://www.ihe.net/Technical_Framework/upload/IHE_Lab_TF_Rev3-0_Vol3_FT_2011-05-19.pdf">
+        ["4"] = <"HL7 FHIR Resource - Observation V1.8.0 FHIR STU3 [Internet]. Health Level Seven International; [accessed 2017 Jun 27]. Available from: http://hl7.org/fhir/2017Jan/.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"25DC09BB69DA53AAF9683F4166266EE9">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Dient der Darstellung von einzelnen Ergebniswerten für Labor-Analyten, die in der klinischen Diagnostikanalyse wie medizinische Biochemie, Hämatologie, Immunologie und Transfusionsmedizin zu finden ist.">
+            keywords = <"Labor", "Pathologie", "Analyt", "Bestandteil", "Ergebnis">
+            use = <"Dient zur Erfassung von einzelnen Ergebniswerten für Labor-Analyten, die in der klinischen Diagnostik verbreitet sind, wie z. B. biochemische, hämatologische, immunologische und transfusionsmedizinische Tests. Diese Ergebnisse können auch in Berichten zur anatomischen Pathologie als \"zusätzliche Untersuchungen\" vorkommen, zum Beispiel Durchflusszytometrie.
+
+Eine oder mehrere Instanzen dieses Archetyps können im SLOT \"Testergebnis\" des Archetyps OBSERVATION.laboratory_test_result verschachtelt werden.
+
+Unter Umständen kann dieser Archetyp in einem CLUSTER.laboratory_test_panel Archetyp verwendet werden - zusammen mit andere Analyten, die normalerweise als Teil eine Panels oder Profils getestet und/oder befundet werden.
+
+Dieser Archetyp kann im Rahmen einer komplexerem Labor/Pathologie-Befundung, z.B. in anatomisch-pathologischen Befunden verwendet werden, in denen oft quantitative Resultate, wie Durchfluss-Zytometrie-Analysen neben den üblichen makroskopischen und mikroskopischen Ergebnissen dokumentiert werden.">
+            misuse = <"Nicht zur Darstellung von strukturierten Details von makroskopischen/mikroskopischen Befunden der anatomischen Pathologie verwenden.
+
+Nicht zur Darstellung von detaillierten, strukturierten Ergebnissen für Mikrobiologische Befunde verwenden.
+">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Registrering av ett enskilt laboratorieanalysresultat som vanligtvis förekommer i undersökningar inom exempelvis klinisk kemi, kliniska mikrobiologi, klinisk genetik, immunologi och transfusionsmedicin.
+">
+            keywords = <"laboratorium", "labb", "patologi", "analyt", "analys", "resultat", "analysresultat", "svar", "komponent">
+            use = <"*Use to record a single value laboratory analyte result, commonly found in clinical pathology testing such as medical biochemistry, haematology, immunology and transfusion medicine. These results may also appear in anatomical pathology reports as ‘ancillary tests', for example flow cytometry.
+
+One or more instances of this archetype may be nested within the 'Test result' SLOT in the OBSERVATION.laboratory_test_result. 
+
+In some circumstances this archetype may be carried within a CLUSTER.laboratory_test_panel archetype, together with other analytes which are normally tested and/or reported as part of a battery, panel or profile. 
+
+This archetype may be used within the setting of more complex laboratory/pathology reporting such as anatomical pathology reports where quantitative results such as cytometric flow studies are often reported alongside conventional macroscopic and microscopic reporting. (en)">
+            misuse = <"*Not to be used to record structured details about anatomical pathology macroscopic/microscopic findings.
+
+Not to be used to record detailed structured results for microbiological culture findings. (en)">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere ett enkelt laboratorieresultat innenfor områder som medisinsk biokjemi, hematologi, immunologi og transfusjonsmedisin.">
+            keywords = <"laboratorie", "analytt", "analyse", "svar", "resultat">
+            use = <"For å registrere ett enkelt laboratorieresultat innenfor områder som medisinsk biokjemi, hematologi, immunologi og transfusjonsmedisin. Arketypen kan også brukes til tilleggsundersøkelser innenfor patologi, for eksempel flowcytometri.
+
+En eller flere instanser av denne arketypen kan nøstes i SLOTet \"Undersøkelsesresultat\" i arketypen OBSERVATION.laboratory_test_result.
+
+I noen sammenhenger kan denne arketypen brukes i arketypen CLUSTER.laboratory_test_panel, sammen med andre analytter som vanligvis utføres sammen som del av en analysegruppe.
+
+Denne arketypen kan brukes innenfor mer komplekse laboratorie/patologirapporter der kvantitative svar som for eksempel flowcytometri rapporteres sammen med konvensjonelle makroskopiske og mikroskopiske undersøkelser.">
+            misuse = <"Skal ikke brukes til å registrere strukturerte detaljer om makroskopiske/mikroskopiske funn i anatomisk patologi.
+
+Skal ikke brukes til å registrere detaljerte strukturerte resultater for mikrobiologiske dyrkningsfunn.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Para gravar valores únicos e individuais de resultados laboratoriais de analitos comuns a testes patológicos clínicos como bioquímica, hematologia e imunologia.
+">
+            keywords = <"laboratório", "patologia", "analito", "componente", "resultado">
+            use = <"*Use to record a single value laboratory analyte result, commonly found in clinical pathology testing such as medical biochemistry, haematology, immunology and transfusion medicine. These results may also appear in anatomical pathology reports as ‘ancillary tests', for example flow cytometry.
+
+One or more instances of this archetype may be nested within the 'Test result' SLOT in the OBSERVATION.laboratory_test_result. 
+
+In some circumstances this archetype may be carried within a CLUSTER.laboratory_test_panel archetype, together with other analytes which are normally tested and/or reported as part of a battery, panel or profile. 
+
+This archetype may be used within the setting of more complex laboratory/pathology reporting such as anatomical pathology reports where quantitative results such as cytometric flow studies are often reported alongside conventional macroscopic and microscopic reporting. (en)">
+            misuse = <"*Not to be used to record structured details about anatomical pathology macroscopic/microscopic findings.
+
+Not to be used to record detailed structured results for microbiological culture findings. (en)">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a single value laboratory analyte result, commonly found in clinical pathology testing such as medical biochemistry, haematology, immunology and transfusion medicine.">
+            keywords = <"laboratory", "pathology", "analyte", "constituent", "result">
+            use = <"Use to record a single value laboratory analyte result, commonly found in clinical pathology testing such as medical biochemistry, haematology, immunology and transfusion medicine. These results may also appear in anatomical pathology reports as ‘ancillary tests', for example flow cytometry.
+
+One or more instances of this archetype may be nested within the 'Test result' SLOT in the OBSERVATION.laboratory_test_result. 
+
+In some circumstances this archetype may be carried within a CLUSTER.laboratory_test_panel archetype, together with other analytes which are normally tested and/or reported as part of a battery, panel or profile. 
+
+This archetype may be used within the setting of more complex laboratory/pathology reporting such as anatomical pathology reports where quantitative results such as cytometric flow studies are often reported alongside conventional macroscopic and microscopic reporting.">
+            misuse = <"Not to be used to record structured details about anatomical pathology macroscopic/microscopic findings.
+
+Not to be used to record detailed structured results for microbiological culture findings.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            purpose = <"Pour enregistrer le résultat d'un paramètre de laboratoire à valeur unique, couramment utilisé dans les examens de pathologie clinique tels que la biochimie médicale, l'hématologie, l'immunologie et la médecine transfusionnelle.">
+            keywords = <"laboratoire", "pathologie", "analyte", "composant", "résultat">
+            use = <"À utiliser pour enregistrer le résultat d’un analyte de laboratoire à valeur unique, couramment rencontré dans les examens de pathologie clinique tels que la biochimie médicale, l’hématologie, l’immunologie et la médecine transfusionnelle. Ces résultats peuvent également figurer dans les rapports d’anatomopathologie en tant qu’« examens complémentaires », par exemple la cytométrie de flux.
+
+Une ou plusieurs instances de cet archétype peuvent être imbriquées dans le SLOT « Résultat d’examen » de l’OBSERVATION.laboratory_test_result. 
+
+Dans certaines circonstances, cet archétype peut être intégré dans l’archétype CLUSTER.laboratory_test_panel, avec d’autres analytes qui sont normalement analysés et/ou rapportés dans le cadre d’une batterie de tests, d’un panel ou d’un profil. 
+
+Cet archétype peut être utilisé dans le cadre de rapports de laboratoire/pathologie plus complexes, tels que des rapports de pathologie anatomique, où des résultats quantitatifs, comme des études des cytométrie de flux, sont souvent rapportés parallèlement aux rapports macroscopiques et microscopiques conventionnels.">
+            misuse = <"À ne pas utiliser pour enregister des informations structurées concernant les résultats macroscopiques ou microscopiques en anatomopathologie.
+
+À ne pas utiliser pour enregister des résultats détaillés et structurés concernant les résultats de cultures microbiologiques.">
+        >
+        ["zh-cn"] = <
+            language = <[ISO_639-1::zh-cn]>
+            purpose = <"旨在用于记录单值型的实验室检验结果，常见于医学生物化学、血液学、免疫学和输血医学等临床病理学/检验医学检测当中。">
+            keywords = <"实验室", "病理学", "检验医学", "检验", "分析物", "检验项目", "检验结果", "化验结果", "构成要素">
+            use = <"旨在用于记录单值型的实验室检验结果，常见于医学生物化学、血液学、免疫学和输血医学等临床病理学/检验医学检测当中。
+
+可以在实验室检验结果观察型原始型OBSERVATION.laboratory_test_result中的检验结果槽位“Test result”之内嵌套本原始型的一个或多个实例。
+
+在某些情况下，可以将本原始型，与通常作为组合、组套/套餐或项目集组成部分进行检测和/或报告的其他分析物一起，收纳在同一个实验室检验项目组套群簇型原始型CLUSTER.laboratory_test_panel原始型之内。
+
+而且，还可以将本原始型用于解剖病理学报告之类更为复杂的实验室/病理学报告场景；在此类报告当中，常常会将流式细胞术检查之类的定量结果（如研究）与常规/传统的大体/肉眼检查和显微镜检查报告一同加以报告和呈现。">
+            misuse = <"本原始型并不用于记录关于解剖病理学大体/肉眼检查和显微镜检查结果的结构化详情。
+
+本原始型并不用于记录关于微生物培养结果的详细结构化结果信息。">
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            purpose = <"Voor het vastleggen van een enkele laboratorium analyt uitslag, gebruikelijk in klinische chemische onderzoeken zoals medische biochemie, hematologie, immunologie en transfusiegeneeskunde.">
+            keywords = <"laboratorium", "klinische chemie", "analyt", "bepaling", "uitslag">
+            use = <"*Use to record a single value laboratory analyte result, commonly found in clinical pathology testing such as medical biochemistry, haematology, immunology and transfusion medicine. These results may also appear in anatomical pathology reports as ‘ancillary tests', for example flow cytometry.
+
+One or more instances of this archetype may be nested within the 'Test result' SLOT in the OBSERVATION.laboratory_test_result. 
+
+In some circumstances this archetype may be carried within a CLUSTER.laboratory_test_panel archetype, together with other analytes which are normally tested and/or reported as part of a battery, panel or profile. 
+
+This archetype may be used within the setting of more complex laboratory/pathology reporting such as anatomical pathology reports where quantitative results such as cytometric flow studies are often reported alongside conventional macroscopic and microscopic reporting. (en)">
+            misuse = <"*Not to be used to record structured details about anatomical pathology macroscopic/microscopic findings.
+
+Not to be used to record detailed structured results for microbiological culture findings. (en)">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registrar el resultado de un analito de laboratorio de valor único, normalmente en pruebas de patología clínica como bioquímica médica, hematología, inmunología y medicina transfusional.">
+            keywords = <"laboratorio", "patología", "analito", "componente", "resultado">
+            use = <"*Use to record a single value laboratory analyte result, commonly found in clinical pathology testing such as medical biochemistry, haematology, immunology and transfusion medicine. These results may also appear in anatomical pathology reports as ‘ancillary tests', for example flow cytometry.
+
+One or more instances of this archetype may be nested within the 'Test result' SLOT in the OBSERVATION.laboratory_test_result. 
+
+In some circumstances this archetype may be carried within a CLUSTER.laboratory_test_panel archetype, together with other analytes which are normally tested and/or reported as part of a battery, panel or profile. 
+
+This archetype may be used within the setting of more complex laboratory/pathology reporting such as anatomical pathology reports where quantitative results such as cytometric flow studies are often reported alongside conventional macroscopic and microscopic reporting. (en)">
+            misuse = <"*Not to be used to record structured details about anatomical pathology macroscopic/microscopic findings.
+
+Not to be used to record detailed structured results for microbiological culture findings. (en)">
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            purpose = <"Registrar un resultat d'un anàlit de laboratori d'un únic valor, que es troba normalment en les proves de patologia clínica, com ara bioquímica, hematologia, immunologia, i medicina transfusional.">
+            keywords = <"laboratori", "patologia", "anàlit", "constituent", "resultat">
+            use = <"*Use to record a single value laboratory analyte result, commonly found in clinical pathology testing such as medical biochemistry, haematology, immunology and transfusion medicine. These results may also appear in anatomical pathology reports as ‘ancillary tests', for example flow cytometry.
+
+One or more instances of this archetype may be nested within the 'Test result' SLOT in the OBSERVATION.laboratory_test_result. 
+
+In some circumstances this archetype may be carried within a CLUSTER.laboratory_test_panel archetype, together with other analytes which are normally tested and/or reported as part of a battery, panel or profile. 
+
+This archetype may be used within the setting of more complex laboratory/pathology reporting such as anatomical pathology reports where quantitative results such as cytometric flow studies are often reported alongside conventional macroscopic and microscopic reporting. (en)">
+            misuse = <"*Not to be used to record structured details about anatomical pathology macroscopic/microscopic findings.
+
+Not to be used to record detailed structured results for microbiological culture findings. (en)">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Laboratory analyte result
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0027] occurrences matches {0..1} matches {    -- Analyte result sequence
+                value matches {
+                    DV_COUNT[at9007]
+                }
+            }
+            ELEMENT[at0024] occurrences matches {0..1} matches {    -- Analyte name
+                value matches {
+                    DV_TEXT[at9006]
+                }
+            }
+            ELEMENT[at0001]    -- Analyte result
+            allow_archetype CLUSTER[at0014] matches {    -- Analyte result detail
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Reference range guidance
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0028] occurrences matches {0..1}    -- Test method
+            ELEMENT[at0031] occurrences matches {0..1} matches {    -- Analysis performed time
+                value matches {
+                    DV_DATE_TIME[at9011]
+                }
+            }
+            ELEMENT[at0025] occurrences matches {0..1} matches {    -- Validation time
+                value matches {
+                    DV_DATE_TIME[at9008]
+                }
+            }
+            ELEMENT[at0005] matches {    -- Result status
+                value matches {
+                    DV_CODED_TEXT[at9003] matches {
+                        defining_code matches {[ac9004]}    -- Result status (synthesised)
+                    }
+                    DV_TEXT[at9005]
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Result status time
+                value matches {
+                    DV_DATE_TIME[at9004]
+                }
+            }
+            ELEMENT[at0026] occurrences matches {0..1} matches {    -- Specimen
+                value matches {
+                    DV_IDENTIFIER[at9009]
+                    DV_URI[at9010]
+                    DV_TEXT[at9012]
+                }
+            }
+            ELEMENT[at0032] occurrences matches {0..1} matches {    -- Accredited
+                value matches {
+                    DV_BOOLEAN[at9013]
+                    DV_TEXT[at9014]
+                }
+            }
+            ELEMENT[at0003] matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Laboranalyt-Ergebnis">
+                description = <"Ergebnis einer Laboranalyse für einen bestimmten Analytwert.">
+            >
+            ["at0001"] = <
+                text = <"Analyt-Ergebnis">
+                description = <"(Mess-)Wert des Analyt-Ergebnisses.">
+                comment = <"Z.B. \"7,3 mmol/l\", \"Erhöht\". Der \"Any\"-Datentyp wird dann durch eine Spezialisierung, eine Vorlage oder zur Laufzeit der Anwendung auf einen passenden Datentyp eingeschränkt werden müssen, um das aktuelle Analyt-Ergebnis wiederzugeben. Der \"Quantity\"-Datentyp hat Referenzmodell-Attribute, wie Kennungen für normal/abnormal, Referenzbereiche und Näherungen - für weitere Details s. https://specifications.openehr.org/releases/RM/latest/data_types.html#_dv_quantity_class .">
+                hl7v2_mapping = <"OBX.2, OBX.5, OBX.6, OBX.7, OBX.8">
+                fhir_mapping = <"Observation.value[x]">
+            >
+            ["at0003"] = <
+                text = <"Kommentar">
+                description = <"Kommentar zum Analyt-Ergebnis, soweit noch nicht in anderen Feldern erfasst.">
+                hl7v2_mapping = <"NTE.3">
+                fhir_mapping = <"Observation.note">
+            >
+            ["at0004"] = <
+                text = <"Referenzbereichs-Hinweise">
+                description = <"Zusätzliche Hinweise zur Anwendbarkeit des Referenzbereichs für dieses Resultat oder (codierter) Text, ob das Ergebnis im Referenzbereich ist oder nicht.">
+                comment = <"z.B.: 'im Referenzbereich, bezogen auf Alter und Geschlecht'.">
+            >
+            ["at0005"] = <
+                text = <"Ergebnis-Status">
+                description = <"Status des Analyt-Ergebniswertes.">
+                comment = <"Die Werte wurden speziell so ausgewählt, dass sie mit denen im HL7 FHIR-Diagnosebericht übereinstimmen, der ursprünglich aus der HL7v2-Praxis abgeleitet wurde. Andere lokale Codes / Begriffe können über die Textauswahl verwendet werden.
+
+Dieses Element ermöglicht mehrere Vorkommen, um Anwendungsfälle zu unterstützen, wo mehr als eine Art von Status implementiert werden muss.">
+                hl7v2_mapping = <"OBX.11">
+                fhir_mapping = <"Observation.status">
+            >
+            ["at0006"] = <
+                text = <"Zeitpunkt Ergebnis-Status">
+                description = <"Datum und/oder Zeitpunkt an dem der Status für das Analyseergebnis gesetzt wurde.">
+                hl7v2_mapping = <"OBX.19">
+                fhir_mapping = <"Observation.issued">
+            >
+            ["at0014"] = <
+                text = <"Analyseergebnis-Detail">
+                description = <"Weitere Details zu einem einzelnen Ergebnis.">
+            >
+            ["at0015"] = <
+                text = <"Registriert">
+                description = <"Der Test ist im Laborinformationssystem registriert, aber noch kein Ergebnis verfügbar.">
+            >
+            ["at0016"] = <
+                text = <"Unvollständig">
+                description = <"Das Testergebnis ist ein Anfangs- oder Interimswert: Daten im Testergebnis können unvollständig oder nicht verifiziert/validiert sein.">
+            >
+            ["at0017"] = <
+                text = <"Vorläufig">
+                description = <"Erste, verifizierte Resultate sind vorhanden, der Test ist aber noch nicht abgeschlossen (Sub-Kategorie von 'Unvollständig').">
+            >
+            ["at0018"] = <
+                text = <"Endbefund">
+                description = <"Das Analyseergebnis ist vollständig und durch eine autorisierte Person verifiziert.">
+            >
+            ["at0019"] = <
+                text = <"Korrigiert">
+                description = <"Das Ergebnis wurde nach dem endgültigen Abschluss geändert und ist vollständig und wird von einer autorisierten Person überprüft. Dies ist eine Sub-Kategorie von \"Geändert\".">
+            >
+            ["at0020"] = <
+                text = <"Geändert">
+                description = <"Das Ergebnis wurde nach dem endgültigen Abschluss geändert und ist vollständig und von einer autorisierten Person überprüft. Die Ergebnisdaten wurden geändert.">
+            >
+            ["at0021"] = <
+                text = <"Ergänzt">
+                description = <"Nach Abschluss wurde der Bericht durch das Hinzufügen neuer Inhalte abgeändert. Die vorhandene Inhalte sind unverändert. Dies ist eine Sub-Kategorie von \"Geändert\".">
+            >
+            ["at0022"] = <
+                text = <"Endbefund, widerrufen">
+                description = <"Das Testergebnis wurde nach Endbefundung zurückgezogen.">
+            >
+            ["at0023"] = <
+                text = <"Storniert">
+                description = <"Das Testergebnis ist nicht verfügbar, weil der Test nicht gestartet oder nicht abgeschlossen wurde (manchmal auch als \"abgebrochen\" bezeichnet).">
+            >
+            ["at0024"] = <
+                text = <"Bezeichnung des Analyts">
+                description = <"Der Name des untersuchten Analyts.">
+                comment = <"Der Wert dieses Elements wird normalerweise, meist durch eine Spezialisierung, in einem Template oder zur Laufzeit der Anwendung geliefert, um den aktuellen Analyt wiederzugeben. Zum Beispiel: 'Natrium im Serum', 'Hämoglobin'. 
+Die Codierung mit einer externen Terminologie, wie LOINC, NPU, SNOMED-CT oder lokalen Labor-Terminologien wird dringend empfohlen.
+">
+                hl7v2_mapping = <"OBX.3">
+                fhir_mapping = <"Observation.code">
+            >
+            ["at0025"] = <
+                text = <"Zeitpunkt der Validierung">
+                description = <"Datum und Uhrzeit der Validierung des Analyt-Ergebnisses im Labor durch medizinisches Fachpersonal.">
+                comment = <"In vielen Gerichtsbarkeiten wird angenommen, dass der \"Ergebnis-Status\" die medizinische Validierung einschliesst, in anderen wird diese anhand dieses Datenelements separat erfasst und befundet.">
+            >
+            ["at0026"] = <
+                text = <"Probe">
+                description = <"Kennung der Probe, die für das Analyseergebnis verwendet wurde.">
+                comment = <"In manchen Situationen wird ein einzelner Laborergebnis-Archetyp mehrere Probe- und Laboranalyt-Ergebnis-Archetypen enthalten. In diesen Fällen wird dieses \"Probe\"-Datenelement benötigt, um die Ergebnisse mit den richtigen Proben zu verknüpfen.">
+            >
+            ["at0027"] = <
+                text = <"Analyseergebnis-Reihenfolge">
+                description = <"Die beabsichtigte Position dieses Analyseergebnisses in der Reihenfolge aller Analyseergebnisse.">
+                comment = <"z.B. '1', '2', '3'. Werden mehrere Analysenergebnisse berichtet, gibt die Analyseergebnis-Reihenfolge explizit die Reihenfolge der Analyseergebnisse an.">
+            >
+            ["at0028"] = <
+                text = <"Testmethode">
+                description = <"Die Beschreibung der Methode, mit der der Test nur für diesen Analyten durchgeführt wurde.">
+                comment = <"Wenn die Testmethode für ein gesamtes Panel gilt, kann die Testmethode mithilfe des Datenelements \"Testmethode\" im Ergebnis OBSERVATION.laboratory_test_result erfasst werden.">
+            >
+            ["at0031"] = <
+                text = <"Zeitpunkt der Analyse">
+                description = <"Datum und Uhrzeit der Durchführung des Analyt-Ergebnisses im Labor durch medizinisches Fachpersonal.">
+                comment = <"Stellt den tatsächlichen Analysezeitpunkt dar, unabhängig davon, wann das Ergebnis erfasst oder gemeldet wird.">
+            >
+            ["at0032"] = <
+                text = <"Akkreditiert">
+                description = <"Gibt an, ob die für diesen Analyten verwendete Analysemethode akkreditiert ist.">
+                comment = <"Unterstützt die Qualitätssicherung und die Einhaltung gesetzlicher Vorschriften, indem angegeben wird, ob die Laboranalyse nach einer akkreditierten Methode durchgeführt wurde.">
+            >
+            ["ac9004"] = <
+                text = <"Ergebnis-Status (synthesised)">
+                description = <"Status des Analyt-Ergebniswertes. (synthesised)">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Analysresultat">
+                description = <"Resultatet för en enskild analys i en laboratorieundersökning.">
+            >
+            ["at0001"] = <
+                text = <"Analysresultat">
+                description = <"Analysresultatets värde">
+                comment = <"Till exempel \"7,3 mmol/L\" eller \"Förhöjd\". Datatypen \"Any\", som är en odefinierad datatyp, måste begränsas till en lämplig datatyp i en specialisering, mall eller applikation. Datatypen \"Quantity\" har attribut från referensmodellen som täcker flaggor för normal/onormal, referensområden och approximationer.
+Se https://specifications.openehr.org/releases/RM/latest/data_types.html#_dv_quantity_class för mer information.">
+                hl7v2_mapping = <"OBX.2, OBX.5, OBX.6, OBX.7, OBX.8">
+                fhir_mapping = <"Observation.value[x]">
+            >
+            ["at0003"] = <
+                text = <"Kommentar">
+                description = <"Ytterligare fritext om analysresultatet som inte fångas av andra dataelement.">
+            >
+            ["at0004"] = <
+                text = <"Vägledning för referensintervall">
+                description = <"Ytterligare vägledning för information om referensintervallet är tillämpbart för detta resultat. Kan innehålla text eller kodad text med råd om huruvida resultatet ligger inom det normala intervallet.
+">
+                comment = <"Till exempel \"inom normalområde avseende ålder och kön\".">
+            >
+            ["at0005"] = <
+                text = <"Resultatstatus">
+                description = <"Status för analysresultatet.">
+                comment = <"Värdena har valts specifikt för att motsvara de i HL7 FHIR-resursen \"Diagnostic report\", som historiskt kommer från praxis i HL7 v2. Andra lokala koder eller termer kan användas med datatypen \"Fri eller kodad text\".
+
+Det här fältet kan repeteras för att stödja användningsfall där behov finns av flera statustyper.">
+                hl7v2_mapping = <"OBX.11">
+                fhir_mapping = <"Observation.status">
+            >
+            ["at0006"] = <
+                text = <"Tidsangivelse för resultatstatus">
+                description = <"Datum och tid då analysresultatet utfärdades för den aktuella resultatstatusen.">
+            >
+            ["at0014"] = <
+                text = <"Detaljer om analysresultat">
+                description = <"Ytterligare detaljer om ett enskilt analysresultat.">
+            >
+            ["at0015"] = <
+                text = <"Registrerad">
+                description = <"Analysen är registrerad i laboratoriesystemet, men resultatet är ej ännu tillgängligt.
+
+">
+            >
+            ["at0016"] = <
+                text = <"Partiellt resultat">
+                description = <"Detta är ett partiellt (dvs. initialt eller preliminärt) testresultat: Data i resultatet kan vara ofullständiga eller obekräftade.">
+            >
+            ["at0017"] = <
+                text = <"Preliminärt resultat">
+                description = <"Verifierade tidiga resultat är tillgängliga, men inte alla resultat är slutgiltiga. Detta är en underkategori av \"Partiellt resultat\".">
+            >
+            ["at0018"] = <
+                text = <"Slutgiltigt resultat">
+                description = <"Testresultatet är fullständigt och verifierat av en auktoriserad person.">
+            >
+            ["at0019"] = <
+                text = <"Slutgiltigt resultat, korrigerat">
+                description = <"Resultatet har korrigerats efter att tidigare ha varit markerat som slutgiltigt. Detta är en underkategori av \"Slutgiltigt resultat, reviderat\".">
+            >
+            ["at0020"] = <
+                text = <"Slutgiltigt resultat, reviderat">
+                description = <"Resultatet har reviderats och ändrats efter att tidigare ha varit markerat som slutgiltigt.">
+            >
+            ["at0021"] = <
+                text = <"Slutgiltigt resultat, tillägg">
+                description = <"Efter att ha slutförts har resultatrapporten ändrats genom att nytt innehåll har inkluderats. Det befintliga innehållet är oförändrat. Detta är en underkategori av ”Slutgiltigt svar, reviderat”.">
+            >
+            ["at0022"] = <
+                text = <"Felaktigt registrerat resultat">
+                description = <"Analysresultatet har dragits tillbaka efter att ha varit i status \"Slutgiltigt resultat\".">
+            >
+            ["at0023"] = <
+                text = <"Avbrutet">
+                description = <"Resultatet är inte tillgängligt eftersom testet inte har startats eller inte slutförts (kallas även ibland för \"inställt\").">
+            >
+            ["at0024"] = <
+                text = <"Analysnamn">
+                description = <"Namnet på analysen.">
+                comment = <"Värdet för detta fält anges vanligtvis i en specialisering av den här arketypen, i en mall eller i applikationen. Till exempel \"S-natrium\" eller \"hemoglobin\". Det rekommenderas starkt att koda med en terminologi såsom exempelvis NPU, LOINC, SNOMED CT eller lokala kodverk.">
+                hl7v2_mapping = <"OBX.3">
+                fhir_mapping = <"Observation.code">
+            >
+            ["at0025"] = <
+                text = <"Tidpunkt för validering">
+                description = <"Datum och tid då analysresultatet validerades medicinskt i laboratoriet.
+">
+                comment = <"I många fall antas 'resultatstatus' inkludera medicinsk validering, dvs. ett \"slutligt\" resultat antas vara medicinskt validerat. I andra fall kommer detta att registreras och rapporteras separat med hjälp av detta fält.
+
+
+">
+            >
+            ["at0026"] = <
+                text = <"Provmaterial">
+                description = <"Identifiering av det provmaterial som använts för analysresultatet.">
+                comment = <"I vissa situationer kommer en arketyp för laboratorietestresultat (OBSERVATION.Laboratory_test_result) att innehålla flera arketyper för provmaterial (Specimen) och flera arketyper för analysresultat (Laboratory_analyte_result). I dessa situationer måste man använda detta dataelement för att kunna koppla resultaten till rätt provmaterial.">
+            >
+            ["at0027"] = <
+                text = <"Rapporteringsordning">
+                description = <"Den faktiska positionen för ett enskilt analysresultat i den totala rapporteringsordningen.
+
+
+
+">
+                comment = <"Till exempel 1, 2 eller 3. Om flera analysresultat rapporteras visar detta värde var i ordningsföljden detta resultat har besvarats. 
+
+
+
+">
+            >
+            ["at0028"] = <
+                text = <"Testmetod">
+                description = <"Beskrivning av metoden som har använts för att utföra testet specifikt för denna analyt.
+">
+                comment = <"Om testmetoden gäller för en hel panel kan testmetoden fångas med hjälp av dataelementet 'Testmetod' i OBSERVATION.laboratory_test_result.">
+            >
+            ["at0031"] = <
+                text = <"*Analysis performed time (en)">
+                description = <"*The date and time when the analyte result was performed in the laboratory by a healthcare practitioner. (en)">
+                comment = <"*Represents the actual analysis timestamp, independent of when the result is recorded or reported. (en)">
+            >
+            ["at0032"] = <
+                text = <"*Accredited (en)">
+                description = <"*Indicates whether the analytical method used for this analyte is accredited. (en)">
+                comment = <"*Supports quality assurance and regulatory compliance by specifying whether the laboratory analysis was performed under an accredited method. (en)">
+            >
+            ["ac9004"] = <
+                text = <"Resultatstatus (synthesised)">
+                description = <"Status för analysresultatet. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Analyseresultat">
+                description = <"Resultatet av en individuell laboratorieanalyse.">
+            >
+            ["at0001"] = <
+                text = <"Analyseresultat">
+                description = <"Verdien av analyseresultatet.">
+                comment = <"For eksempel \"7,3 mmol/L\" eller \"Forhøyet\". Datatypen \"Udefinert datatype\" må begrenses til en passende datatype i en spesialisering, et templat eller i applikasjonen. Datatypen Quantity har attributter fra referansemodellen som dekker flagg for normalt/unormalt, referanseområder og approksimeringer. Se https://specifications.openehr.org/releases/RM/latest/data_types.html#_dv_quantity_class for mer detaljer.">
+                hl7v2_mapping = <"OBX.2, OBX.5, OBX.6, OBX.7, OBX.8">
+                fhir_mapping = <"Observation.value[x]">
+            >
+            ["at0003"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om analyseresultatet som ikke fanges opp av andre elementer.">
+                hl7v2_mapping = <"NTE.3">
+                fhir_mapping = <"Observation.note">
+            >
+            ["at0004"] = <
+                text = <"Veileder for referanseområde">
+                description = <"Veileder for å finne ut om referanseverdien er relevant for dette resultatet. Kan inneholde tekst eller kodet tekstlig råd for om resultatet ligger innenfor normalområdet.">
+                comment = <"For eksempel \"innenfor normale grenseverdier i forhold til alder og kjønn\".">
+            >
+            ["at0005"] = <
+                text = <"Resultatstatus">
+                description = <"Status for analyseresultatet.">
+                comment = <"Verdiene er valgt spesifikt for å samsvare med verdiene i HL7 FHIR-ressursen \"Diagnostic report\", som historisk sett kommer fra praksis i HL7 v2. Andre lokale koder eller termer kan brukes ved å bruke datatypen \"Fri eller kodet tekst\".
+
+Dette elementet kan repeteres for å imøtekomme brukstilfeller der det er mer enn en type status som må implementeres.">
+                hl7v2_mapping = <"OBX.11">
+                fhir_mapping = <"Observation.status">
+            >
+            ["at0006"] = <
+                text = <"Tidspunkt for statusendring">
+                description = <"Datoen og tidspunktet da analyseresultatet ble utstedt for den aktuelle \"Analyseresultatstatus\".">
+                hl7v2_mapping = <"OBX.19">
+                fhir_mapping = <"Observation.issued">
+            >
+            ["at0014"] = <
+                text = <"Detaljer om analyseresultat">
+                description = <"Ytterligere detaljer knyttet til et enkelt analyseresultat.">
+            >
+            ["at0015"] = <
+                text = <"Registrert">
+                description = <"Analysen er registrert i laboratoriesystemet, men resultatet er ikke tilgjengelig per nå.">
+            >
+            ["at0016"] = <
+                text = <"Ufullstendig">
+                description = <"Dette er et delvis (dvs initalt, foreløpig eller preliminært) svar: Data i resultatet kan være ukomplett eller ubekreftet.">
+            >
+            ["at0017"] = <
+                text = <"Foreløpig">
+                description = <"Verifiserte tidlige resultater er tilgjengelige, men ikke alle resultater er endelige. Dette er en underkategori av \"Delvis\".">
+            >
+            ["at0018"] = <
+                text = <"Endelig">
+                description = <"Resultatet er komplett og er bekreftet av ansvarlig person.">
+            >
+            ["at0019"] = <
+                text = <"Korrigert">
+                description = <"Etter å ha vært satt som status \"Endelig\", har det blitt lagt nytt innhold til rapporten. Det eksisterende innholdet er uendret. Dette er en underkategori av \"Revidert\"">
+            >
+            ["at0020"] = <
+                text = <"Revidert">
+                description = <"Resultatet har blitt modifisert etter å ha vært i status \"Endelig\", og er komplett og verifisert av ansvarlig person, og resultatdata er endret.">
+            >
+            ["at0021"] = <
+                text = <"Tillegg">
+                description = <"Etter å ha vært satt som status \"Endelig\", har det blitt lagt nytt innhold til rapporten. Det eksisterende innholdet er uendret. Dette er en underkategori av \"Revidert\".">
+            >
+            ["at0022"] = <
+                text = <"Feilregistrert">
+                description = <"Analyseresultatet har blitt trukket tilbake etter å ha vært i status Endelig.">
+            >
+            ["at0023"] = <
+                text = <"Kansellert">
+                description = <"Resultatet er utilgjengelig fordi analysen ikke ble påbegynt eller ferdigstilt (også kalt \"avbrutt\").">
+            >
+            ["at0024"] = <
+                text = <"Analysenavn">
+                description = <"Navnet på analyseresultatet.">
+                comment = <"Verdien for dette elementet blir vanligvis lagt inn i en spesialisering av denne arketypen, i en templat, eller i applikasjonen. For eksempel \"serum natrium\" eller \"hemoglobin\". Det er sterkt anbefalt å kode dette elementet med en terminologi, for eksempel Norsk laboratoriekodeverk, NPU, LOINC, SNOMED CT eller lokale kodesett.">
+                hl7v2_mapping = <"OBX.3">
+                fhir_mapping = <"Observation.code">
+            >
+            ["at0025"] = <
+                text = <"Tidspunkt for medisinsk validering">
+                description = <"Datoen og tidspunktet da analyseresultatet ble medisinsk validert i laboratoriet.">
+                comment = <"I mange myndighetsområder omfatter \"Resultatstatus\" implisitt medisinsk validering, det vil si at et resultat med status \"Endelig\" vil antas å være medisinsk validert. I andre myndighetsområder kan dette registreres og rapporteres separat ved hjelp av dette dataelementet.">
+            >
+            ["at0026"] = <
+                text = <"Prøvemateriale">
+                description = <"Identifikator eller link til prøvematerialet som ble brukt i analysen.">
+                comment = <"I noen situasjoner vil én Laboratorieresultat-arketype inneholde flere Prøvemateriale-arketyper og flere Analyseresultat-arketyper. I disse situasjonene må man bruke dette elementet for å kunne koble resultatene til de korrekte prøvematerialene.">
+            >
+            ["at0027"] = <
+                text = <"Resultatrekkefølge">
+                description = <"Plasseringen av dette analyseresultatet i den overordnede rekkefølgen av resultater.">
+                comment = <"For eksempel \"1\", \"2\", \"3\". Dersom det er flere analyseresultater i en rapport gjør \"Resultatrekkefølge\" rekkefølgen i svarrapporten eksplisitt.">
+            >
+            ["at0028"] = <
+                text = <"Testmetode">
+                description = <"Beskrivelse av metoden brukt for analysering av denne analytten.">
+                comment = <"Hvis testmetoden gjelder for hele testpanelet kan metoden beskrives ved å bruke \"Testing method\" (Testmetode) dataelementet i arketypen OBSERVATION.laboratory_test_result (Laboratorieresultat).">
+            >
+            ["at0031"] = <
+                text = <"Tidspunkt for utført analyse">
+                description = <"Dato og tidspunkt da analytten ble analysert i laboratoriet.">
+                comment = <"Representerer det faktiske analysetidspunktet, uavhengig av når resultatet registreres eller rapporteres.">
+            >
+            ["at0032"] = <
+                text = <"Akkreditert">
+                description = <"Indikerer om analysemetoden som er brukt for dette analyttet, er akkreditert.">
+                comment = <"Understøtter kvalitetssikring og etterlevelse av regelverk ved å angi om laboratorieanalysen ble utført etter en akkreditert metode.">
+            >
+            ["ac9004"] = <
+                text = <"Resultatstatus (synthesised)">
+                description = <"Status for analyseresultatet. (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"*Laboratory analyte result(en)">
+                description = <"*The result of a laboratory test for a single analyte value.(en)">
+            >
+            ["at0001"] = <
+                text = <"*Analyte result(en)">
+                description = <"*The value of the analyte result.(en)">
+                comment = <"*For example '7.3 mmol/l', 'Raised'. The 'Any' data type will need to be constrained to an appropriate data type in a specialisation, a template or at run-time to reflect the actual analyte result. The Quantity data type has reference model attributes that include flags for normal/abnormal, reference ranges and approximations - see https://specifications.openehr.org/releases/RM/latest/data_types.html#_dv_quantity_class for more details.(en)">
+                hl7v2_mapping = <"*OBX.2,OBX.5,OBX.6(en)">
+                fhir_mapping = <"*Observation.value[x](en)">
+            >
+            ["at0003"] = <
+                text = <"*Comment(en)">
+                description = <"*Additional narrative about the analyte result, not captured in other fields.(en)">
+                hl7v2_mapping = <"*NTE.3(en)">
+                fhir_mapping = <"*Observation.comments(en)">
+            >
+            ["at0004"] = <
+                text = <"*Reference range guidance(en)">
+                description = <"*Additional advice on the applicability of the reference range to this result or may carry text or coded textual guidance as to whether the result is within the normal range.(en)">
+                comment = <"*For example, 'within normal limits for age and sex'.(en)">
+            >
+            ["at0005"] = <
+                text = <"*Result status(en)">
+                description = <"*The status of the analyte result value.(en)">
+                comment = <"*The values have been specifically chosen to match those in the HL7 FHIR Diagnostic report, historically derived from HL7v2 practice. Other local codes/terms can be used via the Text 'choice'.
+
+This element is multiple occurrence to cater for the use cases where there are more than one type of status need to be implemented by using two or more instances of this data element. (en)">
+                hl7v2_mapping = <"*OBX-11-observation result status(en)">
+                fhir_mapping = <"*status(en)">
+            >
+            ["at0006"] = <
+                text = <"*Result status time(en)">
+                description = <"*The date and time that the analyte result was issued for the recorded ‘Result status’.(en)">
+                hl7v2_mapping = <"*OBX-22 and/or OBX-19(en)">
+                fhir_mapping = <"*Observation.issued(en)">
+            >
+            ["at0014"] = <
+                text = <"Detalhes do resultado do analito">
+                description = <"Detalhes adicionais relativos a um resultado individual.">
+            >
+            ["at0015"] = <
+                text = <"Registrado">
+                description = <"A existência do teste é registrada no sistema de informação do laboratório, mas não há nada disponível ainda.">
+            >
+            ["at0016"] = <
+                text = <"Parcial">
+                description = <"Este é um resultado de teste parcial (p.e. inicial, intermediário ou preliminar): dados no resultado do teste podem estar incompletos ou não verificados.">
+            >
+            ["at0017"] = <
+                text = <"Preliminar">
+                description = <"Resultados iniciais verificados estão disponíveis, mas nem todos os resultados são definitivos. Esta é uma sub-categoria de \"Parcial\".">
+            >
+            ["at0018"] = <
+                text = <"Final">
+                description = <"O resultado final está completo e verificado por uma pessoa autorizada.">
+            >
+            ["at0019"] = <
+                text = <"*Corrected(en)">
+                description = <"*The result has been modified subsequent to being Final, and is complete and verified by an authorised person. This is a sub-category of 'Amended'. (en)">
+            >
+            ["at0020"] = <
+                text = <"*Amended(en)">
+                description = <"*The result has been modified subsequent to being Final, and is complete and verified by an authorised person, and result data has been changed. (en)">
+            >
+            ["at0021"] = <
+                text = <"*Appended(en)">
+                description = <"*Subsequent to being final, the report has been modified by adding new content. The existing content is unchanged. This is a sub-category of 'Amended'.(en)">
+            >
+            ["at0022"] = <
+                text = <"Entrada com erro">
+                description = <"O resultado do teste foi retirado após ser finalizado.">
+            >
+            ["at0023"] = <
+                text = <"Cancelado">
+                description = <"O resultado está indisponível porque o teste não foi iniciado ou não foi completado (algumas vezes chamado de \"abortado\").">
+            >
+            ["at0024"] = <
+                text = <"*Analyte name(en)">
+                description = <"*The name of the analyte result.(en)">
+                comment = <"*The value for this element is normally supplied in a specialisation, in a template or at run-time to reflect the actual analyte. For example: 'Serum sodium', 'Haemoglobin'. Coding with an external terminology is strongly recommended, such as LOINC, NPU, SNOMED CT, or local lab terminologies.(en)">
+                hl7v2_mapping = <"*OBX-3.1;3.2(en)">
+                fhir_mapping = <"*Observation.code(en)">
+            >
+            ["at0025"] = <
+                text = <"*Validation time(en)">
+                description = <"*The date and time that the analyte result was validated in the laboratory by a healthcare practitioner.(en)">
+                comment = <"*In many jurisdictions the 'Result status' is assumed to include medical validation i.e. a 'final' result will be assumed to be medically validated, but in others this will be recorded and reported separately using this data element.(en)">
+            >
+            ["at0026"] = <
+                text = <"*Specimen(en)">
+                description = <"*Identification of the specimen used for the analyte result.(en)">
+                comment = <"*In some situations, a single Laboratory test result archetype will contain multiple Specimen archetypes and multiple Analyte result archetypes. In these situations, this 'Specimen' data element is needed to be able to connect the results with the correct specimens.(en)">
+            >
+            ["at0027"] = <
+                text = <"*Analyte result sequence(en)">
+                description = <"*">
+            >
+            ["at0028"] = <
+                text = <"*Test method (en)">
+                description = <"*Description about the method used to perform the test on this analyte only. (en)">
+                comment = <"*If the test method applies to an entire panel, the test method can be captured using the 'Test method' data element within the OBSERVATION.laboratory_test_result (en)">
+            >
+            ["at0031"] = <
+                text = <"*Analysis performed time (en)">
+                description = <"*The date and time when the analyte result was performed in the laboratory by a healthcare practitioner. (en)">
+                comment = <"*Represents the actual analysis timestamp, independent of when the result is recorded or reported. (en)">
+            >
+            ["at0032"] = <
+                text = <"*Accredited (en)">
+                description = <"*Indicates whether the analytical method used for this analyte is accredited. (en)">
+                comment = <"*Supports quality assurance and regulatory compliance by specifying whether the laboratory analysis was performed under an accredited method. (en)">
+            >
+            ["ac9004"] = <
+                text = <"*Result status(en) (synthesised)">
+                description = <"*The status of the analyte result value.(en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Laboratory analyte result">
+                description = <"The result of a laboratory test for a single analyte value.">
+            >
+            ["at0001"] = <
+                text = <"Analyte result">
+                description = <"The value of the analyte result.">
+                comment = <"For example '7.3 mmol/l', 'Raised'. The 'Any' data type will need to be constrained to an appropriate data type in a specialisation, a template or at run-time to reflect the actual analyte result. The Quantity data type has reference model attributes that include flags for normal/abnormal, reference ranges and approximations - see https://specifications.openehr.org/releases/RM/latest/data_types.html#_dv_quantity_class for more details.">
+                hl7v2_mapping = <"OBX.2, OBX.5, OBX.6, OBX.7, OBX.8">
+                fhir_mapping = <"Observation.value[x]">
+            >
+            ["at0003"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the analyte result, not captured in other fields.">
+                hl7v2_mapping = <"NTE.3">
+                fhir_mapping = <"Observation.note">
+            >
+            ["at0004"] = <
+                text = <"Reference range guidance">
+                description = <"Additional advice on the applicability of the reference range to this result or may carry text or coded textual guidance as to whether the result is within the normal range.">
+                comment = <"For example, 'within normal limits for age and sex'.">
+            >
+            ["at0005"] = <
+                text = <"Result status">
+                description = <"The status of the analyte result value.">
+                comment = <"The values have been specifically chosen to match those in the HL7 FHIR Diagnostic report, historically derived from HL7v2 practice. Other local codes/terms can be used via the Text 'choice'.
+
+This element allows multiple occurrences to support use cases where more than one type of status need to be implemented.">
+                hl7v2_mapping = <"OBX.11">
+                fhir_mapping = <"Observation.status">
+            >
+            ["at0006"] = <
+                text = <"Result status time">
+                description = <"The date and time that the analyte result was issued for the recorded ‘Result status’.">
+                hl7v2_mapping = <"OBX.19">
+                fhir_mapping = <"Observation.issued">
+            >
+            ["at0014"] = <
+                text = <"Analyte result detail">
+                description = <"Further detail regarding an individual result.">
+            >
+            ["at0015"] = <
+                text = <"Registered">
+                description = <"The existence of the test is registered in the Laboratory Information System, but there is nothing yet available.">
+            >
+            ["at0016"] = <
+                text = <"Partial">
+                description = <"This is a partial (e.g. initial, interim or preliminary) Test Result: data in the Test Result may be incomplete or unverified.">
+            >
+            ["at0017"] = <
+                text = <"Preliminary">
+                description = <"Verified early results are available, but not all results are final. This is a sub-category of 'Partial'.">
+            >
+            ["at0018"] = <
+                text = <"Final">
+                description = <"The Test result is complete and verified by an authorised person.">
+            >
+            ["at0019"] = <
+                text = <"Corrected">
+                description = <"The result has been modified subsequent to being Final, and is complete and verified by an authorised person. This is a sub-category of 'Amended'.">
+            >
+            ["at0020"] = <
+                text = <"Amended">
+                description = <"The result has been modified subsequent to being Final, and is complete and verified by an authorised person, and result data has been changed.">
+            >
+            ["at0021"] = <
+                text = <"Appended">
+                description = <"Subsequent to being final, the report has been modified by adding new content. The existing content is unchanged. This is a sub-category of 'Amended'.">
+            >
+            ["at0022"] = <
+                text = <"Entered in error">
+                description = <"The Test Result has been withdrawn following previous Final release.">
+            >
+            ["at0023"] = <
+                text = <"Cancelled">
+                description = <"The result is unavailable because the test was not started or not completed (also sometimes called 'aborted').">
+            >
+            ["at0024"] = <
+                text = <"Analyte name">
+                description = <"The name of the analyte result.">
+                comment = <"The value for this element is normally supplied in a specialisation, in a template or at run-time to reflect the actual analyte. For example: 'Serum sodium', 'Haemoglobin'. Coding with an external terminology is strongly recommended, such as LOINC, NPU, SNOMED CT, or local lab terminologies.">
+                hl7v2_mapping = <"OBX.3">
+                fhir_mapping = <"Observation.code">
+            >
+            ["at0025"] = <
+                text = <"Validation time">
+                description = <"The date and time that the analyte result was validated in the laboratory by a healthcare practitioner.">
+                comment = <"In many jurisdictions the 'Result status' is assumed to include medical validation i.e. a 'final' result will be assumed to be medically validated, but in others this will be recorded and reported separately using this data element.">
+            >
+            ["at0026"] = <
+                text = <"Specimen">
+                description = <"Identification of the specimen used for the analyte result.">
+                comment = <"In some situations, a single Laboratory test result archetype will contain multiple Specimen archetypes and multiple Analyte result archetypes. In these situations, this 'Specimen' data element is needed to be able to connect the results with the correct specimens.">
+            >
+            ["at0027"] = <
+                text = <"Analyte result sequence">
+                description = <"The intended position of this analyte result within the overall sequence of analyte results.">
+                comment = <"For example: '1' '2', '3'. Where multiple analyte results are reported, the 'Analyte result sequence' makes the order in which they were reported explicit.">
+            >
+            ["at0028"] = <
+                text = <"Test method">
+                description = <"Description about the method used to perform the test on this analyte only.">
+                comment = <"If the test method applies to an entire panel, the test method can be captured using the 'Test method' data element within the OBSERVATION.laboratory_test_result">
+            >
+            ["at0031"] = <
+                text = <"Analysis performed time">
+                description = <"The date and time when the analyte result was performed in the laboratory by a healthcare practitioner.">
+                comment = <"Represents the actual analysis timestamp, independent of when the result is recorded or reported.">
+            >
+            ["at0032"] = <
+                text = <"Accredited">
+                description = <"Indicates whether the analytical method used for this analyte is accredited.">
+                comment = <"Supports quality assurance and regulatory compliance by specifying whether the laboratory analysis was performed under an accredited method.">
+            >
+            ["ac9004"] = <
+                text = <"Result status (synthesised)">
+                description = <"The status of the analyte result value. (synthesised)">
+            >
+        >
+        ["fr"] = <
+            ["at0000"] = <
+                text = <"Résultat d'analyte de laboratoire">
+                description = <"Résultat d'un examen de laboratoire portant sur une seule valeur d'analyte.">
+            >
+            ["at0001"] = <
+                text = <"Résultat de l'analyte">
+                description = <"La valeur du résultat de l'analyte.">
+                comment = <"Par exemple « 7,3 mmol/l », « Élevé ». Le type de données « Any » devra être restreint à un type de données approprié dans une spécialisation, un template ou lors de l'exécution afin de refléter le résultat réel de l'analyte. Le type de données « Quantité » comporte des attributs du modèle de référence qui incluent des indicateurs de normalité/anomalie, des plages de référence et des approximations — voir https://specifications.openehr.org/releases/RM/latest/data_types.html#_dv_quantity_class pour plus de détails.">
+                hl7v2_mapping = <"OBX.2, OBX.5, OBX.6, OBX.7, OBX.8">
+                fhir_mapping = <"Observation.value[x]">
+            >
+            ["at0003"] = <
+                text = <"Commentaire">
+                description = <"Commentaire supplémentaire concernant le résultat de l'analyte, non saisi dans d'autres champs.">
+                hl7v2_mapping = <"NTE.3">
+                fhir_mapping = <"Observation.note">
+            >
+            ["at0004"] = <
+                text = <"Recommandations relatives aux plages de référence">
+                description = <"Des conseils supplémentaires sur l'applicabilité de l'intervalle de référence à ce résultat peuvent être fournis, sous forme de texte ou de code, indiquant si le résultat se situe dans la fourchette normale.">
+                comment = <"Par exemple, « dans les limites normales pour l'âge et le sexe ».">
+            >
+            ["at0005"] = <
+                text = <"Statut du résultat">
+                description = <"Statut de la valeur du résultat de l'analyte.">
+                comment = <"Ces valeurs ont été spécifiquement choisies pour correspondre à celles du rapport diagnostique HL7 FHIR, issues historiquement de la norme HL7v2. D’autres codes ou termes locaux peuvent être utilisés via l’option de texte « choix ».
+
+Cet élément autorise plusieurs occurrences afin de prendre en charge les cas d’utilisation où plusieurs types d’état doivent être mis en œuvre.">
+                hl7v2_mapping = <"OBX.11">
+                fhir_mapping = <"Observation.status">
+            >
+            ["at0006"] = <
+                text = <"Statut du résultat publié le">
+                description = <"La date/heure auxquelles le résultat de l'analyte a été émis, pour le « Statut du résultat » enregistré.">
+                hl7v2_mapping = <"OBX.19">
+                fhir_mapping = <"Observation.issued">
+            >
+            ["at0014"] = <
+                text = <"Détail du résultat de l'analyte">
+                description = <"Informations complémentaires concernant un résultat particulier.">
+            >
+            ["at0015"] = <
+                text = <"Enregistré">
+                description = <"La réalisation du test est enregistrée dans le système d'information du laboratoire, mais aucun résultat n'est encore disponible.">
+            >
+            ["at0016"] = <
+                text = <"Partiel">
+                description = <"Il s'agit d'un résultat d'analyte partiel (par exemple, initial, intermédiaire ou préliminaire) : les données contenues dans ce résultat d'analyte peuvent être incomplètes ou non vérifiées.">
+            >
+            ["at0017"] = <
+                text = <"Préliminaire">
+                description = <"Des résultats préliminaires vérifiés sont disponibles, mais tous les résultats ne sont pas définitifs. Il s'agit d'une sous-catégorie de « Partiel ».">
+            >
+            ["at0018"] = <
+                text = <"Final">
+                description = <"Le résultat du test est complet et a été validé par une personne habilitée.">
+            >
+            ["at0019"] = <
+                text = <"Corrigé">
+                description = <"Le résultat a été modifié après avoir été déclaré « définitif » ; il est complet et a été vérifié par une personne habilitée. Il s'agit d'une sous-catégorie de la catégorie « Modifié ».">
+            >
+            ["at0020"] = <
+                text = <"Modifié">
+                description = <"Le résultat a été modifié après avoir été validé comme « définitif » ; il est complet et a été vérifié par une personne habilitée, et les données du résultat ont été modifiées.">
+            >
+            ["at0021"] = <
+                text = <"ajouté">
+                description = <"Après avoir été finalisé, le rapport a été modifié par l'ajout de nouveaux éléments. Le contenu existant reste inchangé. Il s'agit d'une sous-catégorie de « Modifié ».">
+            >
+            ["at0022"] = <
+                text = <"Saisi par erreur">
+                description = <"Le résultat d'analyte a été retiré après sa publication définitive précédente.">
+            >
+            ["at0023"] = <
+                text = <"Annulé">
+                description = <"Le résultat n'est pas disponible car l'examen n'a pas été lancé ou n'a pas été mené à terme (ce que l'on appelle parfois un « examen interrompu »).">
+            >
+            ["at0024"] = <
+                text = <"Nom de l'analyte">
+                description = <"Nom du résultat de l'analyte.">
+                comment = <"La valeur de cet élément est généralement fournie dans une spécialisation, dans un template ou au moment de l'exécution afin de refléter l'analyte réel. Par exemple : « Sodium sérique », « Hémoglobine ». Il est fortement recommandé d'utiliser une terminologie externe pour le codage, telle que LOINC, NPU, SNOMED CT ou des terminologies de laboratoire locales.">
+                hl7v2_mapping = <"OBX.3">
+                fhir_mapping = <"Observation.code">
+            >
+            ["at0025"] = <
+                text = <"Validation effectuée le">
+                description = <"Date/heure auxquelles le résultat de l'analyte a été validé au laboratoire par un professionnel de santé.">
+                comment = <"Dans de nombreuses juridictions, le « statut du résultat » est supposé inclure la validation médicale, c'est-à-dire qu'un résultat « définitif » sera considéré comme validé sur le plan médical ; dans d'autres, en revanche, cette validation sera enregistrée et communiquée séparément à l'aide de cet élément de données.">
+            >
+            ["at0026"] = <
+                text = <"Échantillon">
+                description = <"Identification de l'échantillon utilisé pour le résultat de l'analyte.">
+                comment = <"Dans certains cas, un archétype de résultat d’analyte de laboratoire unique peut contenir plusieurs archétypes d’échantillon et plusieurs archétypes de résultat d’analyte. Dans ces situations, cet élément de données « Échantillon » est nécessaire pour pouvoir associer les résultats aux échantillons correspondants.">
+            >
+            ["at0027"] = <
+                text = <"Séquence du résultat d'analyte">
+                description = <"Position prévue de ce résultat d'analyte dans la séquence globale des résultats d'analyte.">
+                comment = <"Par exemple : « 1 », « 2 », « 3 ». Lorsque plusieurs résultats d’analytes sont communiqués, la « séquence des résultats d’analytes » précise l’ordre dans lequel ils ont été communiqués.">
+            >
+            ["at0028"] = <
+                text = <"Méthode d'essai">
+                description = <"Description de la méthode utilisée pour réaliser le test sur ce paramètre uniquement.">
+                comment = <"Si la méthode d’analyse s’applique à un panel complet, elle peut être saisie à l’aide de l’élément de données « Méthode d’analyse » au sein de l’élément OBSERVATION.laboratory_test_result">
+            >
+            ["at0031"] = <
+                text = <"Analyse effectuée le">
+                description = <"La date/heure auxquelles le résultat de l'analyse a été obtenu en laboratoire par un professionnel de santé.">
+                comment = <"Représente l'horodatage réel de l'analyse, indépendamment du moment où le résultat est enregistré ou communiqué.">
+            >
+            ["at0032"] = <
+                text = <"Accrédité">
+                description = <"Indique si la méthode d'analyse utilisée pour ce paramètre est accréditée.">
+                comment = <"Contribue à l'assurance qualité et à la conformité réglementaire en précisant si l'analyse de laboratoire a été réalisée selon une méthode accréditée.">
+            >
+            ["ac9004"] = <
+                text = <"Statut du résultat (synthesised)">
+                description = <"Statut de la valeur du résultat de l'analyte. (synthesised)">
+            >
+        >
+        ["zh-cn"] = <
+            ["at0000"] = <
+                text = <"分析物检验结果">
+                description = <"单项分析物检验项目的结果。">
+            >
+            ["at0001"] = <
+                text = <"分析物结果">
+                description = <"分析物结果的取值。">
+                comment = <"例如，“7.3 mmol/l”、“增高”。需要在特化原始型当中、在模板当中或在运行时将数据类型 'Any' 限制为恰当的数据类型，以反映实际的分析物结果。数据类型 Quantity 具有的参考模型属性包括正常/异常标志、参考范围和近似值。有关详细信息，请参阅 https://specifications.openehr.org/releases/RM/latest/data_types.html#_dv_quantity_class。">
+                hl7v2_mapping = <"OBX.2, OBX.5, OBX.6, OBX.7, OBX.8">
+                fhir_mapping = <"Observation.value[x]">
+            >
+            ["at0003"] = <
+                text = <"备注">
+                description = <"关于分析物结果的，其他字段当中并未采集/反映的其他叙述。">
+                hl7v2_mapping = <"NTE.3">
+                fhir_mapping = <"Observation.note">
+            >
+            ["at0004"] = <
+                text = <"参考范围指引">
+                description = <"关于参考范围是否适用于当前此项结果的补充建议，或者也可能含有关于当前此项结果是否在正常范围之内的文本型或编码文本型指引。">
+                comment = <"例如，“在针对相应年龄和性别的正常范围之内”。">
+            >
+            ["at0005"] = <
+                text = <"结果状态">
+                description = <"当前分析物结果取值的状态。">
+                comment = <"这些取值经过了专门的选择，以匹配 HL7 FHIR 诊断报告资源之中的取值，而后者从历史上则源自 HL7v2 的做法。可以利用文本选项 'choice' 来使用其他的本地代码/术语。
+
+当前的数据元允许多次出现，以支持需要实现不止一种状态类型的用例场景。">
+                hl7v2_mapping = <"OBX.11">
+                fhir_mapping = <"Observation.status">
+            >
+            ["at0006"] = <
+                text = <"结果状态时间">
+                description = <"就所记录的“结果状态”来说，当前分析物结果的发布日期和时间。">
+                hl7v2_mapping = <"OBX.19">
+                fhir_mapping = <"Observation.issued">
+            >
+            ["at0014"] = <
+                text = <"分析物结果详情">
+                description = <"关于具体结果的进一步细节。">
+            >
+            ["at0015"] = <
+                text = <"已登记">
+                description = <"实验室信息系统（LIS）当中已登记了当前的检验项目，但其目前还没有任何可用的结果/数据。">
+            >
+            ["at0016"] = <
+                text = <"部分">
+                description = <"这是部分的（如初始的、临时的或初步的）检验结果：当前检验结果之中的数据可能并不完整或未经验证/确认。">
+            >
+            ["at0017"] = <
+                text = <"初步">
+                description = <"已有经过核对/验证的早期结果可用，但并非所有结果都是最终结果。这属于是“部分”类的子类别。">
+            >
+            ["at0018"] = <
+                text = <"最终">
+                description = <"当前的检验结果完整无缺并且经过了授权人员的验证/确认。">
+            >
+            ["at0019"] = <
+                text = <"经过修正">
+                description = <"当前的结果是在其成为最终结果之后又经过修改的结果，且完整无缺，并经过了授权人员的验证/确认。属于是“经过改动”的子类别。">
+            >
+            ["at0020"] = <
+                text = <"经过改动">
+                description = <"当前的结果是在其成为最终结果之后又经过修改的结果，且完整无缺，并经过了授权人员的验证/确认。换句话说，结果数据发生了变化。">
+            >
+            ["at0021"] = <
+                text = <"经过增补">
+                description = <"在成为最终版本之后，对报告进行了修改，在其中增加了新的内容。原有的内容保持不变。属于是“经过改动”的子类别。">
+            >
+            ["at0022"] = <
+                text = <"错误录入">
+                description = <"在之前的最终版本发布之后已撤回了当前的检验结果。">
+            >
+            ["at0023"] = <
+                text = <"已取消">
+                description = <"当前此项结果不可用，因为该检验项目尚未开始或并未完成（有时也称为“中止”）。">
+            >
+            ["at0024"] = <
+                text = <"分析物名称">
+                description = <"分析物结果的名称。">
+                comment = <"通常会在特化原始型中、在模板当中或在运行时提供当前数据元的取值，以反映实际的分析物。例如：“血清钠”、“血红蛋白”。强烈建议采用外部术语集加以编码，如 LOINC、NPU、SNOMED CT 或本地实验室[检验]术语集。">
+                hl7v2_mapping = <"OBX.3">
+                fhir_mapping = <"Observation.code">
+            >
+            ["at0025"] = <
+                text = <"验证时间">
+                description = <"实验室的医疗保健职业人员验证当前分析物结果的日期和时间。">
+                comment = <"在许多司法管辖区域，都会假设认为结果状态数据元 'Result status' 之中包括了医疗验证/确认，即假设认为“最终”结果经过了医学验证/确认，而在其他的司法管辖区域，则会单独记录和报告该数据元。">
+            >
+            ["at0026"] = <
+                text = <"标本">
+                description = <"当前分析物结果所使用的标本的标识。">
+                comment = <"在某些情况下，单个的实验室测试结果原始型当中会包含多个样本原始型 Specimen 和多个分析物结果原始型 “Analyte result”。在此类情况下，就需要利用当前标本数据元 Specimen 才能将结果与相应的标本正确地关联起来。">
+            >
+            ["at0027"] = <
+                text = <"分析物结果序号">
+                description = <"当前的分析物结果在整个分析物结果序列当中的预定位置。">
+                comment = <"例如：'1'、'2'、'3'。当报告多项分析物结果时，当前数据元旨在明确分析物结果的报告顺序。">
+            >
+            ["at0028"] = <
+                text = <"检验方法">
+                description = <"关于仅仅用于检验当前分析物时所采用的方法的描述。">
+                comment = <"如果检验方法适用于当前整个的组套/组合项目，则可以采用实验室检验结果原始型 OBSERVATION.laboratory_test_result 之中的检验方法数据元 'Test method' 来记录检验方法。">
+            >
+            ["at0031"] = <
+                text = <"分析执行时间">
+                description = <"医疗卫生执业人员在实验室内执行此项分析并获得结果的日期和时间。">
+                comment = <"表示的是实际的分析时间戳，与结果的记录时间和报告时间无关。">
+            >
+            ["at0032"] = <
+                text = <"认可标志">
+                description = <"表示用于此项分析的分析方法是否经过/获得认可。">
+                comment = <"通过标明实验室分析是否依据/采用的是经过认可的方法进行，以支持质量保证和法律合规。">
+            >
+            ["ac9004"] = <
+                text = <"结果状态 (synthesised)">
+                description = <"当前分析物结果取值的状态。 (synthesised)">
+            >
+        >
+        ["nl"] = <
+            ["at0000"] = <
+                text = <"Laboratorium analyt uitslag">
+                description = <"Het resultaat van een laboratorium test voor een bepaling van een enkele bepaling.">
+            >
+            ["at0001"] = <
+                text = <"Uitslag van een analyt">
+                description = <"De waarde van een analyt uitslag.">
+                comment = <"Bijvoorbeeld: '7.3 mmol/l', 'Verhoogd'. Om het daadwerkelijke analyt result weer te geven dient het 'Any' data type gespecificeerd te worden tot een toepasselijk data type in een specialisatie, een template of terwijl de applicatie loopt.">
+                hl7v2_mapping = <"OBX.2, OBX.5, OBX.6, OBX.7, OBX.8">
+                fhir_mapping = <"Observation.value[x]">
+            >
+            ["at0003"] = <
+                text = <"Opmerking">
+                description = <"Extra beschrijving van de analyt uitslag, die niet past binnen andere velden.">
+                hl7v2_mapping = <"NTE.3">
+                fhir_mapping = <"Observation.note">
+            >
+            ["at0004"] = <
+                text = <"Referentiebereik aanwijzing">
+                description = <"Extra advies over de toepasselijkheid van het referentiebereik van deze uitslag; mag ook een textuele of gecodeerd textuele aanwijzing bevatten of het resultaat binnen het normale bereik valt.">
+                comment = <"Bijvoorbeeld: 'binnen het normale bereik voor leeftijd en geslacht'">
+            >
+            ["at0005"] = <
+                text = <"Uitslag status">
+                description = <"De status van de waarde van de analyt uitslag.">
+                comment = <"*The values have been specifically chosen to match those in the HL7 FHIR Diagnostic report, historically derived from HL7v2 practice. Other local codes/terms can be used via the Text 'choice'.
+
+This element is multiple occurrence to cater for the use cases where there are more than one type of status need to be implemented by using two or more instances of this data element. (en)">
+                hl7v2_mapping = <"OBX.11">
+                fhir_mapping = <"Observation.status">
+            >
+            ["at0006"] = <
+                text = <"Tijd van de status van de uitslag">
+                description = <"De datum en tijd van de 'Status van de uitslag' van de analyt uitslag.">
+                hl7v2_mapping = <"OBX.19">
+                fhir_mapping = <"Observation.issued">
+            >
+            ["at0014"] = <
+                text = <"Analyte uitslag details">
+                description = <"Verdere details over een individuele uitslag.">
+            >
+            ["at0015"] = <
+                text = <"Vastgelegd">
+                description = <"Het bestaan van de test is vastgelegd in het Laboratorium informatie systeem, maar er is nog niets beschikbaar.">
+            >
+            ["at0016"] = <
+                text = <"Gedeeltelijk">
+                description = <"Dit is een gedeeltelijke (bijvoorbeeld initiële, tussentijdse of voorlopige) Test Uitslag: data in de Test Uitslag kan incompleet of ongevalideerd zijn.">
+            >
+            ["at0017"] = <
+                text = <"Voorlopig">
+                description = <"Gevalideerde uitslagen zijn beschikbaar, maar niet alle uitslagen zijn definitief. Dit is een subcategorie van 'Gedeeltelijk'.">
+            >
+            ["at0018"] = <
+                text = <"Definitief">
+                description = <"De Test uitslag is compleet en geverifieerd door een bevoegd persoon.">
+            >
+            ["at0019"] = <
+                text = <"Gewijzigd">
+                description = <"*The result has been modified subsequent to being Final, and is complete and verified by an authorised person. This is a sub-category of 'Amended'. (en)">
+            >
+            ["at0020"] = <
+                text = <"Aangepast">
+                description = <"*The result has been modified subsequent to being Final, and is complete and verified by an authorised person, and result data has been changed. (en)">
+            >
+            ["at0021"] = <
+                text = <"Informatie toegevoegd">
+                description = <"Er is nieuwe informatie toegevoegd nadat het verslag eerder Definitief was. De bestaande informatie is onveranderd. Dit is een subcategorie van 'Aangepast'.">
+            >
+            ["at0022"] = <
+                text = <"Verkeerd ingevoerd">
+                description = <"De Tets Uitslag is teruggetrokken nadat hij eerder definitief was.">
+            >
+            ["at0023"] = <
+                text = <"Geanuleerd">
+                description = <"De uitslag is niet beschikbaar omdat de test niet gestart of niet compleet was.">
+            >
+            ["at0024"] = <
+                text = <"Naam van het Analyt">
+                description = <"De naam van de analyt uitslag">
+                comment = <"De waarde voor dit element wordt normaal bepaald in een specialisatie, in een template of terwijl de applicatie loopt om het daadwerkelijke analyt weer te geven. Bijvoorbeeld: 'Serum natrium' of 'Haemoglobine'. Het wordt sterk aanbevolen te coderen met een externe terminologie, zoals LOINC, NPU, SNOMED CT, of een lokale lab terminologie.">
+                hl7v2_mapping = <"OBX.3">
+                fhir_mapping = <"Observation.code">
+            >
+            ["at0025"] = <
+                text = <"Tijd van validatie">
+                description = <"De datum en tijd waarop de analyt uitslag werd gevalideerd in het laboratorium door een gezondheidsprofessional.">
+                comment = <"In veel jurisdicties wordt aangenomen dat de 'Status van de uitslag' een medische validatie bevat, bijvoorbeeld: een 'definitieve' uitslag wordt opgevat als medisch gevalideerd, maar in de andere gebieden wordt deze status apart vastgelegd in dit data element.">
+            >
+            ["at0026"] = <
+                text = <"Specimen">
+                description = <"Identificatie van het specimen/monster gebruikt voor de analyt uitslag">
+                comment = <"In sommige situaties, zal een enkel Laboratorium test archetype meerdere Specimen archetypes en meerdere Analyt uitslag archetypes bevatten. In deze situaties is dit 'Specimen' data element nodig om de uitslag met het juiste monster te verbinden.">
+            >
+            ["at0027"] = <
+                text = <"Analyt uitslag volgore">
+                description = <"De bedoelde positie van deze analyt uitslag binnen de gehele volgorde van analyt uitslagen.">
+                comment = <"Bijvoorbeeld: '1', '2' of '3'. Waar meerdere analyt uitslagen worden gerapporteerd, maakt de 'Analyt uitslag volgorde' de volgorde waarin de uitslagen worden gerapporteerd expliciet.">
+            >
+            ["at0028"] = <
+                text = <"Test methode">
+                description = <"Omschrijving van de methode die gebruikt is als onderzoek voor specifiek dit analyt.">
+                comment = <"Als de test methode van toepassing is op het hele test panel, can de test methode vastgelegd worden middels het 'Test methode' data element in">
+            >
+            ["at0031"] = <
+                text = <"*Analysis performed time (en)">
+                description = <"*The date and time when the analyte result was performed in the laboratory by a healthcare practitioner. (en)">
+                comment = <"*Represents the actual analysis timestamp, independent of when the result is recorded or reported. (en)">
+            >
+            ["at0032"] = <
+                text = <"*Accredited (en)">
+                description = <"*Indicates whether the analytical method used for this analyte is accredited. (en)">
+                comment = <"*Supports quality assurance and regulatory compliance by specifying whether the laboratory analysis was performed under an accredited method. (en)">
+            >
+            ["ac9004"] = <
+                text = <"Uitslag status (synthesised)">
+                description = <"De status van de waarde van de analyt uitslag. (synthesised)">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Resultado de laboratorio del analito">
+                description = <"Resultado de una prueba de laboratorio para un valor de analito único.">
+            >
+            ["at0001"] = <
+                text = <"Resultado del analito">
+                description = <"Valor del resultado del analito.">
+                comment = <"Por ejemplo, \"7,3 mmol/l\", \"Elevado\". El tipo de datos \"Cualquiera\" deberá limitarse a un tipo de datos adecuado en una especialización, una plantilla o en tiempo de ejecución para reflejar el resultado real del analito. El tipo de dato \"Cantidad\" tiene atributos de modelo de referencia que incluyen indicadores de normalidad/anormalidad, rangos de referencia y aproximaciones (para más información, véase https://specifications.openehr.org/releases/RM/latest/data_types.html#_dv_quantity_class).">
+                hl7v2_mapping = <"OBX.2, OBX.5, OBX.6, OBX.7, OBX.8">
+                fhir_mapping = <"Observation.value[x]">
+            >
+            ["at0003"] = <
+                text = <"Comentarios">
+                description = <"Narración adicional sobre el resultado del analito, no registrada en otros campos.">
+                hl7v2_mapping = <"NTE.3">
+                fhir_mapping = <"Observation.note">
+            >
+            ["at0004"] = <
+                text = <"Intervalos de referencia">
+                description = <"Asesoramiento adicional sobre la aplicabilidad del intervalo de referencia a este resultado, o bien se puede incluir un texto o guía textual codificada sobre si el resultado está dentro del intervalo normal.
+">
+                comment = <"Por ejemplo, \"dentro de los límites normales para la edad y el sexo\".">
+            >
+            ["at0005"] = <
+                text = <"Estado del resultado">
+                description = <"Estado del valor del resultado del analito.">
+                comment = <"Los valores se han elegido específicamente para que coincidan con los del informe HL7 FHIR Diagnostic, derivados históricamente de la práctica HL7v2. Pueden utilizarse otros códigos/términos locales mediante el texto \"choice\".
+
+Este elemento permite múltiples ocurrencias para admitir casos de uso en los que es necesario implementar más de un tipo de estado.">
+                hl7v2_mapping = <"OBX.11">
+                fhir_mapping = <"Observation.status">
+            >
+            ["at0006"] = <
+                text = <"Fecha/Hora del estado del resultado">
+                description = <"Fecha y hora en que se emitió el resultado del analito para el estado más reciente.">
+                hl7v2_mapping = <"OBX.19">
+                fhir_mapping = <"Observation.issued">
+            >
+            ["at0014"] = <
+                text = <"Detalle del resultado del analito">
+                description = <"Más detalles sobre un resultado individual.">
+            >
+            ["at0015"] = <
+                text = <"Registrado">
+                description = <"La prueba está registrada en el Sistema de Información de Laboratorios, pero aún no hay nada disponible.">
+            >
+            ["at0016"] = <
+                text = <"Parcial">
+                description = <"Resultado de prueba parcial (por ejemplo, inicial, provisional o preliminar): los datos del resultado de la prueba pueden estar incompletos o sin verificar.">
+            >
+            ["at0017"] = <
+                text = <"Preliminar">
+                description = <"Los primeros resultados verificados están disponibles, pero no son definitivos. Se trata de una subcategoría de \"Parcial\".">
+            >
+            ["at0018"] = <
+                text = <"Final">
+                description = <"El resultado de la prueba está completo y ha sido verificado por una persona autorizada.">
+            >
+            ["at0019"] = <
+                text = <"Corregido">
+                description = <"El resultado se ha modificado con posterioridad al estado \"Final\". Está completo y verificado por una persona autorizada. Se trata de una subcategoría de \"Modificado\".">
+            >
+            ["at0020"] = <
+                text = <"Modificado">
+                description = <"El resultado se ha modificado con posterioridad al estado \"Final\". Está completo y verificado por una persona autorizada, y se han cambiado los datos del resultado.">
+            >
+            ["at0021"] = <
+                text = <"Anexo">
+                description = <"Tras pasar a estado \"Final\", el informe se ha modificado añadiendo nuevos contenidos. El contenido existente no ha cambiado. Se trata de una subcategoría de 'Modificado'.">
+            >
+            ["at0022"] = <
+                text = <"Introducido por error">
+                description = <"El resultado de la prueba ha sido retirado tras haberse publicado.">
+            >
+            ["at0023"] = <
+                text = <"Cancelado">
+                description = <"El resultado no está disponible porque la prueba no se ha iniciado o no se ha completado (a veces también se denomina \"anulada\").">
+            >
+            ["at0024"] = <
+                text = <"Nombre del analito">
+                description = <"Nombre del resultado del analito.">
+                comment = <"El valor de este elemento se suministra normalmente en una especialización, en una plantilla o en tiempo de ejecución para reflejar el analito real. Por ejemplo: \"Sodio sérico\", \"Hemoglobina\". Se recomienda encarecidamente la codificación con una terminología externa, como LOINC, NPU, SNOMED CT o terminologías de laboratorio locales.">
+                hl7v2_mapping = <"OBX.3">
+                fhir_mapping = <"Observation.code">
+            >
+            ["at0025"] = <
+                text = <"Tiempo de validación">
+                description = <"Fecha y hora en que un profesional sanitario validó el resultado del analito en el laboratorio.">
+                comment = <"En muchas jurisdicciones se asume que el \"Estado del resultado\" incluye la validación médica, es decir, se asumirá que un resultado \"final\" está validado médicamente, pero en otras esto se registrará y notificará por separado utilizando este elemento de datos.">
+            >
+            ["at0026"] = <
+                text = <"Muestra">
+                description = <"Identificación de la muestra utilizada para el resultado del analito.">
+                comment = <"En algunas situaciones, un único arquetipo de Resultado de Pruebas de Laboratorio podría contener varios arquetipos de muestra y varios arquetipos de resultados del analito. En estas situaciones, el elemento de datos 'Muestra' es necesario para poder conectar los resultados con las muestras correctas.">
+            >
+            ["at0027"] = <
+                text = <"Secuencia de resultados del analito">
+                description = <"Posición prevista del resultado del analito dentro de la secuencia general de resultados del analito.">
+                comment = <"Por ejemplo: \"1\", \"2\", \"3\". Si se notifican varios resultados de analitos, la \"Secuencia de resultados del analito\" indica explícitamente el orden en que se notificaron.">
+            >
+            ["at0028"] = <
+                text = <"Método de prueba">
+                description = <"Descripción del método utilizado para realizar la prueba sólo con este analito.">
+                comment = <"Si el método de prueba se aplica a un panel completo, puede capturarse utilizando el elemento de datos \"Método de prueba\" dentro de OBSERVATION.laboratory_test_result.">
+            >
+            ["at0031"] = <
+                text = <"*Analysis performed time (en)">
+                description = <"*The date and time when the analyte result was performed in the laboratory by a healthcare practitioner. (en)">
+                comment = <"*Represents the actual analysis timestamp, independent of when the result is recorded or reported. (en)">
+            >
+            ["at0032"] = <
+                text = <"*Accredited (en)">
+                description = <"*Indicates whether the analytical method used for this analyte is accredited. (en)">
+                comment = <"*Supports quality assurance and regulatory compliance by specifying whether the laboratory analysis was performed under an accredited method. (en)">
+            >
+            ["ac9004"] = <
+                text = <"Estado del resultado (synthesised)">
+                description = <"Estado del valor del resultado del analito. (synthesised)">
+            >
+        >
+        ["ca"] = <
+            ["at0000"] = <
+                text = <"Resultat de l'anàlit de laboratori">
+                description = <"Resultat d'una prova de laboratori per a un únic valor d'anàlit.">
+            >
+            ["at0001"] = <
+                text = <"Resultat de l'anàlit">
+                description = <"Valor del resultat de l'anàlit.">
+                comment = <"Per exemple, «7,3 mmol/l», «Elevat». El tipus de dades «Qualsevol» s'haurà de restringir a un tipus de dades apropiat en una especialització, una plantilla o en un temps d'execució per a reflectir el resultat real de l’anàlit. El tipus de dades «Quantitat» té atributs de model de referència que inclouen indicadors per a normal/anormal, rangs de referència i aproximacions. Veure https://specifications.openehr.org/releases/RM/latest/data_types.html#_dv_quantity_class per a obtindre més detalls.">
+                hl7v2_mapping = <"OBX.2, OBX.5, OBX.6, OBX.7, OBX.8">
+                fhir_mapping = <"Observation.value[x]">
+            >
+            ["at0003"] = <
+                text = <"Observacions">
+                description = <"Informació addicional sobre el resultat de l'anàlit no recollida en altres caselles.">
+                hl7v2_mapping = <"NTE.3">
+                fhir_mapping = <"Observation.note">
+            >
+            ["at0004"] = <
+                text = <"Instruccions dels rangs de referència">
+                description = <"Consells addicionals sobre l'aplicabilitat del rang de referència per a aquest resultat, o es pot incloure un text o guia textual programada sobre si el resultat es troba dins del rang normal.">
+                comment = <"Per exemple, «dins dels límits normals per a l’edat i el sexe».">
+            >
+            ["at0005"] = <
+                text = <"Estat del resultat">
+                description = <"L’estat del valor del resultat de l'anàlit.">
+                comment = <"Els valors s’han escollit específicament perquè coincideixin amb els de l’Informe de diagnòstic HLT7 FHIR, derivats històricament de la pràctica HL7v2. Es poden utilitzar altres codis/termes mitjançant l'«elecció» del Text.
+
+Aquest element permet múltiples esdeveniments per admetre casos d'ús on calgui implementar més d'un tipus d'estat.">
+                hl7v2_mapping = <"OBX.11">
+                fhir_mapping = <"Observation.status">
+            >
+            ["at0006"] = <
+                text = <"Data i hora de l'estat del resultat">
+                description = <"Data i hora en què es va emetre el resultat de l'anàlit per a «L'estat del Resultat» enregistrat.">
+                hl7v2_mapping = <"OBX.19">
+                fhir_mapping = <"Observation.issued">
+            >
+            ["at0014"] = <
+                text = <"Detall del resultat de l'anàlit">
+                description = <"Més informació d'un resultat individual.">
+            >
+            ["at0015"] = <
+                text = <"Registrat">
+                description = <"L'existència de la prova està registrada en el Sistema d'Informació del Laboratori, però encara no hi ha res disponible.">
+            >
+            ["at0016"] = <
+                text = <"Parcial">
+                description = <"Aquest és un Resultat de la Prova parcial (per exemple; inicial, provisional o preliminar): les dades del Resultat de la Prova poden estar incompletes o sense verificar.">
+            >
+            ["at0017"] = <
+                text = <"Preliminar">
+                description = <"Es disposa de resultats preliminars verificats, però no tots els resultats són definitius. Aquesta és una subcategoria de «Parcial».">
+            >
+            ["at0018"] = <
+                text = <"Definitiu">
+                description = <"El resultat de la Prova està complet i l’ha verificat una persona autoritzada.">
+            >
+            ["at0019"] = <
+                text = <"Corregit">
+                description = <"S’ha modificat el resultat després d’esdevenir Definitiu i està complet i verificat per una persona autoritzada. Aquesta és una subcategoria de «Modificat».">
+            >
+            ["at0020"] = <
+                text = <"Modificat">
+                description = <"S’ha modificat el resultat després d’esdevenir Definitiu, està complet i verificat per una persona autoritzada i les dades del resultat s’han modificat.">
+            >
+            ["at0021"] = <
+                text = <"Annex">
+                description = <"Després d’esdevenir definitiu, l’informe s’ha modificat afegint-hi continguts nous. No s’ha modificat el contingut existent. Aquesta és una subcategoria de «Modificat».">
+            >
+            ["at0022"] = <
+                text = <"Introduït per error">
+                description = <"El Resultat de la Prova s’ha retirat després de la publicació Definitiva anterior.">
+            >
+            ["at0023"] = <
+                text = <"Cancel·lat">
+                description = <"El resultat no està disponible perquè la prova no s’ha iniciat o no s’ha completat (de vegades també s’anomena «Interromput»).">
+            >
+            ["at0024"] = <
+                text = <"Nom de l'anàlit">
+                description = <"Nom del resultat de l'anàlit.">
+                comment = <"El valor per a aquest element normalment s’aporta mitjançant una especialització, en una plantilla o en un temps d'execució per a reflectir l’anàlit real. Per exemple: «Sodi sèric», «Hemoglobina». Es recomana encaridament programar amb terminologia externa, com LOINC, NPU, SNOMED CT o terminologies de laboratoris locals.">
+                hl7v2_mapping = <"OBX.3">
+                fhir_mapping = <"Observation.code">
+            >
+            ["at0025"] = <
+                text = <"Temps de validació">
+                description = <"Data i hora en què un professional sanitari va validar el resultat de l'anàlit en un laboratori.">
+                comment = <"En moltes jurisdiccions, «L'estat del resultat» es pressuposa que inclou validació mèdica. És a dir, es pressuposarà que un resultat «definitiu» estarà validat mèdicament, però en altres es registrarà i notificarà per separat utilitzant aquest element de dades.">
+            >
+            ["at0026"] = <
+                text = <"Mostra">
+                description = <"Identificació de la mostra utilitzada per al resultat de l'anàlit.">
+                comment = <"En algunes situacions, un únic arquetip de resultat de proves de laboratori contindrà múltiples arquetips de mostra i diversos arquetips de resultat de l'anàlit. En aquestes situacions, aquest element de dades de «Mostra» ha de poder connectar els resultats amb les mostres correctes.">
+            >
+            ["at0027"] = <
+                text = <"Seqüència de resultats de l'analit">
+                description = <"Posició prevista d'aquest resultat d'anàlit dins de la seqüència general dels resultats de l'anàlit.">
+                comment = <"Per exemple: «1», «2», «3». On s'informen diversos resultats de l’anàlit, la «Seqüència de resultats de l'anàlit» és qui explicita l'ordre en què es van informar.">
+            >
+            ["at0028"] = <
+                text = <"Mètode de prova">
+                description = <"Descripció sobre el mètode utilitzat per a dur a terme la prova únicament en aquest anàlit.">
+                comment = <"Si el mètode de prova s'aplica a una llista completa, el mètode de prova es pot registrar utilitzant l’element de dades «Mètode de prova» dins de OBSERVATION.laboratory_test_result.">
+            >
+            ["at0031"] = <
+                text = <"*Analysis performed time (en)">
+                description = <"*The date and time when the analyte result was performed in the laboratory by a healthcare practitioner. (en)">
+                comment = <"*Represents the actual analysis timestamp, independent of when the result is recorded or reported. (en)">
+            >
+            ["at0032"] = <
+                text = <"*Accredited (en)">
+                description = <"*Indicates whether the analytical method used for this analyte is accredited. (en)">
+                comment = <"*Supports quality assurance and regulatory compliance by specifying whether the laboratory analysis was performed under an accredited method. (en)">
+            >
+            ["ac9004"] = <
+                text = <"Estat del resultat (synthesised)">
+                description = <"L’estat del valor del resultat de l'anàlit. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0015", "at0016", "at0017", "at0018", "at0019", "at0020", "at0021", "at0022", "at0023">
+        >
+    >

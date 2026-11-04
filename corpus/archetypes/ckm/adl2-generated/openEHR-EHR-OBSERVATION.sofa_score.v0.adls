@@ -1,0 +1,819 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=c39f52e8-2aa9-45f7-bee9-ddb99678e43a; build_uid=97d78eda-e400-4355-a38e-46200be65965)
+    openEHR-EHR-OBSERVATION.sofa_score.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Sarah Ballout">
+                ["organisation"] = <"MHH-Hannover">
+                ["email"] = <"ballout.sarah@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke, Vebjørn Arntzen">
+                ["organisation"] = <"Helse Vest IKT AS, Oslo University Hospital">
+                ["email"] = <"silje.ljosland.bakke@helse-vest-ikt.no, varntzen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Siv Fauchald">
+        ["organisation"] = <"DIPS AS">
+        ["email"] = <"sfa@dips.no">
+        ["date"] = <"2017-03-07">
+    >
+    original_namespace = <"no.nasjonalikt">
+    original_publisher = <"Nasjonal IKT">
+    other_contributors = <"Morten Aas, Oslo Universitetssykehus, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Sarah Ballout, MHH-Hannover, Germany", "Kristian Berg, Vestvågøy kommune - Fagutviklingsavdelingen, Norway", "Bjørn Christensen, Helse Bergen HF, Norway", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Siv Fauchald, DIPS ASA, Norway", "Mikkel Gaup Grønmo, Helse-Nord, FSE, Norway (openEHR Editor)", "Ingrid Heitmann, Oslo universitetssykehus HF, Norway", "Annette Hole Sjøborg, DIPS ASA, Norway", "Hilde Hollås, DIPS AS, Norway", "Lars Ivar Mehlum, Helse Bergen HF, Norway", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Marit Ludvigsen, St Olavs Hospital, Norway", "Siv Marie Lien, DIPS ASA, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Lars Morgan Karlsen, Nordlandssykehuset Bodø, Norway", "Stian Torleif Varpe, Helse Bergen, Norway", "Gro-Hilde Ulriksen, Norwegian center for ehealthresearch, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)", "Marianne Warholm, Helse Vest IKT, Norway">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"no.nasjonalikt">
+    custodian_organisation = <"Nasjonal IKT">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Vincent, J. L., Moreno, R., Takala, J., Willatts, S., de Mendonça, A., Bruining, H., et al. (1996). The SOFA (Sepsis-related Organ Failure Assessment) score to describe organ dysfunction/failure. On behalf of the Working Group on Sepsis-Related Problems of the European Society of Intensive Care Medicine. (Vol. 22, pp. 707–710).">
+        ["2"] = <"Norsk Intensivregister (NIR) [Internet]. Bergen: Helse Bergen HF; 2017 [cited 26 february 2018] Available from: https://helse-bergen.no/norsk-intensivregister-nir/registrering-av-data-i-nir-kun-for-medlemmer">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"96CF01A004B30A00A69956021F95766E">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Repräsentation des SOFA-Score-Wertes, für die einzelnen Komponentenparameter und deren Gesamtwerte für den SOFA-Score.">
+            keywords = <"Sepsis", "Organversagen", "Organ-Dysfunktion", "septischer Schock", "Infektion">
+            use = <"Zur Repräsentation des SOFA-Score-Wertes, für die einzelnen Komponentenparameter und deren Gesamtwerte für den SOFA-Score.
+
+Der SOFA-Score wird in der Regel auf Intensivstationen und in Akutsituationen verwendet, kann aber bei allen Patienten eingesetzt werden, bei denen eine Organfunktionsstörung vermutet oder festgestellt wird, z. B. bei Sepsis-Patienten.
+
+Der SOFA-Score wird bei Erwachsenen über 16 Jahren verwendet.">
+            misuse = <"Nicht zur Repräsentation aktueller Messungen für die einzelnen Komponenten zu verwenden. Verwenden Sie zu diesem Zweck spezielle OBSERVATION-Archetypen:
+- OBSERVATION.pf_ratio;
+- OBSERVATION.blut_druck;
+- OBSERVATION.glasgow_coma_scale; und
+- OBSERVATION.labor_test.
+
+Nicht zur Repräsentation des SOFA-Scores bei Kindern unter 16 Jahren.
+
+Nicht zur Repräsentation qSOFA (quick SOFA) zu verwenden. Verwenden Sie hierfür den Archetyp OBSERVATION.qsofa_score.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å gradere og følge utvikling av organdysfunksjon i seks vitale organsystem.">
+            keywords = <"sepsis", "organsvikt", "organdysfunksjon", "septisk sjokk", "infeksjon">
+            use = <"Brukes for å gradere og følge utvikling av organdysfunksjon i seks vitale organsystem og for å anslå mortalitet for pasienter med organdysfunksjon.
+
+SOFA-skår benyttes vanligvis i intensivavdelinger og i akuttmottak, men kan brukes på alle pasienter hvor man mistenker eller ønsker å følge utviklingen av organdysfunksjon, f.eks. hos pasienter med sepsis.
+
+SOFA-skår benyttes hos voksne (≥ 16 år).">
+            misuse = <"Anvendes ikke for registrering av hver enkelt fysiologisk parameter eller klinisk observasjon. Bruk spesifikke OBSERVATION-arketyper for dette formål: 
+- OBSERVATION.Glascow_coma_scale,
+- OBSERVATION.pao2_fio2_ratio,
+- OBSERVATION.blood_pressure,
+- OBSERVATION.laboratory_test.
+
+Anvendes ikke for registrering av SOFA-skår hos barn som er < 16 år gamle.
+
+Anvendes ikke for registrering av qSOFA (quick SOFA) bruk arketypen OBSERVATION.qsofa_score for dette formålet.">
+            copyright = <"© Nasjonal IKT HF">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the results for each component parameter and their total sum for the SOFA score.">
+            keywords = <"sepsis", "organ failure", "organ dysfunction", "septic shock", "infection">
+            use = <"Use to record the results for each component parameter and their total sum for the SOFA score.
+
+SOFA score is usually used in intensive care units and in acute settings, but can be used in all patients where organ dysfunction is suspected or identified, for example in sepsis patients.
+
+SOFA score is used in adults over the age of 16.">
+            misuse = <"Not to be used to record actual measurements for each component. Use specific OBSERVATION archetypes for this purpose:
+- OBSERVATION.pf_ratio;
+- OBSERVATION.blood_pressure;
+- OBSERVATION.glasgow_coma_scale; and
+- OBSERVATION.laboratory_test.
+
+Not to be used to record SOFA score in children younger than 16 years of age.
+
+Not to be used to record qSOFA (quick SOFA). Use the archetype OBSERVATION.qsofa_score for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- SOFA score
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Respiration
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0005]}],    -- PaO₂/FiO₂ ≥ 400 mmHg
+                                                    [{1}, {[at0006]}],    -- PaO₂/FiO₂ 300-399 mmHg
+                                                    [{2}, {[at0007]}],    -- PaO₂/FiO₂ < 300 mmHg
+                                                    [{3}, {[at0008]}],    -- Mechanically ventilated and PaO₂/FiO₂ 100-199 mmHg
+                                                    [{4}, {[at0009]}]    -- Mechanically ventilated and PaO₂/FiO₂ < 100 mmHg
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Cardiovascular system
+                                        value matches {
+                                            DV_ORDINAL[at9018] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0011]}],    -- MAP ≥ 70 mmHg
+                                                    [{1}, {[at0012]}],    -- MAP < 70 mmHg
+                                                    [{2}, {[at0013]}],    -- DA ≤ 5; Dobutamine
+                                                    [{3}, {[at0014]}],    -- DA > 5; NA/A ≤ 0.1
+                                                    [{4}, {[at0015]}]    -- NA/A > 0.1
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Central nervous system
+                                        value matches {
+                                            DV_ORDINAL[at9013] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- GCS 15
+                                                    [{1}, {[at0018]}],    -- GCS 13 - 14
+                                                    [{2}, {[at0019]}],    -- GCS 10 - 12
+                                                    [{3}, {[at0020]}],    -- GCS 6 - 9
+                                                    [{4}, {[at0021]}]    -- GCS < 6
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Renal function
+                                        value matches {
+                                            DV_ORDINAL[at9014] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0023]}],    -- Creatinine < 1.2 mg/dL
+                                                    [{1}, {[at0024]}],    -- Creatinine 1.2-1.9 mg/dL
+                                                    [{2}, {[at0025]}],    -- Creatinine 2.0-3.4 mg/dL
+                                                    [{3}, {[at0026]}],    -- Creatinine 3.5-4.9 mg/dL or UOP < 500 mL/24h
+                                                    [{4}, {[at0027]}]    -- Creatinine ≥ 5.0 mg/dL or UOP < 200 mL/24h
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- Liver function
+                                        value matches {
+                                            DV_ORDINAL[at9015] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0029]}],    -- Bilirubin < 1.2 mg/dL
+                                                    [{1}, {[at0030]}],    -- Bilirubin 1.2-1.9 mg/dL
+                                                    [{2}, {[at0031]}],    -- Bilirubin 2.0-5.9 mg/dL
+                                                    [{3}, {[at0032]}],    -- Bilirubin 6.0-11.9 mg/dL
+                                                    [{4}, {[at0033]}]    -- Bilirubin ≥ 12.0 mg/dL
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0034] occurrences matches {0..1} matches {    -- Blood clotting
+                                        value matches {
+                                            DV_ORDINAL[at9016] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0035]}],    -- Platelets ≥ 150 (x10³/µL)
+                                                    [{1}, {[at0036]}],    -- Platelets < 150 (x10³/µL)
+                                                    [{2}, {[at0037]}],    -- Platelets < 100 (x10³/µL)
+                                                    [{3}, {[at0038]}],    -- Platelets < 50 (x10³/µL)
+                                                    [{4}, {[at0039]}]    -- Platelets < 20 (x10³/µL)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0041] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9017] matches {
+                                                magnitude matches {|0..24|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0043] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0044] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"SOFA score">
+                description = <"Ein Scoring-System zur Bewertung und Verfolgung der Entwicklung von Organdysfunktion in sechs lebenswichtigen Organsystemen. Zuvor bekannt als \"Sepsis related Organ Failure Assessment\".">
+            >
+            ["at0002"] = <
+                text = <"Beliebiges Ereignis zu einem Zeitpunkt">
+                description = <"Ein undefiniertes Zeitpunkt Ereignis, das explizit im Template oder zur Laufzeit der Anwendung definiert werden kann.">
+            >
+            ["at0004"] = <
+                text = <"Respiration">
+                description = <"Das Verhältnis zwischen dem Sauerstoffpartialdruck (PaO₂) und der Fraktion des eingeatmeten Sauerstoffs (FiO₂) ist ein Indikator für eine mögliche Funktionsstörung des Atmungssystems.">
+                comment = <"Das Verhältnis PaO₂/FiO₂ wird an bestimmten Orten in kPa gemessen.">
+            >
+            ["at0005"] = <
+                text = <"PaO₂/FiO₂ ≥ 400 mmHg">
+                description = <"Der Sauerstoffpartialdruck im arteriellen oder kapillaren Blut, gemessen in mmHg, dividiert durch den Anteil des eingeatmeten Sauerstoffs ist größer oder gleich 400 mmHg. Äquivalent zu PaO₂/FiO₂ ≥ 53 kPa.">
+            >
+            ["at0006"] = <
+                text = <"PaO₂/FiO₂ 300-399 mmHg">
+                description = <"Der Sauerstoffpartialdruck im arteriellen oder kapillaren Blut, gemessen in mmHg, geteilt durch den Anteil des eingeatmeten Sauerstoffs liegt zwischen 300 und 399 mmHg. Äquivalent zu PaO₂/FiO₂ 39,9 - 53 kPa.">
+            >
+            ["at0007"] = <
+                text = <"PaO₂/FiO₂ 200-299 mmHg">
+                description = <"Der Sauerstoffpartialdruck im arteriellen oder kapillaren Blut, gemessen in mmHg, geteilt durch den Anteil des eingeatmeten Sauerstoffs liegt zwischen 200 und 299 mmHg. Äquivalent zu PaO₂/FiO₂ 26,6 - 39,8 kPa.">
+            >
+            ["at0008"] = <
+                text = <"Mechanisch belüftet und PaO₂/FiO₂ 100-199 mmHg">
+                description = <"Bei mechanischer Beatmung liegt der Sauerstoffpartialdruck im arteriellen oder kapillaren Blut, gemessen in mmHg, geteilt durch den Anteil des eingeatmeten Sauerstoffs zwischen 100 und 199 mmHg. Äquivalent zu PaO₂/FiO₂ 13,3 - 26,5 kPa.">
+            >
+            ["at0009"] = <
+                text = <"Mechanisch belüftet und PaO₂/FiO₂ < 100 mmHg">
+                description = <"Bei mechanischer Beatmung ist der Sauerstoffpartialdruck im arteriellen oder kapillaren Blut, gemessen in mmHg, geteilt durch die Fraktion des eingeatmeten Sauerstoffs kleiner als 100 mmHg. Äquivalent zu PaO₂/FiO₂ < 13,3 kPa.">
+            >
+            ["at0010"] = <
+                text = <"Kardiovaskuläres System">
+                description = <"Der mittlere arterielle Druck (MAD) oder der Bedarf an Vasopressoren (VP), (Dopamin (DA), Adrenalin (A), Noradrenalin (NA) oder Dobutamin) sind Indikatoren für eine mögliche Dysfunktion des Herz-Kreislauf-Systems.">
+            >
+            ["at0011"] = <
+                text = <"MAD ≥ 70 mmHg">
+                description = <"Der mittlere arterielle Druck (MAD) ist größer als oder gleich 70 mmHg.">
+            >
+            ["at0012"] = <
+                text = <"MAD < 70 mmHg">
+                description = <"Der mittlere arterielle Druck (MAD) ist kleiner als 70 mmHg.">
+            >
+            ["at0013"] = <
+                text = <"DA ≤ 5; Dobutamin">
+                description = <"Die Dopamin (DA)-Dosis beträgt weniger als 5 µg/kg/Minute bzw. beträgt eine beliebige Dosierung von Dobutamin.">
+            >
+            ["at0014"] = <
+                text = <"DA > 5; NA/A ≤ 0,1">
+                description = <"Die Dosis von Dopamin (DA) ist größer als 5 µg/kg/Minute, oder die Dosis von Noradrenalin (NA) ist kleiner oder gleich 0,1 µg/kg/Minute und die Dosis von Adrenalin (A) ist kleiner oder gleich 0,1 µg/kg/Minute.">
+            >
+            ["at0015"] = <
+                text = <"NA/A > 0,1">
+                description = <"Die Dosierung von Noradrenalin (N) oder Adrenalin (A) ist größer als 0,1 µg/kg/Minute.">
+            >
+            ["at0016"] = <
+                text = <"Zentrales Nervensystem">
+                description = <"Die Glasgow Coma Scale (GCS) ist ein Indikator für eine mögliche Funktionsstörung des zentralen Nervensystems.">
+            >
+            ["at0017"] = <
+                text = <"GCS 15">
+                description = <"Glasgow-Koma-Skala ist 15.">
+            >
+            ["at0018"] = <
+                text = <"GCS 13 - 14">
+                description = <"Glasgow Koma Skala liegt bei 13 oder 14.">
+            >
+            ["at0019"] = <
+                text = <"GCS 10 - 12">
+                description = <"Glasgow Koma-Skala ist 10, 11 oder 12.">
+            >
+            ["at0020"] = <
+                text = <"GCS 6 - 9">
+                description = <"Glasgow Koma-Skala ist 6, 7, 8 oder 9.">
+            >
+            ["at0021"] = <
+                text = <"GCS < 6">
+                description = <"Glasgow Koma Skala ist kleiner als 6.">
+            >
+            ["at0022"] = <
+                text = <"Nierenfunktion">
+                description = <"Die Kreatininkonzentration und die 24-h-Urinausscheidung (UOP) sind Indikatoren für eine mögliche Funktionsstörung des zentralen Nervensystems.">
+                comment = <"An einigen Orten wird die Kreatinin-Konzentration in μmol/L gemessen.">
+            >
+            ["at0023"] = <
+                text = <"Kreatinin < 1,2 mg/dL">
+                description = <"Die Kreatininkonzentration ist kleiner als 1,2 mg/dL. Äquivalent zu Kreatinin < 110 µmol/L.">
+            >
+            ["at0024"] = <
+                text = <"Kreatinin 1,2-1,9 mg/dL">
+                description = <"Die Kreatininkonzentration liegt zwischen 1,2 und 1,9 mg/dL. Entspricht einem Kreatinin von 110 - 170 µmol/L.">
+            >
+            ["at0025"] = <
+                text = <"Kreatinin 2,0-3,4 mg/dL">
+                description = <"Die Kreatininkonzentration liegt zwischen 2,0 und 3,4 mg/dL. Entspricht einem Kreatinin von 171 - 299 µmol/L.">
+            >
+            ["at0026"] = <
+                text = <"Kreatinin 3,5-4,9 mg/dL oder UOP < 500 mL/24h">
+                description = <"Die Kreatininkonzentration liegt zwischen 3,5 und 4,9 mg/dL, bzw. die Urinausscheidung liegt zwischen 500 und 200 mL/24h. Äquivalent zu Kreatinin 300 - 440 µmol/L oder UOP < 500 mL/24h.">
+            >
+            ["at0027"] = <
+                text = <"Kreatinin ≥ 5,0 mg/dL oder UOP < 200 mL/24h">
+                description = <"Die Kreatininkonzentration ist größer oder gleich 5,0 mg/dL, bzw. die Urinausscheidung ist kleiner als 200 mL/24h. Äquivalent zu Kreatinin > 440 µmol/L oder UOP < 200 mL/24h.">
+            >
+            ["at0028"] = <
+                text = <"Leberfunktion">
+                description = <"Die Bilirubin-Konzentration ist ein Indikator für eine mögliche Funktionsstörung des zentralen Nervensystems.">
+                comment = <"In manchen Orten wird die Bilirubin-Konzentration in μmol/L gemessen.">
+            >
+            ["at0029"] = <
+                text = <"Bilirubin < 1,2 mg/dL">
+                description = <"Die Bilirubin-Konzentration ist kleiner als 1,2 mg/dL. Äquivalent zu Bilirubin < 20 µmol/L.">
+            >
+            ["at0030"] = <
+                text = <"Bilirubin 1,2-1,9 mg/dL">
+                description = <"Die Bilirubin-Konzentration liegt zwischen 1,2 und 1,9 mg/dL. Äquivalent zu Bilirubin 20-32 µmol/L.">
+            >
+            ["at0031"] = <
+                text = <"Bilirubin 2,0-5,9 mg/dL">
+                description = <"Die Bilirubin-Konzentration liegt zwischen 2,0 und 5,9 mg/dL. Äquivalent zu Bilirubin 33-101 µmol/L.">
+            >
+            ["at0032"] = <
+                text = <"Bilirubin 6,0-11,9 mg/dL">
+                description = <"Die Bilirubin-Konzentration liegt zwischen 6,0 und 11,9 mg/dL. Entspricht einem Bilirubin von 102-204 µmol/L.">
+            >
+            ["at0033"] = <
+                text = <"Bilirubin ≥ 12,0 mg/dL">
+                description = <"Die Bilirubin-Konzentration ist größer als oder gleich 12,0 mg/dL. Äquivalent zu Bilirubin > 204 µmol/L.">
+            >
+            ["at0034"] = <
+                text = <"Blutgerinnung">
+                description = <"Die Thrombozytenkonzentration ist ein Indikator für eine mögliche Funktionsstörung des Blutgerinnungssystems.">
+            >
+            ["at0035"] = <
+                text = <"Thrombozyten ≥ 150 (x10³/µL)">
+                description = <"Die Thrombozytenkonzentration ist größer als oder gleich 150.000 /µL.">
+            >
+            ["at0036"] = <
+                text = <"Thrombozyten < 150 (x10³/µL)">
+                description = <"Die Thrombozytenkonzentration liegt zwischen 150.000 und 100.000 /µL.">
+            >
+            ["at0037"] = <
+                text = <"Thrombozyten < 100 (x10³/µL)">
+                description = <"Die Thrombozytenkonzentration liegt zwischen 100.000 und 50.000 /µL.">
+            >
+            ["at0038"] = <
+                text = <"Thrombozyten < 50 (x10³/µL)">
+                description = <"Die Thrombozytenkonzentration liegt zwischen 50.000 und 20.000 /µL.">
+            >
+            ["at0039"] = <
+                text = <"Thrombozyten < 20 (x10³/µL)">
+                description = <"Die Thrombozytenkonzentration ist kleiner als 20.000 /µL.">
+            >
+            ["at0041"] = <
+                text = <"Gesamtergebnis">
+                description = <"Die Gesamtanzahl der einzelnen Komponentenparameter für den SOFA-Score.">
+            >
+            ["at0044"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen oder CIMI-Modelle.">
+            >
+            ["ac9031"] = <
+                text = <"Respiration (synthesised)">
+                description = <"Das Verhältnis zwischen dem Sauerstoffpartialdruck (PaO₂) und der Fraktion des eingeatmeten Sauerstoffs (FiO₂) ist ein Indikator für eine mögliche Funktionsstörung des Atmungssystems. (synthesised)">
+            >
+            ["ac9026"] = <
+                text = <"Kardiovaskuläres System (synthesised)">
+                description = <"Der mittlere arterielle Druck (MAD) oder der Bedarf an Vasopressoren (VP), (Dopamin (DA), Adrenalin (A), Noradrenalin (NA) oder Dobutamin) sind Indikatoren für eine mögliche Dysfunktion des Herz-Kreislauf-Systems. (synthesised)">
+            >
+            ["ac9027"] = <
+                text = <"Zentrales Nervensystem (synthesised)">
+                description = <"Die Glasgow Coma Scale (GCS) ist ein Indikator für eine mögliche Funktionsstörung des zentralen Nervensystems. (synthesised)">
+            >
+            ["ac9028"] = <
+                text = <"Nierenfunktion (synthesised)">
+                description = <"Die Kreatininkonzentration und die 24-h-Urinausscheidung (UOP) sind Indikatoren für eine mögliche Funktionsstörung des zentralen Nervensystems. (synthesised)">
+            >
+            ["ac9029"] = <
+                text = <"Leberfunktion (synthesised)">
+                description = <"Die Bilirubin-Konzentration ist ein Indikator für eine mögliche Funktionsstörung des zentralen Nervensystems. (synthesised)">
+            >
+            ["ac9030"] = <
+                text = <"Blutgerinnung (synthesised)">
+                description = <"Die Thrombozytenkonzentration ist ein Indikator für eine mögliche Funktionsstörung des Blutgerinnungssystems. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"SOFA-skår">
+                description = <"Sequential organ failure assessment (SOFA) er et skåringssystem for å gradere og følge utvikling av organdysfunksjon i seks vitale organsystem. Tidligere betegnet som \"Sepsis related organ failure assessment\".">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Respirasjon">
+                description = <"Forholdet mellom partialtrykket av oksygen (PaO₂) og fraksjonen av innåndet oksygen (FiO₂) er en indikator for en eventuell dysfunksjon i respirasjonssystemet.">
+                comment = <"I noen land eller myndighetsområder blir PaO₂/FiO₂ ratio målt i kPa.">
+            >
+            ["at0005"] = <
+                text = <"PaO₂/FiO₂ ≥ 53,3 kPa">
+                description = <"Partialtrykket av oksygen i arterielt eller kapillært blod målt i kPa dividert med fraksjonen av innåndet oksygen er større enn eller lik 53,3 kPa.">
+            >
+            ["at0006"] = <
+                text = <"PaO₂/FiO₂ 40,0 - 53,2 kPa">
+                description = <"Partialtrykket av oksygen i arterielt eller kapillært blod målt i kPa dividert med fraksjonen av innåndet oksygen er fra 40,0 til 53,2 kPa.">
+            >
+            ["at0007"] = <
+                text = <"PaO₂/FiO₂ < 40,0 kPa">
+                description = <"Partialtrykket av oksygen i arterielt eller kapillært blod målt i kPa dividert med fraksjonen av innåndet oksygen er lavere enn 40,0 kPa.">
+            >
+            ["at0008"] = <
+                text = <"PaO₂/FiO₂ 13,3 - 26,5 kPa">
+                description = <"Med ventilasjonsstøtte er partialtrykket av oksygen i arterielt eller kapillært blod målt i kPa dividert med fraksjonen av innåndet oksygen fra 13,3 til 26,5 kPa.">
+            >
+            ["at0009"] = <
+                text = <"PaO₂/FiO₂ < 13,3 kPa">
+                description = <"Med ventilasjonsstøtte er partialtrykket av oksygen i arterielt eller kapillært blod målt i kPa dividert med fraksjonen av innåndet oksygen mindre enn 13,3 kPa.">
+            >
+            ["at0010"] = <
+                text = <"Sirkulasjon">
+                description = <"Middelarterietrykket (MAP), eller behov for vasopressor (VP), (dopamin (DA), adrenalin (A), noradrenalin (NA) eller dobutamin) indikerer en eventuell dysfunksjon i sirkulasjonssystemet.">
+            >
+            ["at0011"] = <
+                text = <"MAP ≥ 70 mmHg">
+                description = <"Middelarterietrykket (MAP) er større eller lik 70 mmHg.">
+            >
+            ["at0012"] = <
+                text = <"MAP < 70 mmHg">
+                description = <"Middelarterietrykket (MAP) er mindre enn 70 mmHg.">
+            >
+            ["at0013"] = <
+                text = <"DA ≤ 5; Dobutamin">
+                description = <"Dosen av dopamin (DA) er mindre enn 5 µg/kg/minutt, eller enhver dose av Dobutamin.">
+            >
+            ["at0014"] = <
+                text = <"DA > 5; NA/A ≤ 0,1">
+                description = <"Dosen av dopamin (DA) er større enn 5,0 µg/kg/minutt, eller dosen av noradrenalin (NA) er mindre eller lik 0.10 µg/kg/minutt eller dosen av adrenalin (A) er mindre enn eller lik 0,1 µg/kg/minutt.">
+            >
+            ["at0015"] = <
+                text = <"NA/A > 0,1">
+                description = <"Dosen av noradrenalin (N) eller adrenalin (A) er større enn 0,1 µg/kg/minutt.">
+            >
+            ["at0016"] = <
+                text = <"Sentralnervesystemet">
+                description = <"Glasgow Coma Scale (GCS) er indikator for eventuell dysfunksjon i sentralnervesystemet.">
+            >
+            ["at0017"] = <
+                text = <"GCS 15">
+                description = <"Glasgow Coma Scale er lik 15.">
+            >
+            ["at0018"] = <
+                text = <"GCS 13 - 14">
+                description = <"Glasgow Coma Scale er lik 13 eller 14.">
+            >
+            ["at0019"] = <
+                text = <"GCS 10 - 12">
+                description = <"Glasgow Coma Scale er fra 10 til 12.">
+            >
+            ["at0020"] = <
+                text = <"GCS 6 - 9">
+                description = <"Glasgow Coma Scale er fra 6 til 9.">
+            >
+            ["at0021"] = <
+                text = <"GCS < 6">
+                description = <"Glasgow Coma Scale er mindre enn 6.">
+            >
+            ["at0022"] = <
+                text = <"Nyrefunksjon">
+                description = <"Konsentrasjonen av kreatinin i μmol/l og døgnurin (DU) i ml/24t er indikator for eventuell dysfunksjon i nyrene.">
+                comment = <"I noen lokaliteter angis kreatininkonsentrasjonen i mg/dl.">
+            >
+            ["at0023"] = <
+                text = <"Kreatinin < 110 µmol/l">
+                description = <"Konsentrasjonen av kreatinin er mindre enn 110 mikromol per liter.">
+            >
+            ["at0024"] = <
+                text = <"Kreatinin 110 - 170 µmol/l">
+                description = <"Konsentrasjonen av kreatinin er mellom 110 - 170 mikromol per liter.">
+            >
+            ["at0025"] = <
+                text = <"Kreatinin 171 - 299 µmol/l">
+                description = <"Konsentrasjonen av kreatinin er mellom 171 - 299 mikromol per liter.">
+            >
+            ["at0026"] = <
+                text = <"Kreatinin 300 - 440 µmol/l eller DU < 500 ml/24t">
+                description = <"Konsentrasjonen av kreatinin er større enn 300 mikromol og mindre eller lik 440 mikromol per liter, eller døgnurin (DU) er mindre enn 500 og større enn 200 milliliter.">
+            >
+            ["at0027"] = <
+                text = <"Kreatinin > 440 µmol/l eller DU < 200 ml/24t">
+                description = <"Konsentrasjonen av kreatinin er større enn 440 mikromol per liter, eller døgnurin (DU) er mindre enn 200 ml.">
+            >
+            ["at0028"] = <
+                text = <"Lever">
+                description = <"Konsentrasjonen av bilirubin i μmol/l er indikator for eventuell dysfunksjon i leveren.">
+                comment = <"I noen lokaliteter angis bilirubinkonsentrasjonen i mg/dl.">
+            >
+            ["at0029"] = <
+                text = <"Bilirubin < 20 µmol/l">
+                description = <"Konsentrasjonen av bilirubin er mindre enn 20 mikromol per liter.">
+            >
+            ["at0030"] = <
+                text = <"Bilirubin 20-32 µmol/l">
+                description = <"Konsentrasjonen av bilirubin er mellom 20 og 32mikromol per liter.">
+            >
+            ["at0031"] = <
+                text = <"Bilirubin 33-101 µmol/l">
+                description = <"Konsentrasjonen av bilirubin er mellom 33 og 101 mikromol per liter.">
+            >
+            ["at0032"] = <
+                text = <"Bilirubin 102-204 µmol/l">
+                description = <"Konsentrasjonen av bilirubin er mellom 102 og 204 mikromol per liter.">
+            >
+            ["at0033"] = <
+                text = <"Bilirubin > 204 µmol/l">
+                description = <"Konsentrasjonen av bilirubin er større enn 204 mikromol per liter.">
+            >
+            ["at0034"] = <
+                text = <"Koagulasjon">
+                description = <"Trombocytt-partikkelkonsentrasjon (TPK) er indikator for eventuelt dysfunksjon i koagulasjonssystemet.">
+            >
+            ["at0035"] = <
+                text = <"TPK ≥ 150 (x10³/µl)">
+                description = <"TPK er større enn 150 000 per mikroliter.">
+            >
+            ["at0036"] = <
+                text = <"TPK < 150 (x10³/µl)">
+                description = <"TPK er mindre enn 150 000 og større enn eller lik 100 000 per mikroliter.">
+            >
+            ["at0037"] = <
+                text = <"TPK < 100 (x10³/µl)">
+                description = <"TPK er mindre enn 100 000 og større enn eller lik 50 000 per mikroliter.">
+            >
+            ["at0038"] = <
+                text = <"TPK < 50 (x10³/µl)">
+                description = <"TPK er mindre enn 50 000 og større eller lik 20 000 per mikroliter.">
+            >
+            ["at0039"] = <
+                text = <"TPK < 20 (x10³/µl)">
+                description = <"TPK er mindre enn 20 000 per mikroliter.">
+            >
+            ["at0041"] = <
+                text = <"Totalskår">
+                description = <"SOFA-skår er summen av skår for de enkelte parametrene.">
+            >
+            ["at0044"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["ac9031"] = <
+                text = <"Respirasjon (synthesised)">
+                description = <"Forholdet mellom partialtrykket av oksygen (PaO₂) og fraksjonen av innåndet oksygen (FiO₂) er en indikator for en eventuell dysfunksjon i respirasjonssystemet. (synthesised)">
+            >
+            ["ac9026"] = <
+                text = <"Sirkulasjon (synthesised)">
+                description = <"Middelarterietrykket (MAP), eller behov for vasopressor (VP), (dopamin (DA), adrenalin (A), noradrenalin (NA) eller dobutamin) indikerer en eventuell dysfunksjon i sirkulasjonssystemet. (synthesised)">
+            >
+            ["ac9027"] = <
+                text = <"Sentralnervesystemet (synthesised)">
+                description = <"Glasgow Coma Scale (GCS) er indikator for eventuell dysfunksjon i sentralnervesystemet. (synthesised)">
+            >
+            ["ac9028"] = <
+                text = <"Nyrefunksjon (synthesised)">
+                description = <"Konsentrasjonen av kreatinin i μmol/l og døgnurin (DU) i ml/24t er indikator for eventuell dysfunksjon i nyrene. (synthesised)">
+            >
+            ["ac9029"] = <
+                text = <"Lever (synthesised)">
+                description = <"Konsentrasjonen av bilirubin i μmol/l er indikator for eventuell dysfunksjon i leveren. (synthesised)">
+            >
+            ["ac9030"] = <
+                text = <"Koagulasjon (synthesised)">
+                description = <"Trombocytt-partikkelkonsentrasjon (TPK) er indikator for eventuelt dysfunksjon i koagulasjonssystemet. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"SOFA score">
+                description = <"A scoring system to grade and follow the development of organ dysfunction in six vital organ systems. Previously known as \"Sepsis related Organ Failure Assessment\".">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Respiration">
+                description = <"The ratio between the partial pressure of oxygen (PaO₂) and the fraction of inspired oxygen (FiO₂) is an indicator for a possible dysfunction of the respiratory system.">
+                comment = <"In some localities, the PaO₂/FiO₂ ratio is measured in kPa.">
+            >
+            ["at0005"] = <
+                text = <"PaO₂/FiO₂ ≥ 400 mmHg">
+                description = <"The partial pressure of oxygen in arterial or capillary blood measured in mmHg, divided by the fraction of inspired oxygen is greater than or equal to 400 mmHg. Equivalent to PaO₂/FiO₂ ≥ 53.3 kPa.">
+            >
+            ["at0006"] = <
+                text = <"PaO₂/FiO₂ 300-399 mmHg">
+                description = <"The partial pressure of oxygen in arterial or capillary blood measured in mmHg, divided by the fraction of inspired oxygen is between 300 and 399 mmHg. Equivalent to PaO₂/FiO₂ 40.0 - 53.2 kPa.">
+            >
+            ["at0007"] = <
+                text = <"PaO₂/FiO₂ < 300 mmHg">
+                description = <"The partial pressure of oxygen in arterial or capillary blood measured in mmHg, divided by the fraction of inspired oxygen is lower than 300 mmHg. Equivalent to PaO₂/FiO₂ 40 kPa.">
+            >
+            ["at0008"] = <
+                text = <"Mechanically ventilated and PaO₂/FiO₂ 100-199 mmHg">
+                description = <"On mechanical ventilation, the partial pressure of oxygen in arterial or capillary blood measured in mmHg, divided by the fraction of inspired oxygen is between 100 and 199 mmHg. Equivalent to PaO₂/FiO₂ 13.3 - 26.5 kPa.">
+            >
+            ["at0009"] = <
+                text = <"Mechanically ventilated and PaO₂/FiO₂ < 100 mmHg">
+                description = <"On mechanical ventilation, the partial pressure of oxygen in arterial or capillary blood measured in mmHg, divided by the fraction of inspired oxygen is less than 100 mmHg. Equivalent to PaO₂/FiO₂ < 13.3 kPa.">
+            >
+            ["at0010"] = <
+                text = <"Cardiovascular system">
+                description = <"The mean arterial pressure (MAP), or the need for vasopressors (VP), (dopamine (DA), adrenaline (A), noradrenaline (NA) or dobutamine) are indicators for a possible dysfunction of the cardiovascular system.">
+            >
+            ["at0011"] = <
+                text = <"MAP ≥ 70 mmHg">
+                description = <"The mean arterial pressure (MAP) is greater than or equal to 70 mmHg.">
+            >
+            ["at0012"] = <
+                text = <"MAP < 70 mmHg">
+                description = <"The mean arterial pressure (MAP) is less than 70 mmHg.">
+            >
+            ["at0013"] = <
+                text = <"DA ≤ 5; Dobutamine">
+                description = <"The dopamine (DA) dosage is less than 5 µg/kg/minute, or any dosage of dobutamine.">
+            >
+            ["at0014"] = <
+                text = <"DA > 5; NA/A ≤ 0.1">
+                description = <"The dosage of dopamine (DA) is greater than 5 µg/kg/minute, or the dosage of noradrenaline (NA) is less than or equal to 0.1 µg/kg/minute, or the dosage of adrenaline (A) is less than or equal to 0.1 µg/kg/minutt.">
+            >
+            ["at0015"] = <
+                text = <"NA/A > 0.1">
+                description = <"The dosage of noradrenaline (N) or adrenaline (A) is greater than 0.1 µg/kg/minute.">
+            >
+            ["at0016"] = <
+                text = <"Central nervous system">
+                description = <"The Glasgow Coma Scale (GCS) is an indicator for a possible dysfunction of the central nervous system.">
+            >
+            ["at0017"] = <
+                text = <"GCS 15">
+                description = <"Glasgow Coma Scale is 15.">
+            >
+            ["at0018"] = <
+                text = <"GCS 13 - 14">
+                description = <"Glasgow Coma Scale is 13 or 14.">
+            >
+            ["at0019"] = <
+                text = <"GCS 10 - 12">
+                description = <"Glasgow Coma Scale is 10, 11 or 12.">
+            >
+            ["at0020"] = <
+                text = <"GCS 6 - 9">
+                description = <"Glasgow Coma Scale is 6, 7, 8 or 9.">
+            >
+            ["at0021"] = <
+                text = <"GCS < 6">
+                description = <"Glasgow Coma Scale is less than 6.">
+            >
+            ["at0022"] = <
+                text = <"Renal function">
+                description = <"Creatinine concentration and 24 h urine output (UOP) are indicators for a possible dysfunction of the central nervous system.">
+                comment = <"In some localities, creatinine concentration is measured in μmol/L.">
+            >
+            ["at0023"] = <
+                text = <"Creatinine < 1.2 mg/dL">
+                description = <"The creatinine concentration is less than 1.2 mg/dL. Equivalent to creatinine < 110 µmol/L.">
+            >
+            ["at0024"] = <
+                text = <"Creatinine 1.2-1.9 mg/dL">
+                description = <"The creatinine concentration is between 1.2 and 1.9 mg/dL. Equivalent to creatinine 110 - 170 µmol/L.">
+            >
+            ["at0025"] = <
+                text = <"Creatinine 2.0-3.4 mg/dL">
+                description = <"The creatinine concentration is between 2.0 and 3.4 mg/dL. Equivalent to creatinine 171 - 299 µmol/L.">
+            >
+            ["at0026"] = <
+                text = <"Creatinine 3.5-4.9 mg/dL or UOP < 500 mL/24h">
+                description = <"The creatinine concentration is between 3.5 and 4.9 mg/dL, or the urine output is between 500 and 200 mL/24h. Equivalent to creatinine 300 - 440 µmol/L or UOP < 500 mL/24h.">
+            >
+            ["at0027"] = <
+                text = <"Creatinine ≥ 5.0 mg/dL or UOP < 200 mL/24h">
+                description = <"The creatinine concentration is greater than or equal to 5.0 mg/dL, or the urine output is less than 200 mL/24h. Equivalent to creatinine > 440 µmol/L or UOP < 200 mL/24h.">
+            >
+            ["at0028"] = <
+                text = <"Liver function">
+                description = <"Bilirubin concentration is an indicator for a possible dysfunction of the central nervous system.">
+                comment = <"In some localities, bilirubin concentration is measured in μmol/L.">
+            >
+            ["at0029"] = <
+                text = <"Bilirubin < 1.2 mg/dL">
+                description = <"The bilirubin concentration is less than 1.2 mg/dL. Equivalent to bilirubin < 20 µmol/L.">
+            >
+            ["at0030"] = <
+                text = <"Bilirubin 1.2-1.9 mg/dL">
+                description = <"The bilirubin concentration is between 1.2 and 1.9 mg/dL. Equivalent to bilirubin 20-32 µmol/L.">
+            >
+            ["at0031"] = <
+                text = <"Bilirubin 2.0-5.9 mg/dL">
+                description = <"The bilirubin concentration is between 2.0 and 5.9 mg/dL. Equivalent to bilirubin 33-101 µmol/L.">
+            >
+            ["at0032"] = <
+                text = <"Bilirubin 6.0-11.9 mg/dL">
+                description = <"The bilirubin concentration is between 6.0 and 11.9 mg/dL. Equivalent to bilirubin 102-204 µmol/L.">
+            >
+            ["at0033"] = <
+                text = <"Bilirubin ≥ 12.0 mg/dL">
+                description = <"The bilirubin concentration is greater than or equal to 12.0 mg/dL. Equivalent to bilirubin > 204 µmol/L.">
+            >
+            ["at0034"] = <
+                text = <"Blood clotting">
+                description = <"Platelets concentration is an indicator for a possible dysfunction of the blood clotting system.">
+            >
+            ["at0035"] = <
+                text = <"Platelets ≥ 150 (x10³/µL)">
+                description = <"The platelet concentration is greater than or equal to 150,000 /µL.">
+            >
+            ["at0036"] = <
+                text = <"Platelets < 150 (x10³/µL)">
+                description = <"The platelet concentration is between 150,000 and 100,000 /µL.">
+            >
+            ["at0037"] = <
+                text = <"Platelets < 100 (x10³/µL)">
+                description = <"The platelet concentration is between 100,000 and 50,000 /µL.">
+            >
+            ["at0038"] = <
+                text = <"Platelets < 50 (x10³/µL)">
+                description = <"The platelet concentration is between 50,000 and 20,000 /µL.">
+            >
+            ["at0039"] = <
+                text = <"Platelets < 20 (x10³/µL)">
+                description = <"The platelet concentration is less than 20,000 /µL.">
+            >
+            ["at0041"] = <
+                text = <"Total score">
+                description = <"The total sum of each component parameter for the SOFA score.">
+            >
+            ["at0044"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["ac9031"] = <
+                text = <"Respiration (synthesised)">
+                description = <"The ratio between the partial pressure of oxygen (PaO₂) and the fraction of inspired oxygen (FiO₂) is an indicator for a possible dysfunction of the respiratory system. (synthesised)">
+            >
+            ["ac9026"] = <
+                text = <"Cardiovascular system (synthesised)">
+                description = <"The mean arterial pressure (MAP), or the need for vasopressors (VP), (dopamine (DA), adrenaline (A), noradrenaline (NA) or dobutamine) are indicators for a possible dysfunction of the cardiovascular system. (synthesised)">
+            >
+            ["ac9027"] = <
+                text = <"Central nervous system (synthesised)">
+                description = <"The Glasgow Coma Scale (GCS) is an indicator for a possible dysfunction of the central nervous system. (synthesised)">
+            >
+            ["ac9028"] = <
+                text = <"Renal function (synthesised)">
+                description = <"Creatinine concentration and 24 h urine output (UOP) are indicators for a possible dysfunction of the central nervous system. (synthesised)">
+            >
+            ["ac9029"] = <
+                text = <"Liver function (synthesised)">
+                description = <"Bilirubin concentration is an indicator for a possible dysfunction of the central nervous system. (synthesised)">
+            >
+            ["ac9030"] = <
+                text = <"Blood clotting (synthesised)">
+                description = <"Platelets concentration is an indicator for a possible dysfunction of the blood clotting system. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9028"] = <
+            id = <"ac9028">
+            members = <"at0023", "at0024", "at0025", "at0026", "at0027">
+        >
+        ["ac9027"] = <
+            id = <"ac9027">
+            members = <"at0017", "at0018", "at0019", "at0020", "at0021">
+        >
+        ["ac9026"] = <
+            id = <"ac9026">
+            members = <"at0011", "at0012", "at0013", "at0014", "at0015">
+        >
+        ["ac9031"] = <
+            id = <"ac9031">
+            members = <"at0005", "at0006", "at0007", "at0008", "at0009">
+        >
+        ["ac9030"] = <
+            id = <"ac9030">
+            members = <"at0035", "at0036", "at0037", "at0038", "at0039">
+        >
+        ["ac9029"] = <
+            id = <"ac9029">
+            members = <"at0029", "at0030", "at0031", "at0032", "at0033">
+        >
+    >

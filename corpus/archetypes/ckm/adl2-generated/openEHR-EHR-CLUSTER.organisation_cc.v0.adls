@@ -1,0 +1,248 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=b1a8e64b-0cb5-45af-97e0-55e787b70d28; build_uid=6c206a29-6ec5-4772-bf97-9d0f89a7db79)
+    openEHR-EHR-CLUSTER.organisation_cc.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            author = <
+                ["name"] = <"Cecilia Mascia">
+                ["organisation"] = <"CRS4 - Center for advanced studies, research and development in Sardinia, Pula (Cagliari), Italy">
+                ["email"] = <"cecilia.mascia@crs4.it">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Hildegard McNicoll">
+        ["organisation"] = <"freshEHR Clinical Informatics Ltd.">
+        ["email"] = <"hildi@freshehr.com">
+        ["date"] = <"2018-07-20">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"https://fhir.hl7.org.uk/STU3/StructureDefinition/CareConnect-Organization-1 cited 20-Jul-2018.">
+    >
+    other_details = <
+        ["current_contact"] = <"Hildegard McNicoll, freshEHR Clinical Informatics Ltd.<hildi@freshehr.com>">
+        ["MD5-CAM-1.0.1"] = <"7AEF475E46CB21A203676FE9E52CAE17">
+    >
+    details = <
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            purpose = <"*For the recording of organisation details aligned with corresponding FHIR resource.(en)">
+            use = <"*Use to record organisation details aligned with the corresponding FHIR resources.
+
+The slots for telecoms, address and contact should be filled with the appropriate FHIR resource-aligned clusters.
+
+This cluster archetype is intended to be used inside FHIR resource aligned archetypes such as CLUSTER.fhir_contact.v0 and CLUSTER.fhir_practitioner.v0.(en)">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For the recording of organisation details aligned with corresponding FHIR resource.">
+            use = <"Use to record organisation details aligned with the corresponding FHIR resources.
+
+The slots for telecoms, address and contact should be filled with the appropriate FHIR resource-aligned clusters.
+
+This cluster archetype is intended to be used inside FHIR resource aligned archetypes such as CLUSTER.fhir_contact.v0 and CLUSTER.fhir_practitioner.v0.">
+            misuse = <"">
+            copyright = <"© Apperta Foundation, openEHR Foundation">
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            purpose = <"Registrare i dettagli di un'Organizzazione, in linea con la corrispondente risorsa FHIR.">
+            use = <"Usato per registrare i dettagli di un'Organizzazione, in linea con la corrispondente risorsa FHIR.
+
+Gli SLOT 'Recapiti telefonici', 'Indirizzo' e 'Contatti' dovrebbero essere riempiti con archetipi di tipo CLUSTER allineati con le appropriate risorse FHIR.
+
+Questo archetipo CLUSTER è ideato per essere usato all'interno di archetipi allineati con le appropriate risorse FHIR, come ad esempio CLUSTER.fhir_contact.v0 e CLUSTER.fhir_practitioner.v0 .">
+            misuse = <"">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Organisation
+        items cardinality matches {1..*; unordered} matches {
+            allow_archetype CLUSTER[at0018] matches {    -- Identifier
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.identifier_cc\.v0\..*/}
+            }
+            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Active
+                value matches {
+                    DV_BOOLEAN[at9000]
+                }
+            }
+            ELEMENT[at0011] matches {    -- Type
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            ELEMENT[at0012] occurrences matches {0..1} matches {    -- Name
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0013] matches {    -- Alias
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            allow_archetype CLUSTER[at0014] matches {    -- Telecom
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.telecom_cc\.v0\..*/}
+            }
+            allow_archetype CLUSTER[at0015] matches {    -- Address
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.address_cc\.v0\..*/}
+            }
+            allow_archetype CLUSTER[at0017] matches {    -- Part of
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.organisation_cc\.v0\..*/}
+            }
+            allow_archetype CLUSTER[at0016] matches {    -- Contact
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.contact_cc\.v0\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["fi"] = <
+            ["at0000"] = <
+                text = <"Organisaatio">
+                description = <"*Organisation details aligned with FHIR resource.(en)">
+            >
+            ["at0010"] = <
+                text = <"Aktiivinen">
+                description = <"Onko organisaatio aktiivisessa toiminnassa">
+            >
+            ["at0011"] = <
+                text = <"Tyyppi">
+                description = <"Organisaation tyyppi">
+            >
+            ["at0012"] = <
+                text = <"Nimi">
+                description = <"Organisaation nimi">
+            >
+            ["at0013"] = <
+                text = <"Alias">
+                description = <"Lista organisaation muista tunnisteista">
+            >
+            ["at0014"] = <
+                text = <"Yhteystiedot">
+                description = <"Organisaation yhteystiedot">
+            >
+            ["at0015"] = <
+                text = <"Osoite">
+                description = <"Organisaation  osoite">
+            >
+            ["at0016"] = <
+                text = <"Yhteyshenkilö">
+                description = <"Organisaation yhteyshenkilö">
+            >
+            ["at0017"] = <
+                text = <"Kuuluu">
+                description = <"Mihin kokonaisuuteen organisaatio kuuluu">
+            >
+            ["at0018"] = <
+                text = <"Tunniste">
+                description = <"Organisaation tunniste">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Organisation">
+                description = <"Organisation details aligned with FHIR resource.">
+            >
+            ["at0010"] = <
+                text = <"Active">
+                description = <"Whether the organization's record is still in active use.">
+            >
+            ["at0011"] = <
+                text = <"Type">
+                description = <"The kind(s) of organization that this is.">
+            >
+            ["at0012"] = <
+                text = <"Name">
+                description = <"Name associated with the organisation.">
+            >
+            ["at0013"] = <
+                text = <"Alias">
+                description = <"A list of alternate names that the organisation is known as, or was known as in the past.">
+            >
+            ["at0014"] = <
+                text = <"Telecom">
+                description = <"Contact detail for the organisation.">
+            >
+            ["at0015"] = <
+                text = <"Address">
+                description = <"Address detail for the organisation.">
+            >
+            ["at0016"] = <
+                text = <"Contact">
+                description = <"Contact for the organisation for a certain purpose.">
+            >
+            ["at0017"] = <
+                text = <"Part of">
+                description = <"The organization of which this organization forms a part.">
+            >
+            ["at0018"] = <
+                text = <"Identifier">
+                description = <"The organisation identifier(s).">
+            >
+        >
+        ["it"] = <
+            ["at0000"] = <
+                text = <"Organizzazione">
+                description = <"Dettagli dell'Organizzazione, in linea con la corrispondente risorsa FHIR.">
+            >
+            ["at0010"] = <
+                text = <"Attivo">
+                description = <"Informazione che indica se il record dell'Organizzazione è ancora in uso attivo.">
+            >
+            ["at0011"] = <
+                text = <"Tipo di organizzazione">
+                description = <"Il tipo di Organizzazione.">
+            >
+            ["at0012"] = <
+                text = <"Nome">
+                description = <"Il nome dell'Organizzazione.">
+            >
+            ["at0013"] = <
+                text = <"Alias">
+                description = <"Lista di nomi alternativi con cui l'Organizzazione è conosciuta o è stata denominata in passato.">
+            >
+            ["at0014"] = <
+                text = <"Recapiti telefonici">
+                description = <"Contatti dettagliati dell'Organizzazione.">
+            >
+            ["at0015"] = <
+                text = <"Indirizzo">
+                description = <"Indirizzo dettagliato dell'Organizzazione.">
+            >
+            ["at0016"] = <
+                text = <"Contatti">
+                description = <"Contatti dell'Organizzazione in relazione ad uno scopo preciso.">
+            >
+            ["at0017"] = <
+                text = <"Organizzazione madre">
+                description = <"L'Organizzazione principale di cui questa Organizzazione fa parte.">
+            >
+            ["at0018"] = <
+                text = <"Identificativo">
+                description = <"L'identificativo dell'Oganizzazione.">
+            >
+        >
+    >

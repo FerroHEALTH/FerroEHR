@@ -1,0 +1,211 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=3829bb2a-ac46-46a1-a6a7-ec742eeea9bb; build_uid=1de1eb7e-d467-4043-a51e-61f63f7f8632)
+    openEHR-EHR-OBSERVATION.agatston_score.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Cheng Yexuan">
+        ["organisation"] = <"ZheJiang University">
+        ["email"] = <"3160100913@zju.edu.cn">
+        ["date"] = <"2021-07-16">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Blaha MJ, Mortensen MB, Kianoush S, Totamaharaj R, Ca Inzosachiri Ca M. Coronary artery calcium scoring: is it time for a change in methodology?. Jacc Cardiovascular Imaging. 2017;10(8):923-925. doi: 10.1016/j.jcmg.2017.05.007. PMID: 28797416.">
+        ["2"] = <"Abbara S, Arbab-Zadeh A, Callister TQ, Desai MY,  Mamuya W, Thomson L, et al. SCCT guidelines for the interpretation and reporting of coronary CT angiography: A report of the Society of Cardiovascular Computed Tomography Guidelines Committee. Journal of Cardiovascular Computed Tomography. 2014;8(3):342-358. doi: 10.1016/j.jcct.2014.07.003. PMID: 25301040.">
+        ["3"] = <"Hecht HS, Cronin P, Blaha MJ, Budoff MJ, Kazerooni EA, Narula J, et al. 2016 SCCT/STR guidelines for coronary artery calcium scoring of noncontrast noncardiac chest CT scans: a report of the Society of Cardiovascular Computed Tomography and Society of Thoracic Radiology. Journal of Cardiovascular Computed Tomography. 2016;11(74):1-11. doi: 10.1016/j.jcct.2016.11.003. PMID: 27916431.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"0E663D7310AF91E8122ACDA45BE33610">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the results for each vessel distribution and their total sum for the Agatston score.">
+            keywords = <"Noncontrast computed tomography", "CT scan", "Coronary artery calcium", "CAC", "Coronary calcium scoring">
+            use = <"Use to record the results for each vessel distribution and their total sum for the Agatston score.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Agatston score
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] matches {    -- Any point in time event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- LM
+                                        value matches {
+                                            DV_QUANTITY[at9009] matches {
+                                                property matches {[at9014]}    -- Qualified real
+                                                units matches {"1"}
+                                                precision matches {1}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- LAD
+                                        value matches {
+                                            DV_QUANTITY[at9010] matches {
+                                                property matches {[at9014]}    -- Qualified real
+                                                units matches {"1"}
+                                                precision matches {1}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- LCx
+                                        value matches {
+                                            DV_QUANTITY[at9011] matches {
+                                                property matches {[at9014]}    -- Qualified real
+                                                units matches {"1"}
+                                                precision matches {1}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- RCA
+                                        value matches {
+                                            DV_QUANTITY[at9012] matches {
+                                                property matches {[at9014]}    -- Qualified real
+                                                units matches {"1"}
+                                                precision matches {1}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0022] occurrences matches {1} matches {    -- Total
+                                        value matches {
+                                            DV_QUANTITY[at9013] matches {
+                                                property matches {[at9014]}    -- Qualified real
+                                                magnitude matches {|0.0..10000.0|}
+                                                units matches {"1"}
+                                                precision matches {1}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Percentile
+                                        value matches {
+                                            DV_PROPORTION[at9006] matches {
+                                                numerator matches {|0.0..100.0|}
+                                                type matches {2}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Risk classification
+                                        value matches {
+                                            DV_CODED_TEXT[at9007] matches {
+                                                defining_code matches {[ac9000]}    -- Risk classification (synthesised)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0004] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0013] matches {    -- Technical details
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Agatston score">
+                description = <"An assessment score used to quantify and measure coronary artery calcium, usually as part of a preliminary noncontrast examination for coronary artery
+and other cardiac structural calcification to estimate risk of cardiovascular diseases.">
+            >
+            ["at0002"] = <
+                text = <"Any point in time event">
+                description = <"Default, unspecified point in time event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0010"] = <
+                text = <"Percentile">
+                description = <"Calcium score percentile based on database representative of the cohort being assessed. This item indicates the percentage of people that have higher score compared to the age, gender, and race matched peers.">
+                comment = <"For example: the total score is at the Xth percentile
+compared to the same age, gender, and race matched peers.">
+            >
+            ["at0012"] = <
+                text = <"Risk classification">
+                description = <"Overall risk classification based on the total score.">
+            >
+            ["at0013"] = <
+                text = <"Technical details">
+                description = <"Structured technical parameters of the imaging examination in which the score was measured.">
+                comment = <"For example: the technical parameters of the ECG-gated CT examination in which the score was measured.">
+            >
+            ["at0014"] = <
+                text = <"Very low">
+                description = <"Score = 0.">
+            >
+            ["at0015"] = <
+                text = <"Mildly increased">
+                description = <"Score = 1 - 99.">
+            >
+            ["at0016"] = <
+                text = <"Moderately increased">
+                description = <"Score = 100 - 299.">
+            >
+            ["at0017"] = <
+                text = <"Moderate to severely increased">
+                description = <"Score >= 299.">
+            >
+            ["at0018"] = <
+                text = <"LM">
+                description = <"Left main coronary artery calcium score.">
+            >
+            ["at0019"] = <
+                text = <"LAD">
+                description = <"Left anterior descending artery calcium score.">
+            >
+            ["at0020"] = <
+                text = <"LCx">
+                description = <"Left circumflex artery calcium score.">
+            >
+            ["at0021"] = <
+                text = <"RCA">
+                description = <"Right coronary artery calcium score.">
+            >
+            ["at0022"] = <
+                text = <"Total">
+                description = <"The score of all individual calcified lesions in all coronary arteries extending through the z-axis of the heart is summed up to give the total coronary artery calcium score.">
+            >
+            ["at9014"] = <
+                text = <"Qualified real">
+                description = <"Qualified real">
+            >
+            ["ac9000"] = <
+                text = <"Risk classification (synthesised)">
+                description = <"Overall risk classification based on the total score. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9014"] = <http://openehr.org/id/380>
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0014", "at0015", "at0016", "at0017">
+        >
+    >

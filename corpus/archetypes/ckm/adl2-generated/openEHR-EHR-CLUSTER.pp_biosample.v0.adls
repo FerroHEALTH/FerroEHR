@@ -1,0 +1,191 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=208c36cf-16ec-4981-b4e2-4e79743ac345; build_uid=1fab9318-a552-48f2-a219-b4a00ff3c251)
+    openEHR-EHR-CLUSTER.pp_biosample.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2019-09-25">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"DAF8772578930B5C7EF35C9382FCACDC">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Phenopacket biosample
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0002] occurrences matches {1} matches {    -- id
+                value matches {
+                    DV_IDENTIFIER[at9000]
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- individual id
+                value matches {
+                    DV_IDENTIFIER[at9001]
+                }
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- description
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0006] occurrences matches {1..*} matches {    -- sampled_tissue
+                value matches {
+                    DV_CODED_TEXT[at9003]
+                }
+            }
+            allow_archetype CLUSTER[at0007] matches {    -- phenotypic_features
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.pp_phenotypic_feature\.v0\..*/}
+            }
+            ELEMENT[at0008] occurrences matches {0..1} matches {    -- taxonomy
+                value matches {
+                    DV_CODED_TEXT[at9004]
+                }
+            }
+            ELEMENT[at0010] occurrences matches {0..1} matches {    -- individual_age_at_collection
+                value matches {
+                    DV_DURATION[at9005]
+                    DV_INTERVAL<DV_DURATION>[at9006]
+                }
+            }
+            ELEMENT[at0011] matches {    -- histological diagnosis
+                value matches {
+                    DV_CODED_TEXT[at9007]
+                }
+            }
+            ELEMENT[at0012] occurrences matches {0..1} matches {    -- tumor_progression
+                value matches {
+                    DV_CODED_TEXT[at9008]
+                }
+            }
+            ELEMENT[at0013] occurrences matches {0..1} matches {    -- tumor_grade
+                value matches {
+                    DV_CODED_TEXT[at9009]
+                }
+            }
+            ELEMENT[at0014] matches {    -- diagnostic_markers
+                value matches {
+                    DV_CODED_TEXT[at9010]
+                }
+            }
+            allow_archetype CLUSTER[at0015] occurrences matches {1..*} matches {    -- procedure
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.pp_procedure\.v0\..*/}
+            }
+            allow_archetype CLUSTER[at0016] matches {    -- hts_files
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.pp_htsfile\.v0\..*/}
+            }
+            allow_archetype CLUSTER[at0017] matches {    -- variants
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.pp_variant\.v0\..*/}
+            }
+            ELEMENT[at0018] occurrences matches {0..1} matches {    -- is_control_sample
+                value matches {
+                    DV_BOOLEAN[at9011] matches {
+                        value matches {True, False; False}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Phenopacket biosample">
+                description = <"biosample">
+            >
+            ["at0002"] = <
+                text = <"id">
+                description = <"Arbitrary identifier.">
+                comment = <"For example: \"sample1\".">
+            >
+            ["at0003"] = <
+                text = <"individual id">
+                description = <"Arbitrary identifier.">
+                comment = <"For example: \"patient1\".">
+            >
+            ["at0004"] = <
+                text = <"description">
+                description = <"Arbitrary text">
+            >
+            ["at0006"] = <
+                text = <"sampled_tissue">
+                description = <"Tissue from which the sample was taken.">
+                comment = <"To be represented as a code and a text label pair. For example: \"UBERON::0001256 | wall of urinary bladder |\".">
+            >
+            ["at0007"] = <
+                text = <"phenotypic_features">
+                description = <"List of phenotypic abnormalities of the sample.">
+            >
+            ["at0008"] = <
+                text = <"taxonomy">
+                description = <"Species of the sampled individual.">
+                comment = <"To be represented as a code and a text label pair.">
+            >
+            ["at0010"] = <
+                text = <"individual_age_at_collection">
+                description = <"Age, or age range, of the proband at the time the sample was taken">
+                comment = <"For example: \"P52Y2M\".">
+            >
+            ["at0011"] = <
+                text = <"histological diagnosis">
+                description = <"Disease diagnosis that was inferred from the histological examination.">
+                comment = <"To be represented as a code and a text label pair. For example: NCIT::C39853|Infiltrating Urothelial Carcinoma|\".">
+            >
+            ["at0012"] = <
+                text = <"tumor_progression">
+                description = <"Indicates primary, metastatic, recurrent.">
+                comment = <"To be represented as a code and a text label pair. For example: \"NCIT::C84509|Primary Malignant Neoplasm|\".">
+            >
+            ["at0013"] = <
+                text = <"tumor_grade">
+                description = <"List of terms representing the tumor grade or stage.">
+                comment = <"To be represented as a code and a text label pair. For example: \"NCIT::C48766|pT2b Stage Finding|\" or \"NCIT::C48750|pN2 Stage Finding|\".">
+            >
+            ["at0014"] = <
+                text = <"diagnostic_markers">
+                description = <"Clinically relevant biomarkers.">
+                comment = <"To be represented as a code and a text label pair.">
+            >
+            ["at0015"] = <
+                text = <"procedure">
+                description = <"The procedure used to extract the biosample.">
+                comment = <"For example: \"NCIT:C5189|Radical Cystoprostatectomy|\".">
+            >
+            ["at0016"] = <
+                text = <"hts_files">
+                description = <"list of high-throughput sequencing files derived from the biosample">
+            >
+            ["at0017"] = <
+                text = <"variants">
+                description = <"List of variants determined to be present in the biosample.">
+            >
+            ["at0018"] = <
+                text = <"is_control_sample">
+                description = <"Whether the sample is being used as a normal control.">
+            >
+        >
+    >

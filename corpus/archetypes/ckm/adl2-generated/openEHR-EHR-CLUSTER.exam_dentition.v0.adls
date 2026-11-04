@@ -1,0 +1,465 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=42d06d0f-ffd2-461e-9c49-d4340df7ae72; build_uid=9c1c8e6a-7251-48e8-9767-ae88db2b3ab1)
+    openEHR-EHR-CLUSTER.exam_dentition.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::ja]>
+
+description
+    original_author = <
+        ["name"] = <"">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"DE6A090788AFAB1D7A41FC8203D8800A">
+    >
+    details = <
+        ["ja"] = <
+            language = <[ISO_639-1::ja]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© Takahiro Nakahara
+Shinji Kobayashi
+© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Examination of dentition
+        items cardinality matches {1..*; unordered} matches {
+            CLUSTER[at0001] occurrences matches {0..1} matches {    -- Face
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- View
+                        value matches {
+                            DV_CODED_TEXT[at9004] matches {
+                                defining_code matches {[ac9000]}    -- View (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Facial type
+                        value matches {
+                            DV_CODED_TEXT[at9005] matches {
+                                defining_code matches {[ac9001]}    -- Facial type (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9006]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- No abnormality detected
+                value matches {
+                    DV_BOOLEAN[at9007] matches {
+                        value matches {True, False}
+                    }
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Clinical description
+                value matches {
+                    DV_TEXT[at9008]
+                }
+            }
+            allow_archetype ELEMENT[at0007] matches {    -- Examination findings
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            allow_archetype ELEMENT[at0008] matches {    -- Multimedia representation
+                include
+                    archetype_id/value matches {/openEHR-EHR-ELEMENT\.multimedia(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0009] occurrences matches {0..1} matches {    -- Clinical interpretation
+                value matches {
+                    DV_TEXT[at9009]
+                }
+            }
+            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9010]
+                }
+            }
+            allow_archetype ELEMENT[at0011] matches {    -- Examination not done
+                include
+                    archetype_id/value matches {/openEHR-EHR-ELEMENT\.exclusion_exam(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            CLUSTER[at0012] matches {    -- Measurements
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0034] occurrences matches {0..1} matches {    -- Arch length discrepancy
+                        value matches {
+                            DV_TEXT[at9011]
+                        }
+                    }
+                    CLUSTER[at0031] matches {    -- Tooth size ratio
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0032] occurrences matches {0..1} matches {    -- Overall
+                                value matches {
+                                    DV_PROPORTION[at9012]
+                                }
+                            }
+                            ELEMENT[at0033] occurrences matches {0..1} matches {    -- Anterior ratio
+                                value matches {
+                                    DV_TEXT[at9013]
+                                }
+                            }
+                        }
+                    }
+                    CLUSTER[at0026] matches {    -- Basal arch
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0027] occurrences matches {0..1} matches {    -- Width
+                                value matches {
+                                    DV_QUANTITY[at9014]
+                                }
+                            }
+                            ELEMENT[at0028] occurrences matches {0..1} matches {    -- Length
+                                value matches {
+                                    DV_QUANTITY[at9015]
+                                }
+                            }
+                            ELEMENT[at0029] occurrences matches {0..1} matches {    -- Description
+                                value matches {
+                                    DV_TEXT[at9016]
+                                }
+                            }
+                            ELEMENT[at0030] occurrences matches {0..1} matches {    -- Side
+                                value matches {
+                                    DV_CODED_TEXT[at9017] matches {
+                                        defining_code matches {[ac9002]}    -- Side (synthesised)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    CLUSTER[at0021] matches {    -- Coronal arch
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0025] occurrences matches {0..1} matches {    -- Side
+                                value matches {
+                                    DV_CODED_TEXT[at9018] matches {
+                                        defining_code matches {[ac9003]}    -- Side (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0024] occurrences matches {0..1} matches {    -- Description
+                                value matches {
+                                    DV_TEXT[at9019]
+                                }
+                            }
+                            ELEMENT[at0023] occurrences matches {0..1} matches {    -- Length
+                                value matches {
+                                    DV_QUANTITY[at9020]
+                                }
+                            }
+                            ELEMENT[at0022] occurrences matches {0..1} matches {    -- Width
+                                value matches {
+                                    DV_QUANTITY[at9021]
+                                }
+                            }
+                        }
+                    }
+                    CLUSTER[at0013] matches {    -- Tooth
+                        items cardinality matches {1..*; unordered} matches {
+                            allow_archetype ELEMENT[at0019] matches {    -- Anatomical location teeth
+                                include
+                                    archetype_id/value matches {/.*/}
+                            }
+                            ELEMENT[at0020] occurrences matches {0..1} matches {    -- Comment
+                                value matches {
+                                    DV_TEXT[at9022]
+                                }
+                            }
+                            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Site
+                                value matches {
+                                    DV_TEXT[at9023]
+                                }
+                            }
+                            ELEMENT[at0015] occurrences matches {0..1} matches {    -- Axis
+                                value matches {
+                                    DV_TEXT[at9024]
+                                }
+                            }
+                            CLUSTER[at0016] occurrences matches {0..1} matches {    -- Size
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Width
+                                        value matches {
+                                            DV_TEXT[at9025]
+                                        }
+                                    }
+                                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Description
+                                        value matches {
+                                            DV_QUANTITY[at9026]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0035] occurrences matches {0..1} matches {    -- Specific findings
+                value matches {
+                    DV_TEXT[at9027]
+                }
+            }
+            CLUSTER[at0036] matches {    -- Style
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0038] occurrences matches {0..1} matches {    -- Group function
+                        value matches {
+                            DV_TEXT[at9028]
+                        }
+                    }
+                    ELEMENT[at0037] occurrences matches {0..1} matches {    -- Cuspid protected
+                        value matches {
+                            DV_TEXT[at9029]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0039] occurrences matches {0..1} matches {    -- Relationship
+                value matches {
+                    DV_TEXT[at9030]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["ja"] = <
+            ["at0000"] = <
+                text = <"Examination of dentition">
+                description = <"unknown">
+            >
+            ["at0001"] = <
+                text = <"Face">
+                description = <"*">
+            >
+            ["at0002"] = <
+                text = <"View">
+                description = <"*">
+            >
+            ["at0003"] = <
+                text = <"Facial type">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"Description">
+                description = <"*">
+            >
+            ["at0005"] = <
+                text = <"No abnormality detected">
+                description = <"*">
+            >
+            ["at0006"] = <
+                text = <"Clinical description">
+                description = <"*">
+            >
+            ["at0007"] = <
+                text = <"Examination findings">
+                description = <"*">
+            >
+            ["at0008"] = <
+                text = <"Multimedia representation">
+                description = <"*">
+            >
+            ["at0009"] = <
+                text = <"Clinical interpretation">
+                description = <"*">
+            >
+            ["at0010"] = <
+                text = <"Comment">
+                description = <"*">
+            >
+            ["at0011"] = <
+                text = <"Examination not done">
+                description = <"*">
+            >
+            ["at0012"] = <
+                text = <"Measurements">
+                description = <"*">
+            >
+            ["at0013"] = <
+                text = <"Tooth">
+                description = <"*">
+            >
+            ["at0014"] = <
+                text = <"Site">
+                description = <"*">
+            >
+            ["at0015"] = <
+                text = <"Axis">
+                description = <"*">
+            >
+            ["at0016"] = <
+                text = <"Size">
+                description = <"*">
+            >
+            ["at0017"] = <
+                text = <"Description">
+                description = <"*">
+            >
+            ["at0018"] = <
+                text = <"Width">
+                description = <"*">
+            >
+            ["at0019"] = <
+                text = <"Anatomical location teeth">
+                description = <"*">
+            >
+            ["at0020"] = <
+                text = <"Comment">
+                description = <"*">
+            >
+            ["at0021"] = <
+                text = <"Coronal arch">
+                description = <"*">
+            >
+            ["at0022"] = <
+                text = <"Width">
+                description = <"*">
+            >
+            ["at0023"] = <
+                text = <"Length">
+                description = <"*">
+            >
+            ["at0024"] = <
+                text = <"Description">
+                description = <"*">
+            >
+            ["at0025"] = <
+                text = <"Side">
+                description = <"*">
+            >
+            ["at0026"] = <
+                text = <"Basal arch">
+                description = <"*">
+            >
+            ["at0027"] = <
+                text = <"Width">
+                description = <"*">
+            >
+            ["at0028"] = <
+                text = <"Length">
+                description = <"*">
+            >
+            ["at0029"] = <
+                text = <"Description">
+                description = <"*">
+            >
+            ["at0030"] = <
+                text = <"Side">
+                description = <"*">
+            >
+            ["at0031"] = <
+                text = <"Tooth size ratio">
+                description = <"*">
+            >
+            ["at0032"] = <
+                text = <"Overall">
+                description = <"*">
+            >
+            ["at0033"] = <
+                text = <"Anterior ratio">
+                description = <"*">
+            >
+            ["at0034"] = <
+                text = <"Arch length discrepancy">
+                description = <"*">
+            >
+            ["at0035"] = <
+                text = <"Specific findings">
+                description = <"*">
+            >
+            ["at0036"] = <
+                text = <"Style">
+                description = <"*">
+            >
+            ["at0037"] = <
+                text = <"Cuspid protected">
+                description = <"*">
+            >
+            ["at0038"] = <
+                text = <"Group function">
+                description = <"*">
+            >
+            ["at0039"] = <
+                text = <"Relationship">
+                description = <"*">
+            >
+            ["at0040"] = <
+                text = <"Front">
+                description = <"*">
+            >
+            ["at0041"] = <
+                text = <"Side">
+                description = <"*">
+            >
+            ["at0042"] = <
+                text = <"Convex">
+                description = <"*">
+            >
+            ["at0043"] = <
+                text = <"Straight">
+                description = <"*">
+            >
+            ["at0044"] = <
+                text = <"Concave">
+                description = <"*">
+            >
+            ["at0045"] = <
+                text = <"Upper">
+                description = <"*">
+            >
+            ["at0046"] = <
+                text = <"Lower">
+                description = <"*">
+            >
+            ["at0047"] = <
+                text = <"Upper">
+                description = <"*">
+            >
+            ["at0048"] = <
+                text = <"Lower">
+                description = <"*">
+            >
+            ["ac9000"] = <
+                text = <"View (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Facial type (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Side (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Side (synthesised)">
+                description = <"* (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0047", "at0048">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0042", "at0043", "at0044">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0040", "at0041">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0045", "at0046">
+        >
+    >

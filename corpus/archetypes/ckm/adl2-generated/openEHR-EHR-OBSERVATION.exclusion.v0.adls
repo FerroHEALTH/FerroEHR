@@ -1,0 +1,112 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=b5264ec4-d65f-4c07-80f6-87bf90df4acd; build_uid=caf12127-db54-4e8c-a962-9bc0c02a0a8d)
+    openEHR-EHR-OBSERVATION.exclusion.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2020-08-26">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Derived from: Eksklusjonsutsagn - overordnet, Draft archetype [Internet]. Nasjonal IKT, Nasjonal IKT Clinical Knowledge Manager [cited: 2017-03-17]. Available from: http://arketyper.no/ckm/#showArchetype_1078.36.1650">
+        ["2"] = <"Exclusion statement, Deprecated Archetype [Internet]. openEHR Foundation, openEHR Clinical Knowledge Manager [cited: 2017-02-17]. Available from: http://openehr.org/ckm/#showArchetype_1013.1.617">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"46ECA8EB7B7AA37362A3371FD7EEFECF">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a positive and explicit statement about exclusion of known current and/or past conditions, treatments or significant aspects of clinical history.">
+            use = <"Use to enable a clinician, at a specified point of time, to record a clear and unambiguous statement about exclusion of known current and/or past conditions, treatments or significant aspects of clinical history. This approach is used in preference to relying on flags or terminology to express negation. 
+
+The scope of exclusions should be limited to clinically significant concepts, in particular where it is relevant to patient safety, informing clinical decision-making or medico-legal documentation. It is not intended to encourage recording exclusions of any or all health information.
+
+The 'Statement' data element allows for recording of a single statement. Each exclusion should be recorded in a separate instance - for example a separate instance for a statement about medications and another for adverse reactions.
+
+Please note that exclusion statements should only be considered to be current and accurate at the time of recording, and should not be assumed to be correct at a later date. For example, it is possible (and appropriate from a medico-legal point of view) for a clinician to record, based on history-taking, that an individual has NO KNOWN history of any adverse reactions (using an exclusion statement) but a few minutes later needing to record evidence of an adverse reaction that occurred in response to administration of penicillin. In future record statements, the individual may have a KNOWN history of the problem or diagnosis recorded in their problem list.">
+            misuse = <"Not to be used to record the exclusion of a specific problem/diagnosis, medication, procedure, family history, adverse reaction or other clinical item - use the EVALUATION.exclusion_specific archetype for this purpose.
+
+Not to be used to record the exclusion of symptoms use the CLUSTER.exclusion_symptom archetype within an appropriate OBSERVATION or CLUSTER archetype.
+
+Not to be used to record the absence of information - use the EVALUATION.absence archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Exclusion
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    POINT_EVENT[at0002] matches {    -- Any point in time event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Exclusion statement
+                                        value matches {
+                                            DV_CODED_TEXT[at9000]
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9001]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0004] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0005] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Exclusion">
+                description = <"A positive and explicit statement about exclusion of known current and/or past conditions, treatments or significant aspects of clinical history.">
+            >
+            ["at0002"] = <
+                text = <"Any point in time event">
+                description = <"Default, unspecified point in time event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0005"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.
+">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0006"] = <
+                text = <"Exclusion statement">
+                description = <"An overall statement of exclusion.">
+                comment = <"For example: 'No known...'; 'No known history of...'; 'No significant...'">
+            >
+            ["at0007"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the exclusion.">
+            >
+        >
+    >

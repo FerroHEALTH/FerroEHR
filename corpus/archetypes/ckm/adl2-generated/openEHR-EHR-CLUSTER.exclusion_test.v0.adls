@@ -1,0 +1,125 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=83b8c5f9-5006-4856-a023-82fa5d5f9080; build_uid=9336c297-dfc6-480a-89e4-311670eaef2f)
+    openEHR-EHR-CLUSTER.exclusion_test.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Ramona Wellmann">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"wellmann.ramona@mh-hannover.de">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2015-01-14">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjoern Arntzen, Oslo university hospital, Norway", "Koray Atalag, University of Auckland, New Zealand", "Silje Ljosland Bakke, National ICT Norway, Norway (openEHR Editor)", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Heather Grain, Llewelyn Grain Informatics, Australia", "Evelyn Hovenga, EJSH Consulting, Australia", "Lars Karlsen, DIPS ASA, Norway", "Heather Leslie, Ocean Informatics, Australia (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Bjoern Naess, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Exclusion of examination, Published archetype [Internet]. openEHR Foundation, openEHR Clinical Knowledge Manager [cited: 2022-07-25]. Available from: https://ckm.openehr.org/ckm/archetypes/1013.1.1846.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics, heather.leslie@oceaninformatics.com">
+        ["MD5-CAM-1.0.1"] = <"7BD5393A4131EE793A2260D33C39AC2D">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"*To explicitly record that a diagnostic test was not performed. (en)">
+            keywords = <"*exclusion (en)", "*test (en)", "*diagnostic (en)", "*done (en)", "*performed (en)">
+            use = <"*Use to explicitly record that a diagnostic test was not performed, with an optional statement about the reason for the non-performance.
+
+This archetype has been designed to be used to allow recording of 'no test was done' at more than one level, as required, within the test result framework. It will never be used as a stand-alone archetype but always inside the OBSERVATION.laboratory_test_result or CLUSTER.analyte archetypes that provides the context for the test.
+
+The intention for this archetype is to avoid the need to use flags or terminology to express negation about a record of diagnostic testing within the health record.
+
+It is reasonable to assume that if the entire test result was incomplete, then data about the component successfully performed will be recorded. (en)">
+            misuse = <"*Not to be used to record the details about diagnostic test result. Use specific archetypes for these purposes, such as the OBSERVATION.laboratory_test_result or CLUSTER.analyte archetype.
+
+Not to be used to record the exclusion or absence of adverse reactions, family history, medication use, procedures, problems or diagnoses, or physical examination - use EVALUATION.exclusion_global, EVALUATION.exclusion_specific or CLUSTER.exclusion_examination for this purpose. (en)">
+            copyright = <"© Australian Digital Health Agency, openEHR Foundation, openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To explicitly record that a diagnostic test was not performed.">
+            keywords = <"exclusion", "test", "diagnostic", "done", "performed">
+            use = <"Use to explicitly record that a diagnostic test was not performed, with an optional statement about the reason for the non-performance.
+
+This archetype has been designed to be used to allow recording of 'no test was done' at more than one level, as required, within the test result framework. It will never be used as a stand-alone archetype but always inside the OBSERVATION.laboratory_test_result or CLUSTER.analyte archetypes that provides the context for the test.
+
+The intention for this archetype is to avoid the need to use flags or terminology to express negation about a record of diagnostic testing within the health record.
+
+It is reasonable to assume that if the entire test result was incomplete, then data about the component successfully performed will be recorded.">
+            misuse = <"Not to be used to record the details about diagnostic test result. Use specific archetypes for these purposes, such as the OBSERVATION.laboratory_test_result or CLUSTER.analyte archetype.
+
+Not to be used to record the exclusion or absence of adverse reactions, family history, medication use, procedures, problems or diagnoses, or physical examination - use EVALUATION.exclusion_global, EVALUATION.exclusion_specific or CLUSTER.exclusion_examination for this purpose.">
+            copyright = <"© Australian Digital Health Agency, openEHR Foundation, openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Exclusion of test
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {1} matches {    -- Test not done
+                value matches {
+                    DV_BOOLEAN[at9000] matches {
+                        value matches {True}
+                    }
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Reason
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"*Exclusion of test (en)">
+                description = <"*Positive statement to record that a diagnostic test was not performed. (en)">
+            >
+            ["at0001"] = <
+                text = <"*Test not done (en)">
+                description = <"*Statement to explicity record that the diagnostic was not performed. (en)">
+                comment = <"*Record as True if the examination was not performed. (en)">
+            >
+            ["at0002"] = <
+                text = <"Grund">
+                description = <"Begründung der Aussage \"nicht durchgeführt\".">
+                comment = <"Zum Beispiel: patientenbezogene Gründe, Ausstattungsgründe, zeitliche Beschränkungen.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Exclusion of test">
+                description = <"Positive statement to record that a diagnostic test was not performed.">
+            >
+            ["at0001"] = <
+                text = <"Test not done">
+                description = <"Statement to explicity record that the diagnostic was not performed.">
+                comment = <"Record as True if the examination was not performed.">
+            >
+            ["at0002"] = <
+                text = <"Reason">
+                description = <"Reason for the 'not done' statement.">
+                comment = <"For example: patient factors, equipment factors, time constraints.">
+            >
+        >
+    >

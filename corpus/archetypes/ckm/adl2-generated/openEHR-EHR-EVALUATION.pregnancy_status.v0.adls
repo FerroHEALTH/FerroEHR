@@ -1,0 +1,126 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=123da1d9-61ec-4ad0-8e81-44e8601b34ac; build_uid=65f0c1ed-de47-4137-ad67-1e83d1b0a1c3)
+    openEHR-EHR-EVALUATION.pregnancy_status.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2024-03-08">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"F1CB96FD268C2D96114822F2E6F3042E">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the current status of a single pregnancy, whether known or planned for the near future.">
+            keywords = <"pregnancy, preconception, pregnant, postnatal, postpartum", ...>
+            use = <"Use to record the phase or status of a single pregnancy. 
+
+The scope of this archetype includes the phases of making preparations for the future pregnancy or actively attempting to conceive, being actively pregnant, or in the period of recovery after delivery.
+
+This archetype has been designed to underpin clinical decision support or exchange use cases:
+- To prevent medications being prescribed which may cause harm to an existing pregnancy
+- To trigger extra caution in the decision to use imaging in women actively trying to conceive, but not currently known to be pregnant
+- To alert pathologists reporting test results that they may need to interpret test results in the context of an ongoing pregnancy or postpartum state.">
+            misuse = <"">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Current pregnancy status
+        data matches {
+            ITEM_TREE[at0002] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0003] occurrences matches {1} matches {    -- Current pregnancy status
+                        value matches {
+                            DV_CODED_TEXT[at9006] matches {
+                                defining_code matches {[ac9001]}    -- Current pregnancy status (synthesised)
+                            }
+                            DV_TEXT[at9007]
+                        }
+                    }
+                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9004]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9005]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0008] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Current pregnancy status">
+                description = <"Details about the current phase of a single pregnancy.">
+            >
+            ["at0003"] = <
+                text = <"Current pregnancy status">
+                description = <"The present phase of a pregnancy.">
+                comment = <"The scope of this data element relates to a single pregnancy and includes the phases of making preparations for the future pregnancy or actively attempting to conceive, being actively pregnant, or in the period of recovery after delivery.">
+            >
+            ["at0004"] = <
+                text = <"Preconception">
+                description = <"The individual is either making preparations for a future pregnancy or is actively attempting to conceive.">
+            >
+            ["at0005"] = <
+                text = <"Pregnant">
+                description = <"The individual is currently pregnant.">
+            >
+            ["at0006"] = <
+                text = <"Postpartum">
+                description = <"The individual is in the period of physical and emotional recovery following recent childbirth.">
+            >
+            ["at0007"] = <
+                text = <"Last updated">
+                description = <"The date when the pregnancy status was last updated.">
+            >
+            ["at0008"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR.">
+            >
+            ["at0009"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the current pregnancy status not captured in other fields.">
+            >
+            ["ac9001"] = <
+                text = <"Current pregnancy status (synthesised)">
+                description = <"The present phase of a pregnancy. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0004", "at0005", "at0006">
+        >
+    >

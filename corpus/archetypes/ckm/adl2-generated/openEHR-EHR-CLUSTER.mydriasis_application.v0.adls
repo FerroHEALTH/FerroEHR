@@ -1,0 +1,180 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=d6dc336b-de0b-4d81-b0b5-6fa996065aba; build_uid=a071d6d8-5e70-4874-a2fb-52731a580366)
+    openEHR-EHR-CLUSTER.mydriasis_application.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Aitor Eguzkitza">
+        ["organisation"] = <"Universidad Pública de Navarra - Complejo Hospitalario de Navarra">
+        ["email"] = <"aitor.eguzkiza@unavarra.es">
+        ["date"] = <"2014-05-22">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"20316CD1A8B83167F6938B68F7CD7841">
+    >
+    details = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registrar las características de dilatación en la pupila, si se aplica midriasis.">
+            keywords = <"Midriasis", ...>
+            use = <"Se utiliza para aportar detalles acerca del uso de agentes midriáticos, cuando esto puede afectar el resultado de un procedimiento mas complejo.
+Por ejemplo, 'Imaging examination' cuando se utiliza para fines oftalmológicos puede sugerir el requerimiento de midriasis mediante este arquetipo.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Register the characteristics of pupil's dilation if mydriasis is applied.">
+            keywords = <"Mydriasis", ...>
+            use = <"It is used to provide details about the use of midriatic agents, whenever it could affect the outcome of a more complex procedure.
+For example, 'Imaging examination' when used for ophthalmic purposes, it can suggest the requirement of mydriasis through this archetype.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Mydriasis application
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Pupil dilated
+                value matches {
+                    DV_BOOLEAN[at9001] matches {
+                        value matches {True, False}
+                    }
+                }
+            }
+            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Degree of dilation
+                value matches {
+                    DV_QUANTITY[at9002] matches {
+                        property matches {[at9000]}    -- Length
+                        magnitude matches {|0.0..3.0|; 0.0}
+                        units matches {"mm"; "mm"}
+                        precision matches {1; 1}
+                    }
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Mydriatic delivery method
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Mydriatic agent
+                value matches {
+                    DV_TEXT[at9006]
+                }
+            }
+            allow_archetype CLUSTER[at0002] occurrences matches {0..1} matches {    -- Dose
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.medication_supply_amount(-[a-zA-Z0-9_]+)*\.v([0-9]+)/}
+                exclude
+                    archetype_id/value matches {/.*/}
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Comments
+                value matches {
+                    DV_TEXT[at9005]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Mydriasis application">
+                description = <"Defines the characteristics of mydriasis procedure when carried out on a patient.">
+            >
+            ["at0001"] = <
+                text = <"Mydriatic agent">
+                description = <"Chemical name of the compound used to apply midriasis.">
+                comment = <"Matches to DICOM (0022,0058) attribute. Values permitted are defined by DICOM standard (PS 3.16) inside the table with Context ID  4208 (Mydriatic agent)">
+            >
+            ["at0002"] = <
+                text = <"Dose">
+                description = <"The quantity of drug used during the mydriasis.">
+            >
+            ["at0003"] = <
+                text = <"Mydriatic delivery method">
+                description = <"The method of delivery if this should be specified (e.g. via a nebuliser or drops).">
+            >
+            ["at0004"] = <
+                text = <"Comments">
+                description = <"Other comments of interest about mydriasis procedure.">
+            >
+            ["at0008"] = <
+                text = <"Pupil dilated">
+                description = <"Whether or not the patient’s pupils were pharmacologically dilated for the current acquisition.">
+                comment = <"Matches to DICOM (0022,000D) attribute.">
+            >
+            ["at0014"] = <
+                text = <"Degree of dilation">
+                description = <"The degree of the dilation in mm.">
+                comment = <"Matches to DICOM (0022,000E) attribute.">
+            >
+            ["at9000"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Aplicación de midriasis">
+                description = <"Define las características del procedimiento midriático cuando se lleva a cabo sobre un paciente.">
+            >
+            ["at0001"] = <
+                text = <"Agente midriático">
+                description = <"Nombre químico del compuesto empleado para llevar a cabo la midriasis.">
+                comment = <"Coincide con el atributo DICOM (0022,0058). Los valores permitidos están definidos por el estándar DICOM (PS 3.16) dentro de la tabla con el ID de contexto o CID 4208 (Mydriatic agent).">
+            >
+            ["at0002"] = <
+                text = <"Dosis">
+                description = <"La cantidad del fármaco utilizado durante la midriasis.">
+            >
+            ["at0003"] = <
+                text = <"Método adminsitración">
+                description = <"Especifica el método por el cual se aplica el fármaco midriático (p.ej. vía nebulizador o gotas).">
+            >
+            ["at0004"] = <
+                text = <"Comentarios">
+                description = <"Descripción de otros aspectos de interés para el procedimiento midriático.">
+            >
+            ["at0008"] = <
+                text = <"Dilatación de pupila">
+                description = <"Identifica si las pupilas del paciente fueron farmacológicamente dilatadas para llevar a cabo la adquisición.">
+                comment = <"Coincide con el atributo DICOM (0022,000D).">
+            >
+            ["at0014"] = <
+                text = <"Grado de dilatación">
+                description = <"El grado de la dilatación en mm.">
+                comment = <"Coincide con el atributo DICOM (0022,000E).">
+            >
+            ["at9000"] = <
+                text = <"Longitud">
+                description = <"Longitud">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/122>
+        >
+        ["SNOMED-CT"] = <
+            ["at0001"] = <http://snomed.info/id/33682005>
+        >
+    >

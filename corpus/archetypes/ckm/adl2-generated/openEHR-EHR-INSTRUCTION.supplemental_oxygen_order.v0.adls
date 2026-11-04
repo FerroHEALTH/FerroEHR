@@ -1,0 +1,566 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=fb56b49d-2166-442f-b84a-61a0e53d4899; build_uid=5e15f263-ad48-46fe-aee9-ce734dfe8d73)
+    openEHR-EHR-INSTRUCTION.supplemental_oxygen_order.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-07-20">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"BTS guideline for O₂ use in adults in healthcare and emerg settings - https://www.brit-thoracic.org.uk/document-library/guidelines/emergency-oxygen/bts-guideline-for-oxygen-use-in-adults-in-healthcare-and-emergency-settings/">
+        ["2"] = <"http://www.lhp.leedsth.nhs.uk/detail.aspx?id=1979">
+        ["3"] = <"https://pulmonaryrehab.com.au/importance-of-exercise/use-of-supplemental-oxygen/">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"9C2434EEC00A01994B28C036700CEF6A">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details of a request for supplemental oxygen for an individual, in both acute care and at home.">
+            keywords = <"oxygen", "supplemental">
+            use = <"Use to record details of a request for supplemental oxygen for an identified individual, in both acute care and at home.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    INSTRUCTION[at0000] matches {    -- Supplemental oxygen order
+        activities cardinality matches {0..*; unordered} matches {
+            ACTIVITY[at0001] occurrences matches {1} matches {    -- Current Activity
+                description matches {
+                    ITEM_TREE[at0002] matches {
+                        items cardinality matches {0..*; unordered} matches {
+                            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Target O₂ saturation
+                                value matches {
+                                    DV_CODED_TEXT[at9009] matches {
+                                        defining_code matches {[ac9000]}    -- Target O₂ saturation (synthesised)
+                                    }
+                                    DV_TEXT[at9010]
+                                    DV_INTERVAL<DV_QUANTITY>[at9011] matches {
+                                        lower matches {
+                                            DV_QUANTITY[at9012] matches {
+                                                property matches {[at9001]}    -- Proportion
+                                                magnitude matches {|0.0..<100.0|}
+                                                units matches {"%"}
+                                                precision matches {1}
+                                            }
+                                        }
+                                        upper matches {
+                                            DV_QUANTITY[at9013] matches {
+                                                property matches {[at9001]}    -- Proportion
+                                                magnitude matches {|>0.0..100.0|}
+                                                units matches {"%"}
+                                                precision matches {1}
+                                            }
+                                        }
+                                    }
+                                    DV_QUANTITY[at9014] matches {
+                                        property matches {[at9001]}    -- Proportion
+                                        magnitude matches {|0.0..100.0|}
+                                        units matches {"%"}
+                                        precision matches {1}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Flow rate
+                                value matches {
+                                    DV_QUANTITY[at9015] matches {
+                                        property matches {[at9002]}    -- Flow rate, volume
+                                        magnitude matches {|>=0.0|}
+                                        units matches {"l/min"}
+                                        precision matches {1}
+                                    }
+                                    DV_INTERVAL<DV_QUANTITY>[at9016] matches {
+                                        lower matches {
+                                            DV_QUANTITY[at9017] matches {
+                                                property matches {[at9002]}    -- Flow rate, volume
+                                                magnitude matches {|>=0.0|}
+                                                units matches {"l/min"}
+                                                precision matches {1}
+                                            }
+                                        }
+                                        upper matches {
+                                            DV_QUANTITY[at9018] matches {
+                                                property matches {[at9002]}    -- Flow rate, volume
+                                                magnitude matches {|>=0.0|}
+                                                units matches {"l/min"}
+                                                precision matches {1}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            ELEMENT[at0021] occurrences matches {0..1} matches {    -- Delivery device
+                                value matches {
+                                    DV_CODED_TEXT[at9019] matches {
+                                        defining_code matches {[ac9003]}    -- Delivery device (synthesised)
+                                    }
+                                    DV_TEXT[at9020]
+                                }
+                            }
+                            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Pattern
+                                value matches {
+                                    DV_CODED_TEXT[at9021] matches {
+                                        defining_code matches {[ac9004]}    -- Pattern (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0041] occurrences matches {0..1} matches {    -- Description
+                                value matches {
+                                    DV_TEXT[at9022]
+                                }
+                            }
+                            ELEMENT[at0028] matches {    -- Clinical indication
+                                value matches {
+                                    DV_TEXT[at9023]
+                                }
+                            }
+                            ELEMENT[at0029] occurrences matches {0..1} matches {    -- Therapeutic intent
+                                value matches {
+                                    DV_TEXT[at9024]
+                                }
+                            }
+                            ELEMENT[at0030] occurrences matches {0..1} matches {    -- Urgency
+                                value matches {
+                                    DV_CODED_TEXT[at9025] matches {
+                                        defining_code matches {[ac9005]}    -- Urgency (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Duration per administration
+                                value matches {
+                                    DV_QUANTITY[at9026] matches {
+                                        property matches {[at9006]}    -- Time
+                                        magnitude matches {|0.0..<24.0|}
+                                        units matches {"h"}
+                                        precision matches {1}
+                                    }
+                                    DV_INTERVAL<DV_QUANTITY>[at9027] matches {
+                                        lower matches {
+                                            DV_QUANTITY[at9028] matches {
+                                                property matches {[at9006]}    -- Time
+                                                magnitude matches {|0.0..<24.0|}
+                                                units matches {"h"}
+                                                precision matches {1}
+                                            }
+                                        }
+                                        upper matches {
+                                            DV_QUANTITY[at9029] matches {
+                                                property matches {[at9006]}    -- Time
+                                                magnitude matches {|0.0..<24.0|}
+                                                units matches {"h"}
+                                                precision matches {1}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            allow_archetype CLUSTER[at0020] matches {    -- Delivery device details
+                                include
+                                    archetype_id/value matches {/.*/}
+                            }
+                            ELEMENT[at0013] occurrences matches {0..1} matches {    -- Duration per day
+                                value matches {
+                                    DV_QUANTITY[at9030] matches {
+                                        magnitude matches {|0.0..<24.0|}
+                                        units matches {"h/d"}
+                                        precision matches {1}
+                                    }
+                                    DV_INTERVAL<DV_QUANTITY>[at9031] matches {
+                                        lower matches {
+                                            DV_QUANTITY[at9032] matches {
+                                                magnitude matches {|0.0..<24.0|}
+                                                units matches {"h/d"}
+                                                precision matches {1}
+                                            }
+                                        }
+                                        upper matches {
+                                            DV_QUANTITY[at9033] matches {
+                                                magnitude matches {|0.0..<24.0|}
+                                                units matches {"h/d"}
+                                                precision matches {1}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            allow_archetype CLUSTER[at0011] matches {    -- Timing
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.timing_daily\.v1\..*/}
+                            }
+                            ELEMENT[at0015] matches {    -- Activity
+                                value matches {
+                                    DV_CODED_TEXT[at9034] matches {
+                                        defining_code matches {[ac9007]}    -- Activity (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0019] occurrences matches {0..1} matches {    -- Used with PAP
+                                value matches {
+                                    DV_BOOLEAN[at9035]
+                                }
+                            }
+                            ELEMENT[at0034] occurrences matches {0..1} matches {    -- Equipment type
+                                value matches {
+                                    DV_CODED_TEXT[at9036] matches {
+                                        defining_code matches {[ac9008]}    -- Equipment type (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0037] occurrences matches {0..1} matches {    -- Order start
+                                value matches {
+                                    DV_DATE_TIME[at9037]
+                                }
+                            }
+                            ELEMENT[at0038] occurrences matches {0..1} matches {    -- Order end
+                                value matches {
+                                    DV_DATE_TIME[at9038]
+                                }
+                            }
+                            ELEMENT[at0039] occurrences matches {0..1} matches {    -- Indefinite
+                                value matches {
+                                    DV_BOOLEAN[at9039]
+                                }
+                            }
+                            ELEMENT[at0040] occurrences matches {0..1} matches {    -- Comment
+                                value matches {
+                                    DV_TEXT[at9040]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0014] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0042] occurrences matches {0..1} matches {    -- Requester order identifier
+                        value matches {
+                            DV_TEXT[at9041]
+                            DV_IDENTIFIER[at9042]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0043] occurrences matches {0..1} matches {    -- Requester
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0044] occurrences matches {0..1} matches {    -- Receiver order identifier
+                        value matches {
+                            DV_TEXT[at9043]
+                            DV_IDENTIFIER[at9044]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0045] occurrences matches {0..1} matches {    -- Receiver
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0046] occurrences matches {0..1} matches {    -- Request status
+                        value matches {
+                            DV_TEXT[at9045]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0047] matches {    -- Distribution list
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.distribution\.v1\..*/}
+                    }
+                    allow_archetype CLUSTER[at0048] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Supplemental oxygen order">
+                description = <"A request for supplemental oxygen for an individual who is breathing spontaneously.">
+            >
+            ["at0001"] = <
+                text = <"Current Activity">
+                description = <"">
+            >
+            ["at0003"] = <
+                text = <"Target O₂ saturation">
+                description = <"The target levels of oxygenation that is appropriate for the individual.">
+            >
+            ["at0004"] = <
+                text = <"94-98%">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"88-92%">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Flow rate">
+                description = <"The rate of flow of oxygen delivered to the delivery device.">
+                comment = <"For example: 4 L/min.">
+            >
+            ["at0007"] = <
+                text = <"Pattern">
+                description = <"The intended approach for administration.">
+            >
+            ["at0008"] = <
+                text = <"Continuous">
+                description = <"Oxygen is delivered at a constant flow rate throughout the 24 hour period.">
+            >
+            ["at0009"] = <
+                text = <"Intermittent">
+                description = <"At various times of the day or during activities specified using the 'Timing' CLUSTER.">
+            >
+            ["at0010"] = <
+                text = <"Duration per administration">
+                description = <"Duration of each administration of supplemental oxygen.">
+                comment = <"Redundant if 'Continuous' is selected in the 'Mode' data element.">
+            >
+            ["at0011"] = <
+                text = <"Timing">
+                description = <"Structured desciption of the timing of intermittent administration within a 24 hour period.">
+                comment = <"Redundant if 'Continuous' is selected in the 'Mode' data element.">
+            >
+            ["at0012"] = <
+                text = <"As required">
+                description = <"Also known as 'PRN (pro re nata)' or 'PN (per necessare)'.">
+            >
+            ["at0013"] = <
+                text = <"Duration per day">
+                description = <"Total administration of supplemental oxygen over a 24 hour period.">
+                comment = <"Redundant if 'Continuous' is selected in the 'Mode' data element.
+For example: 'at least 15 hours per day'.">
+            >
+            ["at0015"] = <
+                text = <"Activity">
+                description = <"Specific activity that requires supplemental oxygen.">
+                comment = <"Redundant if 'Continuous' is selected in the 'Mode' data element.">
+            >
+            ["at0016"] = <
+                text = <"At rest/awake">
+                description = <"Delivered while at rest and awake.">
+            >
+            ["at0017"] = <
+                text = <"Nocturnal/asleep">
+                description = <"Delivered at night or while sleeping.">
+            >
+            ["at0018"] = <
+                text = <"During exertion">
+                description = <"Delivered during exercise or activities of daily living.">
+            >
+            ["at0019"] = <
+                text = <"Used with PAP">
+                description = <"Flag if the order requires PAP.">
+            >
+            ["at0020"] = <
+                text = <"Delivery device details">
+                description = <"Structured details about the delivery device.">
+            >
+            ["at0021"] = <
+                text = <"Delivery device">
+                description = <"Type of oxygen delivery device.">
+                comment = <"For example: 'nasal prongs'; or 'V40, Venturi mask 40%'.">
+            >
+            ["at0022"] = <
+                text = <"Standard nasal cannulae">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"High-flow nasal cannulae">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Simple face mask">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Non-rebreather reservoir mask">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Venturi mask">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Transtracheal catheter">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Clinical indication">
+                description = <"The clinical reason for supplemental use of oxygen.">
+                comment = <"For example: 'Chronic obstructive pulmonary disease'; or 'Obstructive sleep apnea'. Coding of the clinical indication with a terminology is preferred, where possible. This data element allows multiple occurrences to enable recording of multiple conditions.">
+            >
+            ["at0029"] = <
+                text = <"Therapeutic intent">
+                description = <"The therapeutic goal for use of supplemental oxygen.">
+                comment = <"For example: 'symptom relief'; or 'increase exercise tolerance'.">
+            >
+            ["at0030"] = <
+                text = <"Urgency">
+                description = <"Urgency of the request for oxygen.">
+                comment = <"Specific definitions of emergency and urgent will vary between clinical contexts, clinical systems and the clinical scenario. If explicit timing is required then the Order start and expiry times should be clearly stated.">
+            >
+            ["at0031"] = <
+                text = <"Emergency">
+                description = <"The order requires immediate attention.">
+            >
+            ["at0032"] = <
+                text = <"Urgent">
+                description = <"The order requires prioritised attention.">
+            >
+            ["at0033"] = <
+                text = <"Routine">
+                description = <"The order does not require immediate or prioritised attention.">
+            >
+            ["at0034"] = <
+                text = <"Equipment type">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"Portable">
+                description = <"The individual will require equipment that allows them to be ambulatory or mobile.">
+            >
+            ["at0036"] = <
+                text = <"Stationary">
+                description = <"The individual will not require equipment that allows them to be ambulatory or mobile.">
+            >
+            ["at0037"] = <
+                text = <"Order start">
+                description = <"The date/time when supplemental oxygen order commences.">
+                comment = <"Only required if the start date/time is different to the date/time when this order is recorded.">
+            >
+            ["at0038"] = <
+                text = <"Order end">
+                description = <"The date/time when supplemental oxygen order ceases.">
+            >
+            ["at0039"] = <
+                text = <"Indefinite">
+                description = <"The order is open ended and has no end date.">
+            >
+            ["at0040"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the supplemental oxygen order not captured in other fields.">
+            >
+            ["at0041"] = <
+                text = <"Description">
+                description = <"Narrative description about the supplemental oxygen order.">
+                comment = <"This data element should be used to describe the named service in more detail, including how it should be delivered, patient concerns and issues that might be encountered in delivering the order.">
+            >
+            ["at0042"] = <
+                text = <"Requester order identifier">
+                description = <"The local identifier assigned by the requesting clinical system.">
+                comment = <"Usually equivalent to the HL7 Placer Order Identifier.">
+            >
+            ["at0043"] = <
+                text = <"Requester">
+                description = <"Details about the clinician or organisation ordering the supplemental oxygen.">
+            >
+            ["at0044"] = <
+                text = <"Receiver order identifier">
+                description = <"The local identifier assigned to the request by the clinician or organisation receiving the order.">
+                comment = <"Usually equivalent to the HL7 Filler Order Identifier.">
+            >
+            ["at0045"] = <
+                text = <"Receiver">
+                description = <"Details about the clinician or organisation receiving the order.">
+            >
+            ["at0046"] = <
+                text = <"Request status">
+                description = <"The status of the order as indicated by the requester.">
+                comment = <"Status is used to denote whether this is the initial request, or a follow-up request to change or provide supplementary information. Coding with a terminology is preferred, where possible.">
+            >
+            ["at0047"] = <
+                text = <"Distribution list">
+                description = <"Details of additional clinicians, organisations or agencies who require copies of any communication.">
+            >
+            ["at0048"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at9002"] = <
+                text = <"Flow rate, volume">
+                description = <"Flow rate, volume">
+            >
+            ["at9006"] = <
+                text = <"Time">
+                description = <"Time">
+            >
+            ["at9001"] = <
+                text = <"Proportion">
+                description = <"Proportion">
+            >
+            ["ac9000"] = <
+                text = <"Target O₂ saturation (synthesised)">
+                description = <"The target levels of oxygenation that is appropriate for the individual. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Delivery device (synthesised)">
+                description = <"Type of oxygen delivery device. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Pattern (synthesised)">
+                description = <"The intended approach for administration. (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Urgency (synthesised)">
+                description = <"Urgency of the request for oxygen. (synthesised)">
+            >
+            ["ac9007"] = <
+                text = <"Activity (synthesised)">
+                description = <"Specific activity that requires supplemental oxygen. (synthesised)">
+            >
+            ["ac9008"] = <
+                text = <"Equipment type (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9002"] = <http://openehr.org/id/126>
+            ["at9006"] = <http://openehr.org/id/128>
+            ["at9001"] = <http://openehr.org/id/507>
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0004", "at0005">
+        >
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0031", "at0032", "at0033">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0008", "at0009", "at0012">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0022", "at0023", "at0024", "at0025", "at0026", "at0027">
+        >
+        ["ac9008"] = <
+            id = <"ac9008">
+            members = <"at0035", "at0036">
+        >
+        ["ac9007"] = <
+            id = <"ac9007">
+            members = <"at0016", "at0017", "at0018">
+        >
+    >

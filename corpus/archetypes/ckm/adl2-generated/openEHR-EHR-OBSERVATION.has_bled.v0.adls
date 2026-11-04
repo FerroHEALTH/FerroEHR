@@ -1,0 +1,458 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=87a68f1a-346d-46cf-b637-61f7f5a68561; build_uid=0f3492fd-cb57-43dd-a8bc-86b9a17ecf1a)
+    openEHR-EHR-OBSERVATION.has_bled.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Rony Ventura, Alina Rehberg">
+                ["organisation"] = <"UKSH, Medizinische Hochschule Hannover">
+                ["email"] = <"rony.ventura@uksh.de, rehberg.alina@mh-hannover.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Dennis Forslund ">
+                ["organisation"] = <"Cambio Healthcare Systems">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Konstantinos Kalliamvakos">
+        ["organisation"] = <"Cambio Healthcare Systems">
+        ["email"] = <"models@cambiocds.com">
+        ["date"] = <"2014-05-16">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Syeeda S Farruque", "Heather Leslie, Atomica Informatics, Australia">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Lip GY, Frison L, Halperin JL, Lane DA. Comparative validation of a novel risk score for predicting bleeding risk in anticoagulated patients with atrial fibrillation: the HAS-BLED (Hypertension, Abnormal Renal/Liver Function, Stroke, Bleeding History or Predisposition, Labile INR, Elderly, Drugs/Alcohol Concomitantly) score. J Am Coll Cardiol. 2011;57(2):173–180. doi:10.1016/j.jacc.2010.09.024.">
+        ["2"] = <"Pisters R, Lane DA, Nieuwlaat R, de Vos CB, Crijns HJ, Lip GY. A novel user-friendly score (HAS-BLED) to assess 1-year risk of major bleeding in patients with atrial fibrillation: the Euro Heart Survey. Chest. 2010;138(5):1093–1100. doi:10.1378/chest.10-0134.">
+    >
+    other_details = <
+        ["current_contact"] = <"Konstantinos Kalliamvakos, Cambio Healthcare Systems, Konstantinos.Kalliamvakos@cambio.se">
+        ["MD5-CAM-1.0.1"] = <"52B52F450745EA6E64D88E91C1C1D99D">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Erfassung der Ergebnisse für jeden einzelnen Parameter und deren Gesamtsumme für den HAS-BLED-Blutungsrisikoscore.">
+            keywords = <"HAS-BLED", "Schlaganfall", "Vorhofflimmern", "Antikoagulanzien", "Blutung", "Blutung">
+            use = <"Zur Erfassung der Ergebnisse für jeden einzelnen Parameter und deren Gesamtsumme für den HAS-BLED-Blutungsrisikoscore.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att registrera resultat i enlighet med HAS-BLED och därigenom få stöd i bedömning av blödningsrisk hos patienter med behandlat förmaksflimmer.">
+            keywords = <"HAS-BLED", "stroke", "förmaksflimmer", "antikoagulantia", "blödning">
+            use = <"Använd för registrering av resultat i enlighet med HAS-BLED och därigenom få stöd i bedömning av blödningsrisk hos patienter med behandlat (antikoagulantia) förmaksflimmer.
+
+Instrumentet baseras på nio faktorer:
+- Hypertoni: definieras i detta fall som systoliskt blodtryck >160 mmHg.
+- Njurpåverka: förekomst av kronisk dialys, njurtransplantation eller ett kreatininvärde om >200 umol/L.
+- Leverpåverkan: kronisk leversjukdom, bilirubin >2x övre referensvärde, ASAT/ALAT >3x övre referensvärde
+- Tidigare genomgången stroke
+- Tidigare blödning, anemi eller blödningsrisk
+- Riskvärde PK(INR): instabilt/högt värde, inom teurapeutiskt intervall <60% av tiden
+- Patienten är 65 år gammal eller äldre
+- Koagulationshämmande läkemedel: trombocythämmande läkemedel, NSAID
+- Bruk av alkohol: ≥ 8 glas alkohol per vecka">
+            misuse = <"Ej avsedd för att användas isolerat och är ej att betrakta som diagnostisk.">
+            copyright = <"© Cambio Healthcare Systems, openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the results for each component parameter and their total sum for the HAS-BLED bleeding risk score.">
+            keywords = <"HAS-BLED", "stroke", "atrial fibrillation", "anticoagulants", "hemorrhage", "bleeding">
+            use = <"Use to record the results for each component parameter and their total sum for the HAS-BLED bleeding risk score.">
+            misuse = <"">
+            copyright = <"© Cambio Healthcare Systems, openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- HAS-BLED score
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] occurrences matches {0..1} matches {    -- Any point in time event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Hypertension
+                                        value matches {
+                                            DV_ORDINAL[at9001] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0014]}],    -- No
+                                                    [{1}, {[at0015]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Abnormal renal function
+                                        value matches {
+                                            DV_ORDINAL[at9002] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0014]}],    -- No
+                                                    [{1}, {[at0015]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Abnormal liver function
+                                        value matches {
+                                            DV_ORDINAL[at9003] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0014]}],    -- No
+                                                    [{1}, {[at0015]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Stroke
+                                        value matches {
+                                            DV_ORDINAL[at9004] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0014]}],    -- No
+                                                    [{1}, {[at0015]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Bleeding history or predisposition
+                                        value matches {
+                                            DV_ORDINAL[at9005] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0014]}],    -- No
+                                                    [{1}, {[at0015]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Labile INR
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0014]}],    -- No
+                                                    [{1}, {[at0015]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Elderly
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0014]}],    -- No
+                                                    [{1}, {[at0015]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Drugs concomitantly
+                                        value matches {
+                                            DV_ORDINAL[at9008] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0014]}],    -- No
+                                                    [{1}, {[at0015]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Alcohol concomitantly
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0014]}],    -- No
+                                                    [{1}, {[at0015]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9010] matches {
+                                                magnitude matches {|0..9|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0017] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0018] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"HAS-BLED score">
+                description = <"Ein Risikobewertungsscore zur Einschätzung des Blutungsrisikos bei Personen mit Vorhofflimmern">
+                comment = <"Das HAS-BLED-Mnemonic steht für jeden Risikofaktor:
+
+Hypertonie (Bluthochdruck),
+
+Abnorme Nieren- oder Leberfunktion,
+
+Schlaganfall,
+
+Blutungsanamnese oder Blutungsneigung,
+
+Labiler INR-Wert,
+
+Ältere (>65 Jahre), und
+
+Gleichzeitige Einnahme von Medikamenten/Alkohol.">
+            >
+            ["at0002"] = <
+                text = <"Any point in time event">
+                description = <"Standardmäßig nicht spezifiziertes zeitpunktbezogenes Ereignis, das entweder explizit in einer Vorlage oder zur Laufzeit definiert werden kann.">
+            >
+            ["at0004"] = <
+                text = <"Bluthochdruck">
+                description = <"Der systolische Blutdruck liegt über 160 mmHg.">
+            >
+            ["at0005"] = <
+                text = <"Abnorme Nierenfunktion">
+                description = <"Vorliegen einer chronischen Dialyse oder einer Nierentransplantation oder ein Serumkreatinin ≥200 µmol/L">
+            >
+            ["at0006"] = <
+                text = <"Abnorme Leberfunktion">
+                description = <"Chronische Lebererkrankung (z. B. Zirrhose) oder biochemischer Nachweis einer signifikanten Leberfunktionsstörung (z. B. Bilirubin >2-fach oberhalb des Normbereichs in Verbindung mit AST/ALT/ALP >3-fach oberhalb des Normbereichs usw.)">
+            >
+            ["at0007"] = <
+                text = <"Schlaganfall">
+                description = <"Eine frühere Vorgeschichte eines Schlaganfalls, insbesondere eines lakunären Schlaganfalls">
+            >
+            ["at0008"] = <
+                text = <"Blutungsanamnese oder Blutungsneigung">
+                description = <"Eine frühere Blutungsanamnese und/oder eine Blutungsneigung">
+                comment = <"Zum Beispiel: Blutungsneigung, Anämie usw.">
+            >
+            ["at0009"] = <
+                text = <"Labiler INR">
+                description = <"Instabile/hohe INR-Werte oder schlechte Verweildauer im therapeutischen Bereich">
+                comment = <"Zum Beispiel: < 60 %.">
+            >
+            ["at0010"] = <
+                text = <"Ältere">
+                description = <"Alter >65 Jahre">
+            >
+            ["at0011"] = <
+                text = <"Gleichzeitige Medikation">
+                description = <"Die gleichzeitige Einnahme von Medikamenten wie Thrombozytenaggregationshemmern, nichtsteroidalen Antirheumatika etc.">
+            >
+            ["at0012"] = <
+                text = <"Gleichzeitiger Alkoholkonsum">
+                description = <"Alkoholkonsum ≥ 8 Einheiten pro Woche">
+            >
+            ["at0013"] = <
+                text = <"Total score">
+                description = <"Summe der für jeden der einzelnen Parameter vergebenen Punkte.">
+            >
+            ["at0014"] = <
+                text = <"Nein">
+                description = <"Der Risikofaktor ist nicht vorhanden">
+            >
+            ["at0015"] = <
+                text = <"Ja">
+                description = <"Der Risikofaktor ist vorhanden">
+            >
+            ["at0018"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Information, die für die Erfassung des lokalen Kontexts oder für die Anpassung an andere Referenzmodelle/Formalismen benötigt wird.">
+                comment = <"Zum Beispiel: lokale Informationsanforderungen oder zusätzliche Metadaten zur Anpassung an FHIR">
+            >
+            ["ac9010"] = <
+                text = <"Bluthochdruck (synthesised)">
+                description = <"Der systolische Blutdruck liegt über 160 mmHg. (synthesised)">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"*HAS-BLED score(en)">
+                description = <"*A risk assessment score to assess the bleeding risk in individuals with atrial fibrillation.
+
+">
+                comment = <"*The HAS-BLED mnemonic represents each risk factor:
+- Hypertension,
+- Abnormal renal/liver function, 
+- Stroke, 
+-Bleeding history or predisposition, 
+- Labile INR, 
+- Elderly (>65), and
+- Drugs/alcohol concomitantly. (en)">
+            >
+            ["at0002"] = <
+                text = <"*Any point in time event(en)">
+                description = <"*Default, unspecified point in time event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Hypertoni">
+                description = <"*The systolic blood pressure is >160 mmHg. (en)">
+            >
+            ["at0005"] = <
+                text = <"Njurpåverkan">
+                description = <"*The presence of chronic dialysis or renal transplantation or serum creatinine ≥200µmol/L. 
+ (en)">
+            >
+            ["at0006"] = <
+                text = <"Leverpåverkan">
+                description = <"*Chronic hepatic disease (eg. cirrhosis) or biochemical evidence of significant hepatic derangement (eg. bilirubin >2x upper limit of normal, in association with AST/ALT/ALP >3x upper limit normal, etc). (en)">
+            >
+            ["at0007"] = <
+                text = <"Tidigare stroke">
+                description = <"*(previous history, particularly lacunar) (en)">
+            >
+            ["at0008"] = <
+                text = <"Tidigare blödning eller blödningsrisk">
+                description = <"*A previous bleeding history and/or predisposition to bleeding eg. bleeding diathesis, anaemia, etc.  (en)">
+            >
+            ["at0009"] = <
+                text = <"*Labile INR (en)">
+                description = <"*Unstable/high INRs or poor time in therapeutic range
+(eg. <60%). (en)">
+            >
+            ["at0010"] = <
+                text = <"Ålder > 65 år">
+                description = <"*Age >65 yrs. (en)">
+            >
+            ["at0011"] = <
+                text = <"Koagulationshämmande läkemedel">
+                description = <"*The concomitant use of drugs, such as antiplatelet agents, non-steroidal anti-inflammatory drugs, etc.  (en)">
+            >
+            ["at0012"] = <
+                text = <"Bruk av alkohol">
+                description = <"*Alcohol consumption ≥ 8 units per week. (en)">
+            >
+            ["at0013"] = <
+                text = <"Resultat">
+                description = <"*Sum of points assigned for each of the component parameters. (en)">
+            >
+            ["at0014"] = <
+                text = <"Nej">
+                description = <"*">
+            >
+            ["at0015"] = <
+                text = <"Ja">
+                description = <"*">
+            >
+            ["at0018"] = <
+                text = <"*Extension (en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms.
+ (en)">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["ac9010"] = <
+                text = <"Hypertoni (synthesised)">
+                description = <"*The systolic blood pressure is >160 mmHg. (en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"HAS-BLED score">
+                description = <"A risk assessment score to assess the bleeding risk in individuals with atrial fibrillation.">
+                comment = <"The HAS-BLED mnemonic represents each risk factor:
+- Hypertension,
+- Abnormal renal/liver function, 
+- Stroke, 
+-Bleeding history or predisposition, 
+- Labile INR, 
+- Elderly (>65), and
+- Drugs/alcohol concomitantly.">
+            >
+            ["at0002"] = <
+                text = <"Any point in time event">
+                description = <"Default, unspecified point in time event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Hypertension">
+                description = <"The systolic blood pressure is >160 mmHg.">
+            >
+            ["at0005"] = <
+                text = <"Abnormal renal function">
+                description = <"The presence of chronic dialysis or renal transplantation or serum creatinine ≥200µmol/L.">
+            >
+            ["at0006"] = <
+                text = <"Abnormal liver function">
+                description = <"Chronic hepatic disease (eg. cirrhosis) or biochemical evidence of significant hepatic derangement (eg. bilirubin >2x upper limit of normal, in association with AST/ALT/ALP >3x upper limit normal, etc).">
+            >
+            ["at0007"] = <
+                text = <"Stroke">
+                description = <"A previous history of stroke, particularly lacunar.">
+            >
+            ["at0008"] = <
+                text = <"Bleeding history or predisposition">
+                description = <"A previous bleeding history and/or predisposition to bleeding .">
+                comment = <"For example: bleeding diathesis, anaemia, etc.">
+            >
+            ["at0009"] = <
+                text = <"Labile INR">
+                description = <"Unstable/high INRs or poor time in therapeutic range.">
+                comment = <"For example: <60%.">
+            >
+            ["at0010"] = <
+                text = <"Elderly">
+                description = <"Age >65 yrs.">
+            >
+            ["at0011"] = <
+                text = <"Drugs concomitantly">
+                description = <"The concomitant use of drugs, such as antiplatelet agents, non-steroidal anti-inflammatory drugs, etc.">
+            >
+            ["at0012"] = <
+                text = <"Alcohol concomitantly">
+                description = <"Alcohol consumption ≥ 8 units per week.">
+            >
+            ["at0013"] = <
+                text = <"Total score">
+                description = <"Sum of points assigned for each of the component parameters.">
+            >
+            ["at0014"] = <
+                text = <"No">
+                description = <"The risk factor is not present.">
+            >
+            ["at0015"] = <
+                text = <"Yes">
+                description = <"The risk factor is present.">
+            >
+            ["at0018"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["ac9010"] = <
+                text = <"Hypertension (synthesised)">
+                description = <"The systolic blood pressure is >160 mmHg. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9010"] = <
+            id = <"ac9010">
+            members = <"at0014", "at0015">
+        >
+    >

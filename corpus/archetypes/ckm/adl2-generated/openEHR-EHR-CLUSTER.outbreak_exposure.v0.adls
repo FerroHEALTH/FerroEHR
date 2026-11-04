@@ -1,0 +1,131 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=54ed4751-7f28-4558-ab97-c683650f1ac0; build_uid=05f2b51b-1338-4a44-a1b9-fc581080f74d)
+    openEHR-EHR-CLUSTER.outbreak_exposure.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"freshEHR Clinical Informatics Ltd.">
+        ["email"] = <"ian@freshehr.com">
+        ["date"] = <"2020-02-27">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"8F872A09963D031C6CB5FD7F26A0137A">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"">
+            keywords = <"location, outbreak, infection,", ...>
+            use = <"To record details of potential exposure to a potentially harmful agent, relating to a specific location, typically an outbreak of infectious disease.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Location-based exposure
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0007] matches {    -- Outbreak  location
+                value matches {
+                    DV_TEXT[at9000]
+                    DV_CODED_TEXT[at9001]
+                }
+                name matches {
+                    DV_CODED_TEXT[at9008] matches {
+                        defining_code matches {[ac9007]}    -- Outbreak  location (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0021] matches {    -- Location identifier
+                value matches {
+                    DV_IDENTIFIER[at9002]
+                }
+            }
+            ELEMENT[at0024] occurrences matches {0..1} matches {    -- Risk category
+                value matches {
+                    DV_CODED_TEXT[at9003]
+                    DV_TEXT[at9004]
+                    DV_ORDINAL[at9005]
+                }
+            }
+            ELEMENT[at0022] occurrences matches {0..1} matches {    -- Date entered location
+                value matches {
+                    DV_DATE[at9006]
+                }
+            }
+            ELEMENT[at0023] occurrences matches {0..1} matches {    -- Date left location
+                value matches {
+                    DV_DATE_TIME[at9007]
+                }
+            }
+            allow_archetype CLUSTER[at0025] matches {    -- Sub-location
+                include
+                    archetype_id/value matches {/.*|openEHR-EHR-CLUSTER\.outbreak_exposure\.v0\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Location-based exposure">
+                description = <"Details of potential exposure to a potentially harmful agent, relating to a specific location, typically an outbreak of infectious disease.">
+            >
+            ["at0007"] = <
+                text = <"Outbreak  location">
+                description = <"*">
+            >
+            ["at0021"] = <
+                text = <"Location identifier">
+                description = <"*">
+            >
+            ["at0022"] = <
+                text = <"Date entered location">
+                description = <"*">
+            >
+            ["at0023"] = <
+                text = <"Date left location">
+                description = <"*">
+            >
+            ["at0024"] = <
+                text = <"Risk category">
+                description = <"*">
+            >
+            ["at0025"] = <
+                text = <"Sub-location">
+                description = <"*">
+            >
+            ["at0026"] = <
+                text = <"City">
+                description = <"The name of the city visited.">
+            >
+            ["at0027"] = <
+                text = <"Region">
+                description = <"The name of a region or district visited.">
+            >
+            ["at0028"] = <
+                text = <"Country">
+                description = <"The name of the country visited.">
+            >
+            ["ac9007"] = <
+                text = <"Outbreak  location (synthesised)">
+                description = <"* (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9007"] = <
+            id = <"ac9007">
+            members = <"at0026", "at0027", "at0028">
+        >
+    >

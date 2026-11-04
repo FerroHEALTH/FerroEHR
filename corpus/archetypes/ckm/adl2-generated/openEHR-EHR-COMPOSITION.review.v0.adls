@@ -1,0 +1,238 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=6a46c34f-7f93-3a41-ad71-baef7887a79c; build_uid=6ae89a60-b6d2-4523-af0b-83e75eb2d572)
+    openEHR-EHR-COMPOSITION.review.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Emmanuel Eschmann">
+                ["organisation"] = <"CISTEC AG">
+                ["email"] = <"emmanuel.eschmann@cistec.com">
+            >
+            other_details = <
+                ["other_contributors"] = <"Jonas Bucher, CISTEC AG, Switzerland">
+            >
+        >
+        ["pt-pt"] = <
+            language = <[ISO_639-1::pt-pt]>
+            author = <
+                ["name"] = <"Hugo Silva">
+                ["organisation"] = <"University of Minho">
+                ["email"] = <"pg50416@uminho.pt">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Oscar Karlsson, Manna Vosta">
+                ["organisation"] = <"Karolinska Universitetssjukhuset, Karolinska University Hospital">
+                ["email"] = <"oscar.karlsson@regionstockholm.se, manna.vosta@regionstockholm.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Mikkel Johan Gaup Grønmo">
+                ["organisation"] = <"Helse Nord IKT">
+                ["email"] = <"mikkel.johan.gaup.gronmo@hnikt.no">
+            >
+            accreditation = <"Nasjonal IKT">
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            author = <
+                ["name"] = <"Jonas Bucher">
+                ["organisation"] = <"Cistec AG">
+                ["email"] = <"jonas.bucher@cistec.com">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2012-12-11">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, heather.leslie@atomicainformatics.com">
+        ["MD5-CAM-1.0.1"] = <"18AFB80928AA95AF3DAB27B3A1E2FFEA">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Erfassung der Einzelheiten einer formellen Überprüfung der klinischen Situation eines Patienten oder eines bestimmten Aspekts seiner klinischen Versorgung.">
+            keywords = <"Überprüfung", "Beurteilung", "Medizin", "klinisch", "Fall", "Akte">
+            use = <"Zur Erfassung der Einzelheiten einer formellen Überprüfung der klinischen Situation eines Patienten oder eines bestimmten Aspekts seiner klinischen Versorgung. Zum Beispiel, um Arzneimittelüberprüfungen oder Überprüfungen durch einen Case Manager zu dokumentieren.">
+            misuse = <"">
+        >
+        ["pt-pt"] = <
+            language = <[ISO_639-1::pt-pt]>
+            purpose = <"Registar os detalhes de uma análise formal da situação clínica de um sujeito ou de qualquer aspeto específico dos seus cuidados clínicos.">
+            keywords = <"análise", "avaliação", "medicina", "clínico", "caso", "ficheiro">
+            use = <"Utilize para registar os detalhes de uma análise formal da situação clínica de um sujeito ou de qualquer aspeto específico dos seus cuidados clínicos. Por exemplo: utilizar para registar avaliações de Medicamentos; ou revisões do Coordenador de Caso.">
+            misuse = <"">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att dokumentera innehållet och detaljerna kring en formell granskning av en patients kliniska situation eller en specifik aspekt av den kliniska vården.">
+            keywords = <"granskning", "bedömning", "medicin", "klinisk", "patientfall">
+            use = <"Används för att dokumentera en formell granskning av en patients kliniska situation eller en specifik aspekt av den kliniska vården.
+Exempelvis för att dokumentera läkemedelsgranskningar eller vårdplaneringsmöten (t.ex. utförda av en patientansvarig sjuksköterska eller samordnare).">
+            misuse = <"">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere detaljer om en formell vurdering av den kliniske situasjonen eller andre aspekter ved den klinisk omsorgen hos et individ.">
+            keywords = <"gjennomgang", "evaluering", "drøftelse", "sak", "dokumentasjon", "gjennomgåelse", "bedømme", "drøfting">
+            use = <"Brukes for å registrere detaljer om en formell vurdering av den kliniske situasjonen eller andre aspekter ved den klinisk omsorgen hos et individ.
+For eksempel: brukes for å registrere Gjennomgang av legemiddelliste; eller Koordinatorvurdering.">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the details of a formal review of a subject's clinical situation or any specific aspect of their clinical care.">
+            keywords = <"review", "assessment", "medicine", "clinical", "case", "file">
+            use = <"Use to record the details of a formal review of a subject's clinical situation or any specific aspect of their clinical care. For example: use to record Medicines reviews; or Case Coordinator reviews.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            purpose = <"Pour enregistrer les détails d'une revue formelle de la situation clinique d'un sujet ou de tout aspect spécifique de ses soins cliniques.">
+            keywords = <"revue", "évaluation", "médecine", "clinique", "cas", "fichier">
+            use = <"À utiliser pour enregistrer les détails d'une revue formelle de la situation clinique d'un sujet ou de tout aspect spécifique de ses soins cliniques. Par exemple pour enregistrer des contrôles de médicaments ou des bilans effectués par un responsable de suivi.">
+            misuse = <"">
+        >
+    >
+
+definition
+    COMPOSITION[at0000] matches {    -- Review
+        category matches {
+            DV_CODED_TEXT[at9001] matches {
+                defining_code matches {[at9000]}    -- event
+            }
+        }
+        context matches {
+            EVENT_CONTEXT[at9002] matches {
+                other_context matches {
+                    ITEM_TREE[at0002] matches {
+                        items cardinality matches {0..*; unordered} matches {
+                            allow_archetype CLUSTER[at0003] matches {    -- Extension
+                                include
+                                    archetype_id/value matches {/.*/}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Überprüfung">
+                description = <"Komposition zur Erfassung der Details einer formellen Überprüfung der klinischen Situation eines Patienten oder eines bestimmten Aspekts seiner klinischen Versorgung.">
+            >
+            ["at0003"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen.">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["pt-pt"] = <
+            ["at0000"] = <
+                text = <"Análise">
+                description = <"Composição para registo dos detalhes de uma análise formal da situação clínica de um sujeito ou de qualquer aspeto específico dos seus cuidados clínicos.">
+            >
+            ["at0003"] = <
+                text = <"*Extension (en)">
+                description = <"*Additional information required to extend the model with local content or to align with other reference models or formalisms. (en)">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Granskning">
+                description = <"COMPOSITION för dokumentation av en formell granskning av patientens kliniska situation eller någon specifik aspekt av den kliniska vården.">
+            >
+            ["at0003"] = <
+                text = <"Tilläggsinformation">
+                description = <"Plats för tilläggsinformation som krävs för lokala anpassningar eller anpassning till andra referensmodeller eller formella krav.">
+                comment = <"Exempelvis lokala informationskrav eller metadata för anpassning till FHIR.">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Vurdering">
+                description = <"Komposisjon for å registrere detaljer om en formell vurdering av den kliniske situasjonen eller andre aspekter ved den klinisk omsorgen hos et individ.">
+            >
+            ["at0003"] = <
+                text = <"*Extension (en)">
+                description = <"*Additional information required to extend the model with local content or to align with other reference models or formalisms. (en)">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Review">
+                description = <"Composition for the recording of the details of a formal review of a subject's clinical situation or any specific aspect of their clinical care.">
+            >
+            ["at0003"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at9000"] = <
+                text = <"event">
+                description = <"event">
+            >
+        >
+        ["fr"] = <
+            ["at0000"] = <
+                text = <"Revue">
+                description = <"Composition destinée à enregistrer les détails d'une revue formelle de la situation clinique d'un sujet ou de tout aspect spécifique de ses soins cliniques.">
+            >
+            ["at0003"] = <
+                text = <"Extension">
+                description = <"Informations supplémentaires nécessaires pour représenter un contenu local ou pour assurer l’alignement avec d’autres modèles de référence ou formalismes.">
+                comment = <"Par exemple: exigences d’information locales ou métadonnées supplémentaires permettant l’alignement avec des équivalents FHIR ou CIMI.">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/433>
+        >
+    >

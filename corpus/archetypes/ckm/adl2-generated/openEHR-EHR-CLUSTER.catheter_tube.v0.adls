@@ -1,0 +1,285 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=7263a9fc-7841-41c1-936a-7758b8e54ae6; build_uid=d7e868f9-9ff8-4eee-a79f-6c2abab88020)
+    openEHR-EHR-CLUSTER.catheter_tube.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-05-04">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Schadow, G. and McDonald, C. J. Unified Code for Units of Measure (UCUM). Regenstrief Institute; 2024. Available from: http://unitsofmeasure.org/ucum.html.">
+        ["2"] = <"International Organization for Standardization. ISO 13485:2016 Quality management systems for medical devices – Requirements for regulatory compliance. Geneva: ISO; 2016.">
+        ["3"] = <"International Organization for Standardization. ISO 80601-1:2017 Medical electrical equipment – Part 1: General requirements and tests. Geneva: ISO; 2017.">
+        ["4"] = <"International Health Terminology Standards Development Organisation. SNOMED CT – Systematized Nomenclature of Medicine Clinical Terms. Available from: https://www.snomed.org/.">
+        ["5"] = <"U.S. Food and Drug Administration. Medical Devices. Available from: https://www.fda.gov/medical-devices.">
+        ["6"] = <"Health Level Seven International. FHIR R4 device resource. Available from: https://www.hl7.org/fhir/device.html.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"57DE05F2DCF0720EE5048F45C0CBEE27">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere fysiske og funksjonelle egenskaper ved fleksibelt tubulært medisinsk utstyr som settes inn gjennom kroppsåpninger eller i kroppshulrom, inkludert katetere, tuber, dren og kanyler.">
+            use = <"Brukes for å registrere generelle egenskaper ved fleksibelt tubulært medisinsk utstyr, enten det brukes intermitterende eller er liggende på plass, som endotrakealtuber, trakeostomituber, urinkatetere, arteriekatetere, sentralvenøse katetere, thoraxdren, sårdren og ernæringstuber.
+
+Lumenspesifikke detaljer, inkludert intern diameter, registreres i CLUSTER.catheter_lumen.
+
+Denne arketypen er designet for å brukes i SLOTet 'Egenskaper' i CLUSTER.device-arketypen.">
+            misuse = <"Skal ikke brukes til å registrere tidspunktet for innsetting eller fjerning av enheten; bruk ACTION.procedure i stedet.
+			
+Skal ikke brukes til å dokumentere innsettingsteknikker, prosedyretrinn, innsettingsutstyr (for eksempel punkteringsnåler, obturatorer) eller andre innsettingsrelaterte detaljer; bruk ACTION.procedure for disse i stedet.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the physical and functional properties of flexible tubular medical devices inserted into body orifices or cavities, including catheters, tubes, drains and cannulas.">
+            use = <"Use to record general properties of a flexible tubular medical device, whether used intermittently or left in place, such as endotracheal tubes, tracheostomy tubes, urinary catheters, arterial lines, central venous catheters, chest tubes, wound drains and feeding tubes.
+
+Lumen-specific details, including internal diameter, are recorded in CLUSTER.catheter_lumen.
+
+This archetype is designed to be nested within the 'Properties' SLOT of the CLUSTER.device archetype.">
+            misuse = <"Not to be used to record the timing of insertion or removal of the device; use ACTION.procedure instead.
+			
+Not to be used to document insertion techniques, procedural steps, insertion equipment (e.g. puncture needles, obturators), or other insertion-related details; use ACTION.procedure for these instead.">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Catheter tube
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0038] occurrences matches {0..1} matches {    -- Tip
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Material
+                value matches {
+                    DV_CODED_TEXT[at9003] matches {
+                        defining_code matches {[ac9000]}    -- Material (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Overall length
+                value matches {
+                    DV_QUANTITY[at9004] matches {
+                        property matches {[at9001]}    -- Length
+                        magnitude matches {|>=0.0|}
+                        units matches {"cm"}
+                    }
+                }
+            }
+            ELEMENT[at0009] occurrences matches {0..1} matches {    -- External diameter
+                value matches {
+                    DV_QUANTITY[at9005] matches {
+                        property matches {[at9001]}    -- Length
+                        [magnitude, units, precision] matches {
+                            [{|>=0.0|}, {"mm"}, {|>=0|}],
+                            [{|>=0.0|}, {"[Ch]"}, {0}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0044] occurrences matches {0..1} matches {    -- Number of lumens
+                value matches {
+                    DV_COUNT[at9006] matches {
+                        magnitude matches {|>=1|}
+                    }
+                }
+            }
+            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Radiopaque
+                value matches {
+                    DV_BOOLEAN[at9007]
+                }
+            }
+            allow_archetype CLUSTER[at0011] matches {    -- Additional details
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.[a-zA-Z0-9_]+(-[a-zA-Z0-9_]+)*\.v[0-9]+/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Kateterslange">
+                description = <"Detaljer om fysiske og funksjonelle egenskaper ved fleksibelt tubulært medisinsk utstyr som settes inn gjennom kroppsåpninger eller i kroppshulrom.">
+            >
+            ["at0001"] = <
+                text = <"Materiale">
+                description = <"Materialet som enheten er laget av.">
+            >
+            ["at0002"] = <
+                text = <"Silikon">
+                description = <"Enheten er laget av silikonmateriale.">
+            >
+            ["at0003"] = <
+                text = <"Latex">
+                description = <"Enheten er laget av lateksmateriale.">
+            >
+            ["at0004"] = <
+                text = <"Polyurethan">
+                description = <"Enheten er laget av polyurethanmateriale.">
+            >
+            ["at0006"] = <
+                text = <"PVC">
+                description = <"Enheten er laget av polyvinylklorid (PVC) materiale.">
+            >
+            ["at0039"] = <
+                text = <"Polyetylen (PE)">
+                description = <"Enheten er laget av polyetylenmateriale.">
+            >
+            ["at0040"] = <
+                text = <"Polypropylen (PP)">
+                description = <"Enheten er laget av polypropylenmateriale.">
+            >
+            ["at0041"] = <
+                text = <"Polytetrafluoretylen (PTFE)">
+                description = <"Enheten er laget av polytetrafluoretylenmateriale.">
+            >
+            ["at0042"] = <
+                text = <"Nylon/polyamid">
+                description = <"Enheten er laget av nylon- eller polyamidmateriale.">
+            >
+            ["at0008"] = <
+                text = <"Samlet lengde">
+                description = <"Den totale lengden på enheten.">
+            >
+            ["at0009"] = <
+                text = <"Ytre diameter">
+                description = <"Enhetens ytre diameter.">
+            >
+            ["at0010"] = <
+                text = <"Røntgenopak">
+                description = <"Indikator på om enheten er synlig ved røntgenbildebehandling.">
+            >
+            ["at0038"] = <
+                text = <"Spiss">
+                description = <"Designkarakteristika ved spissen av enheten som kan påvirke innsetting, posisjonsering eller funksjon.">
+                comment = <"For eksempel: rundspiss, skrå, Tiemann, Murphy, vektet, pigtail, coudé, fenestrert, step-tip, split-tip. Koding med et terminologisystem foretrekkes der det er mulig.">
+            >
+            ["at0011"] = <
+                text = <"Tilleggsdetaljer">
+                description = <"Strukturerte tilleggsdetaljer om enheten, registrert med nestede cluster-arketyper.">
+                comment = <"Bruk dette slotet for relevante nestede CLUSTER-arketyper, for eksempel CLUSTER.catheter_lumen og CLUSTER.catheter_cuff.">
+            >
+            ["at0044"] = <
+                text = <"Antall lumen">
+                description = <"Antall lumen i kateterslangen.">
+            >
+            ["at9001"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac9000"] = <
+                text = <"Materiale (synthesised)">
+                description = <"Materialet som enheten er laget av. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Catheter tube">
+                description = <"Details about the physical and functional properties of flexible tubular medical devices inserted into body orifices or cavities.">
+            >
+            ["at0001"] = <
+                text = <"Material">
+                description = <"The material from which the device is constructed.">
+            >
+            ["at0002"] = <
+                text = <"Silicone">
+                description = <"The device is made of silicone material.">
+            >
+            ["at0003"] = <
+                text = <"Latex">
+                description = <"The device is made of latex material.">
+            >
+            ["at0004"] = <
+                text = <"Polyurethane">
+                description = <"The device is made of polyurethane material.">
+            >
+            ["at0006"] = <
+                text = <"PVC">
+                description = <"The device is made of polyvinyl chloride (PVC) material.">
+            >
+            ["at0039"] = <
+                text = <"Polyethylene (PE)">
+                description = <"The device is made of polyethylene material.">
+            >
+            ["at0040"] = <
+                text = <"Polypropylene (PP)">
+                description = <"The device is made of polypropylene material.">
+            >
+            ["at0041"] = <
+                text = <"Polytetrafluoroethylene (PTFE)">
+                description = <"The device is made of polytetrafluoroethylene material.">
+            >
+            ["at0042"] = <
+                text = <"Nylon/Polyamide">
+                description = <"The device is made of nylon or polyamide material.">
+            >
+            ["at0008"] = <
+                text = <"Overall length">
+                description = <"The total length of the device.">
+            >
+            ["at0009"] = <
+                text = <"External diameter">
+                description = <"The external diameter of the device.">
+            >
+            ["at0010"] = <
+                text = <"Radiopaque">
+                description = <"Indicator of whether the device is visible on X-ray imaging.">
+            >
+            ["at0038"] = <
+                text = <"Tip">
+                description = <"The design characteristics of the tip of the device that may affect insertion, positioning, or function.">
+                comment = <"For example: rounded, beveled, Tiemann, Murphy eye, weighted, pigtail, coudé, fenestrated, step-tip, split-tip. Coding with a terminology system is preferred where possible.">
+            >
+            ["at0011"] = <
+                text = <"Additional details">
+                description = <"Structured additional details about the device, captured using nested cluster archetypes.">
+                comment = <"Use this slot for relevant nested CLUSTER archetypes, for example CLUSTER.catheter_lumen and CLUSTER.catheter_cuff.">
+            >
+            ["at0044"] = <
+                text = <"Number of lumens">
+                description = <"The number of lumens in the catheter tube.">
+            >
+            ["at9001"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["ac9000"] = <
+                text = <"Material (synthesised)">
+                description = <"The material from which the device is constructed. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9001"] = <http://openehr.org/id/122>
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0002", "at0003", "at0004", "at0006", "at0039", "at0040", "at0041", "at0042">
+        >
+    >

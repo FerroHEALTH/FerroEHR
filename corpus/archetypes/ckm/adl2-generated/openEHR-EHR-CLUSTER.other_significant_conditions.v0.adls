@@ -1,0 +1,99 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=9e8ff3e4-47aa-47cf-8718-96eea2f66153; build_uid=98dff6d7-ae45-418b-8126-5bf68a455e72)
+    openEHR-EHR-CLUSTER.other_significant_conditions.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Mikkel Johan Gaup Grønmo">
+                ["organisation"] = <"Forvaltningssenter EPJ, Helse Nord RHF">
+                ["email"] = <"mikkel.johan.gaup.gronmo@helse-nord.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Mikkel Johan Gaup Grønmo">
+        ["organisation"] = <"Forvaltningssenter EPJ, Helse-Nord RHF">
+        ["email"] = <"mikkel.johan.gaup.gronmo@helse-nord.no">
+        ["date"] = <"2021-11-19">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"World Health Organization (2016). International statistical classification of diseases and related health problems, 10th revision, vol. 2, 5th edition. Geneva, World Health Organization. Page 203. Available from: https://icd.who.int/browse10/Content/statichtml/ICD10Volume2_en_2016.pdf">
+        ["2"] = <"NVSS - U.S Standard Certificate of Death. november 2003,[Internet] Available from: https://www.cdc.gov/nchs/data/dvs/DEATH11-03final-ACC.pdf.">
+        ["3"] = <"Hanzlick, Randy, og Randy Hanzlick. Cause of death and the death certificate: important information for physicians, coroners, medical examiners, and the public. College of American Pathologists, 2006. Available from: https://www.health.state.mn.us/people/vitalrecords/physician-me/docs/capcodbook.pdf.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"40F4A63F186177BEB5D8FE702482D7F0">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere årsaker som kan ha vært av signifikans for pasientens helsetilstand, dette i tillegg til indirekte årsaker og umiddelbar dødsårsak.">
+            keywords = <"komorbiditet", "sekundære tilstander">
+            use = <"Brukes for å registrere årsaker som kan ha vært av signifikans for pasientens helsetilstand, dette i tillegg til indirekte årsaker og umiddelbar dødsårsak.
+Denne arketypen er spesifikt designet for bruk i konteksten av en EVALUATION.cause_of_death arketypen registrering.
+
+Det anbefales på det sterkeste å benytte ICD-10 eller tilsvarende koding.">
+            misuse = <"Skal ikke brukes for å registrere indirekte årsaker og umiddelbar dødsårsak, bruk i stedet EVALUATION.cause_of_death til dette.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record conditions that may been of significance with regards to the patients healthstatus, in addition to indirect causes and main cause of death.">
+            keywords = <"comorbidity", "secondary conditions">
+            use = <"Use to record conditions that may be of significance in addition to indirect causes and main cause of death.
+This archetype is specifically designed to be used within the context of EVALUATION.cause_of_death archetype.
+
+Coding with ICD-10 or similar terminology is highly recommended.">
+            misuse = <"Not to be used to record indirect causes or main cause of death, use EVALUATION.cause_of_death instead.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Other significant conditions
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] matches {    -- Significant condition
+                value matches {
+                    DV_TEXT[at9000]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Andre medvirkende årsaker">
+                description = <"Tilstander som kan ha vært av signifikans for pasientens helsetilstand, dette i tillegg til indirekte årsaker og umiddelbar dødsårsak.">
+            >
+            ["at0001"] = <
+                text = <"Medvirkende årsak">
+                description = <"Andre medvirkende årsaker bidragende til død.">
+                comment = <"Det anbefales på det sterkeste å benytte ICD-10 eller tilsvarende koding.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Other significant conditions">
+                description = <"Conditions that may have been of significance with regards to the patients healthstatus, in addition to indirect causes and main cause of death.">
+            >
+            ["at0001"] = <
+                text = <"Significant condition">
+                description = <"Other significant conditions contributing to death.">
+                comment = <"Strongly suggested using terminologies like ICD-10 or Snomed-CT.">
+            >
+        >
+    >

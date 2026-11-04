@@ -1,0 +1,489 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=2edd09cc-bc09-4ae4-a9ed-4ac30a34cd05; build_uid=e438ebea-81c0-428c-825e-7c52ecde3f8c)
+    openEHR-EHR-CLUSTER.acquisition_details_on_ophthalmic_tomography.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Aitor Eguzkitza">
+        ["organisation"] = <"Universidad Pública de Navarra - Complejo Hospitalario de Navarra">
+        ["email"] = <"aitor.eguzkiza@unavarra.es">
+        ["date"] = <"2015-06-19">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Jose Andonegui Navarro, Complejo Hospitalario de Navarra, Spain", "Luis Serrano Arriezu, Institute of Smart Cities & Universidad Pública de Navarra, Spain">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"78FFDA0B88BFDE3BAC71DD3666150F90">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Register details about settings specified to carry out the acquisitions of a study of ophthalmic tomography.">
+            use = <"To specify the strategy of acquisitions for ophthalmic tomography either planning the study, or recording the procedure once has been carried out.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Acquisition details on ophthalmic tomography
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Laterality
+                value matches {
+                    DV_CODED_TEXT[at9008] matches {
+                        defining_code matches {[ac9000]}    -- Laterality (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0072] occurrences matches {0..1} matches {    -- Acquisition method
+                value matches {
+                    DV_CODED_TEXT[at9009] matches {
+                        defining_code matches {[ac9001]}    -- Acquisition method (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0064] matches {    -- Study outcome
+                value matches {
+                    DV_CODED_TEXT[at9010] matches {
+                        defining_code matches {[ac9002]}    -- Study outcome (synthesised)
+                    }
+                }
+            }
+            CLUSTER[at0019] occurrences matches {0..1} matches {    -- Predefined scan
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0011] matches {    -- Study type
+                        value matches {
+                            DV_CODED_TEXT[at9011] matches {
+                                defining_code matches {[ac9003]}    -- Study type (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0005] matches {    -- Predefined scans
+                        value matches {
+                            DV_CODED_TEXT[at9012] matches {
+                                defining_code matches {[ac9004]}    -- Predefined scans (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0047] occurrences matches {0..1} matches {    -- Custom scan
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0048] occurrences matches {0..1} matches {    -- Scan pattern
+                        value matches {
+                            DV_CODED_TEXT[at9013] matches {
+                                defining_code matches {[ac9005]}    -- Scan pattern (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0058] occurrences matches {0..1} matches {    -- Position of scan pattern
+                        value matches {
+                            DV_CODED_TEXT[at9014] matches {
+                                defining_code matches {[ac2]}    -- Anatomic structures of eye
+                            }
+                        }
+                    }
+                    ELEMENT[at0054] occurrences matches {0..1} matches {    -- Scan size (width or diameter)
+                        value matches {
+                            DV_QUANTITY[at9015] matches {
+                                property matches {[at9006]}    -- Angle, plane
+                                units matches {"deg"}
+                                precision matches {0}
+                            }
+                        }
+                    }
+                    ELEMENT[at0056] occurrences matches {0..1} matches {    -- Scan size (height)
+                        value matches {
+                            DV_QUANTITY[at9016] matches {
+                                property matches {[at9006]}    -- Angle, plane
+                                units matches {"deg"}
+                                precision matches {0}
+                            }
+                        }
+                    }
+                    ELEMENT[at0062] occurrences matches {0..1} matches {    -- Distance between sections
+                        value matches {
+                            DV_QUANTITY[at9017] matches {
+                                property matches {[at9007]}    -- Length
+                                units matches {"um"}
+                                precision matches {0}
+                            }
+                        }
+                    }
+                    ELEMENT[at0057] occurrences matches {0..1} matches {    -- Section scans
+                        value matches {
+                            DV_COUNT[at9018] matches {
+                                magnitude matches {|>=1|}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Acquisition details on ophthalmic tomography">
+                description = <"Defines specific details about ophthalmic tomography studies.">
+            >
+            ["at0001"] = <
+                text = <"Laterality">
+                description = <"Eye/s included in the study.">
+            >
+            ["at0002"] = <
+                text = <"Left eye">
+                description = <"Left eye observation.">
+            >
+            ["at0003"] = <
+                text = <"Right eye">
+                description = <"Right eye observation.">
+            >
+            ["at0004"] = <
+                text = <"Both eyes">
+                description = <"Test acquired on both eyes of the patient.">
+            >
+            ["at0005"] = <
+                text = <"Predefined scans">
+                description = <"Choice of a predefined scan patterns from the device to conduct the study.">
+            >
+            ["at0011"] = <
+                text = <"Study type">
+                description = <"Subject of study of the ophthalmic tomography.">
+            >
+            ["at0012"] = <
+                text = <"Angle">
+                description = <"Study of anterior chamber angles.">
+            >
+            ["at0013"] = <
+                text = <"Cornea">
+                description = <"Study focusing on cornea of the eye.">
+            >
+            ["at0014"] = <
+                text = <"Sclera">
+                description = <"Study focusing on eye sclera.">
+            >
+            ["at0015"] = <
+                text = <"Glaucoma">
+                description = <"Study focusing on search glaucomatous defects.">
+            >
+            ["at0016"] = <
+                text = <"Retina">
+                description = <"Study focusing on eye retina.">
+            >
+            ["at0017"] = <
+                text = <"Iris">
+                description = <"Study focusing on iris of the eye.">
+            >
+            ["at0019"] = <
+                text = <"Predefined scan">
+                description = <"Choice among predefined settings provided by the ophthalmic tomography for scanning the eye structure.">
+            >
+            ["at0020"] = <
+                text = <"Angle 1 ACA">
+                description = <"Anterior chamber angle: Angle 1.">
+            >
+            ["at0021"] = <
+                text = <"Angle 2 ACA">
+                description = <"Anterior chamber angle: Angle 2.">
+            >
+            ["at0022"] = <
+                text = <"Angle small">
+                description = <"*">
+            >
+            ["at0023"] = <
+                text = <"Cornea dense">
+                description = <"*">
+            >
+            ["at0024"] = <
+                text = <"Cornea large">
+                description = <"*">
+            >
+            ["at0025"] = <
+                text = <"Cornea scan 08">
+                description = <"*">
+            >
+            ["at0026"] = <
+                text = <"Cornea scan 11">
+                description = <"*">
+            >
+            ["at0027"] = <
+                text = <"Cornea small">
+                description = <"*">
+            >
+            ["at0029"] = <
+                text = <"Sclera dense">
+                description = <"*">
+            >
+            ["at0030"] = <
+                text = <"Sclera large">
+                description = <"*">
+            >
+            ["at0031"] = <
+                text = <"Sclera scan 08">
+                description = <"*">
+            >
+            ["at0032"] = <
+                text = <"Sclera scan 11">
+                description = <"*">
+            >
+            ["at0033"] = <
+                text = <"Sclera small">
+                description = <"*">
+            >
+            ["at0034"] = <
+                text = <"Sclera vol. bleb">
+                description = <"*">
+            >
+            ["at0035"] = <
+                text = <"Glaucoma dense">
+                description = <"*">
+            >
+            ["at0036"] = <
+                text = <"Glaucoma Fast">
+                description = <"*">
+            >
+            ["at0037"] = <
+                text = <"Glaucoma ONH">
+                description = <"Glaucoma optic nerve head.">
+            >
+            ["at0038"] = <
+                text = <"Glaucoma P. Pole">
+                description = <"Glaucoma posterior pole.">
+            >
+            ["at0039"] = <
+                text = <"Glaucoma RNFL">
+                description = <"Glaucoma retinal nerve fiber layer.">
+            >
+            ["at0040"] = <
+                text = <"Retina 7 lines">
+                description = <"*">
+            >
+            ["at0041"] = <
+                text = <"Retina dense">
+                description = <"*">
+            >
+            ["at0042"] = <
+                text = <"Retina detail">
+                description = <"*">
+            >
+            ["at0043"] = <
+                text = <"Retina fast">
+                description = <"*">
+            >
+            ["at0044"] = <
+                text = <"Retina Fast HR">
+                description = <"Retina fast high resolution.">
+            >
+            ["at0045"] = <
+                text = <"Retina Lin HR">
+                description = <"Retina Lin HR.">
+            >
+            ["at0046"] = <
+                text = <"Retina P. Pole">
+                description = <"Retina posterior pole.">
+            >
+            ["at0047"] = <
+                text = <"Custom scan">
+                description = <"Description of characteristics for a personalized scan.">
+            >
+            ["at0048"] = <
+                text = <"Scan pattern">
+                description = <"Defines the pattern used to scan structures inside the eye.">
+            >
+            ["at0049"] = <
+                text = <"Radial">
+                description = <"The scan depicts a circle around the eye structure to be studied.">
+            >
+            ["at0050"] = <
+                text = <"Single">
+                description = <"The scan is composed by a single section strategically acquired on the eye structure to be studied.">
+            >
+            ["at0051"] = <
+                text = <"High speed multi-frame">
+                description = <"The scan it is comprised of multiple parallel frames. So that, it is possible to reconstruct volumetric structures.">
+            >
+            ["at0052"] = <
+                text = <"High resolution multi-frame">
+                description = <"Increases resolution of the scan. It is useful to analyze eye structures that provide many information in a small area, such as fovea or the optic nerve head.">
+            >
+            ["at0053"] = <
+                text = <"Star">
+                description = <"The scan comprises of several slices with the eye structure to be studied as axis in common. Those are uniformly distributed with different angles, so they describe the shape of a star.">
+            >
+            ["at0054"] = <
+                text = <"Scan size (width or diameter)">
+                description = <"Width of the frame (or diameter in case of circle scan pattern).">
+            >
+            ["at0056"] = <
+                text = <"Scan size (height)">
+                description = <"Height of the frame.">
+            >
+            ["at0057"] = <
+                text = <"Section scans">
+                description = <"Number of sections included in the scan.">
+            >
+            ["at0058"] = <
+                text = <"Position of scan pattern">
+                description = <"Eye structure in which the scan is centred.">
+            >
+            ["at0062"] = <
+                text = <"Distance between sections">
+                description = <"Distance between sections scanned consecutively.">
+            >
+            ["at0064"] = <
+                text = <"Study outcome">
+                description = <"Identifies the type of analyses which must be obtained from the study.">
+            >
+            ["at0065"] = <
+                text = <"Transverse image overview">
+                description = <"While the majority of ophthalmic tomography imagingconsists of sets of longitudinal images (also known as B scans or line scans), transverse images (also known as coronal or “en face” images) can also provide useful information in determining the full extent of the volume affected by pathology.">
+            >
+            ["at0066"] = <
+                text = <"3D reconstruction image analysis">
+                description = <"The prognosis of some pathologies can be aided by a 3D visualization of the affected areas of the eye.">
+            >
+            ["at0067"] = <
+                text = <"Video angiography">
+                description = <"Acquistion of simultaneous angiographies and OCT images.">
+            >
+            ["at0068"] = <
+                text = <"Thickness analysis">
+                description = <"Thickness measurements of specific anatomic structures might be useful for detection of areas of the eye affected by inflamation or tissue loss.">
+            >
+            ["at0069"] = <
+                text = <"Thickness evolution along-time (follow-up)">
+                description = <"The study of the evolution on thickness from an eye structure can warn us about the progress of a specific disease.">
+            >
+            ["at0070"] = <
+                text = <"Thickness classification (measured vs normative)">
+                description = <"Classification of measured thickness values, compared to a reference data defined by normative.">
+            >
+            ["at0071"] = <
+                text = <"Asymmetry analysis">
+                description = <"Comparison of thickness between different but symmetric eye structures.">
+            >
+            ["at0072"] = <
+                text = <"Acquisition method">
+                description = <"Acquisition method chosen to perform the ophthalmic tomography study. It is based on the Table CID 4210 of DICOM standard.">
+            >
+            ["at0073"] = <
+                text = <"Optical Coherence Tomography Scanner">
+                description = <"Corresponds to DICOM Code value A-00FBE.">
+            >
+            ["at0074"] = <
+                text = <"Retinal Thickness Analyzer">
+                description = <"Corresponds to DICOM Code value R-FAB5A.">
+            >
+            ["at0075"] = <
+                text = <"Confocal Scanning Laser Ophthalmoscope">
+                description = <"Corresponds to DICOM Code value A-00E8B.">
+            >
+            ["at0076"] = <
+                text = <"Scheimpflug Camera">
+                description = <"A slit reflected light microscope, which has the ability to form an image of the back scattered light from the eye in a sagittal plane. Scheimpflug cameras are able to achieve a wide depth of focus by employing the “Sheimpflug principle” where the lens and image planes are not parallel with each other. Rotating Sheimplug cameras are able to generate three-dimensional images and calculate measurements of the anterior chamber of the eye. Corresponds to DICOM Code value 111626.">
+            >
+            ["at0077"] = <
+                text = <"Scanning Laser Polarimeter">
+                description = <"Corresponds to DICOM Code value A-00E8C.">
+            >
+            ["at0078"] = <
+                text = <"Elevation-based corneal tomographer">
+                description = <"A device that measures corneal anterior surface shape using elevation-based methods (stereographic and light slit-based). Rasterstereography images a grid pattern illuminating the fluorescein dyed tear film with 2 cameras to produce 3D. Slit-based devices scan the cornea, usually by rotation about the instrument axis centered on the cornea vertex. Corresponds to DICOM Code value 111945.">
+            >
+            ["at0079"] = <
+                text = <"Reflection-based corneal topographer">
+                description = <"A reflection-based device that projects a pattern of light onto the cornea and an image of the reflection of that pattern from the tear film is recorded in one video frame. Light patterns include the circular mire pattern (Placido disc) and spot matrix patterns. Sequential scanning of light spots reflected from the corneal surface is also used requiring multiple video frames for recording. Corresponds to DICOM Code value 111946.">
+            >
+            ["at0080"] = <
+                text = <"Interferometry-based corneal tomographer">
+                description = <"An Interference-based device that projects a beam of light onto and through the cornea. Light reflected from within the cornea is combined with a reference beam giving rise to an interference pattern. Appropriately scanned, this imaging is used to construct 3-dimensional images of the cornea from anterior to posterior surfaces. E.g., swept source OCT. Corresponds to DICOM Code value 111947.">
+            >
+            ["ac2"] = <
+                text = <"Anatomic structures of eye">
+                description = <"List of regions of interest in the study of eye.">
+            >
+            ["at9006"] = <
+                text = <"Angle, plane">
+                description = <"Angle, plane">
+            >
+            ["at9007"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["ac9000"] = <
+                text = <"Laterality (synthesised)">
+                description = <"Eye/s included in the study. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Acquisition method (synthesised)">
+                description = <"Acquisition method chosen to perform the ophthalmic tomography study. It is based on the Table CID 4210 of DICOM standard. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Study outcome (synthesised)">
+                description = <"Identifies the type of analyses which must be obtained from the study. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Study type (synthesised)">
+                description = <"Subject of study of the ophthalmic tomography. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Predefined scans (synthesised)">
+                description = <"Choice of a predefined scan patterns from the device to conduct the study. (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Scan pattern (synthesised)">
+                description = <"Defines the pattern used to scan structures inside the eye. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9006"] = <http://openehr.org/id/497>
+            ["at9007"] = <http://openehr.org/id/122>
+        >
+        ["SNOMED-CT"] = <
+            ["at0001"] = <http://snomed.info/id/272741003>
+            ["at0002"] = <http://snomed.info/id/362503005>
+            ["at0003"] = <http://snomed.info/id/362502000>
+            ["at0016"] = <http://snomed.info/id/700070005>
+            ["at0073"] = <http://snomed.info/id/392012008>
+            ["at0074"] = <http://snomed.info/id/416567007>
+            ["at0075"] = <http://snomed.info/id/392004000>
+            ["at0077"] = <http://snomed.info/id/392007007>
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0065", "at0066", "at0067", "at0068", "at0069", "at0070", "at0071">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0073", "at0074", "at0075", "at0076", "at0077", "at0078", "at0079", "at0080">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0002", "at0003", "at0004">
+        >
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0050", "at0049", "at0053", "at0051", "at0052">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0020", "at0021", "at0022", "at0023", "at0024", "at0025", "at0026", "at0027", "at0029", "at0030", "at0031", "at0032", "at0033", "at0034", "at0035", "at0036", "at0037", "at0038", "at0039", "at0040", "at0041", "at0042", "at0043", "at0044", "at0045", "at0046">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0012", "at0013", "at0017", "at0014", "at0015", "at0016">
+        >
+    >

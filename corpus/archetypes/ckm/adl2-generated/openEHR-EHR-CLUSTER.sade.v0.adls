@@ -1,0 +1,111 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=92cdf944-0002-4faf-837d-8fa5b6b7a3f9; build_uid=b87219de-00f6-46a4-b6e6-4af0cf04bf5a)
+    openEHR-EHR-CLUSTER.sade.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics, UK">
+        ["email"] = <"ian.mcnicoll@oceaninformatics.com">
+        ["date"] = <"2012-09-07">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Heather Leslie, Ocean Informatics, Australia", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    references = <
+        ["1"] = <"Derived from: Sade classification, Draft Archetype [Internet]. Digital Health Agency, Australian Digital Health Agency Clinical Knowledge Manager. No longer available.">
+        ["2"] = <"Personal communication with clinical domain experts.">
+        ["3"] = <"Sadé J, Berco E. Atelectasis and secretory otitis media. Ann. Otol. Rhinol. Laryngol. 1976 Apr;85(2 Suppl 25 Pt 2):6">
+        ["4"] = <"Lancaster J, Srinivasan V. Management of tympanic membrane retraction pockets. Australian Journal of Otolaryngology 2002;5(1):17–20.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"47E9553AAAE9E71CBFECF41402E17256">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the grading of tympanic membrane pars tensa retraction based on the classification by Sade.">
+            keywords = <"retraction", "atelectasis", "tympanic", "membrane", "drum", "pars tensa">
+            use = <"Use to record the grading of tympanic membrane retraction, particularly by specialist physicians. 
+
+Designed to be optionally nested within the CLUSTER.exam_tympanic_membrane archetype to provide additional detail on tympanic membrane retraction, if it is useful within a given clinical scenario.
+
+This archetype extends the Sade Classification to allow recording of 'No visible retraction' where applicable.
+Sade Stage 5 (spontaneous perforation) is described in some documentation but is not described in the original paper and appears not to be in common usage.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Sade Classification
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Sade Classification
+                value matches {
+                    DV_ORDINAL[at9001] matches {
+                        [value, symbol] matches {
+                            [{0}, {[at0003]}],    -- No visible retraction
+                            [{1}, {[at0004]}],    -- Stage 1 :  Mild retraction
+                            [{2}, {[at0005]}],    -- Stage 2 : Retraction onto incudostapedial joint
+                            [{3}, {[at0006]}],    -- Stage 3 :  Retraction onto promontory
+                            [{4}, {[at0007]}],    -- Stage 4 : Adhesion of pars tensa to medial wall
+                            [{5}, {[at0008]}]    -- Stage 5 : Spontaneous perforation with otorrhea and polyp formation
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Sade Classification">
+                description = <"Grading of the degree of tympanic membrane pars tensa retraction / atelectasis.">
+            >
+            ["at0001"] = <
+                text = <"Sade Classification">
+                description = <"Grading of the degree of tympanic membrane pars tensa retraction / atelectasis based on the Sade Classification.">
+            >
+            ["at0003"] = <
+                text = <"No visible retraction">
+                description = <"The tympanic membrane pars tensa is not visibly retracted.">
+            >
+            ["at0004"] = <
+                text = <"Stage 1 :  Mild retraction">
+                description = <"The tympanic membrane pars tensa is mildly retracted.">
+            >
+            ["at0005"] = <
+                text = <"Stage 2 : Retraction onto incudostapedial joint">
+                description = <"The tympanic membrane pars tensa is retracted onto the incudostapedial joint.">
+            >
+            ["at0006"] = <
+                text = <"Stage 3 :  Retraction onto promontory">
+                description = <"The tympanic membrane pars tensa is retracted onto the promontary.">
+            >
+            ["at0007"] = <
+                text = <"Stage 4 : Adhesion of pars tensa to medial wall">
+                description = <"The tympanic membrane pars tensa is adherent to the medial wall.">
+            >
+            ["at0008"] = <
+                text = <"Stage 5 : Spontaneous perforation with otorrhea and polyp formation">
+                description = <"The tympanic membrane is spontaneously perforated with evidence of otorrhea and polyp formation.">
+            >
+            ["ac9001"] = <
+                text = <"Sade Classification (synthesised)">
+                description = <"Grading of the degree of tympanic membrane pars tensa retraction / atelectasis based on the Sade Classification. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0003", "at0004", "at0005", "at0006", "at0007", "at0008">
+        >
+    >

@@ -1,0 +1,236 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=2af3e530-2e98-4b43-a9e6-1c934b6e2184; build_uid=f46adbf4-d5d2-4d8e-ac22-5d82a19a9831)
+    openEHR-EHR-OBSERVATION.mskcc_motzer.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Maryam Razavi">
+        ["organisation"] = <"Cambio CDS">
+        ["email"] = <"maryam.razavi@cambio.se">
+        ["date"] = <"2021-01-09">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"1. Motzer RJ, Mazumdar M, Bacik J, Berg W, Amsterdam A, Ferrara J. Survival and prognostic stratification of 670 patients with advanced renal cell carcinoma. J Clin Oncol. 1999 Aug;17(8):2530-40. doi: 10.1200/JCO.1999.17.8.2530. PMID: 10561319.">
+        ["2"] = <"2. Motzer RJ, Bacik J, Murphy BA, Russo P, Mazumdar M. Interferon-alfa as a comparative treatment for clinical trials of new therapies against advanced renal cell carcinoma. J Clin Oncol. 2002 Jan 1;20(1):289-96. doi: 10.1200/JCO.2002.20.1.289. PMID: 11773181.">
+        ["3"] = <"3. Motzer RJ, Bacik J, Schwartz LH, Reuter V, Russo P, Marion S, Mazumdar M. Prognostic factors for survival in previously treated patients with metastatic renal cell carcinoma. J Clin Oncol. 2004 Feb 1;22(3):454-63. doi: 10.1200/JCO.2004.06.132. PMID: 14752067.">
+        ["4"] = <"4. Mekhail TM, Abou-Jawde RM, Boumerhi G, Malhi S, Wood L, Elson P, Bukowski R. Validation and extension of the Memorial Sloan-Kettering prognostic factors model for survival in patients with previously untreated metastatic renal cell carcinoma. J Clin Oncol. 2005 Feb 1;23(4):832-41. doi: 10.1200/JCO.2005.05.179. PMID: 15681528.">
+        ["5"] = <"5. Motzer RJ, Hutson TE, Tomczak P, Michaelson MD, Bukowski RM, Oudard S, Negrier S, Szczylik C, Pili R, Bjarnason GA, Garcia-del-Muro X, Sosman JA, Solska E, Wilding G, Thompson JA, Kim ST, Chen I, Huang X, Figlin RA. Overall survival and updated results for sunitinib compared with interferon alfa in patients with metastatic renal cell carcinoma. J Clin Oncol. 2009 Aug 1;27(22):3584-90. doi: 10.1200/JCO.2008.20.1293. Epub 2009 Jun 1. PMID: 19487381; PMCID: PMC3646307.">
+        ["6"] = <"6. Heng DY, Xie W, Regan MM, Harshman LC, Bjarnason GA, Vaishampayan UN, Mackenzie M, Wood L, Donskov F, Tan MH, Rha SY, Agarwal N, Kollmannsberger C, Rini BI, Choueiri TK. External validation and comparison with other models of the International Metastatic Renal-Cell Carcinoma Database Consortium prognostic model: a population-based study. Lancet Oncol. 2013 Feb;14(2):141-8. doi: 10.1016/S1470-2045(12)70559-4. Epub 2013 Jan 9. PMID: 23312463; PMCID: PMC4144042.">
+    >
+    other_details = <
+        ["current_contact"] = <"maryam.razavi@cambio.se">
+        ["MD5-CAM-1.0.1"] = <"D90F0FE6ECC8E4837F338F2F01463BEA">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the results for each component parameter and their total sum for the MSKCC/Motzer score.">
+            keywords = <"renal", "cell", "carcinoma", "RCC", "cancer", "metastatic ">
+            use = <"Use to record the results for each component parameter and their total sum for the MSKCC/Motzer score.">
+            misuse = <"">
+            copyright = <"© Cambio CDS, openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Memorial Sloan-Kettering Cancer Center (MSKCC/Motzer) score
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] occurrences matches {0..1} matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Time from diagnosis to systemic treatment <1 year
+                                        value matches {
+                                            DV_ORDINAL[at9005] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0005]}],    -- No
+                                                    [{1}, {[at0006]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Hemoglobin < Lower Limit of Normal
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0008]}],    -- No
+                                                    [{1}, {[at0009]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Calcium >10mg/dL (>2.5 mmol/L)
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0011]}],    -- No
+                                                    [{1}, {[at0012]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- LDH > 1.5x Upper Limit of Normal
+                                        value matches {
+                                            DV_ORDINAL[at9008] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0014]}],    -- No
+                                                    [{1}, {[at0015]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Performance status <80% (Karnofsky)
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- No
+                                                    [{1}, {[at0018]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9010] matches {
+                                                magnitude matches {|0..5|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Memorial Sloan-Kettering Cancer Center (MSKCC/Motzer) score">
+                description = <"An assessment score used for metastatic renal cell carcinoma (RCC) to predict survival based on clinical and laboratory data in metastatic RCC patients.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"Time from diagnosis to systemic treatment <1 year">
+                description = <"Measured ~1 month after stopping anticoagulation">
+            >
+            ["at0005"] = <
+                text = <"No">
+                description = <"*">
+            >
+            ["at0006"] = <
+                text = <"Yes">
+                description = <"*">
+            >
+            ["at0007"] = <
+                text = <"Hemoglobin < Lower Limit of Normal">
+                description = <"Men (Normal): 13.5-17.5 g/dL- Women (Normal): 12.0-15.5 g/dL">
+            >
+            ["at0008"] = <
+                text = <"No">
+                description = <"*">
+            >
+            ["at0009"] = <
+                text = <"Yes">
+                description = <"*">
+            >
+            ["at0010"] = <
+                text = <"Calcium >10mg/dL (>2.5 mmol/L)">
+                description = <"*">
+            >
+            ["at0011"] = <
+                text = <"No">
+                description = <"*">
+            >
+            ["at0012"] = <
+                text = <"Yes">
+                description = <"*">
+            >
+            ["at0013"] = <
+                text = <"LDH > 1.5x Upper Limit of Normal">
+                description = <"Normal: 140 U/L">
+            >
+            ["at0014"] = <
+                text = <"No">
+                description = <"*">
+            >
+            ["at0015"] = <
+                text = <"Yes">
+                description = <"*">
+            >
+            ["at0016"] = <
+                text = <"Performance status <80% (Karnofsky)">
+                description = <"*">
+            >
+            ["at0017"] = <
+                text = <"No">
+                description = <"*">
+            >
+            ["at0018"] = <
+                text = <"Yes">
+                description = <"*">
+            >
+            ["at0019"] = <
+                text = <"Total score ">
+                description = <"*">
+            >
+            ["ac9010"] = <
+                text = <"Time from diagnosis to systemic treatment <1 year (synthesised)">
+                description = <"Measured ~1 month after stopping anticoagulation (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Hemoglobin < Lower Limit of Normal (synthesised)">
+                description = <"Men (Normal): 13.5-17.5 g/dL- Women (Normal): 12.0-15.5 g/dL (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"Calcium >10mg/dL (>2.5 mmol/L) (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"LDH > 1.5x Upper Limit of Normal (synthesised)">
+                description = <"Normal: 140 U/L (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Performance status <80% (Karnofsky) (synthesised)">
+                description = <"* (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9013"] = <
+            id = <"ac9013">
+            members = <"at0014", "at0015">
+        >
+        ["ac9012"] = <
+            id = <"ac9012">
+            members = <"at0011", "at0012">
+        >
+        ["ac9011"] = <
+            id = <"ac9011">
+            members = <"at0008", "at0009">
+        >
+        ["ac9010"] = <
+            id = <"ac9010">
+            members = <"at0005", "at0006">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0017", "at0018">
+        >
+    >

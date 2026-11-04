@@ -1,0 +1,396 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=3c3e21f0-0141-40c0-b0c3-d9a45d133dfe; build_uid=924c8d16-72bc-4799-abe9-14b0c4c938b5)
+    openEHR-EHR-CLUSTER.tnm-pathological.v1.0.3
+
+specialize
+    openEHR-EHR-CLUSTER.tnm.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Vebjørn Arntzen / Sabine Leh">
+                ["organisation"] = <"Oslo University Hospital HF / Helse Bergen HF">
+                ["email"] = <"varntzen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2016-08-26">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Heidi Aursand, Oslo universitetssykehus, Norway", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Vegar Dagenborg, OUS, Norway", "Kristin Eik, Kreftregisteret, Norway", "Hildegard Franke, freshEHR Clinical Informatics Ltd. UK", "Sergey Kovalenko, Chelyabinsk Regional Children Hospital, Russia", "Siri Laronningen, Kreftregisteret, Norway", "Liv Laugen, Oslo universitetssykehus, Norway", "Sabine Leh, Haukeland University Hospital, Department of Pathology, Norway", "Miha Lenic, Marand, Slovenia", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics Ltd. UK", "Bjørn Næss, DIPS ASA, Norway", "SARA PRETE, Abinsula, Italy", "Natalia Strauch, Medizinische Hochschule Hannover, Germany", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Brierley JD, Gospodarowicz MK, Wittekind C. TNM Classification of Malignant Tumours, 8th Edition. Wiley-Springer; 2016. 272 p.">
+        ["2"] = <"Principles of Cancer Staging. AJCC American Joint Committee on Cancer; [cited 2019 03 15]. Available at: https://cancerstaging.org/references-tools/deskreferences/Documents/Principles%20of%20Cancer%20Staging.pdf.">
+        ["3"] = <"TNM Classification Help (Manual for Cancer Staging); [cited 2019 10 04].  Available at: http://cancerstaging.blogspot.com/.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, heather.leslie@atomicainformatics.com">
+        ["MD5-CAM-1.0.1"] = <"623BAC3524C44A48FA15C2EE2B4243A8">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung der pathologischen Klassifikation und die Einteilung der Malignität in Stadien anhand des TNM-Systems.">
+            keywords = <"TNM, Krebs, Tumor, pTNM, Grading, Einstufung, Malignität, Klassifikation, Einteilung, Stadium, Neoplasie", ...>
+            use = <"Zur Darstellung der pathologischen Klassifikation, als pTNM bezeichnet, und der Stadieneinteilung der Malignität.
+
+Dieser Archetyp wurde entworfen, um in einem ENTRY- ggf. einem CLUSTER-Archetyp, der einen klinischen oder pathologischen Kontext für den TNM-Datensatz bereitstellt, verschachtelt zu werden - zum Beispiel: der SLOT \"Spezifische Angaben\" im Archetyp EVALUATION.problem_diagnosis; oder verschachtelt in einem geeigneten histopathologiebezogenen CLUSTER-Archetyp im Kontext OBSERVATION.laboratory_test_result.
+
+Jeder Krebs hat einen Satz eindeutigen pTNM-Klassifikationswerte. Dieser Archetyp kann unter Verwendung einer Spezialisierung oder eines Templates für jede Tumorentität und jede Auflage der TNM-Klassifikation weiter eingeschränkt werden, um individuelle Anforderungen zu berücksichtigen.
+
+Bei bestimmten Tumorarten wie Hodgkin-Lymphomen und anderen Non-Hodgkin-Lymphomen wird zur Bestimmung des Ausmaßes und der Prognose von Krankheiten ein anderes System verwendet. In diesem Fall wird nur die Stadieneinteilung definiert.">
+            misuse = <"Nicht zur Darstellung der klinischen TNM-Klassifikation verwenden - verwenden Sie für diesen Zweck den Archetyp CLUSTER.tnm.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere patologisk klassifikasjon og gradering av maligne tumorer ved å bruke TNM-systemet.">
+            keywords = <"TNM, kreft, svulst, tumor, cTNM, gradering, staging, malignitet, klassifikasjon, gruppering, stage, neoplasi, neoplastisk vekst, metastase, spredning, canser, cancer, malign tumor, stadie, stadium, carcinoma, karsinom", ...>
+            use = <"For å registrere patologisk klassifikasjon og gradering av maligne tumorer, ved å bruke TNM-systemet, betegnet som pTNM.
+
+Arketypen er laget for å benyttes i en ENTRY arketype som vil gi den kliniske eller patologiske konteksten, samt typen tumor for TNM registreringen. For eksempel: I SLOTet \"Spesifikke detaljer\" i arketypen EVALUATION.problem_diagnose (Problem/diagnose), eller nøstet i en relevant patologirelatert CLUSTER-arketype som igjen nøstes i laboratoriesvar-arketypen. (OBSERVATION.laboratory_test_result).
+
+Hver kreftform har et sett av unike TNM klassifikasjonsverdier. Det antas at denne arketypen blir tilpasset for å ivareta de unike kravene til hver tumortype i henhold til aktuell utgave av TNM-klassifikasjonen. Dette vil gjøres enten ved å bruke en spesialisering av arketypen eller i et templat.
+
+For noen bestemte kreftformer, som Hodgkins eller non-Hodgkins lymfom vil andre klassifikasjonssystemer benyttes for å angi omfang av sykdom eller prognose. I disse tilfellene vil kun stadium defineres.">
+            misuse = <"Skal ikke brukes for å registrere klinisk TNM-klassifikasjon. Bruk arketypen CLUSTER.tnm (TNM-klassifikasjon klinisk) for dette formålet.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the pathological classification and stage grouping of malignancies using the TNM system.">
+            keywords = <"TNM, cancer, tumour, pTNM, grading, staging, malignancy, classification, grouping, stage, neoplasia", ...>
+            use = <"Use to record the pathological classification, designated as pTNM, and stage grouping of malignancies.
+
+This archetype has been designed to be nested inside an ENTRY or appropriate CLUSTER archetype which will provide a clinical or pathological context and the tumour type for the TNM record - for example: the 'Specific details' SLOT within the EVALUATION.problem_diagnosis archetype; or nested in an appropriate histopathology-related CLUSTER archetype within the OBSERVATION.laboratory_test_result context.
+
+Each cancer has a set of unique pTNM classification values. It is expected that this archetype will be further constrained to reflect the unique requirements for each tumour and edition of the TNM classification, using either an archetype specialisation or a template.
+
+With certain types of tumours, such as Hodgkin and other non-Hodgkin lymphomas, a different system for designating the extent of disease and prognosis is used. In these circumstances only the stage group is defined.">
+            misuse = <"Not to be used to record the TNM clinical classification - use the CLUSTER.tnm archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- TNM pathological classification
+        items matches {
+            ELEMENT[at0003.1] matches {    -- Primary tumour (pT)
+                value matches {
+                    DV_TEXT[at0.9001]
+                }
+            }
+            ELEMENT[at0004.1] matches {    -- Regional lymph nodes (pN)
+                value matches {
+                    DV_TEXT[at0.9002]
+                }
+            }
+            ELEMENT[at0005.1] matches {    -- Distant metastasis (pM)
+                value matches {
+                    DV_TEXT[at0.9003]
+                }
+            }
+            ELEMENT[at0025.1] matches {    -- Multiple primary tumours (m)
+                value matches {
+                    DV_COUNT[at0.9008]
+                    DV_BOOLEAN[at0.9009]
+                }
+            }
+            ELEMENT[at0030.1] matches {    -- pTNM assessment
+                value matches {
+                    DV_TEXT[at0.9011]
+                }
+            }
+            ELEMENT[at0031.1] matches {    -- Stage grouping
+                value matches {
+                    DV_TEXT[at0.9012]
+                }
+            }
+            ELEMENT[at0.1] occurrences matches {0..1} matches {    -- Sentinel node (sn)
+                value matches {
+                    DV_BOOLEAN[at0.9004] matches {
+                        value matches {True}
+                    }
+                }
+            }
+            ELEMENT[at0.2] occurrences matches {0..1} matches {    -- Micrometastases (mi)
+                value matches {
+                    DV_BOOLEAN[at0.9005] matches {
+                        value matches {True}
+                    }
+                }
+            }
+            ELEMENT[at0.3] occurrences matches {0..1} matches {    -- Regional lymph node ITC
+                value matches {
+                    DV_CODED_TEXT[at0.9006] matches {
+                        defining_code matches {[ac0.9000]}    -- Regional lymph node ITC (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0.8] occurrences matches {0..1} matches {    -- Distant metastasis ITC
+                value matches {
+                    DV_CODED_TEXT[at0.9007] matches {
+                        defining_code matches {[ac0.9000]}    -- Regional lymph node ITC (synthesised)
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0.1"] = <
+                text = <"Sentinel-Knoten (sn)">
+                description = <"Als WAHR darzustellen, wenn Metastasierung innerhalb eines oder mehrerer Sentinel-Knoten vorhanden ist.">
+                comment = <"Dargestellt durch das Suffix \"sn\", das der \"TNM-Bewertung\" hinzugefügt wurde.">
+            >
+            ["at0.2"] = <
+                text = <"Mikrometastasen (mi)">
+                description = <"Als WAHR darzustellen, wenn Mikrometastasen im regionalen Lymphabflussgebiet des Primärtumors vorhanden sind.">
+                comment = <"Dargestellt durch das Suffix \"mi\", das der \"TNM-Bewertung\" hinzugefügt wurde.">
+            >
+            ["at0.3"] = <
+                text = <"Regionäre Lymphknoten ITC">
+                description = <"Das Vorhandensein von isolierten Tumorzellen (ITC), die durch H&E-Färbung oder Immunhistochemie in regionären Lymphknoten nachgewiesen wurden.">
+                comment = <"Zum Beispiel „pN0(i-) Histologisch keine regionäre Lymphknotenmetastasierung, negative morphologische Befunde für ITC“; „pN0(mol+) Histologisch keine regionäre Lymphknotenmetastasierung, positiver nichtmorphologischer Befund für ITC“; oder „pN0(i+)(sn) Histologisch keine Sentinel-Lymphknotenmetastasen, positiver morphologischer Befund für ITC“.">
+            >
+            ["at0.4"] = <
+                text = <"i-">
+                description = <"Negative morphologische Befunde für ITC">
+            >
+            ["at0.5"] = <
+                text = <"i+">
+                description = <"Positive morphologische Befunde für ITC.">
+            >
+            ["at0.6"] = <
+                text = <"mol-">
+                description = <"Negative nichtmorphologische Befunde für ITC.">
+            >
+            ["at0.7"] = <
+                text = <"mol+">
+                description = <"Positive morphologische Befunde für ITC.">
+            >
+            ["at0.8"] = <
+                text = <"Fernmetastasierung ITC">
+                description = <"Das Vorhandensein von isolierten Tumorzellen (ITC), die durch H&E-Färbung oder Immunhistochemie in Fernmetastasen wie im Knochenmark nachgewiesen wurden.">
+                comment = <"Zum Beispiel: \"pM0(i+)\" oder \"pM0(mol+)\".">
+            >
+            ["at0000.1"] = <
+                text = <"Pathologische TNM-Klassifikation">
+                description = <"Ein Archetyp für die pathologische Klassifikation und die Einteilung der Malignität in Stadien anhand des TNM-Systems.">
+                comment = <"Bezeichnet als pTNM.">
+            >
+            ["at0003.1"] = <
+                text = <"Primärtumor (pT)">
+                description = <"Die Beurteilung des Ausmaßes des Primärtumors.">
+                comment = <"Die Codierung mit einem T-Code, der der Art des Tumors und der anatomischen Lokalisation entspricht, wird erwartet. Zum Beispiel: \"pT1\" oder \"pT3\". Dargestellt als \"pT\" in der \"TNM-Bewertung\".">
+            >
+            ["at0004.1"] = <
+                text = <"Regionäre Lymphknoten (pN)">
+                description = <"Die Beurteilung des Fehlens oder Vorhandenseins und des Ausmaßes regionären Lymphknotenmetastasen.">
+                comment = <"Die Codierung mit einem N-Code, der der Art des Tumors und der anatomischen Lokalisation entspricht, wird erwartet. Zum Beispiel: \"pNX\" oder \"pN2\". Dargestellt als \"pN\" in der \"TNM-Bewertung\".">
+            >
+            ["at0005.1"] = <
+                text = <"Fernmetastasierung (pM)">
+                description = <"Beurteilung des Fehlens oder Vorhandenseins von Fernmetastasen.">
+                comment = <"Die Codierung mit einem M-Code, der der Art des Tumors und der anatomischen Lokalisation entspricht, wird erwartet. Zum Beispiel: \"pM1\". Dargestellt als \"pM\" in der \"TNM-Bewertung\".">
+            >
+            ["at0025.1"] = <
+                text = <"Multiple Primärtumoren (m)">
+                description = <"Das Vorhandensein multipler simultaner Primärtumoren mit einer Lokalisation.">
+                comment = <"Dargestellt durch das Suffix, entweder als \"(m)\" oder als Anzahl der Primärtumoren, die dem T-Code in Klammern hinzugefügt wurden. Zum Beispiel: \"pT2(m)\" oder \"pT2(4)\". Dargestellt als \"pm\" in der \"TNM-Bewertung\".">
+            >
+            ["at0030.1"] = <
+                text = <"pTNM-Bewertung">
+                description = <"Verknüpfung von \"pT\", \"pN\" und \"pM\"-Bewertungen sowie ggf. optionale Bewertungen von „G“, „R“, „L“, „V“, Präfixen und / oder Suffixen.">
+            >
+            ["at0031.1"] = <
+                text = <"Stadiumeinteilung">
+                description = <"Die Kategorisierung des anatomischen Stadiums des Tumors, in der Regel basierend auf die TNM-Bewertung.">
+                comment = <"Zum Beispiel: Carcinoma in situ wird in das Stadium 0 eingeteilt; oder Tumoren mit Fernmetastasen werden in das Stadium IV eingruppiert.">
+            >
+            ["ac0.9000"] = <
+                text = <"Regionäre Lymphknoten ITC (synthesised)">
+                description = <"Das Vorhandensein von isolierten Tumorzellen (ITC), die durch H&E-Färbung oder Immunhistochemie in regionären Lymphknoten nachgewiesen wurden. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0.1"] = <
+                text = <"Vaktpostlymfeknute (sn)">
+                description = <"Registreres som 'Sann' hvis det er funn av metastaser i en eller flere vaktpostlymfeknute(r), (Sentinel Lymph Node, SNL).">
+                comment = <"Angis ved å legge til suffikset \"sn\" i \"TNM-vurdering\".">
+            >
+            ["at0.2"] = <
+                text = <"Mikrometastaser (mi)">
+                description = <"Registreres som 'Sann' hvis det er funn av mikrometastaser i lymfedrenasjeområdet til primærsvulsten.">
+                comment = <"Angis ved å legge til suffikset \"mi\" i \"TNM-vurdering\".">
+            >
+            ["at0.3"] = <
+                text = <"Regional lymfeknute ITC">
+                description = <"Funn av isolerte tumorceller (ITC), ved bruk av HE-farging eller immunhistokjemi i regionale lymfeknuter.">
+                comment = <"For eksempel \"pN0(i-) Ingen metastaser i regionale lymfeknuter histologisk, negativt morfologisk funn for ITC\", \"pN0(mol+) Ingen metastaser i regionale lymfeknuter histologisk, positive funn non-morfologisk av ITC\" eller \"pN0(i+)(sn) Ingen metastase i vaktpostlymfeknute histologisk, positive morfologiske funn av ITC.">
+            >
+            ["at0.4"] = <
+                text = <"i-">
+                description = <"Ingen morfologiske funn av ITC.">
+            >
+            ["at0.5"] = <
+                text = <"i+">
+                description = <"Funn av morfologisk ITC.">
+            >
+            ["at0.6"] = <
+                text = <"mol-">
+                description = <"Ingen non-morfologiske funn av ITC.">
+            >
+            ["at0.7"] = <
+                text = <"mol+">
+                description = <"Non-morfologiske funn av ITC.">
+            >
+            ["at0.8"] = <
+                text = <"Fjernmetastase ITC (pM)">
+                description = <"Funn av isolerte tumorceller (ITC), oppdaget ved HE-farging eller immunhistokjemi som fjernmetastaser, for eksempel i beinmarg.">
+                comment = <"For eksempel \"pM0(i+) eller \"pM0(mol+).">
+            >
+            ["at0000.1"] = <
+                text = <"TNM-klassifikasjon patologi">
+                description = <"Et rammeverk for patologisk klassifikasjon og gradering av maligne tumorer i henhold til TNM-systemet.">
+                comment = <"Betegnes som pTNM.">
+            >
+            ["at0003.1"] = <
+                text = <"Primærtumor (pT)">
+                description = <"Vurdering av primærtumor.">
+                comment = <"Kodes med en T-kode som passer for tumortypen og den anatomiske lokaliseringen, for eksempel \"pT1\" eller \"pT3\". Fremkommer i \"TNM-vurdering\" som \"pT\".">
+            >
+            ["at0004.1"] = <
+                text = <"Regionale lymfeknuter (pN)">
+                description = <"Vurdering av hvorvidt det er metastaser i regionale lymfeknuter eller ikke, og i så fall i hvilken grad.">
+                comment = <"Kodes med en N-kode som passer for tumortypen og den anatomiske lokaliseringen, for eksempel \"pNX\" eller \"pN2\". Fremkommer i \"TNM-vurdering\" som \"pN\".">
+            >
+            ["at0005.1"] = <
+                text = <"Fjernmetastase (pM)">
+                description = <"Vurdering av hvorvidt det er fjernmetastaser eller ikke.">
+                comment = <"Kodes med en M-kode som passer for tumortypen og den anatomiske lokaliseringen, for eksempel \"pM1. Fremkommer i \"TNM-vurdering\" som \"pM\".">
+            >
+            ["at0025.1"] = <
+                text = <"Multiple primærtumorer (m)">
+                description = <"Funn av multiple samtidige primærsvulster på ett enkelt sted.">
+                comment = <"Angis med en tilføyelse, enten bokstaven \"m\" eller antallet av primærsvulster, i parantes bak T-koden, for eksempel \"pT2(m)\" eller \"pT2(4)\". Fremkommer i \"TNM-vurdering\" som \"pm\".">
+            >
+            ["at0030.1"] = <
+                text = <"pTNM-vurdering">
+                description = <"Sammentrekning av vurdering av \"pT\", \"pN\" og \"pM\", pluss eventuelle tilleggsvurderinger av \"G\", \"R\", \"L\", \"V\", prefiks og/eller tillegg der det er passende.">
+            >
+            ["at0031.1"] = <
+                text = <"Stadium">
+                description = <"Kategoriseringen av tumorens stadium, vanligvis basert på pTNM vurderingen.">
+                comment = <"For eksempel: Karsinom in situ er kategorisert som stadium 0, tumorer med fjernmetastaser er kategorisert som stadium IV.">
+            >
+            ["ac0.9000"] = <
+                text = <"Regional lymfeknute ITC (synthesised)">
+                description = <"Funn av isolerte tumorceller (ITC), ved bruk av HE-farging eller immunhistokjemi i regionale lymfeknuter. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0.1"] = <
+                text = <"Sentinel node (sn)">
+                description = <"Record as True if presence of metastasis within one or more sentinel node(s).">
+                comment = <"Represented by the suffix 'sn' added to the 'TNM assessment'.">
+            >
+            ["at0.2"] = <
+                text = <"Micrometastases (mi)">
+                description = <"Record as True if presence of micrometastases in the regional lymph drainage area of the primary tumour.">
+                comment = <"Represented by the suffix 'mi' added to the 'TNM assessment'.">
+            >
+            ["at0.3"] = <
+                text = <"Regional lymph node ITC">
+                description = <"Presence of isolated tumour cells (ITC) detected by H&E stains or immunohistochemistry in regional lymph nodes.">
+                comment = <"For example 'pN0(i-) No regional lymph node metastasis histologically, negative morphological findings for ITC'; 'pN0(mol+) No regional lymph node metastasis histologically, positive non morphological findings for ITC'; or 'pN0(i+)(sn) No sentinel lymph node metastasis histologically, positive morphological findings for ITC'.">
+            >
+            ["at0.4"] = <
+                text = <"i-">
+                description = <"Negative morphological findings for ITC.">
+            >
+            ["at0.5"] = <
+                text = <"i+">
+                description = <"Positive morphological findings for ITC.">
+            >
+            ["at0.6"] = <
+                text = <"mol-">
+                description = <"Negative non-morphological findings for ITC.">
+            >
+            ["at0.7"] = <
+                text = <"mol+">
+                description = <"Positive non-morphological findings for ITC.">
+            >
+            ["at0.8"] = <
+                text = <"Distant metastasis ITC">
+                description = <"Presence of isolated tumour cells (ITC) detected by H&E stains or immunohistochemistry as distant metastases, such as bone marrow.">
+                comment = <"For example: 'pM0(i+)' or 'pM0(mol+)'.">
+            >
+            ["at0000.1"] = <
+                text = <"TNM pathological classification">
+                description = <"A framework for the pathological classification and stage grouping of malignancies using the TNM system.">
+                comment = <"Designated as pTNM.">
+            >
+            ["at0003.1"] = <
+                text = <"Primary tumour (pT)">
+                description = <"Assessment of the extent of the primary tumour.">
+                comment = <"Coding with a T code appropriate for the tumour type and anatomical site is expected. For example: 'pT1'; or 'pT3'. Represented as 'pT' in the 'TNM assessment'.">
+            >
+            ["at0004.1"] = <
+                text = <"Regional lymph nodes (pN)">
+                description = <"Assessment of the absence or presence and extent of regional lymph node metastasis.">
+                comment = <"Coding with an N code appropriate for the tumour type and anatomical site is expected. For example: 'pNX'; or 'pN2'. Represented as 'pN' in the 'TNM assessment'.">
+            >
+            ["at0005.1"] = <
+                text = <"Distant metastasis (pM)">
+                description = <"Assessment of the absence or presence of distant metastasis.">
+                comment = <"Coding with an M code appropriate for the tumour type and anatomical site is expected. For example: 'pM1'. Represented as 'pM' in the 'TNM assessment'.">
+            >
+            ["at0025.1"] = <
+                text = <"Multiple primary tumours (m)">
+                description = <"Presence of multiple simultaneous primary tumours at a single site.">
+                comment = <"Represented by the suffix, either as '(m)' or the number of primary tumours added to the T code. For example: 'pT2(m)' or 'pT2(4)'. Represented as 'pm' within the 'TNM assessment'.">
+            >
+            ["at0030.1"] = <
+                text = <"pTNM assessment">
+                description = <"Concatenation of 'pT', 'pN' and 'pM' assessments plus any optional assessments of 'G', 'R', 'L', 'V', prefixes and/or suffixes, as applicable.">
+            >
+            ["at0031.1"] = <
+                text = <"Stage grouping">
+                description = <"The categorisation of the anatomical stage of the tumour, usually based on pTNM assessment.">
+                comment = <"For example: carcinoma in situ is categorised as stage 0; or tumours with distant metastasis are categorised as stage IV.">
+            >
+            ["ac0.9000"] = <
+                text = <"Regional lymph node ITC (synthesised)">
+                description = <"Presence of isolated tumour cells (ITC) detected by H&E stains or immunohistochemistry in regional lymph nodes. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.4", "at0.5", "at0.6", "at0.7">
+        >
+    >

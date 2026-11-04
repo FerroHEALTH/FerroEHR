@@ -1,0 +1,179 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=dccca68d-54de-4fe9-9d7c-a3926c0584ab; build_uid=48626781-8bd2-4514-86e9-0281df2701d9)
+    openEHR-EHR-OBSERVATION.poem_score.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Dmitri Wall">
+        ["organisation"] = <"Irish Skin Foundation">
+        ["email"] = <"dmitri.wall@gmail.com">
+        ["date"] = <"2015-02-07">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Ian McNicoll", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"1. Charman CR, Venn AJ, Williams HC. The patient-oriented eczema measure: development and initial validation of a new tool for measuring atopic eczema severity from the patients’ perspective. Archives of dermatology 2004; 140: 1513-9.">
+        ["2"] = <"2. Schram M, Spuls PI, Leeflang M et al. EASI,(objective) SCORAD and POEM for atopic eczema: responsiveness and minimal clinically important difference. Allergy 2012; 67: 99-106.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"870CEC9E5D90C84B1FE0601CA5589197">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"The Patient-Oriented Eczema Measure (POEM), is a simple measure, developed \"for research purposes, and to assist health care professionals such as general practitioners, dermatologists, pediatricians, and specialist nurses caring for patients in routine clinical practice\"(1). It is a tool that enables measurement of \"atopic eczema severity from the patients’ perspective\"(1,2).">
+            keywords = <"Atopic dermatitis", "Eczema", "PROM (patient-reported outcome measure)">
+            use = <"">
+            misuse = <"Should not be utilised in children.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- POEM score
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] occurrences matches {0..1} matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    CLUSTER[at0004] matches {    -- Symptom score
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0013] occurrences matches {0..6} matches {    -- Symptom name
+                                                value matches {
+                                                    DV_CODED_TEXT[at9002] matches {
+                                                        defining_code matches {[ac9000]}    -- Symptom name (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Frequency
+                                                value matches {
+                                                    DV_ORDINAL[at9003] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0006]}],    -- 0 days
+                                                            [{1}, {[at0007]}],    -- 1-2 days
+                                                            [{2}, {[at0008]}],    -- 3-4 days
+                                                            [{3}, {[at0009]}],    -- 5-6 days
+                                                            [{4}, {[at0010]}]    -- Every day
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Total Poem score
+                                        value matches {
+                                            DV_COUNT[at9004] matches {
+                                                magnitude matches {|<=28|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"POEM score">
+                description = <"POEM (Patient-Oriented Eczema Measure).">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Any event.">
+            >
+            ["at0004"] = <
+                text = <"Symptom score">
+                description = <"The symptom score.">
+            >
+            ["at0005"] = <
+                text = <"Frequency">
+                description = <"Frequency of the symptom.">
+            >
+            ["at0006"] = <
+                text = <"0 days">
+                description = <"The symptom was not experienced in the past week.">
+            >
+            ["at0007"] = <
+                text = <"1-2 days">
+                description = <"The symptom was experienced on 1 or 2 days of the last week.">
+            >
+            ["at0008"] = <
+                text = <"3-4 days">
+                description = <"The symptom was experienced on 3 or 4 days of the last week.">
+            >
+            ["at0009"] = <
+                text = <"5-6 days">
+                description = <"The symptom was experienced on 5 or 6 days of the last week.">
+            >
+            ["at0010"] = <
+                text = <"Every day">
+                description = <"The symptom was experienced every day of the past week.">
+            >
+            ["at0013"] = <
+                text = <"Symptom name">
+                description = <"Symptom experienced by the patient in the past week.">
+            >
+            ["at0014"] = <
+                text = <"Itch">
+                description = <"The patient experienced itch.">
+            >
+            ["at0015"] = <
+                text = <"Sleep loss">
+                description = <"The patient experienced sleep loss.">
+            >
+            ["at0016"] = <
+                text = <"Weeping">
+                description = <"The patient experienced weeping skin.">
+            >
+            ["at0017"] = <
+                text = <"Cracking">
+                description = <"The patient experienced cracking of skin.">
+            >
+            ["at0018"] = <
+                text = <"Flaking">
+                description = <"The patient experienced flaking skin.">
+            >
+            ["at0019"] = <
+                text = <"Dry or rough skin">
+                description = <"The patient experienced dry or rough skin.">
+            >
+            ["at0020"] = <
+                text = <"Total Poem score">
+                description = <"The total Poem score.">
+                comment = <"The score is the sum of the frequencies with which all of the symptoms are experienced in the past week.">
+            >
+            ["ac9000"] = <
+                text = <"Symptom name (synthesised)">
+                description = <"Symptom experienced by the patient in the past week. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Frequency (synthesised)">
+                description = <"Frequency of the symptom. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0014", "at0015", "at0016", "at0017", "at0018", "at0019">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0006", "at0007", "at0008", "at0009", "at0010">
+        >
+    >

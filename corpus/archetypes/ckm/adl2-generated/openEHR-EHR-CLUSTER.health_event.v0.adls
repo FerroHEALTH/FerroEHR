@@ -1,0 +1,319 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=b6868ac0-d4d1-4f57-80db-0388ae4fcd25; build_uid=c2385e12-84fd-45bc-bb52-2f627f0adb3a)
+    openEHR-EHR-CLUSTER.health_event.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Therese Lindberg">
+                ["organisation"] = <"Cambio CDS">
+                ["email"] = <"therese.lindberg@cambio.se">
+            >
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2007-12-17">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"0746E8D958A0B1C631208FFFE0EF8730">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung der Informationen zu einem gesundheitsbezogenen Ereignis.">
+            use = <"">
+            misuse = <"">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att registrera detaljer om en hälsorelaterad händelse.">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتسجيل التفاصيل حول واقعة متعلقة بالصحة">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about a health related event.">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Health event
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {1} matches {    -- Event name
+                value matches {
+                    DV_TEXT[at9000]
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Description
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            allow_archetype CLUSTER[at0003] matches {    -- Preceding symptoms and events
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.health_event(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-CLUSTER\.symptom_sign(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            allow_archetype CLUSTER[at0004] matches {    -- Associated symptoms and events
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.symptom_sign(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.health_event(-[a-zA-Z0-9_]+)*\.v0\..*/}
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Time elapsed
+                value matches {
+                    DV_DURATION[at9002]
+                }
+            }
+            allow_archetype CLUSTER[at0006] matches {    -- Witness
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Circumstances
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            ELEMENT[at0008] matches {    -- Contributing factor
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+            allow_archetype CLUSTER[at0009] matches {    -- Additional details
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9005]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Gesundheitliches Ereignis">
+                description = <"Die Angaben zu einem bestimmten gesundheitsbezogenen Ereignis.">
+                comment = <"Zum Beispiel: eine Vergiftung, Überdosierung oder ein Trauma.">
+            >
+            ["at0001"] = <
+                text = <"Name des Ereignisses">
+                description = <"Identifikation des aufgetretenen Ereignisses.">
+            >
+            ["at0002"] = <
+                text = <"Beschreibung">
+                description = <"Eine Beschreibung des Ereignisses.">
+            >
+            ["at0003"] = <
+                text = <"Vorangegangene Symptome und Ereignisse">
+                description = <"Symptome und Ereignisse, die dem Bezugsereignis vorausgingen.">
+            >
+            ["at0004"] = <
+                text = <"Begleitsymptome und -Ereignisse">
+                description = <"Symptome und Ereignisse, die zum Zeitpunkt des Bezugsereignisses aufgetreten sind.">
+            >
+            ["at0005"] = <
+                text = <"Verstrichene Zeit">
+                description = <"Die Zeit zwischen dem Ereignis und dem Zeitpunkt der klinischen Beurteilung.">
+            >
+            ["at0006"] = <
+                text = <"Zeuge">
+                description = <"Identifizierung einer Person, die das Ereignis beobachtet hat.">
+            >
+            ["at0007"] = <
+                text = <"Umstände">
+                description = <"Die Beschreibung des Rahmens und der Umstände des Ereignisses.">
+            >
+            ["at0008"] = <
+                text = <"Beeinflussender Faktor">
+                description = <"Identifizierung von Faktoren, die zum Auftreten des Ereignisses beitragen.">
+            >
+            ["at0009"] = <
+                text = <"Zusätzliche Angaben">
+                description = <"Strukturierte Angaben zu spezifischen Aspekten des Ereignisses.">
+            >
+            ["at0010"] = <
+                text = <"Kommentar">
+                description = <"Zusätzlicher Text zu dem gesundheitlichen Ereignis, der nicht in anderen Feldern erfasst wird.">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Hälsorelaterad händelse">
+                description = <"Detaljer om en specifik hälsorelaterad händelse.">
+                comment = <"Till exempel: en förgiftning, överdos eller trauma.">
+            >
+            ["at0001"] = <
+                text = <"Händelsenamn">
+                description = <"Identifiering av händelsen som inträffade.">
+            >
+            ["at0007"] = <
+                text = <"Omständigheter">
+                description = <"Berättande beskrivning av sammanhanget och omständigheterna kring evenemanget.">
+            >
+            ["at0002"] = <
+                text = <"Beskrivning">
+                description = <"En berättande beskrivning av händelsen.">
+            >
+            ["at0005"] = <
+                text = <"Tiden som gått">
+                description = <"Tiden mellan händelsen och tiden för klinisk bedömning.">
+            >
+            ["at0008"] = <
+                text = <"Bidragande faktor">
+                description = <"Identifiering av faktorer som bidrar till händelsen.">
+            >
+            ["at0003"] = <
+                text = <"Tidigare symtom och händelser">
+                description = <"Symtom och händelser som föregick indexhändelsen.">
+            >
+            ["at0004"] = <
+                text = <"Associerade symtom och händelser">
+                description = <"Symtom och händelser som inträffade vid tidpunkten för indexhändelsen.">
+            >
+            ["at0009"] = <
+                text = <"Ytterligare detaljer">
+                description = <"Strukturerad information om specifika aspekter av händelsen.">
+            >
+            ["at0006"] = <
+                text = <"Bevittna">
+                description = <"Identifiering av andra som bevittnat händelsen.">
+            >
+            ["at0010"] = <
+                text = <"*Comment (en)">
+                description = <"*Additional narrative about the health event, not captured in other fields. (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Health event">
+                description = <"Details about a specific health-related event.">
+                comment = <"For example: a poisoning, overdose or trauma.">
+            >
+            ["at0001"] = <
+                text = <"Event name">
+                description = <"Identification of the event that occurred.">
+            >
+            ["at0007"] = <
+                text = <"Circumstances">
+                description = <"Narrative description the context and circumstances surrounding the event.">
+            >
+            ["at0002"] = <
+                text = <"Description">
+                description = <"A narrative description of the event.">
+            >
+            ["at0005"] = <
+                text = <"Time elapsed">
+                description = <"The time between the event and the time of clinical assessment.">
+            >
+            ["at0008"] = <
+                text = <"Contributing factor">
+                description = <"Identification of factors contributing to the occurrence of the event.">
+            >
+            ["at0003"] = <
+                text = <"Preceding symptoms and events">
+                description = <"Symptoms and events which preceded the index event.">
+            >
+            ["at0004"] = <
+                text = <"Associated symptoms and events">
+                description = <"Symptoms and events which occurred at the time of the index event.">
+            >
+            ["at0009"] = <
+                text = <"Additional details">
+                description = <"Structured details about specific aspects of the event.">
+            >
+            ["at0006"] = <
+                text = <"Witness">
+                description = <"Identification of an individual who witnessed the event.">
+            >
+            ["at0010"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the health event, not captured in other fields.">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"واقعة صحية">
+                description = <"*Details about a specific health-related event. (en)">
+                comment = <"*For example: a poisoning, overdose or trauma. (en)">
+            >
+            ["at0001"] = <
+                text = <"*Event name(en)">
+                description = <"*Identification of the event that occurred.(en)">
+            >
+            ["at0007"] = <
+                text = <"*Circumstances(en)">
+                description = <"*Narrative description the context and circumstances surrounding the event.(en)">
+            >
+            ["at0002"] = <
+                text = <"*Clinical description (en)">
+                description = <"*A narrative description of the event.(en)">
+            >
+            ["at0005"] = <
+                text = <"*Time elapsed(en)">
+                description = <"*The time between the event and the time of clinical assessment.(en)">
+            >
+            ["at0008"] = <
+                text = <"*Contributing factor(en)">
+                description = <"*Identification of factors contributing to the occurrence of the event.(en)">
+            >
+            ["at0003"] = <
+                text = <"*Preceding symptoms and events(en)">
+                description = <"*Symptoms and events which preceded the index event.(en)">
+            >
+            ["at0004"] = <
+                text = <"*Associated symptoms and events(en)">
+                description = <"*Symptoms and events which occurred at the time of the index event.(en)">
+            >
+            ["at0009"] = <
+                text = <"*Additional details (en)">
+                description = <"*Structured details about specific aspects of the event. (en)">
+            >
+            ["at0006"] = <
+                text = <"*Witness (en)">
+                description = <"*Identification of an individual who witnessed the event. (en)">
+            >
+            ["at0010"] = <
+                text = <"*Comment (en)">
+                description = <"*Additional narrative about the health event, not captured in other fields. (en)">
+            >
+        >
+    >

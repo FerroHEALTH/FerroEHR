@@ -1,0 +1,444 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=ce13c28e-45ab-480c-91e6-09c4c45f046c; build_uid=918720a6-e302-4cd6-a13d-e8d0d467da46)
+    openEHR-EHR-CLUSTER.auscultation_breath.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Keisha Barwise">
+        ["organisation"] = <"openEHR Foundation">
+        ["email"] = <"keisha.barwise@openehr.org">
+        ["date"] = <"2025-05-13">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Heather Leslie", "CCIO", "openEHR Foundation", "heather.leslie@openehr.org">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"C27D920B3D313B1041C153D5B1DD8D1F">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a narrative description and clinical interpretation of the findings observed during the auscultation of breath sounds.">
+            keywords = <"breath sounds, auscultation", ...>
+            use = <"Use to record a narrative description and clinical interpretation of the findings observed during the auscultation of breath sounds.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam, CLUSTER.exam-lung or CLUSTER.exam-abdomen archetypes, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element.">
+            misuse = <"Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom_sign.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Auscultation of breath sounds
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Body site
+                value matches {
+                    DV_TEXT[at9009]
+                }
+            }
+            allow_archetype CLUSTER[at0002] matches {    -- Structured body site
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location\.v1\..*|openEHR-EHR-CLUSTER\.anatomical_location_circle\.v1\..*|openEHR-EHR-CLUSTER\.anatomical_location_relative\.v2\..*/}
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Clinical description
+                value matches {
+                    DV_TEXT[at9010]
+                }
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Presence
+                value matches {
+                    DV_CODED_TEXT[at9011] matches {
+                        defining_code matches {[ac9000]}    -- Presence (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0012] occurrences matches {0..1} matches {    -- Intensity
+                value matches {
+                    DV_CODED_TEXT[at9012] matches {
+                        defining_code matches {[ac9001]}    -- Intensity (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Type
+                value matches {
+                    DV_TEXT[at9013]
+                }
+            }
+            CLUSTER[at0016] matches {    -- Adventitious breath sound
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0017] occurrences matches {1} matches {    -- Breath sound
+                        value matches {
+                            DV_CODED_TEXT[at9014] matches {
+                                defining_code matches {[ac9002]}    -- Breath sound (synthesised)
+                            }
+                            DV_TEXT[at9015]
+                        }
+                    }
+                    ELEMENT[at0066] occurrences matches {0..1} matches {    -- Presence
+                        value matches {
+                            DV_CODED_TEXT[at9016] matches {
+                                defining_code matches {[ac9003]}    -- Presence (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0024] occurrences matches {1} matches {    -- Intensity
+                        value matches {
+                            DV_CODED_TEXT[at9017] matches {
+                                defining_code matches {[ac9004]}    -- Intensity (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0029] occurrences matches {0..1} matches {    -- Phase
+                        value matches {
+                            DV_CODED_TEXT[at9018] matches {
+                                defining_code matches {[ac9005]}    -- Phase (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0033] occurrences matches {1} matches {    -- Timing
+                        value matches {
+                            DV_CODED_TEXT[at9019] matches {
+                                defining_code matches {[ac9006]}    -- Timing (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0037] occurrences matches {0..1} matches {    -- Clinical description
+                        value matches {
+                            DV_TEXT[at9020]
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0039] occurrences matches {0..1} matches {    -- Vocal resonance
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0040] occurrences matches {0..1} matches {    -- Intensity
+                        value matches {
+                            DV_CODED_TEXT[at9021] matches {
+                                defining_code matches {[ac9007]}    -- Intensity (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0045] occurrences matches {0..1} matches {    -- Type
+                        value matches {
+                            DV_CODED_TEXT[at9022] matches {
+                                defining_code matches {[ac9008]}    -- Type (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0053] occurrences matches {0..1} matches {    -- Clinical interpretation
+                value matches {
+                    DV_TEXT[at9023]
+                }
+            }
+            allow_archetype CLUSTER[at0051] matches {    -- Examination not done
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.exclusion_exam\.v1\..*/}
+            }
+            ELEMENT[at0052] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9024]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Auscultation of breath sounds">
+                description = <"Findings observed during the auscultation of breath sounds.">
+            >
+            ["at0001"] = <
+                text = <"Body site">
+                description = <"Identification of the area of the body under examination.">
+                comment = <"For example examination of a specific area of the lung. If the body site has been fully identified in the parent archetype in which this archetype is nested, this data element becomes redundant.">
+            >
+            ["at0002"] = <
+                text = <"Structured body site">
+                description = <"A structured description of the area of the body under examination.">
+                comment = <"If the body site has been fully identified in the parent archetype in which this archetype is nested or in the 'Body site' data element, this SLOT becomes redundant.">
+            >
+            ["at0003"] = <
+                text = <"Clinical description">
+                description = <"Narrative description of the auscultation findings.">
+            >
+            ["at0004"] = <
+                text = <"Presence">
+                description = <"The presence or absence of any breath sounds heard on auscultation.">
+            >
+            ["at0005"] = <
+                text = <"Present">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Absent">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Type">
+                description = <"The type or character of the breath sounds heard on auscultation.">
+                comment = <"For example: Vesicular; Bronchial; Bronchovesicular;	
+Tracheal.	
+">
+            >
+            ["at0012"] = <
+                text = <"Intensity">
+                description = <"The relative volume or loudness of all breath sounds compared to what is expected.">
+            >
+            ["at0016"] = <
+                text = <"Adventitious breath sound">
+                description = <"Details about an abnormal breath sound heard over the area of lung being auscultated.">
+            >
+            ["at0017"] = <
+                text = <"Breath sound">
+                description = <"Name of the abnormal breath sound.">
+            >
+            ["at0024"] = <
+                text = <"Intensity">
+                description = <"The volume or loudness of the identified breath sound.">
+            >
+            ["at0029"] = <
+                text = <"Phase">
+                description = <"The timing of the sound within the whole breathing cycle.">
+            >
+            ["at0033"] = <
+                text = <"Timing">
+                description = <"The timing of the sound within the specified 'Phase' of the breathing cycle.">
+            >
+            ["at0034"] = <
+                text = <"Early">
+                description = <"The added breath sound occurs at the beginning of either the inspiratory or expiratory phase.">
+            >
+            ["at0035"] = <
+                text = <"Mid">
+                description = <"The added breath sound is heard during the middle portion of either the inspiratory or expiratory phase.">
+            >
+            ["at0036"] = <
+                text = <"Late">
+                description = <"The added breath sound occurs near the end of the inspiratory or expiratory phase.">
+            >
+            ["at0037"] = <
+                text = <"Clinical description">
+                description = <"Narrative description about the identified breath sound.">
+            >
+            ["at0039"] = <
+                text = <"Vocal resonance">
+                description = <"Details about vocal resonance heard over the area of lung being auscultated.">
+            >
+            ["at0040"] = <
+                text = <"Intensity">
+                description = <"The relative volume or loudness of the transmitted sounds compared to what is expected.">
+            >
+            ["at0045"] = <
+                text = <"Type">
+                description = <"The type or character of transmitted sound heard.">
+            >
+            ["at0046"] = <
+                text = <"Aegophony">
+                description = <"A change in the quality of the spoken voice over the chest wall, in which the sound \"ee\" is heard as a nasal \"ay\".">
+            >
+            ["at0047"] = <
+                text = <"Whispered pectoriloquy">
+                description = <"Increased clarity and loudness of whispered speech heard over the chest wall.">
+            >
+            ["at0051"] = <
+                text = <"Examination not done">
+                description = <"Details to explicitly record that this examination was not performed.">
+            >
+            ["at0052"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the auscultation findings at the body site, not captured in other fields.">
+            >
+            ["at0053"] = <
+                text = <"Clinical interpretation">
+                description = <"Single word, phrase or brief description that represents the clinical meaning and significance of the auscultation  findings at the body site.">
+                comment = <"For example: 'No abnormality detected' or 'Consolidation present'. Coding of the 'Clinical interpretation' with a terminology is preferred, where possible.">
+            >
+            ["at0054"] = <
+                text = <"Bronchophony">
+                description = <"Increased clarity and loudness of spoken voice over the chest wall.">
+            >
+            ["at0059"] = <
+                text = <"Soft">
+                description = <"The abnormal sound is faint and hard to hear.">
+            >
+            ["at0060"] = <
+                text = <"Moderate">
+                description = <"The abnormal sound is clearly heard but not dominant.">
+            >
+            ["at0061"] = <
+                text = <"Loud">
+                description = <"The abnormal sound is easily heard and prominent.">
+            >
+            ["at0063"] = <
+                text = <"Inspiratory">
+                description = <"The abnormal sound is heard during inhalation.">
+            >
+            ["at0064"] = <
+                text = <"Expiratory">
+                description = <"The abnormal sound is heard during exhalation.">
+            >
+            ["at0065"] = <
+                text = <"Biphasic">
+                description = <"The abnormal sound is heard during both inhalation and exhalation.">
+            >
+            ["at0066"] = <
+                text = <"Presence">
+                description = <"The presence or absence of an identified abnormal sound.">
+            >
+            ["at0067"] = <
+                text = <"Present">
+                description = <"">
+            >
+            ["at0068"] = <
+                text = <"Absent">
+                description = <"">
+            >
+            ["at0075"] = <
+                text = <"Stridor">
+                description = <"A high-pitched sound resulting from turbulent airflow due to upper airway obstruction.">
+            >
+            ["at0076"] = <
+                text = <"Rhonchi">
+                description = <"A low-pitched sound caused by airflow through large airways with secretions or obstruction.">
+            >
+            ["at0077"] = <
+                text = <"Fine crackles">
+                description = <"A discontinuous, high-pitched sound produced by sudden opening of small airways.">
+            >
+            ["at0078"] = <
+                text = <"Coarse crackles">
+                description = <"A discontinuous, low-pitched sound produced by air passing through larger airways with fluid or secretions.">
+            >
+            ["at0079"] = <
+                text = <"Pleural rub">
+                description = <"A grating sound generated by inflamed pleural surfaces rubbing against each other.">
+            >
+            ["at0080"] = <
+                text = <"Wheeze">
+                description = <"A continuous, high-pitched sound resulting from airflow through narrowed or compressed airways.">
+            >
+            ["at0081"] = <
+                text = <"Increased">
+                description = <"The transmitted vocal sound is louder than expected in the area of the lung being auscultated.">
+            >
+            ["at0082"] = <
+                text = <"Normal">
+                description = <"The transmitted vocal sound is heard at the expected intensity in the area of the lung being auscultated.">
+            >
+            ["at0083"] = <
+                text = <"Decreased">
+                description = <"The transmitted vocal sound is quieter than expected in the area of the lung being auscultated.">
+            >
+            ["at0084"] = <
+                text = <"Absent">
+                description = <"No transmitted vocal sound is heard in the area of the lung being auscultated.">
+            >
+            ["at0085"] = <
+                text = <"Absent">
+                description = <"The breath sound is not heard over the area of lung being auscultated.">
+            >
+            ["at0086"] = <
+                text = <"Decreased">
+                description = <"The breath sound is less intense than expected over the area of lung being auscultated.">
+            >
+            ["at0087"] = <
+                text = <"Normal">
+                description = <"The breath sound is heard at the expected intensity over the area of lung being auscultated.">
+            >
+            ["at0088"] = <
+                text = <"Increased">
+                description = <"The breath sound is louder than expected over the area of lung being auscultated.">
+            >
+            ["ac9000"] = <
+                text = <"Presence (synthesised)">
+                description = <"The presence or absence of any breath sounds heard on auscultation. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Intensity (synthesised)">
+                description = <"The relative volume or loudness of all breath sounds compared to what is expected. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Breath sound (synthesised)">
+                description = <"Name of the abnormal breath sound. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Presence (synthesised)">
+                description = <"The presence or absence of an identified abnormal sound. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Intensity (synthesised)">
+                description = <"The volume or loudness of the identified breath sound. (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Phase (synthesised)">
+                description = <"The timing of the sound within the whole breathing cycle. (synthesised)">
+            >
+            ["ac9006"] = <
+                text = <"Timing (synthesised)">
+                description = <"The timing of the sound within the specified 'Phase' of the breathing cycle. (synthesised)">
+            >
+            ["ac9007"] = <
+                text = <"Intensity (synthesised)">
+                description = <"The relative volume or loudness of the transmitted sounds compared to what is expected. (synthesised)">
+            >
+            ["ac9008"] = <
+                text = <"Type (synthesised)">
+                description = <"The type or character of transmitted sound heard. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0080", "at0076", "at0075", "at0077", "at0078", "at0079">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0088", "at0087", "at0086", "at0085">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0005", "at0006">
+        >
+        ["ac9006"] = <
+            id = <"ac9006">
+            members = <"at0034", "at0035", "at0036">
+        >
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0063", "at0064", "at0065">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0059", "at0060", "at0061">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0067", "at0068">
+        >
+        ["ac9008"] = <
+            id = <"ac9008">
+            members = <"at0046", "at0047", "at0054">
+        >
+        ["ac9007"] = <
+            id = <"ac9007">
+            members = <"at0081", "at0082", "at0083", "at0084">
+        >
+    >

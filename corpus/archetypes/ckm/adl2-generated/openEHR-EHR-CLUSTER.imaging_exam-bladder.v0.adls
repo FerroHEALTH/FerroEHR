@@ -1,0 +1,241 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=a3c1df47-c06c-48aa-a0e3-cfd7d976481b; build_uid=bbebe592-1c5b-464d-8786-edeb38a7e172)
+    openEHR-EHR-CLUSTER.imaging_exam-bladder.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-CLUSTER.imaging_exam.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Vebjørn Arntzen">
+                ["organisation"] = <"Oslo University Hospital">
+                ["email"] = <"varntzen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-11-24">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital", "Liv Laugen, Oslo University Hospital", "Peter Fedorcsak, Oslo University Hospital">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"7C47F73CCDF65DAF2D50279E10C6D347">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung der Befunde einer radiologischen Untersuchung einer bestimmten Körperstruktur oder -region und deren Interpretation.">
+            keywords = <"Befund, Ergebnis, Bildgebung, Körper, Organ, System, Struktur, Region, Beobachtung, Diagnostik, Radiologie, Bild", ...>
+            use = <"*Use to record the findings on radiological examination of a specified body structure or region, and their interpretation.
+
+In practice, the design intent is for the CLUSTER.imaging_exam family of archetypes to be used to record all detailed findings on radiological examination. The family of specialised archetypes are derived from this generic parent archetype, CLUSTER.imaging_exam, designed as a universal pattern for recording any findings in any specified body structure or region and using any modality.
+
+Each structure- or region-specific specialisation of this parent archetype is intended to be inclusive of all reasonably anticipated and relevant findings. For example, the CLUSTER.imaging_exam-ovary will support recording of all findings that would be expected in reporting on imaging of the ovary using any radiological modality, including the size of the ovary, largest follicle size and the diameter and description of specific follicles. Similarly, CLUSTER.imaging_exam-lymph_node_group will contain data elements required to record specific findings of a lymph node group, including its precise or relative location in the body and the number of lymph nodes in the group. 
+
+If an appropriate specialisation is not available for a body structure or region, this archetype can be used to record all relevant findings related to the structure or region. 
+
+This archetype and its related family of specialisations are designed to be nested within the 'Structured imaging findings' SLOT in the OBSERVATION.imaging_exam_result or within other relevant CLUSTER.imaging_exam archetypes, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. If this archetype of its specialisations need to be extended with further levels of detailed findings, additional instances of the CLUSTER.imaging_exam or its specialisations can be nested in the 'Additional details' SLOT. (en)">
+            misuse = <"Nicht zur Darstellung von Befunden verwenden, die außerhalb der identifizierten Körperstruktur oder -region beobachtet wurden. Verwenden Sie zu diesem Zweck eine separate Instanz eines oder mehrerer Archetypen aus der Familie CLUSTER.imaging_exam.
+
+Darf nicht verwendet werden, um Details in Bezug auf die Gesamtbefunde, den Kontext oder technische Details in Bezug auf ein vollständiges Testergebnis einer bildgebenden Untersuchung darzustellen. Verwenden Sie zu diesem Zweck das OBSERVATION.imaging_exam_result. Zum Beispiel Kommentare zur Studienqualität, zu Differenzialdiagnosen und zum Gesamteindruck.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere en fritekstlig beskrivelse, strukturerte detaljer eller funn eller observasjoner ved radiologisk undersøkelse av urinblæren.">
+            use = <"Bruk for å registrere en fritekstlig beskrivelse, strukturerte detaljer eller funn eller observasjoner ved radiologisk undersøkelse av urinblæren.
+
+Denne arketypen har blitt designet for å bli nøstet i SLOT'et \"Strukturerte funn\" i arketypen OBSERVATION.imaging_exam (Bildediagnostisk svar), men kan også bli brukt i enhver annen ENTRY eller CLUSTER-arketype der det er klinisk formålstjenlig.
+
+Brukes som et rammeverk der CLUSTER-arketyper kan bli nøstet inn i SLOT'et \"Ytterligere detaljer\" i denne arketypen for å legge til flere nivåer av strukturerte bildefunn for tilhørende kroppsstrukturer eller funn som er spesifikke for denne kroppsstrukturen.">
+            misuse = <"Skal ikke brukes til å registrere funn som er gjort utenom den definerte kroppsstrukturen eller regionen. Bruk andre arketyper i gruppen av CLUSTER.imaging_exam for dette formålet.
+
+Skal ikke brukes for å registrere detaljer som gjelder overordnede funn og observasjoner, kontekst eller tekniske detaljer som hører til det komplette bildediagnostiske svaret. Bruk OBSERVATION.imaging_exam_result (Bildediagnostisk svar) for dette formålet, for eksempel kommentarer om bildediagnostisk kvalitet, differensialdiagnose og resymé.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a narrative description, structured details and clinical impression of the findings observed in an imaging examination targeting the bladder.">
+            use = <"Use to record a narrative description, structured details and clinical impression of the findings observed in an imaging examination targeting the bladder.
+
+This archetype has been designed to be nested in the 'Structured imaging findings' SLOT within the OBSERVATION.imaging_exam_result archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Additional details' SLOT within this archetype to record additional nested levels of structured imaging findings for related body substructures or site-specified findings.">
+            misuse = <"Not to be used to record findings outside the specified body structure or region. Use other archetypes from the CLUSTER.imaging_exam family for this purpose.
+
+Not to be used to record details related to the overall findings, context or technical details related to a complete imaging examination test result. Use the OBERSERVATION.imaging_exam_result for this purpose. For example, comments on the study quality, differential diagnoses, and overall impression.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Imaging examination of the bladder
+        items matches {
+            ELEMENT[at0001.1] matches {    -- Body structure
+                value matches {
+                    DV_CODED_TEXT[at0.9001] matches {
+                        defining_code matches {[at0.1]}    -- Urinary bladder
+                    }
+                }
+            }
+            ELEMENT[at0.2] occurrences matches {0..1} matches {    -- Length
+                value matches {
+                    DV_QUANTITY[at0.9002] matches {
+                        property matches {[at0.9000]}    -- Length
+                        [magnitude, units, precision] matches {
+                            [{|>=0.0|}, {"mm"}, {0}],
+                            [{|>=0.0|}, {"cm"}, {1}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0.3] occurrences matches {0..1} matches {    -- Width
+                value matches {
+                    DV_QUANTITY[at0.9003] matches {
+                        property matches {[at0.9000]}    -- Length
+                        [magnitude, units, precision] matches {
+                            [{|>=0.0|}, {"mm"}, {0}],
+                            [{|>=0.0|}, {"cm"}, {1}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0.4] occurrences matches {0..1} matches {    -- Depth
+                value matches {
+                    DV_QUANTITY[at0.9004] matches {
+                        property matches {[at0.9000]}    -- Length
+                        [magnitude, units, precision] matches {
+                            [{|>=0.0|}, {"mm"}, {0}],
+                            [{|>=0.0|}, {"cm"}, {1}]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000.1"] = <
+                text = <"Bildgebende Untersuchung einer Körperstruktur">
+                description = <"Befunde zur radiologischen Untersuchung einer bestimmten Körperstruktur oder -region.">
+            >
+            ["at0001.1"] = <
+                text = <"Körperstruktur">
+                description = <"Identifizierung der untersuchten Körperstruktur oder Region.">
+                comment = <"Zum Beispiel: „Leber“, „Rechtes Fußgelenk“ oder „Lymphknotengruppe“. Es wird empfohlen, die Körperstruktur mit einer geeigneten Terminologie, wie z. B. SNOMED CT, zu codieren.">
+            >
+            ["at0.1"] = <
+                text = <"Urinary bladder">
+                description = <"The urinary bladder was examined.">
+            >
+            ["at0.2"] = <
+                text = <"Length">
+                description = <"Measurement of the longest axis of the bladder.">
+            >
+            ["at0.3"] = <
+                text = <"Width">
+                description = <"Measurement of the widest axis of the bladder, perpendicular to the length.">
+            >
+            ["at0.4"] = <
+                text = <"Depth">
+                description = <"Measurement of the depth of the bladder, perpendicular to the length and width.">
+            >
+            ["at0.9000"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+        >
+        ["nb"] = <
+            ["at0.1"] = <
+                text = <"Urinblære">
+                description = <"Urinblæren ble undersøkt.">
+            >
+            ["at0.2"] = <
+                text = <"Lengde">
+                description = <"Den målte lengste aksen til urinblæren.">
+            >
+            ["at0.3"] = <
+                text = <"Bredde">
+                description = <"Den målte bredeste aksen til urinblæren, vinkelrett til lengden.">
+            >
+            ["at0.4"] = <
+                text = <"Dybde">
+                description = <"Den målte dybden av urinblæren, vinkelrett til lengden og bredden.">
+            >
+            ["at0000.1"] = <
+                text = <"Bildediagnostisk undersøkelse - urinblæren">
+                description = <"Funn eller observasjoner ved radiologisk undersøkelse av urinblæren.">
+            >
+            ["at0001.1"] = <
+                text = <"Kroppsstruktur">
+                description = <"Identifisering av organet eller kroppsdelen som svaret gjelder.">
+                comment = <"For eksempel \"Lever\", \"Høyre ankel\" eller \"Lymfeknutegruppe\". Det er anbefalt å kode kroppsstruktur med en passende terminologi, som SNOMED CT.">
+            >
+            ["at0.9000"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+        >
+        ["en"] = <
+            ["at0.1"] = <
+                text = <"Urinary bladder">
+                description = <"The urinary bladder was examined.">
+            >
+            ["at0.2"] = <
+                text = <"Length">
+                description = <"Measurement of the longest axis of the bladder.">
+            >
+            ["at0.3"] = <
+                text = <"Width">
+                description = <"Measurement of the widest axis of the bladder, perpendicular to the length.">
+            >
+            ["at0.4"] = <
+                text = <"Depth">
+                description = <"Measurement of the depth of the bladder, perpendicular to the length and width.">
+            >
+            ["at0000.1"] = <
+                text = <"Imaging examination of the bladder">
+                description = <"Findings observed in an imaging examination targeting the bladder, using radiographic techniques.">
+            >
+            ["at0001.1"] = <
+                text = <"Body structure">
+                description = <"Identification of the body structure or region examined.">
+            >
+            ["at0.9000"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at0.9000"] = <http://openehr.org/id/122>
+        >
+        ["SNOMED-CT"] = <
+            ["at0.1"] = <http://snomed.info/id/89837001>
+        >
+    >

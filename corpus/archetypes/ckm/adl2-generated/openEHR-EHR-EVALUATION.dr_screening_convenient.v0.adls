@@ -1,0 +1,286 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=f5193671-3d22-4d14-aa97-c7c47f01b7e7; build_uid=02a73b06-a894-44e1-987a-c1e7dd4016a1)
+    openEHR-EHR-EVALUATION.dr_screening_convenient.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Aitor Eguzkitza">
+        ["organisation"] = <"Universidad Pública de Navarra - Complejo Hospitalario de Navarra">
+        ["email"] = <"aitor.eguzkiza@unavarra.es">
+        ["date"] = <"2016-07-25">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"José Andonegui, Hospital de Navarra, jose.andonegui.navarro@cfnavarra.es", "Luis Serrano, Universidad Pública de Navarra (UPNA), lserrano@unavarra.es", "Jesús D. Trigo, Universidad Pública de Navarra (UPNA), jesusdaniel.trigo@unavarra.es">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"B597C264CE16CB42D98540977E9806AF">
+    >
+    details = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registrar la declaración de admisión de un paciente dentro de un servicio de cribado para una enfermedad específica.">
+            use = <"Se utiliza para registrar la declaración de admisión o exclusión de un paciente para un servicio de cribado, en un punto específico de su historia clínica.
+
+La declaración se considera únicamente para el momento en que ha sido registrada. Es decir, un paciente excluído del cribado más adelante podría ser admitido en caso de darse las condiciones para ello.">
+            misuse = <"Arquetipo específicamente diseñado para el caso específico del cribado de la retinopatía diabñetica. No debe utilizarse para validar otras affecciones. Escoger el arquetipo indicado para tales casos.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Register the statement/s about the convenience of a patient within a screening service for a specific disease.">
+            keywords = <"admission", "diabetic retinopathy">
+            use = <"Use to record statement/s about the admission or exclusion of a patient for a screening service, at a specific point in time of its clinical history.
+
+The statement is considered only at the time it is registered. That is to say, a patient excluded from the screening service may be admitted in the future if given the right conditions.">
+            misuse = <"Archetype specifically designed to validate DR screening. It should not be used for other conditions. Choose the appropriate archetype for such cases.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- DR screening convenient
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Admittance in screening
+                        value matches {
+                            DV_CODED_TEXT[at9002] matches {
+                                defining_code matches {[ac9000]}    -- Admittance in screening (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Exclusion statement
+                        value matches {
+                            DV_CODED_TEXT[at9003] matches {
+                                defining_code matches {[ac9001]}    -- Exclusion statement (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9004]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0005] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Date last decision
+                        value matches {
+                            DV_DATE_TIME[at9005]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"DR screening convenient">
+                description = <"Statement/s about patient's compliance of the requirements established to access to a service of screening for diabetic retinopathy.">
+            >
+            ["at0002"] = <
+                text = <"Exclusion statement">
+                description = <"Description of the reason of excluding the patient from the screening service.">
+            >
+            ["at0006"] = <
+                text = <"Date last decision">
+                description = <"The date at which the decision of admittance or exclusion in screening was confirmed.">
+            >
+            ["at0007"] = <
+                text = <"Admittance in screening">
+                description = <"Identifies if the patient has been accepted or not to take part in the screening service.">
+            >
+            ["at0008"] = <
+                text = <"Screening compliant">
+                description = <"The patient meets the criteria be included in the screening.">
+            >
+            ["at0009"] = <
+                text = <"Screening not necessary">
+                description = <"The clinician does not consider necessary including the patient into the screening.">
+            >
+            ["at0010"] = <
+                text = <"Excluded from Screening">
+                description = <"Patient non-compliant with admission criteria, thus it is definitely excluded from the screening.">
+            >
+            ["at0011"] = <
+                text = <"Blind">
+                description = <"Excluded from screening as blind.">
+            >
+            ["at0012"] = <
+                text = <"Deceased">
+                description = <"Excluded from screening as deceased.">
+            >
+            ["at0013"] = <
+                text = <"Learning disability">
+                description = <"Excluded from screening as learning disability.">
+            >
+            ["at0014"] = <
+                text = <"Moved away">
+                description = <"Excluded from screening as moved away.">
+            >
+            ["at0015"] = <
+                text = <"No current contact details">
+                description = <"Excluded from screening as no current contact details.">
+            >
+            ["at0016"] = <
+                text = <"No longer diabetic">
+                description = <"Excluded from screening as no longer diabetic.">
+            >
+            ["at0017"] = <
+                text = <"Physical disorder">
+                description = <"Excluded from screening as physical disorder.">
+            >
+            ["at0018"] = <
+                text = <"Terminal illness">
+                description = <"Excluded from screening as terminal illness.">
+            >
+            ["at0019"] = <
+                text = <"Under care of ophthalmologist">
+                description = <"Excluded from screening as under care of ophthalmologist.">
+            >
+            ["at0020"] = <
+                text = <"Other">
+                description = <"Other exclusion criteria.">
+            >
+            ["at0021"] = <
+                text = <"Comment">
+                description = <"Additional narrative information about the inclusion or exclusion of the patient in the screening service.">
+            >
+            ["ac9000"] = <
+                text = <"Admittance in screening (synthesised)">
+                description = <"Identifies if the patient has been accepted or not to take part in the screening service. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Exclusion statement (synthesised)">
+                description = <"Description of the reason of excluding the patient from the screening service. (synthesised)">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Conveniencia del cribado de RD">
+                description = <"Declaración acerca del cumplimiento por parte de un paciente de los requisitos establecidos para acceder a un servicio de cribado específico para retinopatía diabética.">
+            >
+            ["at0002"] = <
+                text = <"Declaración de inclusión">
+                description = <"Descripción del motivo de exclusión del paciente del servicio de cribado en caso en que no haya sido admitido.">
+            >
+            ["at0006"] = <
+                text = <"Fecha última decisión">
+                description = <"La fecha en que se confirmó la decisión de admisión o exclusión del cribado.">
+            >
+            ["at0007"] = <
+                text = <"Admisión en el cribado">
+                description = <"Identifica si el paciente ha sido aceptado o no participar en el servicio de cribado.">
+            >
+            ["at0008"] = <
+                text = <"Compatible con el cribado">
+                description = <"El paciente cumple las condiciones para ser incluido en el cribado.">
+            >
+            ["at0009"] = <
+                text = <"Cribado no necesario">
+                description = <"El facultativo no considera necesario incluir al paciente en el cribado.">
+            >
+            ["at0010"] = <
+                text = <"Excluido del cribado">
+                description = <"El paciente no cumple con los criterios de admisión, por lo que es definitivamente excluido del cribado.">
+            >
+            ["at0011"] = <
+                text = <"Ceguera">
+                description = <"Excluído del cribado por ceguera.">
+            >
+            ["at0012"] = <
+                text = <"Fallecimiento">
+                description = <"Excluído del cribado por fallecimiento.">
+            >
+            ["at0013"] = <
+                text = <"Discapacidad del aprendizaje">
+                description = <"Excluído del cribado por discapacidad del aprendizaje.">
+            >
+            ["at0014"] = <
+                text = <"Traslado">
+                description = <"Excluído del cribado por traslado.">
+            >
+            ["at0015"] = <
+                text = <"Datos de contacto actualizados">
+                description = <"Excluído del cribado por no disponer de datos de contacto actualizados.">
+            >
+            ["at0016"] = <
+                text = <"Remisión de la diabetes">
+                description = <"Excluído del cribado por remisión de la diabetes.">
+            >
+            ["at0017"] = <
+                text = <"Trastorno físico">
+                description = <"Excluído del cribado por trastorno físico.">
+            >
+            ["at0018"] = <
+                text = <"Enfermedad terminal">
+                description = <"Excluído del cribado por enfermedad terminal.">
+            >
+            ["at0019"] = <
+                text = <"Bajo el cuidado directo de un oftalmologo">
+                description = <"Excluído del cribado por asignarle bajo el cuidado directo de un oftalmologo.">
+            >
+            ["at0020"] = <
+                text = <"Otro motivo">
+                description = <"Otro motivo de exclusión.">
+            >
+            ["at0021"] = <
+                text = <"Comentarios">
+                description = <"Información narrativa adicional acerca de la inclusión o exclusión del paciente en el servicio de cribado.">
+            >
+            ["ac9000"] = <
+                text = <"Admisión en el cribado (synthesised)">
+                description = <"Identifica si el paciente ha sido aceptado o no participar en el servicio de cribado. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Declaración de inclusión (synthesised)">
+                description = <"Descripción del motivo de exclusión del paciente del servicio de cribado en caso en que no haya sido admitido. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0000"] = <http://snomed.info/id/371781000000108>
+            ["at0009"] = <http://snomed.info/id/371811000000106>
+            ["at0010"] = <http://snomed.info/id/374901000000103>
+            ["at0011"] = <http://snomed.info/id/374691000000100>
+            ["at0012"] = <http://snomed.info/id/374631000000101>
+            ["at0013"] = <http://snomed.info/id/374841000000109>
+            ["at0014"] = <http://snomed.info/id/374601000000107>
+            ["at0015"] = <http://snomed.info/id/374781000000105>
+            ["at0016"] = <http://snomed.info/id/374721000000109>
+            ["at0017"] = <http://snomed.info/id/374871000000103>
+            ["at0018"] = <http://snomed.info/id/374811000000108>
+            ["at0019"] = <http://snomed.info/id/374661000000106>
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0011", "at0012", "at0013", "at0014", "at0015", "at0016", "at0017", "at0018", "at0019", "at0020">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0008", "at0009", "at0010">
+        >
+    >

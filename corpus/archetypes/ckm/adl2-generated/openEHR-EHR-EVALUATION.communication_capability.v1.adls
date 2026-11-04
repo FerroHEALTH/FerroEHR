@@ -1,0 +1,520 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=3206e37b-adc7-4c04-8b2e-3bb84f3a7f9a; build_uid=06c8d6e6-54df-4164-baef-ff883fe96381)
+    openEHR-EHR-EVALUATION.communication_capability.v1.0.3
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Emma Malm">
+                ["organisation"] = <"Karolinska Universitetssjukhuset">
+                ["email"] = <"emma.malm@cambio.se">
+            >
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            author = <
+                ["name"] = <"Riikka Lahtela, Heidi Koikkalainen">
+                ["organisation"] = <"Istekki, Finland">
+                ["email"] = <"riikka.lahtela@istekki.fi, heidi.koikkalainen@freshehr.com">
+            >
+            other_details = <
+                ["other_contributors"] = <"Henri Huttunen, UNA Oy, Finland
+Anna-Leena Karvonen, Tietoevry, Finland">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand, Vebjørn Arntzen">
+                ["organisation"] = <"Helse Bergen HF, Norway, Oslo University Hospital">
+                ["email"] = <"john.tore.valand@helse-bergen.no, varntzen@ous-hf.no">
+            >
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Julio de Sosa">
+                ["organisation"] = <"Servei Català de la Salut">
+                ["email"] = <"juliodesosa@catsalut.cat">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics, Australia">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2018-03-26">
+    >
+    original_namespace = <"no.openEHR">
+    original_publisher = <"openEHR Norway">
+    other_contributors = <"Paula Anderson, UCLH, United Kingdom", "Erling Are Hole, Helse Bergen, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Heidi Aursand, Oslo universitetssykehus, Norway", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Birgitte Bjerkely, Senter for sjeldne diagnoser, OUS, Norway", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Valborg Ellingsen, Haraldsplass Diakonale sykehus, Norway", "Mikkel Gaup Grønmo, FSE, Helse Nord, Norway", "Heather Grain, Llewelyn Grain Informatics, Australia", "Jessica Hansen, Universitetet i Oslo, Norway", "Liv Ingrid Svela, Helse Bergen HF, Norway", "Lars Ivar Mehlum, Helse Bergen HF, Norway", "Tom Jarl Jakobsen, Helse Bergen, Norway", "Nils Kolstrup, Skansen Legekontor og Nasjonalt Senter for samhandling og telemedisin, Norway", "Siren Kraakenes, Helse Vest IKT, Norway", "Panita Laksuktom, Haukeland universitetssjukehus, Norway", "Øygunn Leite Kallevik, Helse Bergen, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Rose Mari Eikås, Helse Bergen, Norway", "Siv Marie Lien, DIPS ASA, Norway", "Hildegard McNicoll, freshEHR Clinical Informatics Ltd., United Kingdom", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Jagan Mohan, Mahatma Gandhi Medical College and Research Institute, India", "Lars Morgan Karlsen, Nordlandssykehuset Bodø, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Anine Ramberg, DIPS ASA, Norway", "Gro-Hilde Severinsen, Norwegian center for ehealthresearch, Norway", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Laila Storesund, Haraldsplass diakonale sykehus, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Nyree Taylor, Ocean Informatics, Australia", "Susanne Trønnes, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"no.openEHR">
+    custodian_organisation = <"openEHR Norway">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, Australia<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"485945C793875A489010B7C1DAD52D7F">
+    >
+    details = <
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            purpose = <"Tallentaa yksityiskohtaisia tietoja henkilön kommunikaatiokyvystä sekä kommunikointiin liittyvistä haasteista ja tuen tarpeista.">
+            keywords = <"kieli", "tulkki", "käännös", "kääntäjä">
+            use = <"Hyödynnetään henkilön kommunikaatiokykyyn liittyvien yksityiskohtaisten tietojen tallentamiseen sisältäen tiedot kommunikointiin liittyvistä haasteista ja tuen tarpeista.
+
+Arkkityypin tarkoituksena on tallentaa tietoa siitä, miten henkilö kommunikoi muiden kanssa ja miten terveydenhuollon palveluntarjoajat voivat parhaiten kommunikoida hänen kanssaan.">
+            misuse = <"Ei tule käyttää kieleen liittyvien tietojen tallentamiseen. Siihen tarkoitukseen käytetään CLUSTER.language -arkkityyppiä. 
+ 
+Ei tule käyttää tulkkipalvelupyyntöjä koskien tietojen tallentamiseen. Siihen tarkoitukseen käytetään CLUSTER.interpreter_request-arkkityyppiä ja sopivaa INSTRUCTION-arkkityyppiä, kuten INSTRUCTION.service_request. 
+ 
+Ei tule käyttää suoritetun tulkkauksen tietojen tallentamiseen.">
+            copyright = <"*© openEHR Foundation, openEHR Norway (en)">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att registrera detaljer om en individs praktiska förmåga att kommunicera, inklusive försämringar och behov av kommunikationshjälpmedel.">
+            keywords = <"språk", "tolk", "översättning", "översättare", "translator", "kommunicera">
+            use = <"Används för att registrera detaljer om en individs praktiska förmåga att kommunicera, inklusive försämringar och behov av kommunikationshjälpmedel.
+
+Denna arketyp är avsedd att uppfånga hur en individ kommunicerar med andra och hur vårdgivare bäst kan kommunicera med en individ.">
+            misuse = <"*Not to be used to record details about a language - use CLUSTER.language for this purpose.
+
+Not to be used to record details about a request for interpreter services - use CLUSTER.Interpreter_request with a suitable INSTRUCTION archetype, for example INSTRUCTION.service_request.
+
+Not to be used to record details about an interpretation that was performed - use the proposed ACTION.interpretation. (en)">
+            copyright = <"*© openEHR Foundation, openEHR Norway (en)">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere detaljer om individets praktiske evne til å kommunisere, inkludert funksjonsnedsettelser og behov for kommunikasjonshjelpemidler.">
+            keywords = <"språk", "tolk", "oversettelse", "oversetter", "kommunikasjon", "informasjonsutveksling", "formidle", "videreformidle", "tilpasset kommunikasjon", "tilrettelagt kommunikasjon", "samtale", "translatør", "språkassistent", "ytring", "verbal", "nonverbal", "dialog">
+            use = <"Brukes for å registrere detaljer om individets praktiske evne til å kommunisere, inkludert funksjonsnedsettelser og behov for kommunikasjonshjelpemidler.
+
+Hensikten med arketypen er å registrere hvordan individet kommuniserer med andre og hvordan klinikere best kan kommunisere med individet.">
+            misuse = <"Brukes ikke for å registrere detaljer om et språk, bruk arketypen CLUSTER.language (Språk) for dette formålet.
+
+Brukes ikke for å registrere detaljer om en forespørsel om tolketjenester. Bruk arketypen CLUSTER.interpreter_request (Tolkebehov) i en egnet INSTRUCTION-arketype, for eksempel INSTRUCTION.service_request (Helsetjenesteforespørsel).
+
+Brukes ikke for å registrere detaljer om tolking som er gjennomført. Bruk arketypen ACTION.interpretation for dette formålet.">
+            copyright = <"*© openEHR Foundation, openEHR Norway (en)">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about the practical ability of an individual to communicate, including impairments and need for communication aids.">
+            keywords = <"language", "interpreter", "translation", "translater", "translator">
+            use = <"Use to record details about the practical ability of an individual to communicate, including impairments and need for communication aids.
+
+This archetype is intended to capture how an individual communicates with others and how healthcare providers can best communicate with an individual.">
+            misuse = <"Not to be used to record details about a language - use CLUSTER.language for this purpose.
+
+Not to be used to record details about a request for interpreter services - use CLUSTER.Interpreter_request with a suitable INSTRUCTION archetype, for example INSTRUCTION.service_request.
+
+Not to be used to record details about an interpretation that was performed - use the proposed ACTION.interpretation.">
+            copyright = <"© openEHR Foundation, openEHR Norway">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registrar detalles sobre la capacidad práctica de una persona para comunicarse, incluidas las deficiencias y la necesidad de apoyo a la comunicación.">
+            keywords = <"idioma", "intérprete", "traducción", "traductor">
+            use = <"Se utiliza para registrar detalles sobre la capacidad práctica de una persona para comunicarse, incluidas las deficiencias y la necesidad de apoyo a la comunicación.
+
+Este arquetipo pretende captar cómo se comunica un individuo con los demás y cómo pueden comunicarse mejor con él los profesionales sanitarios.">
+            misuse = <"*Not to be used to record details about a language - use CLUSTER.language for this purpose.
+
+Not to be used to record details about a request for interpreter services - use CLUSTER.Interpreter_request with a suitable INSTRUCTION archetype, for example INSTRUCTION.service_request.
+
+Not to be used to record details about an interpretation that was performed - use the proposed ACTION.interpretation. (en)">
+            copyright = <"*© openEHR Foundation, openEHR Norway (en)">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Communication capability
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9000]
+                        }
+                    }
+                    CLUSTER[at0015] matches {    -- Per language
+                        name matches {
+                            DV_CODED_TEXT[at9007] matches {
+                                defining_code matches {[ac9003]}    -- Per language (synthesised)
+                            }
+                        }
+                        items cardinality matches {1..*; unordered} matches {
+                            allow_archetype CLUSTER[at0003] occurrences matches {1} matches {    -- Language
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.language(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                            }
+                            allow_archetype CLUSTER[at0018] matches {    -- Capability details
+                                include
+                                    archetype_id/value matches {/.*/}
+                            }
+                            ELEMENT[at0021] occurrences matches {0..1} matches {    -- Comment
+                                value matches {
+                                    DV_TEXT[at9005]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0022] matches {    -- Communication aid
+                        value matches {
+                            DV_TEXT[at9006]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0005] occurrences matches {0..1} matches {    -- Additional details
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Overall comment
+                        value matches {
+                            DV_TEXT[at9002]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0011] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0012] occurrences matches {0..1} matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9003]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Kommunikationsförmåga">
+                description = <"En individs förmåga att kommunicera.">
+            >
+            ["at0002"] = <
+                text = <"Beskrivning">
+                description = <"Beskrivning av en individs övergripande förmåga att kommunicera, inklusive försämringar och behov av kommunikationshjälpmedel.">
+            >
+            ["at0003"] = <
+                text = <"Språk">
+                description = <"Språk och kommunikationssätt för en individ.">
+            >
+            ["at0005"] = <
+                text = <"Ytterligare detaljer">
+                description = <"Ytterligare strukturerade detaljer om individens övergripande kommunikationsförmåga.">
+            >
+            ["at0009"] = <
+                text = <"Övergripande kommentar">
+                description = <"Övergripande kommentarer avseende kommunikationsförmågan som inte beskrivs i övriga fält.">
+            >
+            ["at0012"] = <
+                text = <"Tilläggsinformation">
+                description = <"Plats för att infoga tilläggsinformation som krävs för lokala anpassningar eller anpassning till andra referensmodeller eller formella krav.">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["at0013"] = <
+                text = <"Senast uppdaterad">
+                description = <"Datum då kommunikationsförmågan senast uppdaterades.">
+            >
+            ["at0015"] = <
+                text = <"Per språk">
+                description = <"Detaljer om individens funktioner för ett visst språk.">
+                comment = <"The run-time name constraint kan användas för att specificera om språket, eller ett alternativ, föredras för kommunikation av individen.">
+            >
+            ["at0018"] = <
+                text = <"Detaljer om kommunikationsförmåga">
+                description = <"Ytterligare strukturerad information om kommunikationsförmågan för det specifika språket.">
+                comment = <"Exempelvis detaljer om skicklighet.">
+            >
+            ["at0019"] = <
+                text = <"Föredraget språk">
+                description = <"Föredraget språk och/eller ett kommunikationssätt för en individ.">
+            >
+            ["at0020"] = <
+                text = <"Alternativt språk">
+                description = <"Annat språk och/eller kommunikationsmetoder som kan användas för en individ.">
+            >
+            ["at0021"] = <
+                text = <"Kommentar">
+                description = <"Kommentarer avseende den specifika språkförmågan som inte beskrivs i övriga fält.">
+            >
+            ["at0022"] = <
+                text = <"Kommunikationshjälpmedel">
+                description = <"Identifiering av ett hjälpmedel för att underlätta kommunikationen.">
+                comment = <"Exempelvis en hörapparat eller en taktil läsanordning. Om möjligt, benämn kommunikationshjälpmedlet med en terminologi. Detaljer om det faktiska kommunikationshjälpmedlet bör helst registreras med EVALUATION.device_summary-arketyp.">
+            >
+            ["ac9003"] = <
+                text = <"Per språk (synthesised)">
+                description = <"Detaljer om individens funktioner för ett visst språk. (synthesised)">
+            >
+        >
+        ["fi"] = <
+            ["at0000"] = <
+                text = <"Kommunikaatiokyky">
+                description = <"Henkilön kyky kommunikoida.">
+            >
+            ["at0002"] = <
+                text = <"Kuvaus">
+                description = <"Sanallinen kuvaus henkilön kommunikaatiokyvystä sisältäen tiedot kommunikaatiohaasteista sekä tuen tarpeista.">
+            >
+            ["at0003"] = <
+                text = <"Kieli">
+                description = <"Henkilön kieli tai kommunikointitapa.">
+            >
+            ["at0005"] = <
+                text = <"Lisätiedot">
+                description = <"Strukturoidut lisätiedot sanallisesti henkilön kommunikaatiokyvystä.">
+            >
+            ["at0009"] = <
+                text = <"Yleinen kommentti">
+                description = <"Yleiset lisätiedot sanallisesti henkilön kommunikaatiokyvystä siltä osin kuin ei ole tullut esille jo muissa kentissä.">
+            >
+            ["at0012"] = <
+                text = <"Laajennos">
+                description = <"Vaaditut lisätiedot paikallisen sisällön tallentamiseksi tai mukauttamiseksi muihin viitemalleihin.">
+                comment = <"Esimerkiksi: paikalliset tietovaatimukset tai FHIR:n mukaiset metatiedot.">
+            >
+            ["at0013"] = <
+                text = <"Viimeisin päivitys">
+                description = <"Päivämäärä, jolloin Kommunikaatiokyky on viimeksi päivitetty.">
+            >
+            ["at0015"] = <
+                text = <"Per kieli">
+                description = <"Yksityiskohtaiset tiedot henkilön kyvystä kommunikoida tietyllä kielellä.">
+                comment = <"Suoritusaikainen nimi, jota voidaan käyttää määrittämään sitä, onko kyseessä henkilön ensisijainen vai vaihtoehtoinen kieli.">
+            >
+            ["at0018"] = <
+                text = <"Kyvyn yksityiskohtaiset tiedot">
+                description = <"Strukturoidut lisätiedot kommunikaatiokyvystä tietyllä kielellä.">
+                comment = <"Esimerkiksi yksityiskohtaiset tiedot taitotasosta.">
+            >
+            ["at0019"] = <
+                text = <"Ensisijainen kieli">
+                description = <"Henkilön ensisijainen kieli ja/tai kommunikointitapa.">
+            >
+            ["at0020"] = <
+                text = <"Toissijainen kieli">
+                description = <"Henkilön toissijainen kieli, ja/tai kommunikointitapa, jota voidaan käyttää hänen kanssaan.">
+            >
+            ["at0021"] = <
+                text = <"Kommentti">
+                description = <"Lisätieto taitotasosta tietyllä kielellä, mikä ei ole tullut esille muissa kentissä.">
+            >
+            ["at0022"] = <
+                text = <"Kommunikoinnin apuväline">
+                description = <"Kommunikoinnin apuvälineen tunniste.">
+                comment = <"Esimerkiksi: kuulokoje tai taktiilinen lukulaite. Kommunikoinnin apuvälineiden koodaaminen terminologialla on suositeltavaa, mikäli mahdollista. Yksityiskohtaiset tiedot kommunikoinnin apuvälineestä tulisi tallentaa käyttämällä EVALUATION.device_summary-arkkityyppiä.">
+            >
+            ["ac9003"] = <
+                text = <"Per kieli (synthesised)">
+                description = <"Yksityiskohtaiset tiedot henkilön kyvystä kommunikoida tietyllä kielellä. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Evne til kommunikasjon">
+                description = <"Individets evne til å kommunisere.">
+            >
+            ["at0002"] = <
+                text = <"Beskrivelse">
+                description = <"En fritekstbeskrivelse om individets overordnede evne til kommunikasjon, inkludert funksjonsnedsettelser og behov for kommunikasjonshjelpemidler.">
+            >
+            ["at0003"] = <
+                text = <"Språk">
+                description = <"Evne og kommunikasjonsmetode for et spesifikt språk.">
+            >
+            ["at0005"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Ytterligere detaljer om individets evne til å kommunisere.">
+            >
+            ["at0009"] = <
+                text = <"Overordnet kommentar">
+                description = <"Ytterligere overordnet fritekstbeskrivelse om individets evne til kommunikasjon som ikke er fanget opp i andre felt.">
+            >
+            ["at0012"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0013"] = <
+                text = <"Sist oppdatert">
+                description = <"Datoen da evne til kommunikasjon sist ble oppdatert.">
+            >
+            ["at0015"] = <
+                text = <"Per språk">
+                description = <"Detaljer om individets evne til kommunikasjon for et spesifikt språk.">
+                comment = <"\"Run-time name constraint\" (navnebegrensning) lagt på clusteret \"Per språk\" kan brukes for å spesifisere om språket er foretrukket i kommunikasjonen med individet eller om det er et alternativt språk som kan benyttes.">
+            >
+            ["at0018"] = <
+                text = <"Detaljer om evne">
+                description = <"Ytterligere strukturerte detaljer om individets evne til å kommunisere ved hjelp av det spesifiserte språket.">
+                comment = <"For eksempel detaljer om språkferdigheter.">
+            >
+            ["at0019"] = <
+                text = <"Foretrukket språk">
+                description = <"Individets foretrukne språk og kommunikasjonsmetode.">
+            >
+            ["at0020"] = <
+                text = <"Alternativt språk">
+                description = <"Individets alternative språk og/eller kommunikasjonsmetoder.">
+            >
+            ["at0021"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekstbeskrivelse om individets evne til kommunikasjon på et spesifikt språk, som ikke er fanget opp i andre felt.">
+            >
+            ["at0022"] = <
+                text = <"Kommunikasjonshjelpemidler">
+                description = <"Identifisert behov for et kommunikasjonshjelpemiddel.">
+                comment = <"For eksempel: Et høreapparat, lesebriller eller leselist. Koding av elementet \"Kommunikasjonshjelpemidler\" med en terminologi er ønskelig om mulig. Detaljer om det faktiske kommunikasjonshjelpemiddelet registreres i arketypen EVALUATION.device_summary.">
+            >
+            ["ac9003"] = <
+                text = <"Per språk (synthesised)">
+                description = <"Detaljer om individets evne til kommunikasjon for et spesifikt språk. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Communication capability">
+                description = <"The ability of an individual to communicate.">
+            >
+            ["at0002"] = <
+                text = <"Description">
+                description = <"Narrative description about the overall capability of an individual to communicate, including impairments and need for communication aids.">
+            >
+            ["at0003"] = <
+                text = <"Language">
+                description = <"Language and method of communication for an individual.">
+            >
+            ["at0005"] = <
+                text = <"Additional details">
+                description = <"Additional structured details about the individual's overall communication capability.">
+            >
+            ["at0009"] = <
+                text = <"Overall comment">
+                description = <"Additional overall narrative about the communication capability of an individual not captured in other fields.">
+            >
+            ["at0012"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0013"] = <
+                text = <"Last updated">
+                description = <"Date when the Communication capability was last updated.">
+            >
+            ["at0015"] = <
+                text = <"Per language">
+                description = <"Details about the capabilities of an individual for a specific language.">
+                comment = <"The run-time name constraint can be used to specify whether the language is preferred for communication by the individual, or an alternative.">
+            >
+            ["at0018"] = <
+                text = <"Capability details">
+                description = <"Additional structured details about the communication capability for the specific language.">
+                comment = <"For example: details about proficiency.">
+            >
+            ["at0019"] = <
+                text = <"Preferred language">
+                description = <"Preferred language and/or method of communication for an individual.">
+            >
+            ["at0020"] = <
+                text = <"Alternative language">
+                description = <"Other language, and/or method of communication that could be used for an individual.">
+            >
+            ["at0021"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the specific language capability not captured in other fields.">
+            >
+            ["at0022"] = <
+                text = <"Communication aid">
+                description = <"Identification of an aid to assist communication.">
+                comment = <"For example: a hearing aid or tactile reading device. Coding of 'Communication aid' with a terminology is preferred, where possible. Details about the actual communication aid should preferably be recorded using the EVALUATION.device_summary archetype.">
+            >
+            ["ac9003"] = <
+                text = <"Per language (synthesised)">
+                description = <"Details about the capabilities of an individual for a specific language. (synthesised)">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Competencia comunicativa">
+                description = <"La capacidad de un individuo para comunicarse.">
+            >
+            ["at0002"] = <
+                text = <"Descripción">
+                description = <"Descripción narrativa de la capacidad general de una persona para comunicarse, incluidas las deficiencias y la necesidad de apoyo a la comunicación.">
+            >
+            ["at0003"] = <
+                text = <"Idioma">
+                description = <"Idioma y método de comunicación de un individuo.">
+            >
+            ["at0005"] = <
+                text = <"Detalles adicionales">
+                description = <"Detalles estructurados adicionales sobre la competencia comunicativa general del individuo.">
+            >
+            ["at0009"] = <
+                text = <"Observaciones generales">
+                description = <"Descripción general adicional sobre la competencia comunicativa de un individuo no recogida en otros campos.">
+            >
+            ["at0012"] = <
+                text = <"Extensión">
+                description = <"Información adicional necesaria para captar el contenido local o para alinearse con otros modelos/formalismos de referencia.">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["at0013"] = <
+                text = <"Última actualización">
+                description = <"Fecha de la última actualización de la competencia comunicativa.">
+            >
+            ["at0015"] = <
+                text = <"Por idioma">
+                description = <"Detalles sobre las competencias de un individuo para un idioma concreto.">
+                comment = <"La restricción del nombre en tiempo de ejecución se puede utilizar para especificar si el idioma es el preferido para la comunicación del individuo, o una alternativa.">
+            >
+            ["at0018"] = <
+                text = <"Detalles de la competencia">
+                description = <"Detalles estructurados adicionales sobre la competencia comunicativa para el idioma específico.">
+                comment = <"Por ejemplo: detalles sobre la competencia.">
+            >
+            ["at0019"] = <
+                text = <"Idioma preferido">
+                description = <"Idioma y/o método de comunicación preferidos por una persona.">
+            >
+            ["at0020"] = <
+                text = <"Idioma alternativo">
+                description = <"Otro idioma, y/o método de comunicación que podría utilizarse para un individuo.">
+            >
+            ["at0021"] = <
+                text = <"Comentarios">
+                description = <"Información adicional sobre la competencia lingüística específica no recogida en otros campos.">
+            >
+            ["at0022"] = <
+                text = <"Apoyo a la comunicación">
+                description = <"Identificación de una ayuda para mejora de la comunicación.">
+                comment = <"Por ejemplo: un audífono o un dispositivo de lectura táctil. Siempre que sea posible, es preferible codificar \"Apoyo a la comunicación\" con una terminología. Los detalles sobre el apoyo a la comunicación real deben registrarse preferiblemente utilizando el arquetipo EVALUATION.device_summary.">
+            >
+            ["ac9003"] = <
+                text = <"Por idioma (synthesised)">
+                description = <"Detalles sobre las competencias de un individuo para un idioma concreto. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0019", "at0020">
+        >
+    >

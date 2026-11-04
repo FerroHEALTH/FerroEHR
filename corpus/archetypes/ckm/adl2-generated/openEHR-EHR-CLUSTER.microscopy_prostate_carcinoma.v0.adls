@@ -1,0 +1,1128 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=87d5a992-7b7a-4655-954b-121964b0601b; build_uid=5b2d037a-123d-4f26-b78b-2ec6dd057a80)
+    openEHR-EHR-CLUSTER.microscopy_prostate_carcinoma.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Dr Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics, UK">
+        ["email"] = <"ian.mcnicoll@oceaninformatics.com">
+        ["date"] = <"17/06/2009">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"David Rowed, Ocean Informatics, Australia", "Heather Leslie, Ocean Informatics, Australia", "Matt Cordell, NEHTA, Australia", "David McKillop, NEHTA, Australia", "Cathy Richardson, NEHTA, Australia", "Koray Atalag, University of Auckland, New Zealand", "David Ellis, RCPA, Australia">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Royal College of Pathologists of Australasia. Prostate Cancer (Radical Prostatectomy) Structured Reporting Protocol (1st Edition 2010). [Internet]. 2010;[cited 2010 Mar 21 ] Available from: http://www.rcpa.edu.au//static/File/Asset%20library/public%20documents/Publications/StructuredReporting/PROSTATE%20CANCER%20RAD%20PROS%20STRUCTURED%20REPORTING%20PROTOCOL%20for%20web.pdf">
+        ["2"] = <"Royal College of Pathologists. Dataset for prostate cancer histopathology reports [Internet]. 2009 ;[cited 2009 Jul 30 ]">
+        ["3"] = <"Available from: http://www.rcpath.org/index.asp?PageID=1164">
+        ["4"] = <"College of American Pathologists. Protocol for the examination of specimens from patients with invasive carcinomas of the prostate gland [Internet]. 2007 Apr ;[cited 2009 Jul 30 ] ">
+        ["5"] = <"Available from: http://www.cap.org/apps/docs/committees/cancer/cancer_protocols/2006/prostate06_ckw.pdf">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"97295325987015804EC826164BEB65B6">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record detailed findings about prostate cancer found on microscopic examination.">
+            keywords = <"histopathology", "cancer", "laboratory", "prostate", "histology", "malignancy", "lab", "pathology">
+            use = <"To record detailed findings about microscopic examination of prostate cancer as part of an anatomical pathology result.
+Use as a component archetype in the context of a suite of archetypes that make up a histopathology report ie OBSERVATION.lab_test.histopathology.">
+            misuse = <"Not designed to be used within any other archetype other than OBSERVATION.lab_test.histopathology.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتسجيل الموجودات التفصيلية حول سرطان البروستاتا عند الفحص المجهري">
+            keywords = <"الهيستوباثولوجيا", "السرطان", "المعمل/المختبر", "البروستاتا", "الهيستولوجيا", "الخباثة", "المعمل/المختبر", "الباثولوجيا/المرضية">
+            use = <"لتسجيل الموجودات التفصيلية حول الفحص المجهري لسرطان البروستاتا كجزء من نتيجة اختبار الباثولوجيا التشريحية. 
+يستخدم كنموذج يدخل في سياق النماذج التي يتكون منها تقرير الهيستولوجيا, و هو نموذج ملاحظة.الاختبار المعملي. الهيستوباثولوجيا.">
+            misuse = <"لم يتم تصميم هذا النموذج ليستخدم في داخل نموذج آخر غير نموذج ملاحظة.الاختبار المعملي. الهيستوباثولوجيا">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Microscopic findings - Prostate cancer
+        items cardinality matches {1..*; unordered} matches {
+            CLUSTER[at0160] occurrences matches {0..1} matches {    -- Tumour quantification
+                items cardinality matches {1..*; unordered} matches {
+                    CLUSTER[at0234] occurrences matches {0..1} matches {    -- Surgical resection specimen
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0161] occurrences matches {0..1} matches {    -- Proportion of tumour involvement
+                                value matches {
+                                    DV_PROPORTION[at9037] matches {
+                                        numerator matches {|0.0..100.0|}
+                                        is_integral matches {False}
+                                        type matches {2}
+                                    }
+                                }
+                            }
+                            CLUSTER[at0156] occurrences matches {0..1} matches {    -- 3D volume estimation
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0158] occurrences matches {0..1} matches {    -- Qualitative estimation
+                                        value matches {
+                                            DV_CODED_TEXT[at9038] matches {
+                                                defining_code matches {[ac9000]}    -- Qualitative estimation  (synthesised)
+                                            }
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0036] occurrences matches {0..1} matches {    -- Dominant tumour node dimensions
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.physical_properties\.v1\..*/}
+                                        exclude
+                                            archetype_id/value matches {/.*/}
+                                    }
+                                    ELEMENT[at0185] occurrences matches {0..1} matches {    -- Estimation methodology
+                                        value matches {
+                                            DV_TEXT[at9039]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    CLUSTER[at0221] occurrences matches {0..1} matches {    -- Fine needle aspiration biopsy (FNAB) specimen
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0165] occurrences matches {0..1} matches {    -- Proportion of positive cores
+                                value matches {
+                                    DV_PROPORTION[at9015] matches {
+                                        numerator matches {|0.0..100.0|}
+                                        type matches {0, 2}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0198] occurrences matches {0..1} matches {    -- Ratio of linear distance of carcinoma to length of cores
+                                value matches {
+                                    DV_PROPORTION[at9014] matches {
+                                        numerator matches {|0.0..100.0|}
+                                        type matches {0}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0199] occurrences matches {0..1} matches {    -- Other quantification
+                                value matches {
+                                    DV_TEXT[at9016]
+                                }
+                            }
+                        }
+                    }
+                    CLUSTER[at0222] occurrences matches {0..1} matches {    -- Transurethral resection(TUR) specimen
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0224] occurrences matches {0..1} matches {    -- Proportion of positive chips
+                                value matches {
+                                    DV_PROPORTION[at9018] matches {
+                                        numerator matches {|0.0..100.0|}
+                                        type matches {0, 2}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0162] occurrences matches {0..1} matches {    -- Tumour found incidentally at histopathology
+                                value matches {
+                                    DV_CODED_TEXT[at9017] matches {
+                                        defining_code matches {[ac9045]}    -- Tumour found incidentally at histopathology (synthesised)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0015] occurrences matches {0..1} matches {    -- Gleason Score
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0166] occurrences matches {0..1} matches {    -- Primary Gleason grade
+                        value matches {
+                            DV_ORDINAL[at9051] matches {
+                                [value, symbol] matches {
+                                    [{1}, {[at0250]}],    -- Grade 1
+                                    [{2}, {[at0251]}],    -- Grade 2
+                                    [{3}, {[at0252]}],    -- Grade 3
+                                    [{4}, {[at0253]}],    -- Grade 4
+                                    [{5}, {[at0254]}]    -- Grade 5
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0182] occurrences matches {0..1} matches {    -- Secondary Gleason grade
+                        value matches {
+                            DV_ORDINAL[at9052] matches {
+                                [value, symbol] matches {
+                                    [{1}, {[at0255]}],    -- Grade 1
+                                    [{2}, {[at0256]}],    -- Grade 2
+                                    [{3}, {[at0257]}],    -- Grade 3
+                                    [{4}, {[at0258]}],    -- Grade 4
+                                    [{5}, {[at0259]}]    -- Grade 5
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0183] occurrences matches {0..1} matches {    -- Tertiary Gleason grade
+                        value matches {
+                            DV_ORDINAL[at9053] matches {
+                                [value, symbol] matches {
+                                    [{1}, {[at0260]}],    -- Grade 1
+                                    [{2}, {[at0261]}],    -- Grade 2
+                                    [{3}, {[at0262]}],    -- Grade 3
+                                    [{4}, {[at0263]}],    -- Grade 4
+                                    [{5}, {[at0264]}]    -- Grade 5
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0197] occurrences matches {0..1} matches {    -- Total Gleason score
+                        value matches {
+                            DV_COUNT[at9022] matches {
+                                magnitude matches {|>=0|}
+                            }
+                        }
+                    }
+                }
+            }
+            allow_archetype CLUSTER[at0245] matches {    -- Tumour invasion
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.tumour_invasion\.v1\..*/}
+                exclude
+                    archetype_id/value matches {/.*/}
+            }
+            CLUSTER[at0021] occurrences matches {0..1} matches {    -- Surgical resection margins
+                items cardinality matches {1..*; unordered} matches {
+                    CLUSTER[at0237] matches {    -- Surgical resection margin
+                        items cardinality matches {1; unordered} matches {
+                            allow_archetype CLUSTER[at0084] matches {    -- Resection margin detail
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.tumour_resection_margins\.v1\..*/}
+                                exclude
+                                    archetype_id/value matches {/.*/}
+                            }
+                            ELEMENT[at0184] matches {    -- Gleason score at involved margin
+                                value matches {
+                                    DV_COUNT[at9044] matches {
+                                        magnitude matches {|>=0|}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0238] matches {    -- Relation to prostatic capsule
+                                value matches {
+                                    DV_CODED_TEXT[at9045] matches {
+                                        defining_code matches {[ac9036]}    -- Relation to prostatic capsule (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0249] matches {    -- Benign glands
+                                value matches {
+                                    DV_CODED_TEXT[at9054] matches {
+                                        defining_code matches {[ac9049]}    -- Benign glands (synthesised)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0181] occurrences matches {0..1} matches {    -- Seminal vesicle
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0172] occurrences matches {0..1} matches {    -- Seminal vesicle involvement
+                        value matches {
+                            DV_CODED_TEXT[at9030] matches {
+                                defining_code matches {[ac9050]}    -- Seminal vesicle involvement (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0247] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9055]
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0030] occurrences matches {0..1} matches {    -- Lymph node findings
+                items cardinality matches {1..*; unordered} matches {
+                    allow_archetype CLUSTER[at0087] matches {    -- Lymph node detail
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.lymph_node_metastases\.v1\..*/}
+                        exclude
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+            ELEMENT[at0269] occurrences matches {0..1} matches {    -- Bladder neck involvement
+                value matches {
+                    DV_CODED_TEXT[at9057] matches {
+                        defining_code matches {[ac9055]}    -- Bladder neck involvement (synthesised)
+                    }
+                }
+            }
+            CLUSTER[at0273] occurrences matches {0..1} matches {    -- Tumour zones
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0274] matches {    -- Tumour zone
+                        value matches {
+                            DV_CODED_TEXT[at9058] matches {
+                                defining_code matches {[ac9056]}    -- Tumour zone (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0179] occurrences matches {0..1} matches {    -- Additional findings
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0178] matches {    -- Addtional finding
+                        value matches {
+                            DV_CODED_TEXT[at9032] matches {
+                                defining_code matches {[ac9009]}    -- Addtional finding (synthesised)
+                            }
+                            DV_TEXT[at9033]
+                        }
+                    }
+                    ELEMENT[at0220] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9034]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Microscopic findings - Prostate cancer">
+                description = <"Microscopic anatomical pathology findings related to prostate cancer.">
+            >
+            ["at0015"] = <
+                text = <"Gleason Score">
+                description = <"Gleason Score (ISUP2005 version) - a prostate cancer grading score ratified by the International Society of Urological Pathologists  (ISUP).">
+            >
+            ["at0021"] = <
+                text = <"Surgical resection margins">
+                description = <"Findings related to tumour at multiple surgical resection margins.">
+            >
+            ["at0030"] = <
+                text = <"Lymph node findings">
+                description = <"Findings related to the involvement of tumour in lymph nodes.">
+            >
+            ["at0036"] = <
+                text = <"Dominant tumour node dimensions">
+                description = <"Dimensions of the dominant tumour node.">
+            >
+            ["at0084"] = <
+                text = <"Resection margin detail  ">
+                description = <"Details of  tumour at an individual surgical resection margin.">
+            >
+            ["at0087"] = <
+                text = <"Lymph node detail ">
+                description = <"Details  of tumour at a single lymph node.">
+            >
+            ["at0156"] = <
+                text = <"3D volume estimation">
+                description = <"Estimate of 3D volume of the primary prostate tumour.">
+            >
+            ["at0158"] = <
+                text = <"Qualitative estimation ">
+                description = <"Qualitative estimate of the amount of primary prostate tumour.">
+            >
+            ["at0160"] = <
+                text = <"Tumour quantification">
+                description = <"Estimate of the amount of primary prostate tumour.">
+            >
+            ["at0161"] = <
+                text = <"Proportion of tumour involvement">
+                description = <"Proportion of prostate tissue involved by tumour.">
+            >
+            ["at0162"] = <
+                text = <"Tumour found incidentally at histopathology">
+                description = <"Where tumour has been found incidentally on histopathological examination, the extent of tumour found. This is used as part of the cTNM classification of prostate cancer.">
+            >
+            ["at0163"] = <
+                text = <"Tumour incidental histologic finding in no more than 5% of tissue resected">
+                description = <"Prostate tumour is an incidental histologic finding in no more than 5% of tissue resected.">
+            >
+            ["at0164"] = <
+                text = <"Tumour incidental histologic finding in more than 5% of tissue resected">
+                description = <"Prostate tumour is an incidental histological finding in more than 5% of tissue resected.">
+            >
+            ["at0165"] = <
+                text = <"Proportion of positive cores">
+                description = <"Proportion of tumour positive prostate cores out of the total number of prostate cores. ">
+            >
+            ["at0166"] = <
+                text = <"Primary Gleason grade">
+                description = <"The primary Gleason score.">
+            >
+            ["at0172"] = <
+                text = <"Seminal vesicle involvement">
+                description = <"Findings of tumour involvement in seminal vesicles.">
+            >
+            ["at0173"] = <
+                text = <"Present - bilateral">
+                description = <"Tumour is present in both seminal vesicles.">
+            >
+            ["at0174"] = <
+                text = <"Present - left">
+                description = <"Tumour is present in only the left seminal vesicle.">
+            >
+            ["at0175"] = <
+                text = <"Present - right">
+                description = <"Tumour is present in only the right seminal vesicle.">
+            >
+            ["at0176"] = <
+                text = <"Absent">
+                description = <"Tumour is absent from both seminal vesicle.">
+            >
+            ["at0177"] = <
+                text = <"Indeterminate">
+                description = <"Presence of tumour in seminal vesicles has not been determined.">
+            >
+            ["at0178"] = <
+                text = <"Addtional finding">
+                description = <"Additional histological finding related to prostate cancer.">
+            >
+            ["at0179"] = <
+                text = <"Additional findings">
+                description = <"Additional histological findings related to prostate cancer.">
+            >
+            ["at0181"] = <
+                text = <"Seminal vesicle">
+                description = <"Findings related to tumour involvement in seminal vesicles.">
+            >
+            ["at0182"] = <
+                text = <"Secondary Gleason grade">
+                description = <"The secondary Gleason score.">
+            >
+            ["at0183"] = <
+                text = <"Tertiary Gleason grade">
+                description = <"The tertiary Gleason score.">
+            >
+            ["at0184"] = <
+                text = <"Gleason score at involved margin">
+                description = <"The Gleason score at a surgical margin involved with tumour.">
+            >
+            ["at0185"] = <
+                text = <"Estimation methodology">
+                description = <"A description of the methodology used to estimate tumour volume.">
+            >
+            ["at0194"] = <
+                text = <"Inflammation">
+                description = <"Tissue inflammation is present.">
+            >
+            ["at0195"] = <
+                text = <"High grade prostatic intraepithelial neoplasia (PIN)">
+                description = <"High grade prostatic intraepithelial neoplasia (PIN) is present.">
+            >
+            ["at0196"] = <
+                text = <"Atypical adenomatous hyperplasia">
+                description = <"Atypical adenomatous hyperplasia is present.">
+            >
+            ["at0197"] = <
+                text = <"Total Gleason score">
+                description = <"The sum of the primary, secondary and tertiary Gleason scores.">
+            >
+            ["at0198"] = <
+                text = <"Ratio of linear distance of carcinoma to length of cores">
+                description = <"Ratio of the linear distance of prostatic carcinoma to the length of prostatic cores.">
+            >
+            ["at0199"] = <
+                text = <"Other quantification">
+                description = <"A description of the method and result of other type of quantification.">
+            >
+            ["at0214"] = <
+                text = <"Minimal tumour">
+                description = <"Minimal tumour is present.">
+            >
+            ["at0215"] = <
+                text = <"Unifocal tumour">
+                description = <"Unifocal tumour is present.">
+            >
+            ["at0216"] = <
+                text = <"Multifocal or extensive tumour">
+                description = <"Multifocal or extensive tumour is present.">
+            >
+            ["at0217"] = <
+                text = <"Indeterminate">
+                description = <"A qualitative estimate of tumour volume has not been determined.">
+            >
+            ["at0218"] = <
+                text = <"Nodular prostatic hyperplasia">
+                description = <"Nodular prostatic hyperplasia is present.">
+            >
+            ["at0219"] = <
+                text = <"Absent">
+                description = <"Additional pathological findings are absent.">
+            >
+            ["at0220"] = <
+                text = <"Description">
+                description = <"A text description of additional pathological findings.">
+            >
+            ["at0221"] = <
+                text = <"Fine needle aspiration biopsy (FNAB) specimen">
+                description = <"Quantification results from specimens obtained by fine needle aspiration biopsy (FNAB).">
+            >
+            ["at0222"] = <
+                text = <"Transurethral resection(TUR) specimen">
+                description = <"Quantification results from a specimen obtained by transurethral resection (TUR).">
+            >
+            ["at0224"] = <
+                text = <"Proportion of positive chips">
+                description = <"Proportion of tumour positive prostatic chips out of the total number of prostatic chips. ">
+            >
+            ["at0234"] = <
+                text = <"Surgical resection specimen">
+                description = <"Quantification results from specimens obtained from open surgical resection.">
+            >
+            ["at0237"] = <
+                text = <"Surgical resection margin">
+                description = <"Findings related to a single surgical resection margin.">
+            >
+            ["at0238"] = <
+                text = <"Relation to prostatic capsule">
+                description = <"Findings of the relation of the resection margin to the prostatic capsule.">
+            >
+            ["at0239"] = <
+                text = <"Intraprostatic">
+                description = <"The surgical margin has been developed within the prostatic capsule. Sometimes termed 'capsular incision' (CI).">
+            >
+            ["at0240"] = <
+                text = <"Extraprostatic">
+                description = <"The surgical margin has been developed external to the prostatic capsule.">
+            >
+            ["at0241"] = <
+                text = <"Indeterminate">
+                description = <"The relation of the surgical margin to the prostatic capsule has not been determined.">
+            >
+            ["at0245"] = <
+                text = <"Tumour invasion">
+                description = <"Details of tumour invasion to local tissues.">
+            >
+            ["at0246"] = <
+                text = <"Indeterminate">
+                description = <"The extent of tumour incidental histologic finding has not been determined.">
+            >
+            ["at0247"] = <
+                text = <"Description">
+                description = <"A text description of seminal vesicle involvement by tumour.">
+            >
+            ["at0248"] = <
+                text = <"Present">
+                description = <"Tumour is present in seminal vesicles..">
+            >
+            ["at0249"] = <
+                text = <"Benign glands">
+                description = <"Finding of benign glands at the surgical margin">
+            >
+            ["at0250"] = <
+                text = <"Grade 1">
+                description = <"The cancerous prostate closely resembles normal prostate tissue. The glands are small, well-formed, and closely packed.">
+            >
+            ["at0251"] = <
+                text = <"Grade 2">
+                description = <"The tissue still has well-formed glands, but they are larger and have more tissue between them.">
+            >
+            ["at0252"] = <
+                text = <"Grade 3">
+                description = <"The tissue still has recognizable glands, but the cells are darker. At high magnification, some of these cells have left the glands and are beginning to invade the surrounding tissue.">
+            >
+            ["at0253"] = <
+                text = <"Grade 4">
+                description = <"The tissue has few recognizable glands. Many cells are invading the surrounding tissue.">
+            >
+            ["at0254"] = <
+                text = <"Grade 5">
+                description = <"The tissue does not have recognizable glands. There are often just sheets of cells throughout the surrounding tissue.">
+            >
+            ["at0255"] = <
+                text = <"Grade 1">
+                description = <"The cancerous prostate closely resembles normal prostate tissue. The glands are small, well-formed, and closely packed.">
+            >
+            ["at0256"] = <
+                text = <"Grade 2">
+                description = <"The tissue still has well-formed glands, but they are larger and have more tissue between them.">
+            >
+            ["at0257"] = <
+                text = <"Grade 3">
+                description = <"The tissue still has recognizable glands, but the cells are darker. At high magnification, some of these cells have left the glands and are beginning to invade the surrounding tissue.">
+            >
+            ["at0258"] = <
+                text = <"Grade 4">
+                description = <"The tissue has few recognizable glands. Many cells are invading the surrounding tissue.">
+            >
+            ["at0259"] = <
+                text = <"Grade 5">
+                description = <"The tissue does not have recognizable glands. There are often just sheets of cells throughout the surrounding tissue.">
+            >
+            ["at0260"] = <
+                text = <"Grade 1">
+                description = <"The cancerous prostate closely resembles normal prostate tissue. The glands are small, well-formed, and closely packed.">
+            >
+            ["at0261"] = <
+                text = <"Grade 2">
+                description = <"The tissue still has well-formed glands, but they are larger and have more tissue between them.">
+            >
+            ["at0262"] = <
+                text = <"Grade 3">
+                description = <"The tissue still has recognizable glands, but the cells are darker. At high magnification, some of these cells have left the glands and are beginning to invade the surrounding tissue.">
+            >
+            ["at0263"] = <
+                text = <"Grade 4">
+                description = <"The tissue has few recognizable glands. Many cells are invading the surrounding tissue.">
+            >
+            ["at0264"] = <
+                text = <"Grade 5">
+                description = <"The tissue does not have recognizable glands. There are often just sheets of cells throughout the surrounding tissue.">
+            >
+            ["at0265"] = <
+                text = <"Present">
+                description = <"Benign glands are present at the surgical margin.">
+            >
+            ["at0266"] = <
+                text = <"Absent">
+                description = <"Benign glands are absent from the surgical margin">
+            >
+            ["at0267"] = <
+                text = <"Indeterminate">
+                description = <"Presence of benign glands at the surgical margin has not been determined.">
+            >
+            ["at0269"] = <
+                text = <"Bladder neck involvement">
+                description = <"Finding of involvement by tumour of the bladder neck.">
+            >
+            ["at0270"] = <
+                text = <"Present">
+                description = <"Blaader neck involvement by tumour is present.">
+            >
+            ["at0271"] = <
+                text = <"Absent">
+                description = <"Bladder neck involvement by tumour is absent.">
+            >
+            ["at0272"] = <
+                text = <"Indeterminate">
+                description = <"Bladder neck involvement by tumour has not been determined.">
+            >
+            ["at0273"] = <
+                text = <"Tumour zones">
+                description = <"Findings of tumour zone.">
+            >
+            ["at0274"] = <
+                text = <"Tumour zone">
+                description = <"Finding of zone(s) involved by tumour.">
+            >
+            ["at0275"] = <
+                text = <"Peripheral">
+                description = <"Peripheral zone is involved by tumour.">
+            >
+            ["at0276"] = <
+                text = <"Central">
+                description = <"Central zone is involved by tumour.">
+            >
+            ["at0277"] = <
+                text = <"Transition">
+                description = <"Transition zone is involved by tumour.">
+            >
+            ["ac9000"] = <
+                text = <"Qualitative estimation  (synthesised)">
+                description = <"Qualitative estimate of the amount of primary prostate tumour. (synthesised)">
+            >
+            ["ac9045"] = <
+                text = <"Tumour found incidentally at histopathology (synthesised)">
+                description = <"Where tumour has been found incidentally on histopathological examination, the extent of tumour found. This is used as part of the cTNM classification of prostate cancer. (synthesised)">
+            >
+            ["ac9057"] = <
+                text = <"Primary Gleason grade (synthesised)">
+                description = <"The primary Gleason score. (synthesised)">
+            >
+            ["ac9058"] = <
+                text = <"Secondary Gleason grade (synthesised)">
+                description = <"The secondary Gleason score. (synthesised)">
+            >
+            ["ac9059"] = <
+                text = <"Tertiary Gleason grade (synthesised)">
+                description = <"The tertiary Gleason score. (synthesised)">
+            >
+            ["ac9036"] = <
+                text = <"Relation to prostatic capsule (synthesised)">
+                description = <"Findings of the relation of the resection margin to the prostatic capsule. (synthesised)">
+            >
+            ["ac9049"] = <
+                text = <"Benign glands (synthesised)">
+                description = <"Finding of benign glands at the surgical margin (synthesised)">
+            >
+            ["ac9050"] = <
+                text = <"Seminal vesicle involvement (synthesised)">
+                description = <"Findings of tumour involvement in seminal vesicles. (synthesised)">
+            >
+            ["ac9055"] = <
+                text = <"Bladder neck involvement (synthesised)">
+                description = <"Finding of involvement by tumour of the bladder neck. (synthesised)">
+            >
+            ["ac9056"] = <
+                text = <"Tumour zone (synthesised)">
+                description = <"Finding of zone(s) involved by tumour. (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"Addtional finding (synthesised)">
+                description = <"Additional histological finding related to prostate cancer. (synthesised)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"الموجودات المجهرية - سرطان البروستاتا">
+                description = <"موجودات فحص الباثولوجيا/المَرَضية التشريحية المجهرية المتعلقة بسرطان البروستاتا">
+            >
+            ["at0015"] = <
+                text = <"حرز غليسون">
+                description = <"حرز غليسون (ISUP2005 version) - حرز لدرجات سرطان البروستاتا تم تأكيدها بواسطة الجمعية الدولية لمتخصصي باثولوجيا الجهاز البولي.">
+            >
+            ["at0021"] = <
+                text = <"هوامش/حواف القطع الجراحي">
+                description = <"الموجودات المتعلقة بالورم عند حواف/هوامش متعددة للقطع الجراحي">
+            >
+            ["at0030"] = <
+                text = <"موجودات العقد الليمفاوية">
+                description = <"الموجودات المتعلقة باكتناف الورم في العقد الليمفاوية">
+            >
+            ["at0036"] = <
+                text = <"أبعاد العقدة السائدة للورم">
+                description = <"أبعاد العقدة السائدة للورم">
+            >
+            ["at0084"] = <
+                text = <"تفاصيل هامش القطع">
+                description = <"تفاصيل الورم عند هامش/حافة واحدة للقطع الجراحي">
+            >
+            ["at0087"] = <
+                text = <"تفاصيل العقد الليمفاوية">
+                description = <"تفاصيل الورم في عقدة ليمفاوية واحدة">
+            >
+            ["at0156"] = <
+                text = <"التقدير ثلاثي الأبعاد للحجم ">
+                description = <"تقدير الحجم ثلاثي الأبعاد للورم الأولي للبروستاتا">
+            >
+            ["at0158"] = <
+                text = <"التقدير الكيفي">
+                description = <"تقدير كيفي لكمية الورم الأولي للبروستاتا">
+            >
+            ["at0160"] = <
+                text = <"التقدير الكمي للورم">
+                description = <"تقدير كمية ورم البروستاتا الأولي">
+            >
+            ["at0161"] = <
+                text = <"نسبة اكتناف الورم">
+                description = <"نسبة اكتناف نسيج البروستاتا بالورم">
+            >
+            ["at0162"] = <
+                text = <"الورم الذي تم اكتشافه بشكل عارض عند فحص الهيستوباثولوجيا">
+                description = <"مدى الورم الذي تم العثور عليه, إذا كان هناك ورم موجود بشكل عارض عند الفحص الهيستوباثولوجي. 
+و يستخدم ذلك كجزء من تصنيف (الورم, العقد الليمفاوية, و النقيلة) السريري لسرطان البروستاتا.">
+            >
+            ["at0163"] = <
+                text = <"الموجودات الهيستولوجية العارضة للورم فيما لا يزيد عن 5% من النسيج">
+                description = <"ورم البروستاتا هو إحدى الموجودات الهيستولوجية العارضة فيما لا يزيد عن 5% من النسيج المقطوع">
+            >
+            ["at0164"] = <
+                text = <"الموجودات الهيستولوجية العارضة للورم فيما يزيد عن 5% من النسيج">
+                description = <"ورم البروستاتا هو إحدى الموجودات الهيستولوجية العارضة فيما يزيد عن 5% من النسيج المقطوع">
+            >
+            ["at0165"] = <
+                text = <"نسبة الألباب الإيجابية">
+                description = <"نسبة ألباب البروستاتا التي يوجد بها بالفعل ورم , من إجمالي عدد ألباب البروستاتا">
+            >
+            ["at0166"] = <
+                text = <"حرز غليسون الأولي">
+                description = <"حرز غليسون الأولي">
+            >
+            ["at0172"] = <
+                text = <"اكتناف الحويصلات المنوية">
+                description = <"الموجودات الكتعلقة باكتناف الورم في الحويصلات المنوية">
+            >
+            ["at0173"] = <
+                text = <"موجود - من الجانبين">
+                description = <"الورم موجود في كلتي الحويصلات المنوية">
+            >
+            ["at0174"] = <
+                text = <"موجود - أيسر">
+                description = <"الورم موجود عند الجانب الأيسر فقط">
+            >
+            ["at0175"] = <
+                text = <"موجود - أيمن">
+                description = <"الورم موجود في الحويصلة المنوية على الجانب الأيمن">
+            >
+            ["at0176"] = <
+                text = <"غائب">
+                description = <"لا يوجد ورم في كلتي الحويصلات المنوية">
+            >
+            ["at0177"] = <
+                text = <"غير محدد">
+                description = <"لم يتم تحديد وجود الورم في الحويصلات المنوية">
+            >
+            ["at0178"] = <
+                text = <"الموجودات الإضافية">
+                description = <"الموجودات الهيستولوجية الإضافية المتعلقة بسرطان البروستاتا">
+            >
+            ["at0179"] = <
+                text = <"الموجودات الإضافية">
+                description = <"الموجودات الهيستولوجية الإضافية المتعلقة بسرطان البروستاتا">
+            >
+            ["at0181"] = <
+                text = <"الحويصلة المنوية">
+                description = <"الموجودات المتعلقة باكتناف الورم في الحويصلات المنوية">
+            >
+            ["at0182"] = <
+                text = <"درجة غليسون الثانوي">
+                description = <"حرز غليسون الثانوي">
+            >
+            ["at0183"] = <
+                text = <"درجة غليسون في المرحلة الثالثة">
+                description = <"حرز غليسون في المرحلة الثالثة">
+            >
+            ["at0184"] = <
+                text = <"حرز غليسون عند الهوامش/الحواف التي تم اكتنافها">
+                description = <"حرز غليسون عند الهوامش/الحواف التي تم اكتنافها">
+            >
+            ["at0185"] = <
+                text = <"طريقة التقدير">
+                description = <"وصف للطريقة المستخدمة لتقدير حجم الورم">
+            >
+            ["at0194"] = <
+                text = <"التهاب">
+                description = <"يوجد التهاب بالنسيج">
+            >
+            ["at0195"] = <
+                text = <"تكون الورم ذي الدرجة العالية داخل الظهارة في البروستاتا ">
+                description = <"يوجد تكون للورم ذي الدرجة العالية داخل الظهارة في البروستاتا ">
+            >
+            ["at0196"] = <
+                text = <"فرط تنسُّج الورم الغُدِّي غير النمطي">
+                description = <"يوجد فرط تنسُّج الورم الغُدِّي بشكل غير النمطي">
+            >
+            ["at0197"] = <
+                text = <"حرز غليسون الكلي">
+                description = <"مجموع أحراز غليسون الأولي, الثانوي و ذي المرحلة الثالثة">
+            >
+            ["at0198"] = <
+                text = <"نسبة المسافة الخطية للسرطانة إلى طول الألباب">
+                description = <"نسبة المسافة الخطية للسرطانة إلى طول ألباب البروستاتا">
+            >
+            ["at0199"] = <
+                text = <"طرق التقدير الكمي الأخرى">
+                description = <"وصف للطريقة و النتيجة للنوع الآخر من التقدير الكمي">
+            >
+            ["at0214"] = <
+                text = <"حد أدنى من الورم">
+                description = <"يوجد حد أدنى من الورم">
+            >
+            ["at0215"] = <
+                text = <"ورم وحيد البؤرة">
+                description = <"يوجد ورم وحيد البؤرة">
+            >
+            ["at0216"] = <
+                text = <"يوجد ورم متعدد البؤر أو شامل">
+                description = <"يوجد ورم متعدد البؤر أو شامل">
+            >
+            ["at0217"] = <
+                text = <"غير محدد">
+                description = <"لم يتم تقدير كيفي لحجم الورم ">
+            >
+            ["at0218"] = <
+                text = <"فرط التنسج الغُدِّي في البروستاتا">
+                description = <"يوجد فرط التنسج الغُدِّي في البروستاتا">
+            >
+            ["at0219"] = <
+                text = <"غائب">
+                description = <"لا يوجد موجودات باثولوجية إضافية">
+            >
+            ["at0220"] = <
+                text = <"الوصف">
+                description = <"وصف نصي للموجودات الباثولوجية الإضافية">
+            >
+            ["at0221"] = <
+                text = <"عينة خزعة بواسطة إبرة شافطة دقيقة">
+                description = <"نتائج التقدير الكمي من عينات الخزعات التي تم الحصول عليها بواسطة إبرة شافطة دقيقة">
+            >
+            ["at0222"] = <
+                text = <"عينة عن طريق القطع عبر الإخليل">
+                description = <"نتائج التقدير الكمي من العينة التي تم الحصول عليها بالقطع عبر الإخليل">
+            >
+            ["at0224"] = <
+                text = <"نسبة الشرائح الإيجابية">
+                description = <"نسبة شرائح البروستاتا ذات الورم من إجمالي عدد شرائح البروستاتا">
+            >
+            ["at0234"] = <
+                text = <"عينة القطع الجراحي">
+                description = <"نتائج التقدير الكمي من العينات التي تم الحصول عليها من قطع جراحي مفتوح.">
+            >
+            ["at0237"] = <
+                text = <"هامش/حافة القطع الجراحي">
+                description = <"الموجودات المتعلقة هامش/حافة واحدة للقطع الجراحي">
+            >
+            ["at0238"] = <
+                text = <"العلاقة بمحفظة البروستاتا">
+                description = <"الموجودات في علاقة هامش/حافة القطع بمحفظة البروستاتا">
+            >
+            ["at0239"] = <
+                text = <"في داخل البروستاتا">
+                description = <"تم عمل الهامش/الحافة الجراحية في داخل محفظة البروستاتا. 
+و أحيانا يطلق عليها \"شق المحفظة\".">
+            >
+            ["at0240"] = <
+                text = <"خارج البروستاتا">
+                description = <"تم عمل الحافة/الهامش الجراحي في خارج محفظة البروستاتا">
+            >
+            ["at0241"] = <
+                text = <"غير محدد">
+                description = <"لم يتم تحديد علاقة الحافة/الهامش الجراحي بمحفظة البروستاتا">
+            >
+            ["at0245"] = <
+                text = <"غزو الورم">
+                description = <"تفاصيل غزو الورم للأنسجة الموضعية">
+            >
+            ["at0246"] = <
+                text = <"غير قابل للتحديد">
+                description = <"لم يتم تحديد مدى الموجودات الهيستولوجية العارضة للورم">
+            >
+            ["at0247"] = <
+                text = <"الوصف">
+                description = <"وصف نصي لاكتناف الحويصلة المنوية بالورم">
+            >
+            ["at0248"] = <
+                text = <"موجود">
+                description = <"الورم موجود في الحويصلات المنوية">
+            >
+            ["at0249"] = <
+                text = <"الغدد الحميدة">
+                description = <"الموجودات المتعلقة بالغدد الحميدة عند الحافة/الهامش الجراحي">
+            >
+            ["at0250"] = <
+                text = <"الدرجة 1">
+                description = <"النسيج المسرطن في البروستاتا يشبه كثيرا نسيج البروستاتا الطبيعي.
+الغدد صغيرة, مُتَشكِّلة بصورة جيدة, و مكدوسة بقرب.">
+            >
+            ["at0251"] = <
+                text = <"الدرجة 2">
+                description = <"لا يزال يوجد غدد متشكلة بصورة جيدة في النسيج, و لكنها أكبر حجما و بها المزيد من النسيج يفصل بينها">
+            >
+            ["at0252"] = <
+                text = <"الدرجة الثالثة">
+                description = <"لا يزال بالنسيج غدد يمكن التعرف عليها, و لكن الخلايا ذات لون غامق. 
+و عند تكبيرها, فإن بعض هذه الخلايا قد ترك الغدد و بدأ يغزو/يغير على النسيج المحيط بها.">
+            >
+            ["at0253"] = <
+                text = <"الدرجة 4">
+                description = <"يوجد بالنسيج عدد قليل من الغدد التي يمكن التعرف عليها.
+العديد من الخلايا يغزو النسيج المحيط">
+            >
+            ["at0254"] = <
+                text = <"الدرجة 5">
+                description = <"لا يوجد غدد يمكن التعرف عليها في النسيج. 
+و غالبا ما يوجد صحائف للخلايا منتشرة خلال النسيج المحيط.">
+            >
+            ["at0255"] = <
+                text = <"الدرجة الأولى">
+                description = <"النسيج المسرطن في البروستاتا يشبه كثيرا نسيج البروستاتا الطبيعي.
+الغدد صغيرة, مُتَشكِّلة بصورة جيدة, و مكدوسة بقرب.">
+            >
+            ["at0256"] = <
+                text = <"الدرجة 2">
+                description = <"لا يزال يوجد غدد متشكلة بصورة جيدة في النسيج, و لكنها أكبر حجما و بها المزيد من النسيج يفصل بينها">
+            >
+            ["at0257"] = <
+                text = <"الدرجة 3">
+                description = <"لا يزال بالنسيج غدد يمكن التعرف عليها, و لكن الخلايا ذات لون غامق. 
+و عند تكبيرها, فإن بعض هذه الخلايا قد ترك الغدد و بدأ يغزو/يغير على النسيج المحيط بها.">
+            >
+            ["at0258"] = <
+                text = <"الدرجة 4">
+                description = <"يوجد بالنسيج عدد قليل من الغدد التي يمكن التعرف عليها.
+العديد من الخلايا يغزو النسيج المحيط">
+            >
+            ["at0259"] = <
+                text = <"الدرجة 5">
+                description = <"لا يوجد غدد يمكن التعرف عليها في النسيج. 
+و غالبا ما يوجد صحائف للخلايا منتشرة خلال النسيج المحيط.">
+            >
+            ["at0260"] = <
+                text = <"الدرجة 1">
+                description = <"النسيج المسرطن في البروستاتا يشبه كثيرا نسيج البروستاتا الطبيعي.
+الغدد صغيرة, مُتَشكِّلة بصورة جيدة, و مكدوسة بقرب.">
+            >
+            ["at0261"] = <
+                text = <"الدرجة 2">
+                description = <"لا يزال يوجد غدد متشكلة بصورة جيدة في النسيج, و لكنها أكبر حجما و بها المزيد من النسيج يفصل بينها">
+            >
+            ["at0262"] = <
+                text = <"الدرجة 3">
+                description = <"لا يزال بالنسيج غدد يمكن التعرف عليها, و لكن الخلايا ذات لون غامق. 
+و عند تكبيرها, فإن بعض هذه الخلايا قد ترك الغدد و بدأ يغزو/يغير على النسيج المحيط بها.">
+            >
+            ["at0263"] = <
+                text = <"الدرجة 4">
+                description = <"يوجد بالنسيج عدد قليل من الغدد التي يمكن التعرف عليها.
+العديد من الخلايا يغزو النسيج المحيط">
+            >
+            ["at0264"] = <
+                text = <"الدرجة 5">
+                description = <"لا يوجد غدد يمكن التعرف عليها في النسيج. 
+و غالبا ما يوجد صحائف للخلايا منتشرة خلال النسيج المحيط.">
+            >
+            ["at0265"] = <
+                text = <"موجودة">
+                description = <"يوجد غدد حميدة عند الحافة/الهامش الجراحي">
+            >
+            ["at0266"] = <
+                text = <"غائب">
+                description = <"لا يوجد غدد حميدة عند الحافة/الهامش الجراحي">
+            >
+            ["at0267"] = <
+                text = <"غير محدد">
+                description = <"لم يتم تحديد وجود غدد حميدة عند الحافة/الهامش الجراحي">
+            >
+            ["at0269"] = <
+                text = <"اكتناف عنق المثانة">
+                description = <"الموجودات المتعلقة باكتناف عنق المثانة بالورم">
+            >
+            ["at0270"] = <
+                text = <"موجود">
+                description = <"يوجد اكتناف لعنق المثانة بالورم">
+            >
+            ["at0271"] = <
+                text = <"غائب">
+                description = <"لا يوجد اكتناف لعنق المثانة بالورم">
+            >
+            ["at0272"] = <
+                text = <"غير محدد">
+                description = <"لم يتم تحديد اكتناف عنق المثانة بالورم">
+            >
+            ["at0273"] = <
+                text = <"مناطق الورم">
+                description = <"موجودات مناطق الورم">
+            >
+            ["at0274"] = <
+                text = <"منطقة الورم">
+                description = <"موجودات المنطقة/المناطق المكتنفة بالورم">
+            >
+            ["at0275"] = <
+                text = <"طرفي">
+                description = <"المنطقة الطرفية مكتنفة بالورم">
+            >
+            ["at0276"] = <
+                text = <"مركزي">
+                description = <"المنطقة المركزية مكتنفة بالورم">
+            >
+            ["at0277"] = <
+                text = <"المنطقة الانتقالية">
+                description = <"المنطقة الانتقالية مكتنفة بالورم">
+            >
+            ["ac9000"] = <
+                text = <"التقدير الكيفي (synthesised)">
+                description = <"تقدير كيفي لكمية الورم الأولي للبروستاتا (synthesised)">
+            >
+            ["ac9045"] = <
+                text = <"الورم الذي تم اكتشافه بشكل عارض عند فحص الهيستوباثولوجيا (synthesised)">
+                description = <"مدى الورم الذي تم العثور عليه, إذا كان هناك ورم موجود بشكل عارض عند الفحص الهيستوباثولوجي. 
+و يستخدم ذلك كجزء من تصنيف (الورم, العقد الليمفاوية, و النقيلة) السريري لسرطان البروستاتا. (synthesised)">
+            >
+            ["ac9057"] = <
+                text = <"حرز غليسون الأولي (synthesised)">
+                description = <"حرز غليسون الأولي (synthesised)">
+            >
+            ["ac9058"] = <
+                text = <"درجة غليسون الثانوي (synthesised)">
+                description = <"حرز غليسون الثانوي (synthesised)">
+            >
+            ["ac9059"] = <
+                text = <"درجة غليسون في المرحلة الثالثة (synthesised)">
+                description = <"حرز غليسون في المرحلة الثالثة (synthesised)">
+            >
+            ["ac9036"] = <
+                text = <"العلاقة بمحفظة البروستاتا (synthesised)">
+                description = <"الموجودات في علاقة هامش/حافة القطع بمحفظة البروستاتا (synthesised)">
+            >
+            ["ac9049"] = <
+                text = <"الغدد الحميدة (synthesised)">
+                description = <"الموجودات المتعلقة بالغدد الحميدة عند الحافة/الهامش الجراحي (synthesised)">
+            >
+            ["ac9050"] = <
+                text = <"اكتناف الحويصلات المنوية (synthesised)">
+                description = <"الموجودات الكتعلقة باكتناف الورم في الحويصلات المنوية (synthesised)">
+            >
+            ["ac9055"] = <
+                text = <"اكتناف عنق المثانة (synthesised)">
+                description = <"الموجودات المتعلقة باكتناف عنق المثانة بالورم (synthesised)">
+            >
+            ["ac9056"] = <
+                text = <"منطقة الورم (synthesised)">
+                description = <"موجودات المنطقة/المناطق المكتنفة بالورم (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"الموجودات الإضافية (synthesised)">
+                description = <"الموجودات الهيستولوجية الإضافية المتعلقة بسرطان البروستاتا (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0166"] = <http://snomed.info/id/384994009>
+            ["at0182"] = <http://snomed.info/id/384995005>
+            ["at0183"] = <http://snomed.info/id/385002007>
+            ["at0197"] = <http://snomed.info/id/372278000>
+        >
+    >
+    value_sets = <
+        ["ac9050"] = <
+            id = <"ac9050">
+            members = <"at0173", "at0174", "at0175", "at0176", "at0177", "at0248">
+        >
+        ["ac9057"] = <
+            id = <"ac9057">
+            members = <"at0250", "at0251", "at0252", "at0253", "at0254">
+        >
+        ["ac9056"] = <
+            id = <"ac9056">
+            members = <"at0275", "at0276", "at0277">
+        >
+        ["ac9055"] = <
+            id = <"ac9055">
+            members = <"at0270", "at0271", "at0272">
+        >
+        ["ac9059"] = <
+            id = <"ac9059">
+            members = <"at0260", "at0261", "at0262", "at0263", "at0264">
+        >
+        ["ac9058"] = <
+            id = <"ac9058">
+            members = <"at0255", "at0256", "at0257", "at0258", "at0259">
+        >
+        ["ac9009"] = <
+            id = <"ac9009">
+            members = <"at0194", "at0195", "at0196", "at0218", "at0219">
+        >
+        ["ac9036"] = <
+            id = <"ac9036">
+            members = <"at0239", "at0240", "at0241">
+        >
+        ["ac9045"] = <
+            id = <"ac9045">
+            members = <"at0163", "at0164", "at0246">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0214", "at0215", "at0216", "at0217">
+        >
+        ["ac9049"] = <
+            id = <"ac9049">
+            members = <"at0265", "at0266", "at0267">
+        >
+    >

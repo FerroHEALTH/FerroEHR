@@ -1,0 +1,852 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=5abeacd7-0a9e-4608-b28c-0607fc65477b; build_uid=d817fb15-3a05-4e5a-b480-e238b672a399)
+    openEHR-EHR-CLUSTER.exam-muscle_group.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-CLUSTER.exam.v2
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Nina Schewe, Martin Koch">
+                ["organisation"] = <"Medizinische Hochschule Hannover, Servei Català de la Salut">
+                ["email"] = <"schewe.nina@mh-hannover.de, martinandreaskoch@catsalut.cat">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Erik Sundvall">
+                ["organisation"] = <"Region Östergötland + Linköping University">
+                ["email"] = <"erik.sundvall@regionostergotland.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke, Vebjørn Arntzen">
+                ["organisation"] = <"Nasjonal IKT HF, Oslo University Hospital">
+                ["email"] = <"varntzen@ous-hf.no">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Adriana Kitajima">
+                ["organisation"] = <"Hospital Alemão Oswaldo Cruz - HAOC">
+                ["email"] = <"adrianakitajima@gmail.com">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2015-06-23">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Shahla Foozonkhah, Iran ministry of health and education, Iran", "Hildegard Franke, freshEHR Clinical Informatics Ltd., United Kingdom (openEHR Editor)", "Mikkel Gaup Grønmo, FSE, Helse Nord, Norway (Nasjonal IKT redaktør)", "Ingrid Heitmann, Oslo universitetssykehus HF, Norway", "Hilde Hollås, DIPS ASA, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Lars Ivar Mehlum, Helse Bergen HF, Norway", "Sabine Leh, Haukeland University Hospital, Department of Pathology, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Lars Morgan Karlsen, DIPS ASA, Norway", "Bjørn Næss, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Vladimir Pizzo, Hospital Sírio Libanês, Brazil", "Jussara Rotzsch, UNB, Brazil", "Anoop Shah, University College London, United Kingdom", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Nyree Taylor, Ocean Informatics, Australia (openEHR Editor)", "Rowan Thomas, St. Vincent's Hospital Melbourne, Australia", "Jon Tysdahl, Furst medlab AS, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, Australia<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"A62633B63060E958A076957F20C9DC0A">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Aufzeichnung der bei der körperlichen Untersuchung eines einzelnen Muskels oder einer Muskelgruppe beobachteten Befunde.">
+            use = <"Zur Erfassung der beobachteten Befunde bei der körperlichen Untersuchung eines einzelnen Muskels oder einer Muskelgruppe.
+
+Dieser Archetyp wurde speziell für den SLOT „Untersuchungsdetails“ innerhalb der Archetypen OBSERVATION.exam, CLUSTER.exam-nervous_system oder der Archetypenfamilie CLUSTER.exam-joint entwickelt. Er kann, sofern klinisch sinnvoll, auch innerhalb anderer ENTRY- oder CLUSTER-Archetypen verwendet werden. Weitere Spezialisierungen dieses Archetyps ermöglichen die Erfassung von Untersuchungsbefunden für identifizierte Muskeln oder Muskelgruppen.
+
+Die Interpretation der Befunde, z. B. „Keine Auffälligkeit festgestellt“ oder „Mäßige Entzündung vorhanden“, kann mit dem Datenelement „Klinische Interpretation“ erfasst werden.
+
+Dient als Rahmen, in dem CLUSTER-Archetypen in den SLOT „Untersuchungsbefunde“ eingebettet werden können, um zusätzliche strukturierte Befunde aus körperlichen Untersuchungen zu erfassen.
+
+Der Archetyp CLUSTER.exclusion_exam kann im SLOT „Untersuchung nicht durchgeführt“ verschachtelt werden, um optional explizite Details zur nicht durchgeführten Untersuchung aufzuzeichnen.
+
+Verwenden Sie ihn, um die narrativen Beschreibungen klinischer Befunde in bestehenden oder älteren klinischen Systemen mithilfe des Datenelements „Klinische Beschreibung“ in ein archetypisiertes Format zu integrieren.">
+            misuse = <"Nicht zur Aufzeichnung der Krankengeschichte verwenden. Verwenden Sie hierfür die spezifischen Archetypen „OBSERVATION“ und „CLUSTER“. Zum Beispiel „OBSERVATION.story“ und „CLUSTER.symptom_sign“.
+
+Nicht zur Aufzeichnung der Ergebnisse einer bildgebenden Untersuchung verwenden. Verwenden Sie hierfür die Archetypenfamilie „CLUSTER.imaging_exam“.">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"*To record the findings observed during the physical examination of a single muscle or a muscle group. (en)">
+            keywords = <"fynd, undersökningsfynd, fysisk undersökning, u.a., utan anmärkning", ...>
+            use = <"*Use to record the observed findings during the physical examination of a single muscle or a muscle group.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam or the CLUSTER.exam-nervous_system archetypes, or the CLUSTER.exam-joint family of archetypes.It can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. Further specialisations of this archetype can be used to record examination findings for identified muscles or muscle groups.
+
+Interpretation of the findings, for example 'No abnormality detected' or 'Moderate inflammation present', can be recorded using the 'Clinical interpretation' data element.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element. (en)">
+            misuse = <"*Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom_sign.
+
+Not to be used for recording the results of an imaging examination - use the CLUSTER.imaging_exam family of archetypes for this purpose. (en)">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"*To record the findings observed during the physical examination of a single muscle or a muscle group. (en)">
+            use = <"*Use to record the observed findings during the physical examination of a single muscle or a muscle group.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam or the CLUSTER.exam-nervous_system archetypes, or the CLUSTER.exam-joint family of archetypes.It can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. Further specialisations of this archetype can be used to record examination findings for identified muscles or muscle groups.
+
+Interpretation of the findings, for example 'No abnormality detected' or 'Moderate inflammation present', can be recorded using the 'Clinical interpretation' data element.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element. (en)">
+            misuse = <"Skal ikke brukes til å ta opp anamnese - bruk da spesifikke OBSERVATION og CLUSTER arketyper. For eksempel OBSERVATION.story og CLUSTER.symptom_sign.
+
+Skal ikke brukes for å registrere funn ved bildeundersøkelse - bruk arketype innen gruppen av CLUSTER.imaging_exam (Bildeundersøkelse) for dette.">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"*To record the findings observed during the physical examination of a single muscle or a muscle group. (en)">
+            use = <"*Use to record the observed findings during the physical examination of a single muscle or a muscle group.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam or the CLUSTER.exam-nervous_system archetypes, or the CLUSTER.exam-joint family of archetypes.It can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. Further specialisations of this archetype can be used to record examination findings for identified muscles or muscle groups.
+
+Interpretation of the findings, for example 'No abnormality detected' or 'Moderate inflammation present', can be recorded using the 'Clinical interpretation' data element.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element. (en)">
+            misuse = <"*Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom_sign.
+
+Not to be used for recording the results of an imaging examination - use the CLUSTER.imaging_exam family of archetypes for this purpose. (en)">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the findings observed during the physical examination of a single muscle or a muscle group.">
+            use = <"Use to record the observed findings during the physical examination of a single muscle or a muscle group.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam or the CLUSTER.exam-nervous_system archetypes, or the CLUSTER.exam-joint family of archetypes.It can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. Further specialisations of this archetype can be used to record examination findings for identified muscles or muscle groups.
+
+Interpretation of the findings, for example 'No abnormality detected' or 'Moderate inflammation present', can be recorded using the 'Clinical interpretation' data element.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element.">
+            misuse = <"Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom_sign.
+
+Not to be used for recording the results of an imaging examination - use the CLUSTER.imaging_exam family of archetypes for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Examination findings of a muscle group
+        items matches {
+            ELEMENT[at0001.1] matches {    -- Muscle group
+                value matches {
+                    DV_TEXT[at0.9005]
+                }
+            }
+            ELEMENT[at0.1] occurrences matches {0..1} matches {    -- Fasciculation
+                value matches {
+                    DV_CODED_TEXT[at0.9006] matches {
+                        defining_code matches {[ac0.9000]}    -- Fasciculation (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0.5] occurrences matches {0..1} matches {    -- Atrophy
+                value matches {
+                    DV_CODED_TEXT[at0.9007] matches {
+                        defining_code matches {[ac0.9001]}    -- Atrophy (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0.9] occurrences matches {0..1} matches {    -- Hypertrophy
+                value matches {
+                    DV_CODED_TEXT[at0.9008] matches {
+                        defining_code matches {[ac0.9002]}    -- Hypertrophy (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0.13] occurrences matches {0..1} matches {    -- Tenderness
+                value matches {
+                    DV_CODED_TEXT[at0.9009] matches {
+                        defining_code matches {[ac0.9003]}    -- Tenderness (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0.17] occurrences matches {0..1} matches {    -- Strength
+                value matches {
+                    DV_ORDINAL[at0.9010] matches {
+                        [value, symbol] matches {
+                            [{0}, {[at0.18]}],    -- No visible muscle contraction
+                            [{1}, {[at0.19]}],    -- Visible muscle contraction with no or trace movement
+                            [{2}, {[at0.20]}],    -- Limb movement, but not against gravity
+                            [{3}, {[at0.21]}],    -- Movement against gravity but not resistance
+                            [{4}, {[at0.22]}],    -- Movement against at least some resistance supplied by the examiner
+                            [{5}, {[at0.23]}]    -- Full strength
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0.1"] = <
+                text = <"Faszikulation">
+                description = <"">
+            >
+            ["at0.10"] = <
+                text = <"Vorhanden">
+                description = <"">
+            >
+            ["at0.11"] = <
+                text = <"Unbestimmt">
+                description = <"">
+            >
+            ["at0.12"] = <
+                text = <"Abwesend">
+                description = <"">
+            >
+            ["at0.13"] = <
+                text = <"Empfindlichkeit">
+                description = <"">
+            >
+            ["at0.14"] = <
+                text = <"Vorhanden">
+                description = <"">
+            >
+            ["at0.15"] = <
+                text = <"Unbestimmt">
+                description = <"">
+            >
+            ["at0.16"] = <
+                text = <"Abwesend">
+                description = <"">
+            >
+            ["at0.17"] = <
+                text = <"Stärke">
+                description = <"">
+            >
+            ["at0.18"] = <
+                text = <"Keine sichtbare Muskelkontraktion">
+                description = <"">
+            >
+            ["at0.19"] = <
+                text = <"Sichtbare Muskelkontraktion ohne oder mit nur geringen Bewegungen">
+                description = <"">
+            >
+            ["at0.2"] = <
+                text = <"Vorhanden">
+                description = <"">
+            >
+            ["at0.20"] = <
+                text = <"Bewegung der Gliedmaßen, aber nicht gegen die Schwerkraft">
+                description = <"">
+            >
+            ["at0.21"] = <
+                text = <"Bewegung gegen die Schwerkraft, aber ohne Widerstand">
+                description = <"">
+            >
+            ["at0.22"] = <
+                text = <"Bewegung gegen zumindest einen gewissen Widerstand des Prüfers">
+                description = <"">
+            >
+            ["at0.23"] = <
+                text = <"Volle Stärke">
+                description = <"">
+            >
+            ["at0.3"] = <
+                text = <"Unbestimmt">
+                description = <"">
+            >
+            ["at0.4"] = <
+                text = <"Abwesend">
+                description = <"">
+            >
+            ["at0.5"] = <
+                text = <"Atrophie">
+                description = <"">
+            >
+            ["at0.6"] = <
+                text = <"Vorhanden">
+                description = <"">
+            >
+            ["at0.7"] = <
+                text = <"Unbestimmt">
+                description = <"">
+            >
+            ["at0.8"] = <
+                text = <"Abwesend">
+                description = <"">
+            >
+            ["at0.9"] = <
+                text = <"Hypertrophie">
+                description = <"">
+            >
+            ["at0000.1"] = <
+                text = <"Untersuchungsbefund einer Muskelgruppe">
+                description = <"Befunde, die bei der körperlichen Untersuchung eines einzelnen Muskels oder einer Muskelgruppe beobachtet werden.">
+            >
+            ["at0001.1"] = <
+                text = <"Muskelgruppe">
+                description = <"Identifizierung des untersuchten Körpersystems oder der anatomischen Struktur.">
+                comment = <"Wenn möglich wird die Kodierung des untersuchten Systems oder der untersuchten Struktur mit einer Terminologie bevorzugt.">
+            >
+            ["ac0.9000"] = <
+                text = <"Faszikulation (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"Atrophie (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"Hypertrophie (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"Empfindlichkeit (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac0.9004"] = <
+                text = <"Stärke (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+        ["sv"] = <
+            ["at0000.1"] = <
+                text = <"*Examination findings of a muscle group (en)">
+                description = <"*Findings observed during the physical examination of a single muscle or a muscle group. (en)">
+            >
+            ["at0001.1"] = <
+                text = <"*Muscle group (en)">
+                description = <"Identifiering av systemet eller strukturen som undersökts.">
+                comment = <"Om möjligt, koda systemet eller strukturen med hjälp av ett terminologisystem.">
+            >
+            ["at0.1"] = <
+                text = <"*Fasciculation (en)">
+                description = <"">
+            >
+            ["at0.2"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.3"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.4"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.5"] = <
+                text = <"*Atrophy (en)">
+                description = <"">
+            >
+            ["at0.6"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.7"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.8"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.9"] = <
+                text = <"*Hypertrophy (en)">
+                description = <"">
+            >
+            ["at0.10"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.11"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.12"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.13"] = <
+                text = <"*Tenderness (en)">
+                description = <"">
+            >
+            ["at0.14"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.15"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.16"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.17"] = <
+                text = <"*Strength (en)">
+                description = <"">
+            >
+            ["at0.18"] = <
+                text = <"*No visible muscle contraction (en)">
+                description = <"">
+            >
+            ["at0.19"] = <
+                text = <"*Visible muscle contraction with no or trace movement (en)">
+                description = <"">
+            >
+            ["at0.20"] = <
+                text = <"*Limb movement, but not against gravity (en)">
+                description = <"">
+            >
+            ["at0.21"] = <
+                text = <"*Movement against gravity but not resistance (en)">
+                description = <"">
+            >
+            ["at0.22"] = <
+                text = <"*Movement against at least some resistance supplied by the examiner (en)">
+                description = <"">
+            >
+            ["at0.23"] = <
+                text = <"*Full strength (en)">
+                description = <"">
+            >
+            ["ac0.9000"] = <
+                text = <"*Fasciculation (en) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"*Atrophy (en) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"*Hypertrophy (en) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"*Tenderness (en) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac0.9004"] = <
+                text = <"*Strength (en) (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000.1"] = <
+                text = <"*Examination findings of a muscle group (en)">
+                description = <"*Findings observed during the physical examination of a single muscle or a muscle group. (en)">
+            >
+            ["at0001.1"] = <
+                text = <"*Muscle group (en)">
+                description = <"Identifisering av det undersøkte organsystemet eller den anatomiske strukturen.">
+                comment = <"Det anbefales å kode organsystem eller den anatomiske strukturen med en terminologi dersom mulig.">
+            >
+            ["at0.1"] = <
+                text = <"*Fasciculation (en)">
+                description = <"">
+            >
+            ["at0.2"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.3"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.4"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.5"] = <
+                text = <"*Atrophy (en)">
+                description = <"">
+            >
+            ["at0.6"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.7"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.8"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.9"] = <
+                text = <"*Hypertrophy (en)">
+                description = <"">
+            >
+            ["at0.10"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.11"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.12"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.13"] = <
+                text = <"*Tenderness (en)">
+                description = <"">
+            >
+            ["at0.14"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.15"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.16"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.17"] = <
+                text = <"*Strength (en)">
+                description = <"">
+            >
+            ["at0.18"] = <
+                text = <"*No visible muscle contraction (en)">
+                description = <"">
+            >
+            ["at0.19"] = <
+                text = <"*Visible muscle contraction with no or trace movement (en)">
+                description = <"">
+            >
+            ["at0.20"] = <
+                text = <"*Limb movement, but not against gravity (en)">
+                description = <"">
+            >
+            ["at0.21"] = <
+                text = <"*Movement against gravity but not resistance (en)">
+                description = <"">
+            >
+            ["at0.22"] = <
+                text = <"*Movement against at least some resistance supplied by the examiner (en)">
+                description = <"">
+            >
+            ["at0.23"] = <
+                text = <"*Full strength (en)">
+                description = <"">
+            >
+            ["ac0.9000"] = <
+                text = <"*Fasciculation (en) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"*Atrophy (en) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"*Hypertrophy (en) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"*Tenderness (en) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac0.9004"] = <
+                text = <"*Strength (en) (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000.1"] = <
+                text = <"*Examination findings of a muscle group (en)">
+                description = <"*Findings observed during the physical examination of a single muscle or a muscle group. (en)">
+            >
+            ["at0001.1"] = <
+                text = <"*Muscle group (en)">
+                description = <"Identificação do sistema do corpo examinado ou da estrutura anatômica.">
+                comment = <"A codificação do sistema ou estrutura examinada com uma terminologia é preferível, sempre que possível.">
+            >
+            ["at0.1"] = <
+                text = <"*Fasciculation (en)">
+                description = <"">
+            >
+            ["at0.2"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.3"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.4"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.5"] = <
+                text = <"*Atrophy (en)">
+                description = <"">
+            >
+            ["at0.6"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.7"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.8"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.9"] = <
+                text = <"*Hypertrophy (en)">
+                description = <"">
+            >
+            ["at0.10"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.11"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.12"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.13"] = <
+                text = <"*Tenderness (en)">
+                description = <"">
+            >
+            ["at0.14"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.15"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.16"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.17"] = <
+                text = <"*Strength (en)">
+                description = <"">
+            >
+            ["at0.18"] = <
+                text = <"*No visible muscle contraction (en)">
+                description = <"">
+            >
+            ["at0.19"] = <
+                text = <"*Visible muscle contraction with no or trace movement (en)">
+                description = <"">
+            >
+            ["at0.20"] = <
+                text = <"*Limb movement, but not against gravity (en)">
+                description = <"">
+            >
+            ["at0.21"] = <
+                text = <"*Movement against gravity but not resistance (en)">
+                description = <"">
+            >
+            ["at0.22"] = <
+                text = <"*Movement against at least some resistance supplied by the examiner (en)">
+                description = <"">
+            >
+            ["at0.23"] = <
+                text = <"*Full strength (en)">
+                description = <"">
+            >
+            ["ac0.9000"] = <
+                text = <"*Fasciculation (en) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"*Atrophy (en) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"*Hypertrophy (en) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"*Tenderness (en) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac0.9004"] = <
+                text = <"*Strength (en) (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Examination findings of a muscle group">
+                description = <"Findings observed during the physical examination of a single muscle or a muscle group.">
+            >
+            ["at0001.1"] = <
+                text = <"Muscle group">
+                description = <"Identification of the examined body system or anatomical structure.">
+                comment = <"Coding of the system or structure examined with a terminology is preferred, where possible.">
+            >
+            ["at0.1"] = <
+                text = <"Fasciculation">
+                description = <"">
+            >
+            ["at0.2"] = <
+                text = <"Present">
+                description = <"">
+            >
+            ["at0.3"] = <
+                text = <"Indeterminate">
+                description = <"">
+            >
+            ["at0.4"] = <
+                text = <"Absent">
+                description = <"">
+            >
+            ["at0.5"] = <
+                text = <"Atrophy">
+                description = <"">
+            >
+            ["at0.6"] = <
+                text = <"Present">
+                description = <"">
+            >
+            ["at0.7"] = <
+                text = <"Indeterminate">
+                description = <"">
+            >
+            ["at0.8"] = <
+                text = <"Absent">
+                description = <"">
+            >
+            ["at0.9"] = <
+                text = <"Hypertrophy">
+                description = <"">
+            >
+            ["at0.10"] = <
+                text = <"Present">
+                description = <"">
+            >
+            ["at0.11"] = <
+                text = <"Indeterminate">
+                description = <"">
+            >
+            ["at0.12"] = <
+                text = <"Absent">
+                description = <"">
+            >
+            ["at0.13"] = <
+                text = <"Tenderness">
+                description = <"">
+            >
+            ["at0.14"] = <
+                text = <"Present">
+                description = <"">
+            >
+            ["at0.15"] = <
+                text = <"Indeterminate">
+                description = <"">
+            >
+            ["at0.16"] = <
+                text = <"Absent">
+                description = <"">
+            >
+            ["at0.17"] = <
+                text = <"Strength">
+                description = <"">
+            >
+            ["at0.18"] = <
+                text = <"No visible muscle contraction">
+                description = <"">
+            >
+            ["at0.19"] = <
+                text = <"Visible muscle contraction with no or trace movement">
+                description = <"">
+            >
+            ["at0.20"] = <
+                text = <"Limb movement, but not against gravity">
+                description = <"">
+            >
+            ["at0.21"] = <
+                text = <"Movement against gravity but not resistance">
+                description = <"">
+            >
+            ["at0.22"] = <
+                text = <"Movement against at least some resistance supplied by the examiner">
+                description = <"">
+            >
+            ["at0.23"] = <
+                text = <"Full strength">
+                description = <"">
+            >
+            ["ac0.9000"] = <
+                text = <"Fasciculation (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"Atrophy (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"Hypertrophy (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"Tenderness (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac0.9004"] = <
+                text = <"Strength (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.2", "at0.3", "at0.4">
+        >
+        ["ac0.9003"] = <
+            id = <"ac0.9003">
+            members = <"at0.14", "at0.15", "at0.16">
+        >
+        ["ac0.9004"] = <
+            id = <"ac0.9004">
+            members = <"at0.18", "at0.19", "at0.20", "at0.21", "at0.22", "at0.23">
+        >
+        ["ac0.9001"] = <
+            id = <"ac0.9001">
+            members = <"at0.6", "at0.7", "at0.8">
+        >
+        ["ac0.9002"] = <
+            id = <"ac0.9002">
+            members = <"at0.10", "at0.11", "at0.12">
+        >
+    >

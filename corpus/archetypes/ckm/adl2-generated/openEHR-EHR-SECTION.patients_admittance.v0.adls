@@ -1,0 +1,83 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=f6e94f21-64e6-4c43-ba39-beadad700dcd; build_uid=2e913318-3124-4d83-a5aa-37419f93b9b0)
+    openEHR-EHR-SECTION.patients_admittance.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Aitor Eguzkitza">
+        ["organisation"] = <"Universidad Pública de Navarra - Complejo Hospitalario de Navarra">
+        ["email"] = <"aitor.eguzkiza@unavarra.es">
+        ["date"] = <"2015-06-27">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"José Andonegui, Hospital de Navarra, jose.andonegui.navarro@cfnavarra.es", "Luis Serrano, Universidad Pública de Navarra (UPNA), lserrano@unavarra.es", "Jesús D. Trigo, Universidad Pública de Navarra (UPNA), jesusdaniel.trigo@unavarra.es">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"F95419D4DE238F22E6C6C62D31776BF7">
+    >
+    details = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registrar la declaración de admisión de un paciente dentro de un servicio de cribado para una enfermedad específica.">
+            use = <"Se utiliza para registrar la declaración de admisión o exclusión de un paciente para un servicio de cribado, en un punto específico de su historia clínica. 
+La declaración se considera únicamente para el momento en que ha sido registrada. Es decir, un paciente excluído del cribado más adelante podría ser admitido en caso de darse las condiciones para ello.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Register the statement/s about including (or excluding) a patient in a long-term healthcare process.">
+            keywords = <"admittance", ...>
+            use = <"Use to record statement/s about the admission or exclusion, regarding a specific healthcare process, at a specific point in time of the clinical history of a patient. The statement is considered only at the time it is registered. That is to say, a patient excluded from a healthcare  service may be admitted in the future if given the right conditions.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    SECTION[at0000] matches {    -- Patient's admittance
+        items cardinality matches {1..*; unordered} matches {
+            allow_archetype EVALUATION[at0001] matches {    -- DR screening convenient
+                include
+                    archetype_id/value matches {/openEHR-EHR-EVALUATION\.long_term_process_enrollment(-[a-zA-Z0-9_]+)*\.v([0-9]+)|openEHR-EHR-EVALUATION\.dr_screening_convenient(-[a-zA-Z0-9_]+)*\.v([0-9]+)/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Patient's admittance">
+                description = <"Decision-making regarding to inscribe or not a patient into a screening process.">
+            >
+            ["at0001"] = <
+                text = <"DR screening convenient">
+                description = <"Statement/s about patient's compliance of the requirements established to access to a specific service of screening.">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Admisión del paciente">
+                description = <"Proceso de toma de decisiones hasta la admisión de un paciente dentro del proceso de cribado.">
+            >
+            ["at0001"] = <
+                text = <"Cribado de RD necesario">
+                description = <"Declaración acerca del cumplimiento por parte de un paciente de los requisitos establecidos para acceder a un servicio de cribado específico.">
+            >
+        >
+    >

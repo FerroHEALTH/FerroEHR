@@ -1,0 +1,239 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=b3a90285-ce3a-4c99-9d95-fd8b4ae1d2f1; build_uid=15d9bd8d-7a8a-4ce2-a364-f41d74f694ef)
+    openEHR-EHR-CLUSTER.promis_bank_v10_depression.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Sarah Ballout, Alina Rehberg">
+                ["organisation"] = <"MHH-Hannover, Medizinische Hochschule Hannover">
+                ["email"] = <"ballout.sarah@mh-hannover.de, rehberg.alina@mh-hannover.de">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Silje Ljosland Bakke">
+        ["organisation"] = <"Helse Vest IKT AS">
+        ["email"] = <"silje.ljosland.bakke@helse-vest-ikt.no">
+        ["date"] = <"2020-06-04">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"https://www.healthmeasures.net/index.php?option=com_instruments&view=measure&id=65&Itemid=992">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"22AACC5195FC2D1F974D3655DF1A0A10">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Erfassung von PROMIS Datenbank v1.0 Items über Depressionen.">
+            keywords = <"Depression", "PROMIS">
+            use = <"Zur Erfassung von PROMIS Datenbank v1.0 Items über Depressionen.
+
+Dieser Archetyp wurde zur Verwendung innerhalb des OBSERVATION.promis-Archetyps und zusammen mit anderen PROMIS-Bank-Archetypen entwickelt, die auf die Darstellung eines bestimmten PROMIS-Profils wie PROMIS-29 beschränkt ist.
+
+Der Archetyp ist bei der anfänglichen Modellierung unvollständig und sollte erweitert werden, wenn zusätzliche Artikel aus der entsprechenden Artikelbank benötigt werden.
+
+Obwohl alle openEHR-Archetypen unter einer offenen Lizenz frei verfügbar sind, ist der spezifische Inhalt dieses Archetyps urheberrechtlich geschützt. Jede Verwendung dieses Archetyps innerhalb von Implementierungen muss in Übereinstimmung mit den von den Urheberrechtsinhabern festgelegten Bedingungen erfolgen.
+
+Erklärung zum Urheberrecht: PROMIS-Tests, Testprotokolle, Testaufgaben, Normen, Normtabellen, Bewertungsprogramme, Bewertungsschlüssel (einschließlich Bewertungsalgorithmen, Skalendefinitionen, Skalenzugehörigkeit und Bewertungsrichtungen), Bewertungsberichte, Software und andere PROMIS-bezogene Materialien sind ©2006-2017 PROMIS Gesundheitsorganisation oder andere Personen/Einrichtungen, die Informationen und Materialien beigetragen haben, und werden mit Genehmigung der Urheberrechtsinhaber verwendet.
+
+Allgemeine Nutzungsbedingungen: https://www.healthmeasures.net/images/PROMIS/Terms_of_Use_HM_approved_1-12-17_-_Updated_Copyright_Notices.pdf">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record PROMIS bank v1.0 items about depression.">
+            use = <"Use to record PROMIS bank v1.0 items about depression.
+
+This archetype has been designed to be used within the OBSERVATION.promis archetype, and along with other PROMIS bank archetypes constrained to represent a specific PROMIS profile such as PROMIS-29.
+
+The archetype is incomplete at initial modelling, and should be grown as additional items from the relevant item bank are required.
+
+While openEHR archetypes are all freely available under an open license, the specific content of this archetype is copyright protected. Any use of this archetype within implementations must be in compliance with the terms established by the copyright owners.
+
+Copyright statement: PROMIS tests, test protocols, test items, norms, norms tables, scoring programs, scoring keys (including scoring algorithms, scale definitions, scale membership, and scoring directions), score reports, software, and other PROMIS-related materials are ©2006-2017 PROMIS Health Organization or other individuals/entities that have contributed information and materials, and are being used with the permission of the copyright holders.
+
+Terms and conditions for use: https://www.healthmeasures.net/images/PROMIS/Terms_of_Use_HM_approved_1-12-17_-_Updated_Copyright_Notices.pdf">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- PROMIS Item Bank v1.0 - Depression
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- In the past 7 days: I felt worthless
+                value matches {
+                    DV_ORDINAL[at9001] matches {
+                        [value, symbol] matches {
+                            [{1}, {[at0010]}],    -- Never
+                            [{2}, {[at0011]}],    -- Rarely
+                            [{3}, {[at0012]}],    -- Sometimes
+                            [{4}, {[at0013]}],    -- Often
+                            [{5}, {[at0014]}]    -- Always
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- In the past 7 days: I felt helpless
+                value matches {
+                    DV_ORDINAL[at9002] matches {
+                        [value, symbol] matches {
+                            [{1}, {[at0010]}],    -- Never
+                            [{2}, {[at0011]}],    -- Rarely
+                            [{3}, {[at0012]}],    -- Sometimes
+                            [{4}, {[at0013]}],    -- Often
+                            [{5}, {[at0014]}]    -- Always
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0008] occurrences matches {0..1} matches {    -- In the past 7 days: I felt depressed
+                value matches {
+                    DV_ORDINAL[at9003] matches {
+                        [value, symbol] matches {
+                            [{1}, {[at0010]}],    -- Never
+                            [{2}, {[at0011]}],    -- Rarely
+                            [{3}, {[at0012]}],    -- Sometimes
+                            [{4}, {[at0013]}],    -- Often
+                            [{5}, {[at0014]}]    -- Always
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0009] occurrences matches {0..1} matches {    -- In the past 7 days: I felt hopeless
+                value matches {
+                    DV_ORDINAL[at9004] matches {
+                        [value, symbol] matches {
+                            [{1}, {[at0010]}],    -- Never
+                            [{2}, {[at0011]}],    -- Rarely
+                            [{3}, {[at0012]}],    -- Sometimes
+                            [{4}, {[at0013]}],    -- Often
+                            [{5}, {[at0014]}]    -- Always
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"PROMIS Datenbank v1.0 - Depression">
+                description = <"Die PROMIS Item Datenbank v1.0 für Depressionen.">
+            >
+            ["at0001"] = <
+                text = <"In den letzten 7 Tagen: Ich fühlte mich wertlos">
+                description = <"Ich fühlte mich wertlos.">
+                item_code = <"EDDEP04">
+            >
+            ["at0007"] = <
+                text = <"In den letzten 7 Tagen: Ich fühlte mich hilflos">
+                description = <"Ich fühlte mich hilflos.">
+                item_code = <"EDDEP06">
+            >
+            ["at0008"] = <
+                text = <"In den letzten 7 Tagen: Ich fühlte mich niedergeschlagen">
+                description = <"Ich fühlte mich niedergeschlagen.">
+                item_code = <"EDDEP29">
+            >
+            ["at0009"] = <
+                text = <"In den letzten 7 Tagen: Ich fühlte mich hoffnungslos">
+                description = <"Ich fühlte mich hoffnungslos.">
+                item_code = <"EDDEP41">
+            >
+            ["at0010"] = <
+                text = <"Nie">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Selten">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Manchmal">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Oft">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Immer">
+                description = <"">
+            >
+            ["ac9004"] = <
+                text = <"In den letzten 7 Tagen: Ich fühlte mich wertlos (synthesised)">
+                description = <"Ich fühlte mich wertlos. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"PROMIS Item Bank v1.0 - Depression">
+                description = <"The PROMIS item bank v1.0 for depression.">
+            >
+            ["at0001"] = <
+                text = <"In the past 7 days: I felt worthless">
+                description = <"I felt worthless.">
+                item_code = <"EDDEP04">
+            >
+            ["at0007"] = <
+                text = <"In the past 7 days: I felt helpless">
+                description = <"I felt helpless.">
+                item_code = <"EDDEP06">
+            >
+            ["at0008"] = <
+                text = <"In the past 7 days: I felt depressed">
+                description = <"I felt depressed.">
+                item_code = <"EDDEP29">
+            >
+            ["at0009"] = <
+                text = <"In the past 7 days: I felt hopeless">
+                description = <"I felt hopeless.">
+                item_code = <"EDDEP41">
+            >
+            ["at0010"] = <
+                text = <"Never">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Rarely">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Sometimes">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Often">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Always">
+                description = <"">
+            >
+            ["ac9004"] = <
+                text = <"In the past 7 days: I felt worthless (synthesised)">
+                description = <"I felt worthless. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0010", "at0011", "at0012", "at0013", "at0014">
+        >
+    >

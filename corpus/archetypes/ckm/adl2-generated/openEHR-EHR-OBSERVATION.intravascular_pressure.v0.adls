@@ -1,0 +1,460 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=5e30a983-e443-4a60-98b4-41df2dccbf7c; build_uid=b7ef0029-a146-4a42-abac-cec8a791178c)
+    openEHR-EHR-OBSERVATION.intravascular_pressure.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Alina Rehberg">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"rehberg.alina@mh-hannover.de">
+            >
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["application"] = <"Adl Designer">
+            >
+            other_details = <
+                ["notes"] = <"Generated automatically by Adl Designer">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"sam.heard@oceaninformatics.com">
+        ["date"] = <"2006-06-28">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Ian McNicoll, freshEHR Clinical Informatics, UK", "Heather Leslie, Atomica Informatics">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"B556D6ECD8B7D193B33E149D32470886">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung von intravaskulären venösen, arteriellen, pulmonalen oder kardialen Druckmessungen.">
+            keywords = <"Druck", "intravaskulär", "zentral", "venös">
+            use = <"Zur Darstellung des gemessenen Drucks an einer bestimmten Stelle, in einem Blutgefäß oder in der Herzhöhle, in einer bestimmten Phase des Herzschlags oder als Durchschnitt über den gesamten Herzzyklus.">
+            misuse = <"Nicht zur Darstellung der Messung des systolischen und diastolischen Blutdrucks geeignet. Verwenden Sie hierfür die Variable OBSERVATION.blood_pressure.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record intravascular venous, arterial, pulmonary or cardiac pressure measurement.">
+            keywords = <"pressure", "intravascular", "central", "venous">
+            use = <"Use to record the measured pressure in a specific location, blood vessel or heart cavity, at a specific phase of the heart or an average over the heart cycle.">
+            misuse = <"Not to be used for Systolic and Diastolic blood pressure. Use the OBSERVATION.blood_pressure for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"قياس الضغط داخل الوعاء الدموي, سواء أكان وريدا أو شريانا أو رئويا أو قلبيا. و عادة ما يتم المزيد من التخصيص له بقياسات للضغط أكثر تحديدا مثل الضغط داخل الوريد الرقبي (الوداجي) و الضغط الوريدي المركزي.">
+            keywords = <"الضغط", "داخل الوعاء الدموي">
+            use = <"">
+            misuse = <"لا يستخدم لقياس ضغط الدم المجموعي. استخدم نموذج (ملاحظة. ضغط الدم) لذلك.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Intravascular pressure
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {1..*} matches {
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Pressure
+                                        value matches {
+                                            DV_QUANTITY[at9003]
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0033] occurrences matches {0..1} matches {    -- Multimedia representation
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.waveform(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-CLUSTER\.media_file\.v1\..*/}
+                                    }
+                                    ELEMENT[at0042] matches {    -- Clinical interpretation
+                                        value matches {
+                                            DV_TEXT[at9015]
+                                        }
+                                    }
+                                    ELEMENT[at0035] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9016]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0038] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0039] occurrences matches {0..1} matches {    -- Position
+                                        value matches {
+                                            DV_TEXT[at9017]
+                                        }
+                                    }
+                                    ELEMENT[at0040] occurrences matches {0..1} matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9008]
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Phase of heart cycle
+                                        value matches {
+                                            DV_CODED_TEXT[at9009] matches {
+                                                defining_code matches {[ac9003]}    -- Phase of heart cycle (synthesised)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    INTERVAL_EVENT[at0004] matches {    -- Average over heart cycle
+                        math_function matches {
+                            DV_CODED_TEXT[at9010] matches {
+                                defining_code matches {[at9004]}    -- mean
+                            }
+                        }
+                        data matches {
+                            use_node ITEM_TREE[at9011] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                        state matches {
+                            use_node ITEM_TREE[at9012] /data[at0001]/events[at0002]/state[at0038]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0021] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0044] occurrences matches {0..1} matches {    -- Method
+                        value matches {
+                            DV_TEXT[at9013]
+                        }
+                    }
+                    ELEMENT[at0043] occurrences matches {0..1} matches {    -- Location of measurement
+                        value matches {
+                            DV_TEXT[at9014]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0036] occurrences matches {0..1} matches {    -- Structured measurement location
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.anatomical_location_relative\.v2\..*/}
+                        exclude
+                            archetype_id/value matches {/.*/}
+                    }
+                    allow_archetype CLUSTER[at0030] matches {    -- Device
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    allow_archetype CLUSTER[at0041] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Intravaskulärer Druck">
+                description = <"Der gemessene Druck an einer bestimmten Stelle, in einem Blutgefäß oder einer Herzhöhle, in einer bestimmten Phase des Herzschlags oder als Durchschnitt über den gesamten Herzzyklus.">
+            >
+            ["at0002"] = <
+                text = <"Beliebiges Ereignis">
+                description = <"Standardmäßiger, nicht näher beschriebener Zeitpunkt oder Intervall Ereignis welches in einem Template oder bei der Anwendung genauer definiert werden kann.">
+            >
+            ["at0004"] = <
+                text = <"Durchschnitt über den Herzzyklus">
+                description = <"Der Durchschnitt über einen Herzzyklus.">
+            >
+            ["at0005"] = <
+                text = <"Druck">
+                description = <"Der gemessene intravaskuläre Druck.">
+            >
+            ["at0007"] = <
+                text = <"Phase des Herzzyklus">
+                description = <"Die Phase des Herzzyklus zum Zeitpunkt der Messung.">
+            >
+            ["at0008"] = <
+                text = <"Systolisch">
+                description = <"Während der Kontraktion des Herzens.">
+            >
+            ["at0009"] = <
+                text = <"Diastolisch">
+                description = <"Während der Entspannung des Herzens.">
+            >
+            ["at0023"] = <
+                text = <"Präsystolisch">
+                description = <"Phase des Herzens unmittelbar vor der Kontraktion des Herzens.">
+            >
+            ["at0024"] = <
+                text = <"Prädiastolisch">
+                description = <"Die Phase des Herzens unmittelbar vor der Füllung der Herzkammer.">
+            >
+            ["at0027"] = <
+                text = <"Ganzer Zyklus">
+                description = <"Der gemessene Druck erstreckt sich über den gesamten Herzzyklus.">
+            >
+            ["at0030"] = <
+                text = <"Gerät">
+                description = <"Details über das Gerät, dass zur Messung verwendet wird.">
+            >
+            ["at0033"] = <
+                text = <"Multimediale Darstellung">
+                description = <"Digitales Bild, Video, Wellenform oder Diagramm zur Darstellung der Ergebnisse.">
+            >
+            ["at0035"] = <
+                text = <"Kommentar">
+                description = <"Zusätzlicher Freitext über die intravaskulären Druckmessung, der nicht in anderen Felder erfasst werden konnte.">
+            >
+            ["at0036"] = <
+                text = <"Strukturierte Stelle der Messung">
+                description = <"Strukturierte Körperstelle an der der Blutdruck gemessen wurde.">
+            >
+            ["at0039"] = <
+                text = <"Position">
+                description = <"Die Position der untersuchten Person während der Messung.">
+            >
+            ["at0040"] = <
+                text = <"Einflussfaktoren">
+                description = <"Kommentar und Aufzeichung anderer Faktoren die ggf. zu dem Ergebnis des intravaskulären Drucks beitragen.">
+            >
+            ["at0041"] = <
+                text = <"Erweiterungen">
+                description = <"Zusätzliche Information, die für die Erfassung des lokalen Kontexts oder für die Anpassung an andere Referenzmodelle/Formalismen benötigt wird.
+">
+                comment = <"Comment: Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen oder CIMI-Modelle.">
+            >
+            ["at0042"] = <
+                text = <"Klinische Interpretation">
+                description = <"Einzelnes Wort, Ausdruck oder Kurzbeschreibung der klinischen Bedeutung und Aussagekraft des intravaskulären Drucks.">
+            >
+            ["at0043"] = <
+                text = <"Stelle der Messung">
+                description = <"Einfache Körperstelle an der der Blutdruck gemessen wurde.">
+            >
+            ["at0044"] = <
+                text = <"Methode">
+                description = <"Beschreibung der Methode zur Messung des intravaskulären Drucks.">
+            >
+            ["at9004"] = <
+                text = <"* mean (en)">
+                description = <"* mean (en)">
+            >
+            ["ac9003"] = <
+                text = <"Phase des Herzzyklus (synthesised)">
+                description = <"Die Phase des Herzzyklus zum Zeitpunkt der Messung. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Intravascular pressure">
+                description = <"The measured pressure in a specific location, blood vessel or heart cavity, at a specific phase of the heart or an average over the heart cycle.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Average over heart cycle">
+                description = <"The average over one heart cycle.">
+            >
+            ["at0005"] = <
+                text = <"Pressure">
+                description = <"The measured intravascular pressure.">
+            >
+            ["at0007"] = <
+                text = <"Phase of heart cycle">
+                description = <"The phase of the heart cycle at the time of the measurement.">
+            >
+            ["at0008"] = <
+                text = <"Systolic">
+                description = <"During contraction of the heart.">
+            >
+            ["at0009"] = <
+                text = <"Diastolic">
+                description = <"During relaxation of the heart.">
+            >
+            ["at0023"] = <
+                text = <"Pre-systolic">
+                description = <"Phase of the heart immediately prior to contraction of the heart.">
+            >
+            ["at0024"] = <
+                text = <"Pre-diastolic">
+                description = <"The phase of the heart immediately prior to filling of the ventricle.">
+            >
+            ["at0027"] = <
+                text = <"Whole cycle">
+                description = <"The pressure measueerd is over the whole heart cycle.">
+            >
+            ["at0030"] = <
+                text = <"Device">
+                description = <"Details about the device used to record the measurement.">
+            >
+            ["at0033"] = <
+                text = <"Multimedia representation">
+                description = <"Digital image, video, wave form or diagram representing the findings.">
+            >
+            ["at0035"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the intravascular pressure measurement not captured in other fields.">
+            >
+            ["at0036"] = <
+                text = <"Structured measurement location">
+                description = <"Structured anatomical location of where the measurement was taken.">
+            >
+            ["at0039"] = <
+                text = <"Position">
+                description = <"Position of patient during measurement.">
+            >
+            ["at0040"] = <
+                text = <"Confounding factors">
+                description = <"Comment on and record other incidental factors that may be contributing to the intravascular pressure measurement.">
+            >
+            ["at0041"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0042"] = <
+                text = <"Clinical interpretation">
+                description = <"Single word, phrase or brief description that represents the clinical meaning and significance of the intravascular pressure.">
+            >
+            ["at0043"] = <
+                text = <"Location of measurement">
+                description = <"Simple body site where blood pressure was measured.">
+            >
+            ["at0044"] = <
+                text = <"Method">
+                description = <"Description about how the intravascular pressure was measured.">
+            >
+            ["at9004"] = <
+                text = <"mean">
+                description = <"mean">
+            >
+            ["ac9003"] = <
+                text = <"Phase of heart cycle (synthesised)">
+                description = <"The phase of the heart cycle at the time of the measurement. (synthesised)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"*Intravascular pressure(en)">
+                description = <"*The measured pressure in a specific location, blood vessel or heart cavity, at a specific phase of the heart or an average over the heart cycle.(en)">
+            >
+            ["at0002"] = <
+                text = <"*Any event(en)">
+                description = <"*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.(en)">
+            >
+            ["at0004"] = <
+                text = <"*Average over heart cycle(en)">
+                description = <"*The average over one heart cycle.(en)">
+            >
+            ["at0005"] = <
+                text = <"*Pressure(en)">
+                description = <"*The measured intravascular pressure.(en)">
+            >
+            ["at0007"] = <
+                text = <"*Phase of heart cycle(en)">
+                description = <"*The phase of the heart cycle at the time of the measurement.(en)">
+            >
+            ["at0008"] = <
+                text = <"*Systolic(en)">
+                description = <"*During contraction of the heart.(en)">
+            >
+            ["at0009"] = <
+                text = <"*Diastolic(en)">
+                description = <"*During relaxation of the heart.(en)">
+            >
+            ["at0023"] = <
+                text = <"*Pre-systolic(en)">
+                description = <"*Phase of the heart immediately prior to contraction of the heart.(en)">
+            >
+            ["at0024"] = <
+                text = <"*Pre-diastolic(en)">
+                description = <"*The phase of the heart immediately prior to filling of the ventricle.(en)">
+            >
+            ["at0027"] = <
+                text = <"*Whole cycle(en)">
+                description = <"*The pressure measueerd is over the whole heart cycle.(en)">
+            >
+            ["at0030"] = <
+                text = <"*Device(en)">
+                description = <"*Details about the device used to record the measurement.(en)">
+            >
+            ["at0033"] = <
+                text = <"*Multimedia representation(en)">
+                description = <"*Digital image, video, wave form or diagram representing the findings.(en)">
+            >
+            ["at0035"] = <
+                text = <"*Comment(en)">
+                description = <"*Additional narrative about the intravascular pressure measurement not captured in other fields.(en)">
+            >
+            ["at0036"] = <
+                text = <"*Structured measurement location(en)">
+                description = <"*Structured anatomical location of where the measurement was taken.(en)">
+            >
+            ["at0039"] = <
+                text = <"*Position(en)">
+                description = <"*Position of patient during measurement.(en)">
+            >
+            ["at0040"] = <
+                text = <"*Confounding factors(en)">
+                description = <"*Comment on and record other incidental factors that may be contributing to the intravascular pressure measurement.(en)">
+            >
+            ["at0041"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms.(en)">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.(en)">
+            >
+            ["at0042"] = <
+                text = <"*Clinical interpretation(en)">
+                description = <"*Single word, phrase or brief description that represents the clinical meaning and significance of the intravascular pressure.(en)">
+            >
+            ["at0043"] = <
+                text = <"*Location of measurement(en)">
+                description = <"*Simple body site where blood pressure was measured.(en)">
+            >
+            ["at0044"] = <
+                text = <"*Method(en)">
+                description = <"*Description about how the intravascular pressure was measured.(en)">
+            >
+            ["at9004"] = <
+                text = <"* mean (en)">
+                description = <"* mean (en)">
+            >
+            ["ac9003"] = <
+                text = <"*Phase of heart cycle(en) (synthesised)">
+                description = <"*The phase of the heart cycle at the time of the measurement.(en) (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9004"] = <http://openehr.org/id/146>
+        >
+    >
+    value_sets = <
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0008", "at0009", "at0023", "at0024", "at0027">
+        >
+    >

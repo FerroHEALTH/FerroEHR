@@ -1,0 +1,149 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=0113d386-ee31-47b8-af6c-583d76381fa8; build_uid=a8e84a14-c94f-4443-b660-03aaf0d07d17)
+    openEHR-EHR-CLUSTER.religion.v1.1.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand, Silje Ljosland Bakke, Vebjørn Arntzen, Kristian Berg">
+                ["organisation"] = <"Helse Bergen HF, Nasjonal IKT HF, Oslo universitetssykehus HF">
+                ["email"] = <"john.tore.valand@helse-bergen.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"John Tore Valand">
+        ["organisation"] = <"Helse Bergen, Norway">
+        ["email"] = <"john.tore.valand@helse-bergen.no">
+        ["date"] = <"2016-11-17">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Morten Aas, Diakonhjemmet Sykehus, Norway", "Tomas Alme, DIPS ASA, Norway", "Erling Are Hole, Helse Bergen, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Ivar Berge, Oslo Universitetssykehus, Norway", "Kristian Berg, Vestvågøy kommune - Fagutviklingsavdelingen, Norway", "Mate Bestek, 3fs, Slovenia", "Anita Bjørnnes, Helse Bergen, Norway", "Bjørn Christensen, Helse Bergen HF, Norway", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Stig Erik Hegrestad, Helse Førde, Norway", "Hildegard Franke, freshEHR Clinical Informatics Ltd., United Kingdom", "Sebastian Garde, Ocean Informatics, Germany", "Heather Grain, Llewelyn Grain Informatics, Australia", "Mikkel Johan Gaup Grønmo, Forvaltningssenter EPJ, Helse-Nord, Norway (openEHR Editor)", "Daniel Habashi, PasientSky AS, Norway", "Anca Heyd, DIPS ASA, Norway", "Annette Hole Sjøborg, DIPS ASA, Norway", "Hilde Hollås, DIPS ASA, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Liv Ingrid Svela, Helse Bergen HF, Norway", "Tom Jarl Jakobsen, Helse Bergen, Norway", "Gunnar Jårvik, Helse Vest IKT AS, Norway", "Lars Morgan Karlsen, DIPS ASA, Norway", "Gunn-Lisbeth Kleiven, Oslo universitetssykehus HF, Norway", "Heidi Koikkalainen, United Kingdom (openEHR Editor)", "Nils Kolstrup, Skansen Legekontor og Nasjonalt Senter for samhandling og telemedisin, Norway", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Siv Marie Lien, DIPS ASA, Norway", "Hildegard McNicoll, freshEHR Clinical Informatics Ltd., United Kingdom", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Andrej Orel, Marand d.o.o., Slovenia", "Tanja Riise, Nasjonal IKT HF, Norway", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Nyree Taylor, Ocean Informatics, Australia", "Tesfay Teame, Folkehelseinstituttet, Norway", "Jon Tysdahl, Furst medlab AS, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Year Book Australia, 2006: Religious Affiliation [Internet]. Australia: Australian Bureau of Statistics; 2006 [cited: 2016-12-14]. Available from: http://www.abs.gov.au/ausstats/abs@.nsf/46d1bc47ac9d0c7bca256c470025ff87/bfdda1ca506d6cfaca2570de0014496e!OpenDocument">
+        ["2"] = <"Religion, Draft Archetype [Internet]. Australian Digital Health Agency, Australian Digital Health Agency Clinical Knowledge Manager [cited: 2016-11-01]. No longer available">
+    >
+    other_details = <
+        ["current_contact"] = <"John Tore Valand, Helse Bergen, Norway">
+        ["MD5-CAM-1.0.1"] = <"24F9269BA97E8326019D7D780C318873">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere et individs livssyn og/eller religiøs eller ikke-religiøs praksis som kan ha betydning for utføring av helsetjenester eller andre tjenester.">
+            keywords = <"religion", "åndelig", "tro", "religiøs", "ateisme", "ateist", "agnostisisme", "agnostiker", "holdning", "hellig", "profan", "sekulær", "verdisyn", "overbevisning", "humanisme">
+            use = <"Brukes for å registrere et individs livssyn og/eller religiøs eller ikke-religiøs praksis og en overordnet beskrivelse om hvordan livssynet kan ha betydning for utføringen av helsetjenester eller andre tjenester. 
+
+Brukes denne arketypen i et EPJ som benytter seg av et sentralt demografiregister, kan relevante demografiske data fra registeret benyttes for å populere dataelementer i denne arketypen. 
+
+Arketypen er ment brukt i arketypen EVALUATION.social_summary (Sosialanamnese) eller i andre relevante arketyper.
+
+Har man behov for å registrere livssynet til noen andre enn individet som dokumentasjonen omhandler, for eksempel individets foreldre, settes begrensinger på referansemodellelementet \"Subject\" for å spesifisere rollen.">
+            misuse = <"Brukes ikke for å registrere pasientens behandlingsønsker som kan være knyttet til et livssyn, særlig de som kan benyttes ved beslutningsstøtte. For eksempel skal ønsker knyttet til ernæring registreres i arketyper som omhandler ernæringsbehov. Behandlingsønsker registreres i arketyper som omhandler pasientens behandlingsønsker.">
+            copyright = <"*© Nasjonal IKT HF, openEHR Foundation (en)">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the identification of the individual's religious or non-religious beliefs and/or practices which may be used for purposes related to provision of healthcare or other services.">
+            keywords = <"religion", "spiritual", "belief", "religious", "atheism", "agnosticism", "attitude", "sacred", "profane", "secular", "atheist", "agnostic", "faith", "creed", "practice">
+            use = <"Use to record the identification of the individual's religious or non-religious beliefs and/or practices and a general description about the impact of the individual's identified religious affiliation on the delivery of health services.
+
+If this archetype is being used within a health record context where a demographic server is deployed, then the relevant demographic data may be used to populate the data elements in this archetype.
+
+This archetype has been designed to be used within the EVALUATION.social_summary or other archetypes where clinically relevant.
+
+If the religion of someone other than the subject of care, such as their parents, needs to be recorded, restrict the \"Subject\" reference model element to specify the role.">
+            misuse = <"Not to be used to record the specific preferences for care that may be related to a religious affiliation, especially those that might drive decision support. For example, record a dietary preference within archetypes recording diet requirements or a treatment preference within archetypes recording patient preferences.">
+            copyright = <"© Nasjonal IKT HF, openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Religious affiliation
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] matches {    -- Religious affiliation
+                value matches {
+                    DV_TEXT[at9000]
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Impact on care
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            allow_archetype CLUSTER[at0004] matches {    -- Details
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.organisation(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Livssyn">
+                description = <"Et individs livssyn og/eller religiøs eller ikke-religiøs overbevisning og/eller praksis som individet fører livet sitt etter, både praktisk og moralsk.">
+                comment = <"For eksempel: Kristendom, Katolisisme, Islam, Wiccan, Humanisme, Animisme, Ateisme, Agnostisisme eller ingen.">
+            >
+            ["at0001"] = <
+                text = <"Livssyn">
+                description = <"Navn på livssyn og/eller praksis som individet identifiserer seg med, eller har tilknytning til.">
+                comment = <"For eksempel: Kristendom, Katolisisme, islamisme, wicca, humanisme, animisme, ateisme, agnostisisme eller ingen. Koding av \"Livssyn\" med en terminologi er ønskelig der det er mulig.">
+            >
+            ["at0002"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om livssynet som ikke er dekket av andre felt.">
+            >
+            ["at0003"] = <
+                text = <"Innvirkning på behandling">
+                description = <"Fritekstbeskrivelse av hvordan behandling/pleie må tilpasses for å støtte individets livssyn og praksis.">
+                comment = <"For eksempel: Trenger hjelp til å stå opp av senga for å be. Ønsker regelmessig kontakt med en prest.">
+            >
+            ["at0004"] = <
+                text = <"Detaljer">
+                description = <"Ytterligere detaljer om individets livssyn.">
+                comment = <"For eksempel: Religiøs organisasjon eller kontaktperson.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Religious affiliation">
+                description = <"Identification of the individual's religious or non-religious beliefs and/or practices by which people order the conduct of their lives both practically and in a moral sense.">
+                comment = <"For example: Christianity, Catholicism, Islam, Wicca, Humanism, Animism, Atheism; Agnosticism; or none.">
+            >
+            ["at0001"] = <
+                text = <"Religious affiliation">
+                description = <"Name of the belief and/or practice to which the individual is affiliated.">
+                comment = <"For example: Christianity; Catholicism; Islam; Wicca; Humanism; Animism; Atheism; Agnosticism; or none. Coding with a terminology is desirable, where possible.">
+            >
+            ["at0002"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the religious affiliation not captured in other fields.">
+            >
+            ["at0003"] = <
+                text = <"Impact on care">
+                description = <"Narrative description about how care needs to be modified to support the individual's religious practice.">
+                comment = <"For example: Needs assistance to get out of bed to pray. Would like regular pastoral care.">
+            >
+            ["at0004"] = <
+                text = <"Details">
+                description = <"Additional details about the individual's religious affiliation.">
+                comment = <"For example: religious organisation or contact person.">
+            >
+        >
+    >

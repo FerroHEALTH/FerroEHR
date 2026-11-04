@@ -1,0 +1,590 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=82d15878-43f0-4e47-90f8-80e4f74d8d8a; build_uid=52b6c45e-8057-4b88-8158-d27708cb8e66)
+    openEHR-EHR-ADMIN_ENTRY.travel_event.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch, Darin Leonhardt">
+                ["organisation"] = <"Medizinische Hochschule Hannover, PLRI">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de, leonhardt.darin@mh-hannover.de">
+            >
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke, Marit Alice Venheim">
+                ["organisation"] = <"Helse Vest IKT AS">
+                ["email"] = <"silje.ljosland.bakke@helse-vest-ikt.no, marit.alice.venheim@helse-vest-ikt.no">
+            >
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2020-03-12">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Silje Ljosland Bakke, Helse Vest, Norway", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"D404BDA9675F06DDD2CE3DC360A297A3">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Aufzeichnung von Einzelheiten über eine bestimmte Reise oder ein bestimmtes Reiseereignis, insbesondere für die Zwecke des öffentlichen Gesundheitsmanagements.">
+            use = <"Zur Erfassung von Einzelheiten zu einer bestimmten Reise oder einem bestimmten Reiseereignis.
+
+Bei der Aufzeichnung einer Reiseanamnese für einen Kontakt mit einer Infektionskrankheit sollte der \"Pflegebedürftige\" im Referenzmodell als Kontakt aufgezeichnet werden, nicht die Person, die Gegenstand der Betreuung in der Gesundheitsakte oder Beurteilung ist.">
+            misuse = <"Nicht als detaillierte Aufzeichnung für die Ermittlung von Kontaktpersonen zu verwenden, für die viel mehr Details erforderlich sein können.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            purpose = <"*To record details about a specific trip or travel event, especially for the purposes of public health management. (en)">
+            use = <"*Use to record details about a specific trip or travel event.
+
+If recording a travel history for an infectious disease contact, the 'subject of care' in the reference model should be recorded as the contact, not the individual who is the subject of care in the health record or assessment. (en)">
+            misuse = <"*Not to be used as a detailed contact tracing record, which may require much more detail. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"*To record details about a specific trip or travel event, especially for the purposes of public health management. (en)">
+            use = <"*Use to record details about a specific trip or travel event.
+
+If recording a travel history for an infectious disease contact, the 'subject of care' in the reference model should be recorded as the contact, not the individual who is the subject of care in the health record or assessment. (en)">
+            misuse = <"*Not to be used as a detailed contact tracing record, which may require much more detail. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about a specific trip or travel event, especially for the purposes of public health management.">
+            use = <"Use to record details about a specific trip or travel event.
+
+If recording a travel history for an infectious disease contact, the 'subject of care' in the reference model should be recorded as the contact, not the individual who is the subject of care in the health record or assessment.">
+            misuse = <"Not to be used as a detailed contact tracing record, which may require much more detail.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            purpose = <"*To record details about a specific trip or travel event, especially for the purposes of public health management. (en)">
+            use = <"*Use to record details about a specific trip or travel event.
+
+If recording a travel history for an infectious disease contact, the 'subject of care' in the reference model should be recorded as the contact, not the individual who is the subject of care in the health record or assessment. (en)">
+            misuse = <"*Not to be used as a detailed contact tracing record, which may require much more detail. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    ADMIN_ENTRY[at0000] matches {    -- Travel event
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0032] occurrences matches {0..1} matches {    -- Origin
+                        value matches {
+                            DV_TEXT[at9013]
+                        }
+                    }
+                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Date of departure
+                        value matches {
+                            DV_DATE_TIME[at9000]
+                        }
+                    }
+                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9001]
+                        }
+                    }
+                    CLUSTER[at0010] matches {    -- Specific destination
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Country
+                                value matches {
+                                    DV_TEXT[at9002]
+                                }
+                            }
+                            ELEMENT[at0012] occurrences matches {0..1} matches {    -- State/region
+                                value matches {
+                                    DV_TEXT[at9003]
+                                }
+                            }
+                            ELEMENT[at0013] occurrences matches {0..1} matches {    -- City
+                                value matches {
+                                    DV_TEXT[at9004]
+                                }
+                            }
+                            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Date of arrival
+                                value matches {
+                                    DV_DATE_TIME[at9006]
+                                }
+                            }
+                            ELEMENT[at0016] occurrences matches {0..1} matches {    -- Description
+                                value matches {
+                                    DV_TEXT[at9008]
+                                }
+                            }
+                            ELEMENT[at0031] matches {    -- Specific place or person
+                                value matches {
+                                    DV_TEXT[at9005]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0024] matches {    -- Additional destination details
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.address(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.organisation(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                            }
+                            ELEMENT[at0015] occurrences matches {0..1} matches {    -- Date of departure
+                                value matches {
+                                    DV_DATE_TIME[at9007]
+                                }
+                            }
+                            ELEMENT[at0017] occurrences matches {0..1} matches {    -- Comment
+                                value matches {
+                                    DV_TEXT[at9009]
+                                }
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0025] matches {    -- Additional trip details
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0018] matches {    -- Return transport
+                        value matches {
+                            DV_TEXT[at9010]
+                        }
+                    }
+                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Date of return
+                        value matches {
+                            DV_DATE_TIME[at9011]
+                        }
+                    }
+                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9012]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Reisefall">
+                description = <"Einzelheiten über eine bestimmte Reise oder ein bestimmtes Reiseereignis.">
+            >
+            ["at0009"] = <
+                text = <"Abreisedatum">
+                description = <"Das Datum, an dem die Person ihren Herkunftsort verlassen hat.">
+            >
+            ["at0010"] = <
+                text = <"Bestimmtes Reiseziel">
+                description = <"Angaben zu einem einzelnen Ort, der auf einer Reise besucht wurde - im Inland oder im Ausland.">
+            >
+            ["at0011"] = <
+                text = <"Land">
+                description = <"Das besuchte Land.">
+            >
+            ["at0012"] = <
+                text = <"Bundesland / Region">
+                description = <"Die besuchte Region.">
+                comment = <"Verschiedene Regionen innerhalb desselben Landes können benannt werden, wenn sie möglicherweise unterschiedliche Gesundheitsrisiken darstellen.">
+            >
+            ["at0013"] = <
+                text = <"Stadt">
+                description = <"Die besuchte Stadt.">
+                comment = <"Verschiedene Städte innerhalb desselben Landes oder derselben Region können benannt werden, wenn sie möglicherweise unterschiedliche Gesundheitsrisiken darstellen.">
+            >
+            ["at0014"] = <
+                text = <"Datum der Ankunft">
+                description = <"Datum der Ankunft am angegebenen Zielort.">
+            >
+            ["at0015"] = <
+                text = <"Datum der Abreise">
+                description = <"Datum der Abreise aus dem angegebenen Zielort.">
+            >
+            ["at0016"] = <
+                text = <"Beschreibung">
+                description = <"Detaillierte Beschreibung des Besuchs an dem Ort.">
+                comment = <"Zum Beispiel: eine Beschreibung der Unterkunft, der getragenen Kleidung, der verwendeten Moskitonetze und einer möglichen Exposition gegenüber anderen Gesundheitsrisiken.">
+            >
+            ["at0017"] = <
+                text = <"Kommentar">
+                description = <"Weitere Beschreibung über den Aufenthalt am identifizierten Ort, die nicht in anderen Feldern dargestellt wurde.">
+            >
+            ["at0018"] = <
+                text = <"Rückreise">
+                description = <"Details darüber, wie die Person zu ihrem Heimatstandort zurückgekehrt ist.">
+                comment = <"Dies kann nützlich sein, wenn die Kontaktverfolgung verwendet werden muss. Zum Beispiel: der Beförderer und die ID eines Fluges oder Schiffes.">
+            >
+            ["at0019"] = <
+                text = <"Rückreisedatum">
+                description = <"Das Datum, an dem die Person an ihren Herkunftsort zurückgekehrt ist.">
+            >
+            ["at0020"] = <
+                text = <"Kommentar">
+                description = <"Zusätzliche Beschreibung über die gesamte Reise, die nicht in anderen Bereichen dargestellt wurde.">
+            >
+            ["at0022"] = <
+                text = <"Beschreibung">
+                description = <"Beschreibung der gesamten Reise, insbesondere über mögliche Gesundheitsrisiken.">
+            >
+            ["at0024"] = <
+                text = <"Zusätzliche Angaben zum Zielort">
+                description = <"Zusätzliche strukturierte Details zur Reise nach, von und am Zielort.">
+                comment = <"Zum Beispiel: eine bestimmte Person, eine Gruppe von Personen, ein Gebäude, eine Organisation, ein Ereignis oder eine Adresse.">
+            >
+            ["at0025"] = <
+                text = <"Zusätzliche Reisedetails">
+                description = <"Zusätzliche strukturierte Informationen zur gesamten Reise.">
+            >
+            ["at0031"] = <
+                text = <"Bestimmter Ort oder Person">
+                description = <"Der Name eines bestimmten Ortes, einer Person oder einer Gruppe von Personen, die besucht wurde.">
+                comment = <"Zum Beispiel: besuchte Personen oder Organisationen, Unterkünfte oder Kreuzfahrtschiffe, Gebäude wie Museen, Konferenzzentren oder Hotels, Veranstaltungen wie Festivals oder andere Orte wie Strände oder Sportstadien. Dieses Datenelement kann mehrfach vorkommen, damit mehr als ein bestimmter Ort/eine bestimmte Person erfasst werden kann.">
+            >
+            ["at0032"] = <
+                text = <"Herkunft">
+                description = <"Der Name des Landes oder der Region eines Landes, das bzw. die der Betroffene für die Zwecke dieser Reise als \"Heimat\" betrachtet.">
+            >
+        >
+        ["fi"] = <
+            ["at0000"] = <
+                text = <"Matkustustapahtuma">
+                description = <"*Details about a specific trip or travel event. (en)">
+            >
+            ["at0009"] = <
+                text = <"Lähtö pvm">
+                description = <"*The date when the individual departed their location of origin. (en)">
+            >
+            ["at0010"] = <
+                text = <"*Specific destination (en)">
+                description = <"*Details about a single location visited during travel - in country or abroad. (en)">
+            >
+            ["at0011"] = <
+                text = <"Maa">
+                description = <"Vierailtu maa">
+            >
+            ["at0012"] = <
+                text = <"Lääni, alue">
+                description = <"Vierailtu alue">
+                comment = <"*Different regions within the same country maybe identified if they potentially pose different health risks.(en)">
+            >
+            ["at0013"] = <
+                text = <"Kaupunki">
+                description = <"Vierailtu kaupunki">
+                comment = <"*Different cities within the same country or region maybe identified if they potentially pose different health risks.(en)">
+            >
+            ["at0014"] = <
+                text = <"*Date of arrival (en)">
+                description = <"*Date of arrival to the identified destination. (en)">
+            >
+            ["at0015"] = <
+                text = <"*Date of departure (en)">
+                description = <"*Date of exit from the identified destination. (en)">
+            >
+            ["at0016"] = <
+                text = <"Selitys">
+                description = <"*Narrative description about the visit to the location. (en)">
+                comment = <"*For example: a description of accommodation, clothing worn, mosquito nets used and any potential exposure to other health risks. (en)">
+            >
+            ["at0017"] = <
+                text = <"Kommentti">
+                description = <"Lisätietoa">
+            >
+            ["at0018"] = <
+                text = <"Käytetty kuljetusväline">
+                description = <"Tietoa siitä minkälaista kuljetusmuotoa käyttäen  henkilö palasi matkaltaan">
+                comment = <"*This may be useful if it is necessary to use contact tracing. For example: the carrier and ID of a flight or ship.(en)">
+            >
+            ["at0019"] = <
+                text = <"Paluu pvm">
+                description = <"*The date when the individual returned back to their location of origin. (en)">
+            >
+            ["at0020"] = <
+                text = <"Kommentti">
+                description = <"Lisätietoa matkasta">
+            >
+            ["at0022"] = <
+                text = <"Selite">
+                description = <"Lisätietoteksti liittyen vierailuun kohteesta, erityisesti jos mahdollisuus altistumiseen.">
+            >
+            ["at0024"] = <
+                text = <"Lisätietoja määräpaikasta">
+                description = <"Lisätietoa matkasta ja määränpäästä">
+                comment = <"*For example: a specific person, group of people, building, organisation, event or address. (en)">
+            >
+            ["at0025"] = <
+                text = <"Lisätietoa matkasta">
+                description = <"Lisätietoa koko matkasta">
+            >
+            ["at0031"] = <
+                text = <"*Specific place or person (en)">
+                description = <"*The name of a specific place, person or group of people that was visited. (en)">
+                comment = <"*For example: people or organisation visited; accommodation or a cruise ship; a building, such as a museum or conference centre, hotel; an event, such as a festival; or other location, such as a beach or sports arena. This data element has multiple occurrences to allow for more than one specific place/person to be recorded. (en)">
+            >
+            ["at0032"] = <
+                text = <"*Origin (en)">
+                description = <"*The name of the country, or the region of a country, that the individual regards as 'home' for the purpose of this episode of travel. (en)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Reisehendelse">
+                description = <"*Details about a specific trip or travel event. (en)">
+            >
+            ["at0009"] = <
+                text = <"Avreisedato">
+                description = <"*The date when the individual departed their location of origin. (en)">
+            >
+            ["at0010"] = <
+                text = <"Spesifikt reisemål">
+                description = <"*Details about a single location visited during travel - in country or abroad. (en)">
+            >
+            ["at0011"] = <
+                text = <"Land">
+                description = <"Landet som ble besøkt.">
+            >
+            ["at0012"] = <
+                text = <"Stat/region">
+                description = <"Regionen som ble besøkt.">
+                comment = <"Ulike regioner i samme land kan identifiseres hvis de potensielt utgjør andre helserisiko.">
+            >
+            ["at0013"] = <
+                text = <"By">
+                description = <"Byen som ble besøkt.">
+                comment = <"Ulike byer i samme land kan identifiseres hvis de potensielt utgjør andre helserisiko.">
+            >
+            ["at0014"] = <
+                text = <"*Date of arrival (en)">
+                description = <"*Date of arrival to the identified destination. (en)">
+            >
+            ["at0015"] = <
+                text = <"*Date of departure (en)">
+                description = <"*Date of exit from the identified destination. (en)">
+            >
+            ["at0016"] = <
+                text = <"Beskrivelse">
+                description = <"*Narrative description about the visit to the location. (en)">
+                comment = <"*For example: a description of accommodation, clothing worn, mosquito nets used and any potential exposure to other health risks. (en)">
+            >
+            ["at0017"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om oppholdet ved identifisert lokasjon, som ikke er fanget opp i andre felt.">
+            >
+            ["at0018"] = <
+                text = <"Transportmetode på hjemreisen">
+                description = <"Detaljer om hvordan den enkelte returnerte til hjemmebasen.">
+                comment = <"Dette kan være nyttig hvis det er nødvendig å bruke kontaktsporing. For eksempel: transportør og ID for en flyreise eller et skip.">
+            >
+            ["at0019"] = <
+                text = <"Dato for hjemkomst">
+                description = <"*The date when the individual returned back to their location of origin. (en)">
+            >
+            ["at0020"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om hele turen, som ikke er fanget opp i andre felt.">
+            >
+            ["at0022"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstbeskrivelse av hele reisen, spesielt om potensiell, spesielt om potensiell eksponering som utgjør en helserisiko.">
+            >
+            ["at0024"] = <
+                text = <"Ytterligere detaljer om destinasjonen">
+                description = <"Ytterligere strukturerte detaljer om reisen til, fra og destinasjonen.">
+                comment = <"*For example: a specific person, group of people, building, organisation, event or address. (en)">
+            >
+            ["at0025"] = <
+                text = <"Ytterligere detaljer om reisen">
+                description = <"Ytterligere strukturerte detaljer om hele reisen.">
+            >
+            ["at0031"] = <
+                text = <"*Specific place or person (en)">
+                description = <"*The name of a specific place, person or group of people that was visited. (en)">
+                comment = <"*For example: people or organisation visited; accommodation or a cruise ship; a building, such as a museum or conference centre, hotel; an event, such as a festival; or other location, such as a beach or sports arena. This data element has multiple occurrences to allow for more than one specific place/person to be recorded. (en)">
+            >
+            ["at0032"] = <
+                text = <"*Origin (en)">
+                description = <"*The name of the country, or the region of a country, that the individual regards as 'home' for the purpose of this episode of travel. (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Travel event">
+                description = <"Details about a specific trip or travel event.">
+            >
+            ["at0009"] = <
+                text = <"Date of departure">
+                description = <"The date when the individual departed their location of origin.">
+            >
+            ["at0010"] = <
+                text = <"Specific destination">
+                description = <"Details about a single location visited during travel - in country or abroad.">
+            >
+            ["at0011"] = <
+                text = <"Country">
+                description = <"The country visited.">
+            >
+            ["at0012"] = <
+                text = <"State/region">
+                description = <"The region visited.">
+                comment = <"Different regions within the same country maybe identified if they potentially pose different health risks.">
+            >
+            ["at0013"] = <
+                text = <"City">
+                description = <"The city visited.">
+                comment = <"Different cities within the same country or region maybe identified if they potentially pose different health risks.">
+            >
+            ["at0014"] = <
+                text = <"Date of arrival">
+                description = <"Date of arrival to the identified destination.">
+            >
+            ["at0015"] = <
+                text = <"Date of departure">
+                description = <"Date of exit from the identified destination.">
+            >
+            ["at0016"] = <
+                text = <"Description">
+                description = <"Narrative description about the visit to the location.">
+                comment = <"For example: a description of accommodation, clothing worn, mosquito nets used and any potential exposure to other health risks.">
+            >
+            ["at0017"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the stay at the identified location, not captured in other fields.">
+            >
+            ["at0018"] = <
+                text = <"Return transport">
+                description = <"Details about how the individual returned to their home base.">
+                comment = <"This may be useful if it is necessary to use contact tracing. For example: the carrier and ID of a flight or ship.">
+            >
+            ["at0019"] = <
+                text = <"Date of return">
+                description = <"The date when the individual returned back to their location of origin.">
+            >
+            ["at0020"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the whole trip, not captured in other fields.">
+            >
+            ["at0022"] = <
+                text = <"Description">
+                description = <"Narrative description about the whole trip, especially about potential exposure to health risks.">
+            >
+            ["at0024"] = <
+                text = <"Additional destination details">
+                description = <"Additional structured details about the travel to, from and at the destination.">
+                comment = <"For example: a specific person, group of people, building, organisation, event or address.">
+            >
+            ["at0025"] = <
+                text = <"Additional trip details">
+                description = <"Additional structured details about the whole trip.">
+            >
+            ["at0031"] = <
+                text = <"Specific place or person">
+                description = <"The name of a specific place, person or group of people that was visited.">
+                comment = <"For example: people or organisation visited; accommodation or a cruise ship; a building, such as a museum or conference centre, hotel; an event, such as a festival; or other location, such as a beach or sports arena. This data element has multiple occurrences to allow for more than one specific place/person to be recorded.">
+            >
+            ["at0032"] = <
+                text = <"Origin">
+                description = <"The name of the country, or the region of a country, that the individual regards as 'home' for the purpose of this episode of travel.">
+            >
+        >
+        ["it"] = <
+            ["at0000"] = <
+                text = <"Viaggio">
+                description = <"*Details about a specific trip or travel event. (en)">
+            >
+            ["at0009"] = <
+                text = <"Data di partenza">
+                description = <"*The date when the individual departed their location of origin. (en)">
+            >
+            ["at0010"] = <
+                text = <"Destinazione al viaggio">
+                description = <"*Details about a single location visited during travel - in country or abroad. (en)">
+            >
+            ["at0011"] = <
+                text = <"Paese">
+                description = <"Il Paese visitato">
+            >
+            ["at0012"] = <
+                text = <"Stato/regione">
+                description = <"La regione visitata. ">
+                comment = <"Le diverse regioni all'interno dello stesso paese possono essere identificate se potenzialmente presentano rischi sanitari diversi. ">
+            >
+            ["at0013"] = <
+                text = <"Città">
+                description = <"La città visitata">
+                comment = <"Differenti città all'interno dello stesso paese o regione possono essere identificate se potenzialmente presentano rischi sanitari diversi. ">
+            >
+            ["at0014"] = <
+                text = <"*Date of arrival (en)">
+                description = <"*Date of arrival to the identified destination. (en)">
+            >
+            ["at0015"] = <
+                text = <"*Date of departure (en)">
+                description = <"*Date of exit from the identified destination. (en)">
+            >
+            ["at0016"] = <
+                text = <"Descrizione">
+                description = <"*Narrative description about the visit to the location. (en)">
+                comment = <"*For example: a description of accommodation, clothing worn, mosquito nets used and any potential exposure to other health risks. (en)">
+            >
+            ["at0017"] = <
+                text = <"Commento">
+                description = <"Narrativa aggiuntiva sul soggiorno nel luogo identificato, non catturata in altri campi.">
+            >
+            ["at0018"] = <
+                text = <"Trasporto di ritorno">
+                description = <"Dettagli su come l'individuo è tornato alla sua base. ">
+                comment = <"Questo può essere utile se è necessario utilizzare la ricerca di contatti. Ad esempio: il vettore e l'ID di un volo o di una nave.">
+            >
+            ["at0019"] = <
+                text = <"Data di ritorno">
+                description = <"*The date when the individual returned back to their location of origin. (en)">
+            >
+            ["at0020"] = <
+                text = <"Commento">
+                description = <"Narrativa aggiuntiva sull'intero viaggio, non catturata in altri campi. ">
+            >
+            ["at0022"] = <
+                text = <"Descrizione">
+                description = <"Descrizione narrativa dell'intero viaggio, in particolare della potenziale esposizione ai rischi per la salute.">
+            >
+            ["at0024"] = <
+                text = <"Dettagli aggiuntivi sulla destinazione">
+                description = <"Dettagli strutturati aggiuntivi sul viaggio da, per e verso la destinazione. ">
+                comment = <"*For example: a specific person, group of people, building, organisation, event or address. (en)">
+            >
+            ["at0025"] = <
+                text = <"Dettagli di viaggio aggiuntivi">
+                description = <"Altri dettagli strutturati sull'intero viaggio. ">
+            >
+            ["at0031"] = <
+                text = <"*Specific place or person (en)">
+                description = <"*The name of a specific place, person or group of people that was visited. (en)">
+                comment = <"*For example: people or organisation visited; accommodation or a cruise ship; a building, such as a museum or conference centre, hotel; an event, such as a festival; or other location, such as a beach or sports arena. This data element has multiple occurrences to allow for more than one specific place/person to be recorded. (en)">
+            >
+            ["at0032"] = <
+                text = <"*Origin (en)">
+                description = <"*The name of the country, or the region of a country, that the individual regards as 'home' for the purpose of this episode of travel. (en)">
+            >
+        >
+    >

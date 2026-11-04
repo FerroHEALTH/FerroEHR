@@ -1,0 +1,1522 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=4f624d13-588c-493b-ac05-b221b5db4e79; build_uid=dbc08042-a412-4211-8631-6f3a67ea3c89)
+    openEHR-EHR-COMPOSITION.report-case_classification.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-COMPOSITION.report.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Ramona Wellmann, Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Sofia Janstad, Åsa Skagerhult">
+                ["organisation"] = <"SLL, Region Östergötland">
+                ["email"] = <"sofia.lang-janstad@sll.se, asa.skagerhult@regionostergotland.se">
+            >
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            author = <
+                ["name"] = <"Alan March">
+                ["organisation"] = <"Hospital Universitario Austral - Buenos Aires - Argentina">
+                ["email"] = <"alandmarch@gmail.com">
+            >
+            accreditation = <"physician">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand, Liv Laugen, Silje Ljosland Bakke">
+                ["organisation"] = <"Helse Bergen, ​Oslo University Hospital, Norway, Helse Vest IKT AS">
+                ["email"] = <"liv.laugen@ous-hf.no, silje.ljosland.bakke@helse-vest-ikt.no">
+            >
+        >
+        ["ko"] = <
+            language = <[ISO_639-1::ko]>
+            author = <
+                ["name"] = <"Seung-Jong Yu">
+                ["organisation"] = <"InfoClinic Co.,Ltd.">
+                ["email"] = <"seungjong.yu@gmail.com">
+            >
+            accreditation = <"Certified Board of Family Medicine in South Korea">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Adriana Kitajima, Débora Farage, Fernanda Maia, Laíse Figueiredo, Marivan Abrahão">
+                ["organisation"] = <"Core Consulting">
+                ["email"] = <"contato@coreconsulting.com.br">
+            >
+            accreditation = <"Hospital Alemão Oswaldo Cruz (HAOC)">
+        >
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            author = <
+                ["name"] = <"Francesca Frexia">
+                ["organisation"] = <"CRS4 - Center for advanced studies, research and development in Sardinia, Pula (Cagliari), Italy">
+                ["email"] = <"francesca.frexia@crs4.it">
+            >
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            author = <
+                ["name"] = <"Pieter Bos, Jelte Zeilstra">
+                ["organisation"] = <"Nedap Healthcare">
+            >
+        >
+        ["zh"] = <
+            language = <[ISO_639-1::zh]>
+            author = <
+                ["name"] = <"Yexuan Cheng">
+                ["organisation"] = <"浙江大学">
+                ["email"] = <"3160100913@zju.edu.cn">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2022-04-01">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo universitetssykehus HF, Norway (Nasjonal IKT redaktør)", "Koray Atalag, University of Auckland, New Zealand", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Sistine Barretto-Daniels, Ocean Informatics, Australia", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Einar Fosse, National Centre for Integrated Care and Telemedicine, Norway", "Heath Frankel, Ocean Informatics, Australia", "Sam Heard, Ocean Informatics, Australia", "Kristian Heldal, Telemark Hospital Trust, Norway", "Lars Morgan Karlsen, DIPS ASA, Norway", "Shinji Kobayashi, National Institute of Public Health, Japan", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Hugh Leslie, Ocean Informatics, Australia", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Bjoern Naess, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Rune Pedersen, Universitetssykehuset i Nord Norge, Norway", "Line Sæle, Nasjonal IKT HF, Norway", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics, heather.leslie@oceaninformatics.com">
+        ["MD5-CAM-1.0.1"] = <"79C98917A26378147AC057229082E613">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"*To carry information about a clinical investigation, such as the result of an interview or complete investigation into a death or occurrence of an infectious disease. (en)">
+            keywords = <"Bericht", "Report">
+            use = <"*Use to carry information about a clinical investigation, such as the record of an interview or investigation into a death or infectious disease notification.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"*Not to be used to carry information about the initial notification of a death or infectious disease for surveillance purposes. Use COMPOSITION.report-clinical_notification for this purpose. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"*To carry information about a clinical investigation, such as the result of an interview or complete investigation into a death or occurrence of an infectious disease. (en)">
+            keywords = <"rapport", ...>
+            use = <"*Use to carry information about a clinical investigation, such as the record of an interview or investigation into a death or infectious disease notification.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"*Not to be used to carry information about the initial notification of a death or infectious disease for surveillance purposes. Use COMPOSITION.report-clinical_notification for this purpose. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            purpose = <"*To carry information about a clinical investigation, such as the result of an interview or complete investigation into a death or occurrence of an infectious disease. (en)">
+            keywords = <"*report(en)", ...>
+            use = <"*Use to carry information about a clinical investigation, such as the record of an interview or investigation into a death or infectious disease notification.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"*Not to be used to carry information about the initial notification of a death or infectious disease for surveillance purposes. Use COMPOSITION.report-clinical_notification for this purpose. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ko"] = <
+            language = <[ISO_639-1::ko]>
+            purpose = <"*To carry information about a clinical investigation, such as the result of an interview or complete investigation into a death or occurrence of an infectious disease. (en)">
+            keywords = <"리포트", ...>
+            use = <"*Use to carry information about a clinical investigation, such as the record of an interview or investigation into a death or infectious disease notification.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"*Not to be used to carry information about the initial notification of a death or infectious disease for surveillance purposes. Use COMPOSITION.report-clinical_notification for this purpose. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"*To carry information about a clinical investigation, such as the result of an interview or complete investigation into a death or occurrence of an infectious disease. (en)">
+            keywords = <"relatório", ...>
+            use = <"*Use to carry information about a clinical investigation, such as the record of an interview or investigation into a death or infectious disease notification.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"*Not to be used to carry information about the initial notification of a death or infectious disease for surveillance purposes. Use COMPOSITION.report-clinical_notification for this purpose. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To carry information about a clinical investigation, such as the result of an interview or complete investigation into a death or occurrence of an infectious disease.">
+            keywords = <"report", ...>
+            use = <"Use to carry information about a clinical investigation, such as the record of an interview or investigation into a death or infectious disease notification.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template.">
+            misuse = <"Not to be used to carry information about the initial notification of a death or infectious disease for surveillance purposes. Use COMPOSITION.report-clinical_notification for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"*To carry information about a clinical investigation, such as the result of an interview or complete investigation into a death or occurrence of an infectious disease. (en)">
+            keywords = <"تقرير", ...>
+            use = <"*Use to carry information about a clinical investigation, such as the record of an interview or investigation into a death or infectious disease notification.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"*Not to be used to carry information about the initial notification of a death or infectious disease for surveillance purposes. Use COMPOSITION.report-clinical_notification for this purpose. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            purpose = <"*To carry information about a clinical investigation, such as the result of an interview or complete investigation into a death or occurrence of an infectious disease. (en)">
+            keywords = <"rapporto", ...>
+            use = <"*Use to carry information about a clinical investigation, such as the record of an interview or investigation into a death or infectious disease notification.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"*Not to be used to carry information about the initial notification of a death or infectious disease for surveillance purposes. Use COMPOSITION.report-clinical_notification for this purpose. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["zh"] = <
+            language = <[ISO_639-1::zh]>
+            purpose = <"*To carry information about a clinical investigation, such as the result of an interview or complete investigation into a death or occurrence of an infectious disease. (en)">
+            keywords = <"报告", ...>
+            use = <"*Use to carry information about a clinical investigation, such as the record of an interview or investigation into a death or infectious disease notification.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"*Not to be used to carry information about the initial notification of a death or infectious disease for surveillance purposes. Use COMPOSITION.report-clinical_notification for this purpose. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"*To carry information about a clinical investigation, such as the result of an interview or complete investigation into a death or occurrence of an infectious disease. (en)">
+            keywords = <"rapport", "svar", "svarrapport">
+            use = <"*Use to carry information about a clinical investigation, such as the record of an interview or investigation into a death or infectious disease notification.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"*Not to be used to carry information about the initial notification of a death or infectious disease for surveillance purposes. Use COMPOSITION.report-clinical_notification for this purpose. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            purpose = <"*To carry information about a clinical investigation, such as the result of an interview or complete investigation into a death or occurrence of an infectious disease. (en)">
+            keywords = <"informe", ...>
+            use = <"*Use to carry information about a clinical investigation, such as the record of an interview or investigation into a death or infectious disease notification.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"*Not to be used to carry information about the initial notification of a death or infectious disease for surveillance purposes. Use COMPOSITION.report-clinical_notification for this purpose. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            purpose = <"*To carry information about a clinical investigation, such as the result of an interview or complete investigation into a death or occurrence of an infectious disease. (en)">
+            keywords = <"*report(en)", ...>
+            use = <"*Use to carry information about a clinical investigation, such as the record of an interview or investigation into a death or infectious disease notification.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"*Not to be used to carry information about the initial notification of a death or infectious disease for surveillance purposes. Use COMPOSITION.report-clinical_notification for this purpose. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            purpose = <"*To carry information about a clinical investigation, such as the result of an interview or complete investigation into a death or occurrence of an infectious disease. (en)">
+            keywords = <"rapportage", ...>
+            use = <"*Use to carry information about a clinical investigation, such as the record of an interview or investigation into a death or infectious disease notification.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"*Not to be used to carry information about the initial notification of a death or infectious disease for surveillance purposes. Use COMPOSITION.report-clinical_notification for this purpose. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    COMPOSITION[at0000.1] matches {    -- Case classification report
+        /context[at9002]/other_context[at0001]/items matches {
+            ELEMENT[at0.1] occurrences matches {0..1} matches {    -- Index item
+                value matches {
+                    DV_TEXT[at0.9000]
+                }
+                name matches {
+                    DV_CODED_TEXT[at0.9001] matches {
+                        defining_code matches {[ac0.9000]}    -- Index item (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0.2] occurrences matches {0..1} matches {    -- Report type
+                value matches {
+                    DV_TEXT[at0.9002]
+                }
+            }
+            ELEMENT[at0.23] occurrences matches {0..1} matches {    -- Date of notification
+                value matches {
+                    DV_DATE_TIME[at0.9003]
+                }
+            }
+            allow_archetype CLUSTER[at0.25] matches {    -- Notifier
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.organisation(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0.4] occurrences matches {0..1} matches {    -- Date investigation initiated
+                value matches {
+                    DV_DATE_TIME[at0.9004]
+                }
+            }
+            allow_archetype CLUSTER[at0.5] matches {    -- Classifier
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.organisation(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0.18] occurrences matches {0..1} matches {    -- Health region
+                value matches {
+                    DV_TEXT[at0.9005]
+                }
+            }
+            ELEMENT[at0.7] occurrences matches {0..1} matches {    -- Date of classification
+                value matches {
+                    DV_DATE_TIME[at0.9006]
+                }
+            }
+            CLUSTER[at0.12] matches {    -- Reviewed by
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0.27] occurrences matches {0..1} matches {    -- Date received for review
+                        value matches {
+                            DV_DATE_TIME[at0.9007]
+                        }
+                    }
+                    ELEMENT[at0.8] matches {    -- Review type
+                        value matches {
+                            DV_TEXT[at0.9008]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0.14] matches {    -- Reviewer
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.organisation(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    ELEMENT[at0.13] occurrences matches {0..1} matches {    -- Reviewer role
+                        value matches {
+                            DV_TEXT[at0.9009]
+                        }
+                    }
+                    ELEMENT[at0.15] occurrences matches {0..1} matches {    -- Report comment
+                        value matches {
+                            DV_TEXT[at0.9010]
+                        }
+                    }
+                    ELEMENT[at0.16] occurrences matches {0..1} matches {    -- Date review completed
+                        value matches {
+                            DV_DATE_TIME[at0.9011]
+                        }
+                    }
+                    ELEMENT[at0.20] occurrences matches {0..1} matches {    -- Date review submitted
+                        value matches {
+                            DV_DATE_TIME[at0.9012]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0.9] occurrences matches {0..1} matches {    -- Date report submitted
+                value matches {
+                    DV_DATE_TIME[at0.9013]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000.1"] = <
+                text = <"*Case classification report (en)">
+                description = <"*Container archetype to carry information about a clinical investigation. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Index item (en)">
+                description = <"*The name or type of the health item under investigation. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Report type (en)">
+                description = <"*The type of report. (en)">
+                comment = <"*For example: hospital investigation; or community investigation. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Date investigation initiated (en)">
+                description = <"*The date when the investigation was assigned to an investigator. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Classifier (en)">
+                description = <"*Details about the individual(s) assigned to investigate the disease notification. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*Date of classification (en)">
+                description = <"*The date when the investigation report was completed. (en)">
+            >
+            ["at0.10"] = <
+                text = <"*Index infectious disease (en)">
+                description = <"*Name of the infectious disease under investigation. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Index health event (en)">
+                description = <"*Type of health event under investigation. (en)">
+            >
+            ["at0.8"] = <
+                text = <"*Review type (en)">
+                description = <"*Identification of the category or level of review. (en)">
+                comment = <"*For example: review by the facility or institution where the investigation was carried out; the local regional authority; or the national authority. (en)">
+            >
+            ["at0.9"] = <
+                text = <"*Date report submitted (en)">
+                description = <"*Date when the final report was submitted to the final health authority. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Reviewed by (en)">
+                description = <"*Details about the review process and reviewers of the report. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Reviewer role (en)">
+                description = <"*The formal role or position of the reviewer. (en)">
+                comment = <"*For example: regional epidemiologist; or Ministry of Health. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*Reviewer (en)">
+                description = <"*Structured details about the individual or organisation who reviewed the report. (en)">
+            >
+            ["at0.15"] = <
+                text = <"*Report comment (en)">
+                description = <"*Narrative response to the content of the report by the reviewer. (en)">
+            >
+            ["at0.16"] = <
+                text = <"*Date review completed (en)">
+                description = <"*Date when the review of the report was completed. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Health region (en)">
+                description = <"*Identification of the local health region where the index case was identified or the index event happened. (en)">
+                comment = <"*This data element supports reporting by a jurisdictional grouping rather than a specific facility or institution, place or physical address. This data element may be able to be derived from the precise recording of 'Investigation site'. (en)">
+            >
+            ["at0.20"] = <
+                text = <"*Date review submitted (en)">
+                description = <"*Date when the review was submitted to the next level of review. (en)">
+            >
+            ["at0.23"] = <
+                text = <"*Date of notification (en)">
+                description = <"*Date when the disease or event notification was submitted. (en)">
+            >
+            ["at0.25"] = <
+                text = <"*Notifier (en)">
+                description = <"*Identification of the facility or individual notifying about the disease or event. (en)">
+            >
+            ["at0.27"] = <
+                text = <"*Date received for review (en)">
+                description = <"">
+            >
+            ["ac0.9000"] = <
+                text = <"*Index item (en) (synthesised)">
+                description = <"*The name or type of the health item under investigation. (en) (synthesised)">
+            >
+        >
+        ["fi"] = <
+            ["at0000.1"] = <
+                text = <"*Case classification report (en)">
+                description = <"*Container archetype to carry information about a clinical investigation. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Index item (en)">
+                description = <"*The name or type of the health item under investigation. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Report type (en)">
+                description = <"*The type of report. (en)">
+                comment = <"*For example: hospital investigation; or community investigation. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Date investigation initiated (en)">
+                description = <"*The date when the investigation was assigned to an investigator. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Classifier (en)">
+                description = <"*Details about the individual(s) assigned to investigate the disease notification. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*Date of classification (en)">
+                description = <"*The date when the investigation report was completed. (en)">
+            >
+            ["at0.10"] = <
+                text = <"*Index infectious disease (en)">
+                description = <"*Name of the infectious disease under investigation. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Index health event (en)">
+                description = <"*Type of health event under investigation. (en)">
+            >
+            ["at0.8"] = <
+                text = <"*Review type (en)">
+                description = <"*Identification of the category or level of review. (en)">
+                comment = <"*For example: review by the facility or institution where the investigation was carried out; the local regional authority; or the national authority. (en)">
+            >
+            ["at0.9"] = <
+                text = <"*Date report submitted (en)">
+                description = <"*Date when the final report was submitted to the final health authority. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Reviewed by (en)">
+                description = <"*Details about the review process and reviewers of the report. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Reviewer role (en)">
+                description = <"*The formal role or position of the reviewer. (en)">
+                comment = <"*For example: regional epidemiologist; or Ministry of Health. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*Reviewer (en)">
+                description = <"*Structured details about the individual or organisation who reviewed the report. (en)">
+            >
+            ["at0.15"] = <
+                text = <"*Report comment (en)">
+                description = <"*Narrative response to the content of the report by the reviewer. (en)">
+            >
+            ["at0.16"] = <
+                text = <"*Date review completed (en)">
+                description = <"*Date when the review of the report was completed. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Health region (en)">
+                description = <"*Identification of the local health region where the index case was identified or the index event happened. (en)">
+                comment = <"*This data element supports reporting by a jurisdictional grouping rather than a specific facility or institution, place or physical address. This data element may be able to be derived from the precise recording of 'Investigation site'. (en)">
+            >
+            ["at0.20"] = <
+                text = <"*Date review submitted (en)">
+                description = <"*Date when the review was submitted to the next level of review. (en)">
+            >
+            ["at0.23"] = <
+                text = <"*Date of notification (en)">
+                description = <"*Date when the disease or event notification was submitted. (en)">
+            >
+            ["at0.25"] = <
+                text = <"*Notifier (en)">
+                description = <"*Identification of the facility or individual notifying about the disease or event. (en)">
+            >
+            ["at0.27"] = <
+                text = <"*Date received for review (en)">
+                description = <"">
+            >
+            ["ac0.9000"] = <
+                text = <"*Index item (en) (synthesised)">
+                description = <"*The name or type of the health item under investigation. (en) (synthesised)">
+            >
+        >
+        ["sv"] = <
+            ["at0000.1"] = <
+                text = <"*Case classification report (en)">
+                description = <"*Container archetype to carry information about a clinical investigation. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Index item (en)">
+                description = <"*The name or type of the health item under investigation. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Report type (en)">
+                description = <"*The type of report. (en)">
+                comment = <"*For example: hospital investigation; or community investigation. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Date investigation initiated (en)">
+                description = <"*The date when the investigation was assigned to an investigator. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Classifier (en)">
+                description = <"*Details about the individual(s) assigned to investigate the disease notification. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*Date of classification (en)">
+                description = <"*The date when the investigation report was completed. (en)">
+            >
+            ["at0.10"] = <
+                text = <"*Index infectious disease (en)">
+                description = <"*Name of the infectious disease under investigation. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Index health event (en)">
+                description = <"*Type of health event under investigation. (en)">
+            >
+            ["at0.8"] = <
+                text = <"*Review type (en)">
+                description = <"*Identification of the category or level of review. (en)">
+                comment = <"*For example: review by the facility or institution where the investigation was carried out; the local regional authority; or the national authority. (en)">
+            >
+            ["at0.9"] = <
+                text = <"*Date report submitted (en)">
+                description = <"*Date when the final report was submitted to the final health authority. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Reviewed by (en)">
+                description = <"*Details about the review process and reviewers of the report. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Reviewer role (en)">
+                description = <"*The formal role or position of the reviewer. (en)">
+                comment = <"*For example: regional epidemiologist; or Ministry of Health. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*Reviewer (en)">
+                description = <"*Structured details about the individual or organisation who reviewed the report. (en)">
+            >
+            ["at0.15"] = <
+                text = <"*Report comment (en)">
+                description = <"*Narrative response to the content of the report by the reviewer. (en)">
+            >
+            ["at0.16"] = <
+                text = <"*Date review completed (en)">
+                description = <"*Date when the review of the report was completed. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Health region (en)">
+                description = <"*Identification of the local health region where the index case was identified or the index event happened. (en)">
+                comment = <"*This data element supports reporting by a jurisdictional grouping rather than a specific facility or institution, place or physical address. This data element may be able to be derived from the precise recording of 'Investigation site'. (en)">
+            >
+            ["at0.20"] = <
+                text = <"*Date review submitted (en)">
+                description = <"*Date when the review was submitted to the next level of review. (en)">
+            >
+            ["at0.23"] = <
+                text = <"*Date of notification (en)">
+                description = <"*Date when the disease or event notification was submitted. (en)">
+            >
+            ["at0.25"] = <
+                text = <"*Notifier (en)">
+                description = <"*Identification of the facility or individual notifying about the disease or event. (en)">
+            >
+            ["at0.27"] = <
+                text = <"*Date received for review (en)">
+                description = <"">
+            >
+            ["ac0.9000"] = <
+                text = <"*Index item (en) (synthesised)">
+                description = <"*The name or type of the health item under investigation. (en) (synthesised)">
+            >
+        >
+        ["ko"] = <
+            ["at0000.1"] = <
+                text = <"*Case classification report (en)">
+                description = <"*Container archetype to carry information about a clinical investigation. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Index item (en)">
+                description = <"*The name or type of the health item under investigation. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Report type (en)">
+                description = <"*The type of report. (en)">
+                comment = <"*For example: hospital investigation; or community investigation. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Date investigation initiated (en)">
+                description = <"*The date when the investigation was assigned to an investigator. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Classifier (en)">
+                description = <"*Details about the individual(s) assigned to investigate the disease notification. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*Date of classification (en)">
+                description = <"*The date when the investigation report was completed. (en)">
+            >
+            ["at0.10"] = <
+                text = <"*Index infectious disease (en)">
+                description = <"*Name of the infectious disease under investigation. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Index health event (en)">
+                description = <"*Type of health event under investigation. (en)">
+            >
+            ["at0.8"] = <
+                text = <"*Review type (en)">
+                description = <"*Identification of the category or level of review. (en)">
+                comment = <"*For example: review by the facility or institution where the investigation was carried out; the local regional authority; or the national authority. (en)">
+            >
+            ["at0.9"] = <
+                text = <"*Date report submitted (en)">
+                description = <"*Date when the final report was submitted to the final health authority. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Reviewed by (en)">
+                description = <"*Details about the review process and reviewers of the report. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Reviewer role (en)">
+                description = <"*The formal role or position of the reviewer. (en)">
+                comment = <"*For example: regional epidemiologist; or Ministry of Health. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*Reviewer (en)">
+                description = <"*Structured details about the individual or organisation who reviewed the report. (en)">
+            >
+            ["at0.15"] = <
+                text = <"*Report comment (en)">
+                description = <"*Narrative response to the content of the report by the reviewer. (en)">
+            >
+            ["at0.16"] = <
+                text = <"*Date review completed (en)">
+                description = <"*Date when the review of the report was completed. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Health region (en)">
+                description = <"*Identification of the local health region where the index case was identified or the index event happened. (en)">
+                comment = <"*This data element supports reporting by a jurisdictional grouping rather than a specific facility or institution, place or physical address. This data element may be able to be derived from the precise recording of 'Investigation site'. (en)">
+            >
+            ["at0.20"] = <
+                text = <"*Date review submitted (en)">
+                description = <"*Date when the review was submitted to the next level of review. (en)">
+            >
+            ["at0.23"] = <
+                text = <"*Date of notification (en)">
+                description = <"*Date when the disease or event notification was submitted. (en)">
+            >
+            ["at0.25"] = <
+                text = <"*Notifier (en)">
+                description = <"*Identification of the facility or individual notifying about the disease or event. (en)">
+            >
+            ["at0.27"] = <
+                text = <"*Date received for review (en)">
+                description = <"">
+            >
+            ["ac0.9000"] = <
+                text = <"*Index item (en) (synthesised)">
+                description = <"*The name or type of the health item under investigation. (en) (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000.1"] = <
+                text = <"*Case classification report (en)">
+                description = <"*Container archetype to carry information about a clinical investigation. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Index item (en)">
+                description = <"*The name or type of the health item under investigation. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Report type (en)">
+                description = <"*The type of report. (en)">
+                comment = <"*For example: hospital investigation; or community investigation. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Date investigation initiated (en)">
+                description = <"*The date when the investigation was assigned to an investigator. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Classifier (en)">
+                description = <"*Details about the individual(s) assigned to investigate the disease notification. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*Date of classification (en)">
+                description = <"*The date when the investigation report was completed. (en)">
+            >
+            ["at0.10"] = <
+                text = <"*Index infectious disease (en)">
+                description = <"*Name of the infectious disease under investigation. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Index health event (en)">
+                description = <"*Type of health event under investigation. (en)">
+            >
+            ["at0.8"] = <
+                text = <"*Review type (en)">
+                description = <"*Identification of the category or level of review. (en)">
+                comment = <"*For example: review by the facility or institution where the investigation was carried out; the local regional authority; or the national authority. (en)">
+            >
+            ["at0.9"] = <
+                text = <"*Date report submitted (en)">
+                description = <"*Date when the final report was submitted to the final health authority. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Reviewed by (en)">
+                description = <"*Details about the review process and reviewers of the report. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Reviewer role (en)">
+                description = <"*The formal role or position of the reviewer. (en)">
+                comment = <"*For example: regional epidemiologist; or Ministry of Health. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*Reviewer (en)">
+                description = <"*Structured details about the individual or organisation who reviewed the report. (en)">
+            >
+            ["at0.15"] = <
+                text = <"*Report comment (en)">
+                description = <"*Narrative response to the content of the report by the reviewer. (en)">
+            >
+            ["at0.16"] = <
+                text = <"*Date review completed (en)">
+                description = <"*Date when the review of the report was completed. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Health region (en)">
+                description = <"*Identification of the local health region where the index case was identified or the index event happened. (en)">
+                comment = <"*This data element supports reporting by a jurisdictional grouping rather than a specific facility or institution, place or physical address. This data element may be able to be derived from the precise recording of 'Investigation site'. (en)">
+            >
+            ["at0.20"] = <
+                text = <"*Date review submitted (en)">
+                description = <"*Date when the review was submitted to the next level of review. (en)">
+            >
+            ["at0.23"] = <
+                text = <"*Date of notification (en)">
+                description = <"*Date when the disease or event notification was submitted. (en)">
+            >
+            ["at0.25"] = <
+                text = <"*Notifier (en)">
+                description = <"*Identification of the facility or individual notifying about the disease or event. (en)">
+            >
+            ["at0.27"] = <
+                text = <"*Date received for review (en)">
+                description = <"">
+            >
+            ["ac0.9000"] = <
+                text = <"*Index item (en) (synthesised)">
+                description = <"*The name or type of the health item under investigation. (en) (synthesised)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000.1"] = <
+                text = <"*Case classification report (en)">
+                description = <"*Container archetype to carry information about a clinical investigation. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Index item (en)">
+                description = <"*The name or type of the health item under investigation. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Report type (en)">
+                description = <"*The type of report. (en)">
+                comment = <"*For example: hospital investigation; or community investigation. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Date investigation initiated (en)">
+                description = <"*The date when the investigation was assigned to an investigator. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Classifier (en)">
+                description = <"*Details about the individual(s) assigned to investigate the disease notification. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*Date of classification (en)">
+                description = <"*The date when the investigation report was completed. (en)">
+            >
+            ["at0.10"] = <
+                text = <"*Index infectious disease (en)">
+                description = <"*Name of the infectious disease under investigation. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Index health event (en)">
+                description = <"*Type of health event under investigation. (en)">
+            >
+            ["at0.8"] = <
+                text = <"*Review type (en)">
+                description = <"*Identification of the category or level of review. (en)">
+                comment = <"*For example: review by the facility or institution where the investigation was carried out; the local regional authority; or the national authority. (en)">
+            >
+            ["at0.9"] = <
+                text = <"*Date report submitted (en)">
+                description = <"*Date when the final report was submitted to the final health authority. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Reviewed by (en)">
+                description = <"*Details about the review process and reviewers of the report. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Reviewer role (en)">
+                description = <"*The formal role or position of the reviewer. (en)">
+                comment = <"*For example: regional epidemiologist; or Ministry of Health. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*Reviewer (en)">
+                description = <"*Structured details about the individual or organisation who reviewed the report. (en)">
+            >
+            ["at0.15"] = <
+                text = <"*Report comment (en)">
+                description = <"*Narrative response to the content of the report by the reviewer. (en)">
+            >
+            ["at0.16"] = <
+                text = <"*Date review completed (en)">
+                description = <"*Date when the review of the report was completed. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Health region (en)">
+                description = <"*Identification of the local health region where the index case was identified or the index event happened. (en)">
+                comment = <"*This data element supports reporting by a jurisdictional grouping rather than a specific facility or institution, place or physical address. This data element may be able to be derived from the precise recording of 'Investigation site'. (en)">
+            >
+            ["at0.20"] = <
+                text = <"*Date review submitted (en)">
+                description = <"*Date when the review was submitted to the next level of review. (en)">
+            >
+            ["at0.23"] = <
+                text = <"*Date of notification (en)">
+                description = <"*Date when the disease or event notification was submitted. (en)">
+            >
+            ["at0.25"] = <
+                text = <"*Notifier (en)">
+                description = <"*Identification of the facility or individual notifying about the disease or event. (en)">
+            >
+            ["at0.27"] = <
+                text = <"*Date received for review (en)">
+                description = <"">
+            >
+            ["ac0.9000"] = <
+                text = <"*Index item (en) (synthesised)">
+                description = <"*The name or type of the health item under investigation. (en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Case classification report">
+                description = <"Container archetype to carry information about a clinical investigation.">
+            >
+            ["at0.1"] = <
+                text = <"Index item">
+                description = <"The name or type of the health item under investigation.">
+            >
+            ["at0.2"] = <
+                text = <"Report type">
+                description = <"The type of report.">
+                comment = <"For example: hospital investigation; or community investigation.">
+            >
+            ["at0.4"] = <
+                text = <"Date investigation initiated">
+                description = <"The date when the investigation was assigned to an investigator.">
+            >
+            ["at0.5"] = <
+                text = <"Classifier">
+                description = <"Details about the individual(s) assigned to investigate the disease notification.">
+            >
+            ["at0.7"] = <
+                text = <"Date of classification">
+                description = <"The date when the investigation report was completed.">
+            >
+            ["at0.10"] = <
+                text = <"Index infectious disease">
+                description = <"Name of the infectious disease under investigation.">
+            >
+            ["at0.11"] = <
+                text = <"Index health event">
+                description = <"Type of health event under investigation.">
+            >
+            ["at0.8"] = <
+                text = <"Review type">
+                description = <"Identification of the category or level of review.">
+                comment = <"For example: review by the facility or institution where the investigation was carried out; the local regional authority; or the national authority.">
+            >
+            ["at0.9"] = <
+                text = <"Date report submitted">
+                description = <"Date when the final report was submitted to the final health authority.">
+            >
+            ["at0.12"] = <
+                text = <"Reviewed by">
+                description = <"Details about the review process and reviewers of the report.">
+            >
+            ["at0.13"] = <
+                text = <"Reviewer role">
+                description = <"The formal role or position of the reviewer.">
+                comment = <"For example: regional epidemiologist; or Ministry of Health.">
+            >
+            ["at0.14"] = <
+                text = <"Reviewer">
+                description = <"Structured details about the individual or organisation who reviewed the report.">
+            >
+            ["at0.15"] = <
+                text = <"Report comment">
+                description = <"Narrative response to the content of the report by the reviewer.">
+            >
+            ["at0.16"] = <
+                text = <"Date review completed">
+                description = <"Date when the review of the report was completed.">
+            >
+            ["at0.18"] = <
+                text = <"Health region">
+                description = <"Identification of the local health region where the index case was identified or the index event happened.">
+                comment = <"This data element supports reporting by a jurisdictional grouping rather than a specific facility or institution, place or physical address. This data element may be able to be derived from the precise recording of 'Investigation site'.">
+            >
+            ["at0.20"] = <
+                text = <"Date review submitted">
+                description = <"Date when the review was submitted to the next level of review.">
+            >
+            ["at0.23"] = <
+                text = <"Date of notification">
+                description = <"Date when the disease or event notification was submitted.">
+            >
+            ["at0.25"] = <
+                text = <"Notifier">
+                description = <"Identification of the facility or individual notifying about the disease or event.">
+            >
+            ["at0.27"] = <
+                text = <"Date received for review">
+                description = <"">
+            >
+            ["ac0.9000"] = <
+                text = <"Index item (synthesised)">
+                description = <"The name or type of the health item under investigation. (synthesised)">
+            >
+        >
+        ["it"] = <
+            ["at0000.1"] = <
+                text = <"*Case classification report (en)">
+                description = <"*Container archetype to carry information about a clinical investigation. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Index item (en)">
+                description = <"*The name or type of the health item under investigation. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Report type (en)">
+                description = <"*The type of report. (en)">
+                comment = <"*For example: hospital investigation; or community investigation. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Date investigation initiated (en)">
+                description = <"*The date when the investigation was assigned to an investigator. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Classifier (en)">
+                description = <"*Details about the individual(s) assigned to investigate the disease notification. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*Date of classification (en)">
+                description = <"*The date when the investigation report was completed. (en)">
+            >
+            ["at0.10"] = <
+                text = <"*Index infectious disease (en)">
+                description = <"*Name of the infectious disease under investigation. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Index health event (en)">
+                description = <"*Type of health event under investigation. (en)">
+            >
+            ["at0.8"] = <
+                text = <"*Review type (en)">
+                description = <"*Identification of the category or level of review. (en)">
+                comment = <"*For example: review by the facility or institution where the investigation was carried out; the local regional authority; or the national authority. (en)">
+            >
+            ["at0.9"] = <
+                text = <"*Date report submitted (en)">
+                description = <"*Date when the final report was submitted to the final health authority. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Reviewed by (en)">
+                description = <"*Details about the review process and reviewers of the report. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Reviewer role (en)">
+                description = <"*The formal role or position of the reviewer. (en)">
+                comment = <"*For example: regional epidemiologist; or Ministry of Health. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*Reviewer (en)">
+                description = <"*Structured details about the individual or organisation who reviewed the report. (en)">
+            >
+            ["at0.15"] = <
+                text = <"*Report comment (en)">
+                description = <"*Narrative response to the content of the report by the reviewer. (en)">
+            >
+            ["at0.16"] = <
+                text = <"*Date review completed (en)">
+                description = <"*Date when the review of the report was completed. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Health region (en)">
+                description = <"*Identification of the local health region where the index case was identified or the index event happened. (en)">
+                comment = <"*This data element supports reporting by a jurisdictional grouping rather than a specific facility or institution, place or physical address. This data element may be able to be derived from the precise recording of 'Investigation site'. (en)">
+            >
+            ["at0.20"] = <
+                text = <"*Date review submitted (en)">
+                description = <"*Date when the review was submitted to the next level of review. (en)">
+            >
+            ["at0.23"] = <
+                text = <"*Date of notification (en)">
+                description = <"*Date when the disease or event notification was submitted. (en)">
+            >
+            ["at0.25"] = <
+                text = <"*Notifier (en)">
+                description = <"*Identification of the facility or individual notifying about the disease or event. (en)">
+            >
+            ["at0.27"] = <
+                text = <"*Date received for review (en)">
+                description = <"">
+            >
+            ["ac0.9000"] = <
+                text = <"*Index item (en) (synthesised)">
+                description = <"*The name or type of the health item under investigation. (en) (synthesised)">
+            >
+        >
+        ["zh"] = <
+            ["at0000.1"] = <
+                text = <"*Case classification report (en)">
+                description = <"*Container archetype to carry information about a clinical investigation. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Index item (en)">
+                description = <"*The name or type of the health item under investigation. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Report type (en)">
+                description = <"*The type of report. (en)">
+                comment = <"*For example: hospital investigation; or community investigation. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Date investigation initiated (en)">
+                description = <"*The date when the investigation was assigned to an investigator. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Classifier (en)">
+                description = <"*Details about the individual(s) assigned to investigate the disease notification. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*Date of classification (en)">
+                description = <"*The date when the investigation report was completed. (en)">
+            >
+            ["at0.10"] = <
+                text = <"*Index infectious disease (en)">
+                description = <"*Name of the infectious disease under investigation. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Index health event (en)">
+                description = <"*Type of health event under investigation. (en)">
+            >
+            ["at0.8"] = <
+                text = <"*Review type (en)">
+                description = <"*Identification of the category or level of review. (en)">
+                comment = <"*For example: review by the facility or institution where the investigation was carried out; the local regional authority; or the national authority. (en)">
+            >
+            ["at0.9"] = <
+                text = <"*Date report submitted (en)">
+                description = <"*Date when the final report was submitted to the final health authority. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Reviewed by (en)">
+                description = <"*Details about the review process and reviewers of the report. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Reviewer role (en)">
+                description = <"*The formal role or position of the reviewer. (en)">
+                comment = <"*For example: regional epidemiologist; or Ministry of Health. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*Reviewer (en)">
+                description = <"*Structured details about the individual or organisation who reviewed the report. (en)">
+            >
+            ["at0.15"] = <
+                text = <"*Report comment (en)">
+                description = <"*Narrative response to the content of the report by the reviewer. (en)">
+            >
+            ["at0.16"] = <
+                text = <"*Date review completed (en)">
+                description = <"*Date when the review of the report was completed. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Health region (en)">
+                description = <"*Identification of the local health region where the index case was identified or the index event happened. (en)">
+                comment = <"*This data element supports reporting by a jurisdictional grouping rather than a specific facility or institution, place or physical address. This data element may be able to be derived from the precise recording of 'Investigation site'. (en)">
+            >
+            ["at0.20"] = <
+                text = <"*Date review submitted (en)">
+                description = <"*Date when the review was submitted to the next level of review. (en)">
+            >
+            ["at0.23"] = <
+                text = <"*Date of notification (en)">
+                description = <"*Date when the disease or event notification was submitted. (en)">
+            >
+            ["at0.25"] = <
+                text = <"*Notifier (en)">
+                description = <"*Identification of the facility or individual notifying about the disease or event. (en)">
+            >
+            ["at0.27"] = <
+                text = <"*Date received for review (en)">
+                description = <"">
+            >
+            ["ac0.9000"] = <
+                text = <"*Index item (en) (synthesised)">
+                description = <"*The name or type of the health item under investigation. (en) (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000.1"] = <
+                text = <"*Case classification report (en)">
+                description = <"*Container archetype to carry information about a clinical investigation. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Index item (en)">
+                description = <"*The name or type of the health item under investigation. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Report type (en)">
+                description = <"*The type of report. (en)">
+                comment = <"*For example: hospital investigation; or community investigation. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Date investigation initiated (en)">
+                description = <"*The date when the investigation was assigned to an investigator. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Classifier (en)">
+                description = <"*Details about the individual(s) assigned to investigate the disease notification. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*Date of classification (en)">
+                description = <"*The date when the investigation report was completed. (en)">
+            >
+            ["at0.10"] = <
+                text = <"*Index infectious disease (en)">
+                description = <"*Name of the infectious disease under investigation. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Index health event (en)">
+                description = <"*Type of health event under investigation. (en)">
+            >
+            ["at0.8"] = <
+                text = <"*Review type (en)">
+                description = <"*Identification of the category or level of review. (en)">
+                comment = <"*For example: review by the facility or institution where the investigation was carried out; the local regional authority; or the national authority. (en)">
+            >
+            ["at0.9"] = <
+                text = <"*Date report submitted (en)">
+                description = <"*Date when the final report was submitted to the final health authority. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Reviewed by (en)">
+                description = <"*Details about the review process and reviewers of the report. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Reviewer role (en)">
+                description = <"*The formal role or position of the reviewer. (en)">
+                comment = <"*For example: regional epidemiologist; or Ministry of Health. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*Reviewer (en)">
+                description = <"*Structured details about the individual or organisation who reviewed the report. (en)">
+            >
+            ["at0.15"] = <
+                text = <"*Report comment (en)">
+                description = <"*Narrative response to the content of the report by the reviewer. (en)">
+            >
+            ["at0.16"] = <
+                text = <"*Date review completed (en)">
+                description = <"*Date when the review of the report was completed. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Health region (en)">
+                description = <"*Identification of the local health region where the index case was identified or the index event happened. (en)">
+                comment = <"*This data element supports reporting by a jurisdictional grouping rather than a specific facility or institution, place or physical address. This data element may be able to be derived from the precise recording of 'Investigation site'. (en)">
+            >
+            ["at0.20"] = <
+                text = <"*Date review submitted (en)">
+                description = <"*Date when the review was submitted to the next level of review. (en)">
+            >
+            ["at0.23"] = <
+                text = <"*Date of notification (en)">
+                description = <"*Date when the disease or event notification was submitted. (en)">
+            >
+            ["at0.25"] = <
+                text = <"*Notifier (en)">
+                description = <"*Identification of the facility or individual notifying about the disease or event. (en)">
+            >
+            ["at0.27"] = <
+                text = <"*Date received for review (en)">
+                description = <"">
+            >
+            ["ac0.9000"] = <
+                text = <"*Index item (en) (synthesised)">
+                description = <"*The name or type of the health item under investigation. (en) (synthesised)">
+            >
+        >
+        ["es-ar"] = <
+            ["at0000.1"] = <
+                text = <"*Case classification report (en)">
+                description = <"*Container archetype to carry information about a clinical investigation. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Index item (en)">
+                description = <"*The name or type of the health item under investigation. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Report type (en)">
+                description = <"*The type of report. (en)">
+                comment = <"*For example: hospital investigation; or community investigation. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Date investigation initiated (en)">
+                description = <"*The date when the investigation was assigned to an investigator. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Classifier (en)">
+                description = <"*Details about the individual(s) assigned to investigate the disease notification. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*Date of classification (en)">
+                description = <"*The date when the investigation report was completed. (en)">
+            >
+            ["at0.10"] = <
+                text = <"*Index infectious disease (en)">
+                description = <"*Name of the infectious disease under investigation. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Index health event (en)">
+                description = <"*Type of health event under investigation. (en)">
+            >
+            ["at0.8"] = <
+                text = <"*Review type (en)">
+                description = <"*Identification of the category or level of review. (en)">
+                comment = <"*For example: review by the facility or institution where the investigation was carried out; the local regional authority; or the national authority. (en)">
+            >
+            ["at0.9"] = <
+                text = <"*Date report submitted (en)">
+                description = <"*Date when the final report was submitted to the final health authority. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Reviewed by (en)">
+                description = <"*Details about the review process and reviewers of the report. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Reviewer role (en)">
+                description = <"*The formal role or position of the reviewer. (en)">
+                comment = <"*For example: regional epidemiologist; or Ministry of Health. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*Reviewer (en)">
+                description = <"*Structured details about the individual or organisation who reviewed the report. (en)">
+            >
+            ["at0.15"] = <
+                text = <"*Report comment (en)">
+                description = <"*Narrative response to the content of the report by the reviewer. (en)">
+            >
+            ["at0.16"] = <
+                text = <"*Date review completed (en)">
+                description = <"*Date when the review of the report was completed. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Health region (en)">
+                description = <"*Identification of the local health region where the index case was identified or the index event happened. (en)">
+                comment = <"*This data element supports reporting by a jurisdictional grouping rather than a specific facility or institution, place or physical address. This data element may be able to be derived from the precise recording of 'Investigation site'. (en)">
+            >
+            ["at0.20"] = <
+                text = <"*Date review submitted (en)">
+                description = <"*Date when the review was submitted to the next level of review. (en)">
+            >
+            ["at0.23"] = <
+                text = <"*Date of notification (en)">
+                description = <"*Date when the disease or event notification was submitted. (en)">
+            >
+            ["at0.25"] = <
+                text = <"*Notifier (en)">
+                description = <"*Identification of the facility or individual notifying about the disease or event. (en)">
+            >
+            ["at0.27"] = <
+                text = <"*Date received for review (en)">
+                description = <"">
+            >
+            ["ac0.9000"] = <
+                text = <"*Index item (en) (synthesised)">
+                description = <"*The name or type of the health item under investigation. (en) (synthesised)">
+            >
+        >
+        ["sl"] = <
+            ["at0000.1"] = <
+                text = <"*Case classification report (en)">
+                description = <"*Container archetype to carry information about a clinical investigation. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Index item (en)">
+                description = <"*The name or type of the health item under investigation. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Report type (en)">
+                description = <"*The type of report. (en)">
+                comment = <"*For example: hospital investigation; or community investigation. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Date investigation initiated (en)">
+                description = <"*The date when the investigation was assigned to an investigator. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Classifier (en)">
+                description = <"*Details about the individual(s) assigned to investigate the disease notification. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*Date of classification (en)">
+                description = <"*The date when the investigation report was completed. (en)">
+            >
+            ["at0.10"] = <
+                text = <"*Index infectious disease (en)">
+                description = <"*Name of the infectious disease under investigation. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Index health event (en)">
+                description = <"*Type of health event under investigation. (en)">
+            >
+            ["at0.8"] = <
+                text = <"*Review type (en)">
+                description = <"*Identification of the category or level of review. (en)">
+                comment = <"*For example: review by the facility or institution where the investigation was carried out; the local regional authority; or the national authority. (en)">
+            >
+            ["at0.9"] = <
+                text = <"*Date report submitted (en)">
+                description = <"*Date when the final report was submitted to the final health authority. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Reviewed by (en)">
+                description = <"*Details about the review process and reviewers of the report. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Reviewer role (en)">
+                description = <"*The formal role or position of the reviewer. (en)">
+                comment = <"*For example: regional epidemiologist; or Ministry of Health. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*Reviewer (en)">
+                description = <"*Structured details about the individual or organisation who reviewed the report. (en)">
+            >
+            ["at0.15"] = <
+                text = <"*Report comment (en)">
+                description = <"*Narrative response to the content of the report by the reviewer. (en)">
+            >
+            ["at0.16"] = <
+                text = <"*Date review completed (en)">
+                description = <"*Date when the review of the report was completed. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Health region (en)">
+                description = <"*Identification of the local health region where the index case was identified or the index event happened. (en)">
+                comment = <"*This data element supports reporting by a jurisdictional grouping rather than a specific facility or institution, place or physical address. This data element may be able to be derived from the precise recording of 'Investigation site'. (en)">
+            >
+            ["at0.20"] = <
+                text = <"*Date review submitted (en)">
+                description = <"*Date when the review was submitted to the next level of review. (en)">
+            >
+            ["at0.23"] = <
+                text = <"*Date of notification (en)">
+                description = <"*Date when the disease or event notification was submitted. (en)">
+            >
+            ["at0.25"] = <
+                text = <"*Notifier (en)">
+                description = <"*Identification of the facility or individual notifying about the disease or event. (en)">
+            >
+            ["at0.27"] = <
+                text = <"*Date received for review (en)">
+                description = <"">
+            >
+            ["ac0.9000"] = <
+                text = <"*Index item (en) (synthesised)">
+                description = <"*The name or type of the health item under investigation. (en) (synthesised)">
+            >
+        >
+        ["nl"] = <
+            ["at0000.1"] = <
+                text = <"*Case classification report (en)">
+                description = <"*Container archetype to carry information about a clinical investigation. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Index item (en)">
+                description = <"*The name or type of the health item under investigation. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Report type (en)">
+                description = <"*The type of report. (en)">
+                comment = <"*For example: hospital investigation; or community investigation. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Date investigation initiated (en)">
+                description = <"*The date when the investigation was assigned to an investigator. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Classifier (en)">
+                description = <"*Details about the individual(s) assigned to investigate the disease notification. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*Date of classification (en)">
+                description = <"*The date when the investigation report was completed. (en)">
+            >
+            ["at0.10"] = <
+                text = <"*Index infectious disease (en)">
+                description = <"*Name of the infectious disease under investigation. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Index health event (en)">
+                description = <"*Type of health event under investigation. (en)">
+            >
+            ["at0.8"] = <
+                text = <"*Review type (en)">
+                description = <"*Identification of the category or level of review. (en)">
+                comment = <"*For example: review by the facility or institution where the investigation was carried out; the local regional authority; or the national authority. (en)">
+            >
+            ["at0.9"] = <
+                text = <"*Date report submitted (en)">
+                description = <"*Date when the final report was submitted to the final health authority. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Reviewed by (en)">
+                description = <"*Details about the review process and reviewers of the report. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Reviewer role (en)">
+                description = <"*The formal role or position of the reviewer. (en)">
+                comment = <"*For example: regional epidemiologist; or Ministry of Health. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*Reviewer (en)">
+                description = <"*Structured details about the individual or organisation who reviewed the report. (en)">
+            >
+            ["at0.15"] = <
+                text = <"*Report comment (en)">
+                description = <"*Narrative response to the content of the report by the reviewer. (en)">
+            >
+            ["at0.16"] = <
+                text = <"*Date review completed (en)">
+                description = <"*Date when the review of the report was completed. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Health region (en)">
+                description = <"*Identification of the local health region where the index case was identified or the index event happened. (en)">
+                comment = <"*This data element supports reporting by a jurisdictional grouping rather than a specific facility or institution, place or physical address. This data element may be able to be derived from the precise recording of 'Investigation site'. (en)">
+            >
+            ["at0.20"] = <
+                text = <"*Date review submitted (en)">
+                description = <"*Date when the review was submitted to the next level of review. (en)">
+            >
+            ["at0.23"] = <
+                text = <"*Date of notification (en)">
+                description = <"*Date when the disease or event notification was submitted. (en)">
+            >
+            ["at0.25"] = <
+                text = <"*Notifier (en)">
+                description = <"*Identification of the facility or individual notifying about the disease or event. (en)">
+            >
+            ["at0.27"] = <
+                text = <"*Date received for review (en)">
+                description = <"">
+            >
+            ["ac0.9000"] = <
+                text = <"*Index item (en) (synthesised)">
+                description = <"*The name or type of the health item under investigation. (en) (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.10", "at0.11">
+        >
+    >

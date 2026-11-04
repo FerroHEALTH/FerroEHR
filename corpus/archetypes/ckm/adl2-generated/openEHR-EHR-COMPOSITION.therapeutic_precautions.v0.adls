@@ -1,0 +1,87 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=32d40309-d1bd-4ebf-873c-43c6e5951523; build_uid=a6cf3eeb-61a6-46e0-aa76-c5c385ef5c88)
+    openEHR-EHR-COMPOSITION.therapeutic_precautions.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["organisation"] = <"NEHTA">
+        ["email"] = <"sam.heard@oceaninformatics.com">
+        ["date"] = <"2012-09-29">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Derived from: Therapeutic precautions, Draft archetype [Internet]. Australian Digital Health Agency (NEHTA), ADHA Clinical Knowledge Manager. Authored: 2012 Sep 29. Available at: http://dcm.nehta.org.au/ckm#showArchetype_1013.1.1094_1 (discontinued)">
+    >
+    other_details = <
+        ["current_contact"] = <"Dr Heather Leslie, Atomica Informatics, Australia<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"FCB72DE957EA4A694775C316C704BDA1">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"A persistent composition or managed list to record key information that will influence or preclude use of particular medications, therapies or interventions.">
+            keywords = <"allergy list", "contraindications", "intolerance">
+            use = <"For managing the list of adverse reactions, allergies, intolerances etc that will influence or preclude use of therapies.">
+            misuse = <"Only use for agreed archetypes to express these precautions.">
+            copyright = <"© Australian Digital Health Agency, openEHR Foundation">
+        >
+    >
+
+definition
+    COMPOSITION[at0000] matches {    -- Therapeutic precautions
+        category matches {
+            DV_CODED_TEXT[at9001] matches {
+                defining_code matches {[at9000]}    -- persistent
+            }
+        }
+        context matches {
+            EVENT_CONTEXT[at0001] matches {    -- Event Context
+                other_context matches {
+                    ITEM_TREE[at0002] matches {
+                        items cardinality matches {0..*; unordered} matches {
+                            allow_archetype CLUSTER[at0003] matches {    -- Extension
+                                include
+                                    archetype_id/value matches {/.*/}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Therapeutic precautions">
+                description = <"Persistent data relating to issues that may influence or preclude the administration of one or more therapies or interventions.">
+            >
+            ["at0001"] = <
+                text = <"Event Context">
+                description = <"">
+            >
+            ["at0003"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at9000"] = <
+                text = <"persistent">
+                description = <"persistent">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/431>
+        >
+    >

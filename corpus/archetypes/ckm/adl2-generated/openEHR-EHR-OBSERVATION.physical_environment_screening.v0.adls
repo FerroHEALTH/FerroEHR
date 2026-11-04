@@ -1,0 +1,280 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=fb25bc8a-ae37-43a6-a0f9-c6034009f2ef; build_uid=bc5e7448-b6ba-4eb7-bccb-a179bb6bafe3)
+    openEHR-EHR-OBSERVATION.physical_environment_screening.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke, Marit Alice Venheim, John Tore Valand">
+                ["organisation"] = <"Helse Vest IKT AS, Helse Bergen">
+                ["email"] = <"silje.ljosland.bakke@helse-vest-ikt.no, marit.alice.venheim@helse-vest-ikt.no, john.tore.valand@helse-vest-ikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2020-03-14">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"CDB173035FCC29D929686045004EA5B7">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"*To create a framework for recording answers to pre-defined screening questions about factors or characteristics in the physical environment which have caused or could potentially cause harm to an individual. (en)">
+            use = <"*Use to create a framework for recording answers to pre-defined screening questions about factors or characteristics in the physical environment which have caused or could potentially cause harm to an individual.
+
+Common use cases include, but are not limited to:
+- Systematic questioning in any consultation related to exposure, for example:
+--- Have you ever lived or worked in a building with asbestos?
+--- Are chemicals stored in appropriate conditions in your workplace?
+--- Is your workplace well ventilated?
+
+The semantics of this archetype are intentionally loose, and querying this archetype would normally only be useful or safe within the context of each specific template. In a template, each data element would usually be renamed to the specific question asked. Where value sets have been proposed for common use cases, these can be adapted for local use by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case.
+
+The EVENT structure from the reference model can be used to specify whether the questions relate to point in time or over a period of time. Use a separate instance of this archetype to distinguish between a questionnaire recording information about exposure that has happened at any time in the past and information about exposure within a specified time interval - for example the difference between \"Have you ever used any drug by injection?\" compared to \"Have you injected any drug during the last 6 months?\".
+
+The source of the information in a questionnaire response may vary in different contexts but can be specifically identified using the 'Information provider' element in the Reference Model.
+
+This archetype has been designed to be used as a screening tool or to record simple questionnaire-format data for use in situations such as a disease registry or public health surveillance. (en)">
+            misuse = <"Brukes ikke for å registrere persistente detaljer om en kjent eller identifisert eksponering. Bruk arketypen EVALUATION.exposure for dette formålet.
+
+Brukes ikke for å lage et rammeverk for registrering av svar på forhåndsdefinerte spørsmål om eksponering for potensielt skadelige psykososiale faktorer som fattigdom, eller traumatiske opplevelser som mobbing eller krig. Bruk en annen passende kartleggingsspørsmål-arketype til dette formålet.
+
+Brukes ikke til å registrere informasjon om egen bruk av substanser som tobakk eller alkohol. Bruk arketypen OBSERVATION.substance_use_screening eller en passende EVALUATION-arketype til dette formålet.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To create a framework for recording answers to pre-defined screening questions about factors or characteristics in the physical environment which have caused or could potentially cause harm to an individual.">
+            use = <"Use to create a framework for recording answers to pre-defined screening questions about factors or characteristics in the physical environment which have caused or could potentially cause harm to an individual.
+
+Common use cases include, but are not limited to:
+- Systematic questioning in any consultation related to exposure, for example:
+--- Have you ever lived or worked in a building with asbestos?
+--- Are chemicals stored in appropriate conditions in your workplace?
+--- Is your workplace well ventilated?
+
+The semantics of this archetype are intentionally loose, and querying this archetype would normally only be useful or safe within the context of each specific template. In a template, each data element would usually be renamed to the specific question asked. Where value sets have been proposed for common use cases, these can be adapted for local use by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case.
+
+The EVENT structure from the reference model can be used to specify whether the questions relate to point in time or over a period of time. Use a separate instance of this archetype to distinguish between a questionnaire recording information about exposure that has happened at any time in the past and information about exposure within a specified time interval - for example the difference between \"Have you ever used any drug by injection?\" compared to \"Have you injected any drug during the last 6 months?\".
+
+The source of the information in a questionnaire response may vary in different contexts but can be specifically identified using the 'Information provider' element in the Reference Model.
+
+This archetype has been designed to be used as a screening tool or to record simple questionnaire-format data for use in situations such as a disease registry or public health surveillance.">
+            misuse = <"Not to be used to record persistent details about a known or identified exposure. Use the EVALUATION.exposure archetype for this purpose.
+
+Not to be used to create a framework for recording answers to pre-defined screening questions about exposure to potentially harmful psychosocial factors like poverty, or traumatic experiences like bullying or war. Use an appropriate screening questionnaire archetype for this purpose.
+
+Not to be used to record information about substance use such as cigarette smoking or alcohol use. Use the OBSERVATION.substance_use_screening or an appropriate EVALUATION archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Physical environment screening
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Screening purpose
+                                        value matches {
+                                            DV_TEXT[at9001]
+                                        }
+                                    }
+                                    CLUSTER[at0009] matches {    -- Specific condition
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0010] occurrences matches {1} matches {    -- Environmental condition
+                                                value matches {
+                                                    DV_TEXT[at9002]
+                                                }
+                                            }
+                                            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Presence?
+                                                value matches {
+                                                    DV_CODED_TEXT[at9003] matches {
+                                                        defining_code matches {[ac9000]}    -- Presence? (synthesised)
+                                                    }
+                                                    DV_TEXT[at9004]
+                                                    DV_BOOLEAN[at9005]
+                                                }
+                                            }
+                                            allow_archetype CLUSTER[at0016]    -- Additional details
+                                            ELEMENT[at0017] occurrences matches {0..1} matches {    -- Comment
+                                                value matches {
+                                                    DV_TEXT[at9006]
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0018] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0019] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"*Physical environment screening (en)">
+                description = <"*Series of questions and associated answers used to screen for factors or characteristics in the physical environment which have caused or could potentially cause harm to an individual. (en)">
+                comment = <"Svarene kan være selvrapporterte.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Kartleggingsformål">
+                description = <"Konteksten eller årsaken for kartleggingen.">
+                comment = <"*This data element is intended to provide collection context for the question/answer groups when queried at a later date. It is not expected that this data element will be exposed to the individual, but only stored in data. (en)">
+            >
+            ["at0009"] = <
+                text = <"*Specific condition (en)">
+                description = <"*Details about each possible specific environmental condition or factor. (en)">
+            >
+            ["at0010"] = <
+                text = <"*Environmental condition (en)">
+                description = <"*The condition or factor in the physical environment being screened for. (en)">
+                comment = <"*For example: safe storage of poisonous materials. Coding with a terminology is preferred, where possible. (en)">
+            >
+            ["at0011"] = <
+                text = <"Tilstede?">
+                description = <"Har den spesifiserte eksponeringssituasjonen hendt?">
+                comment = <"Navnet på dataelementet kan omformuleres til det spesifikke spørsmålet i et templat eller brukergrensesnitt. Det foreslåtte verdisettet kan tilpasses/endres i det enkelte bruksområde ved å benytte de alternative datatypene DV_TEXT eller DV_BOOLEAN.">
+            >
+            ["at0012"] = <
+                text = <"Ja">
+                description = <"Eksponeringssituasjonen har hendt.">
+            >
+            ["at0013"] = <
+                text = <"Nei">
+                description = <"Eksponeringssituasjonen har ikke hendt.">
+            >
+            ["at0014"] = <
+                text = <"Ukjent">
+                description = <"Det er ikke kjent hvorvidt eksponeringssituasjonen har hendt eller ikke.">
+            >
+            ["at0016"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Ytterligere detaljer om den spesifikke eksponeringshendelsen, lokalisering eller tilhørende kontakter.">
+            >
+            ["at0017"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om den spesifikke eksponeringssituasjonen som ikke er omfattet av andre felt.">
+            >
+            ["at0019"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["ac9000"] = <
+                text = <"Tilstede? (synthesised)">
+                description = <"Har den spesifiserte eksponeringssituasjonen hendt? (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Physical environment screening">
+                description = <"Series of questions and associated answers used to screen for factors or characteristics in the physical environment which have caused or could potentially cause harm to an individual.">
+                comment = <"The answers may be self-reported.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Screening purpose">
+                description = <"The context or reason for screening.">
+                comment = <"This data element is intended to provide collection context for the question/answer groups when queried at a later date. It is not expected that this data element will be exposed to the individual, but only stored in data.">
+            >
+            ["at0009"] = <
+                text = <"Specific condition">
+                description = <"Details about each possible specific environmental condition or factor.">
+            >
+            ["at0010"] = <
+                text = <"Environmental condition">
+                description = <"The condition or factor in the physical environment being screened for.">
+                comment = <"For example: safe storage of poisonous materials. Coding with a terminology is preferred, where possible.">
+            >
+            ["at0011"] = <
+                text = <"Presence?">
+                description = <"Has the specified 'Condition' been identified?">
+                comment = <"In a template, the data element would usually be renamed to the specific question asked. The proposed value set can be adapted for local use by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case.">
+            >
+            ["at0012"] = <
+                text = <"Yes">
+                description = <"The exposure situation has occurred.">
+            >
+            ["at0013"] = <
+                text = <"No">
+                description = <"The exposure situation has not occurred.">
+            >
+            ["at0014"] = <
+                text = <"Unknown">
+                description = <"It is not known whether or not the exposure situation has occurred.">
+            >
+            ["at0016"] = <
+                text = <"Additional details">
+                description = <"Additional details about the specific condition or factor identified in the physical environment.">
+            >
+            ["at0017"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the specific exposure situation, not captured in other fields.">
+            >
+            ["at0019"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["ac9000"] = <
+                text = <"Presence? (synthesised)">
+                description = <"Has the specified 'Condition' been identified? (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0014"] = <http://snomed.info/id/261665006>
+            ["at0012"] = <http://snomed.info/id/373066001>
+            ["at0013"] = <http://snomed.info/id/373067005>
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0012", "at0013", "at0014">
+        >
+    >

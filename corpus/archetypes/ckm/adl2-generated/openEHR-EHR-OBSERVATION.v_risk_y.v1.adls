@@ -1,0 +1,1084 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=5859c947-c3aa-4251-882d-28523415ed3b; build_uid=60639611-5ea1-42f8-9acc-cbb5c180b5d6)
+    openEHR-EHR-OBSERVATION.v_risk_y.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Karsten Øvretveit">
+        ["organisation"] = <"Helse Vest IKT">
+        ["email"] = <"karsten.ovretveit@helse-vest-ikt.no">
+        ["date"] = <"2026-04-01">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Hanne Marte Bårholm, Helse Vest IKT, Norway (openEHR Editor)", "Grete Hovde Bøe, Sykehuspartner HF, Norway (openEHR Editor)", "Aleksander Furnes, Helse Nord IKT, Norway (openEHR Editor)", "Ciprian Gerstenberger, Helse Nord IKT, Norway (openEHR Editor)", "Marte Vassli Gullesen, Helse Nord IKT, Norway (openEHR Editor)", "Nancy Helgesen, Helse Fonna, Norway", "Ronald Krawec, Alberta Health Services, Canada", "Elin Kristiansen, Sykehuspartner HF, Norway (openEHR Editor)", "Kanika Kuwelker, Helse Vest IKT, Norway (openEHR Editor)", "Eli Larsen, UNN, Norway (openEHR Editor)", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Patrick Fergal McSharry, MSMS(I) and SESLHD, Australia", "Martin Milde, Helse Vest IKT, Norway (openEHR Editor)", "Olha Nikolaieva, University Hospital Basel, Switzerland", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Bjørn Næss, DIPS ASA, Norway", "Marianne Opsahl Bredesen, Helse Nord IKT HF, Norway", "Terje Sagmyr, Helse Vest IKT, Norway (openEHR Editor)", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "John Tore Valand, Helse Vest IKT, Norway (openEHR Editor)", "Karsten Øvretveit, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Roaldset JO, et al. Validation of a violence screening for youth in psychiatric inpatient care – a pilot study of V-RISK-Y. Front Psychiatry. 2023;14:1210871. https://doi.org/10.3389/fpsyt.2023.1210871">
+        ["2"] = <"Regional Research and Education Centre for Security, Prisons and Forensic Psychiatry. V-RISK-Y [Internet]. Revised 2024 Jun 21. Oslo: Oslo University Hospital, South-Eastern Norway Regional Health Authority; [cited 2026 May 15]. Available from: https://www.sifer.no/verktoy/#v-risk-y">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"0296C9DD92D18D2D238DDB3E3423AA37">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere strukturert vurdering av korttids voldsrisiko hos ungdom i alderen 12–18 år basert på V-RISK-Y sjekkliste, inkludert skåring av individuelle risikofaktorer og samlet klinisk vurdering.">
+            keywords = <"voldsrisiko, ungdom, risikovurdering, psykisk helsevern, sikkerhetspsykiatri, sjekkliste, skåringsverktøy, risikofaktorer, forebyggende tiltak", ...>
+            use = <"Brukes for å registrere strukturert vurdering av korttids voldsrisiko hos ungdom i alderen 12–18 år basert på V-RISK-Y sjekkliste, inkludert skåring av individuelle risikofaktorer og samlet klinisk vurdering.">
+            misuse = <"Brukes ikke for å registrere langsiktig voldsrisiko eller utover aldersgruppen som er definert for V-RISK-Y.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a structured assessment of short-term violence risk in adolescents aged 12–18 years based on the V-RISK-Y checklist, including scoring of individual risk factors and an overall clinical assessment.">
+            keywords = <"violence risk, adolescents, risk assessment, mental health services, forensic psychiatry, checklist, scoring tool, risk factors, preventive measures, youth", ...>
+            use = <"Used to record scores for each of the 12 items in the V-RISK-Y, as well as an overall clinical assessment of violence risk.
+
+Reference for the English translation: V-RISK-Y © Revised 21.06.2024. Regional Research and Education Centre for Security, Prisons and Forensic Psychiatry, Oslo University Hospital, South-Eastern Norway Regional Health Authority.
+
+While openEHR archetypes are all freely available under an open license, the specific content of this V-RISK-Y archetype is copyright protected. Any use of this archetype within implementations must be in compliance with the terms established by the copyright owners.
+
+Copyright statement: V-RISK-Y © The checklist can be downloaded and used free of charge (no fees). It is not permitted to use V-RISK-Y in a commercial context or to charge someone for using it. The layout can be adapted, for example to fit an electronic hospital record, but the text cannot be changed.
+
+Copyright information: https://www.sifer.no/verktoy/#v-risk-y/">
+            misuse = <"Not to be used for results from other instruments in the V-RISK family. Use specific archetypes for these purposes.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Violence Risk Assessment Checklist for Youth aged 12-18 (V-RISK-Y)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- 1. Prior and/or current acts of violence
+                                        value matches {
+                                            DV_CODED_TEXT[at9045] matches {
+                                                defining_code matches {[ac9015]}    -- 1. Prior and/or current acts of violence (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- 2. Prior and/or current threats of violence
+                                        value matches {
+                                            DV_CODED_TEXT[at9046] matches {
+                                                defining_code matches {[ac9016]}    -- 2. Prior and/or current threats of violence (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- 3. Prior and/or current alcohol or substance abuse
+                                        value matches {
+                                            DV_CODED_TEXT[at9047] matches {
+                                                defining_code matches {[ac9017]}    -- 3. Prior and/or current alcohol or substance abuse (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- 4. Prior and/or current severe symptoms of mental health disorders
+                                        value matches {
+                                            DV_CODED_TEXT[at9048] matches {
+                                                defining_code matches {[ac9018]}    -- 4. Prior and/or current severe symptoms of mental health disorders (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- 5. Disruptive, impulsive behaviour/behavioural disorder
+                                        value matches {
+                                            DV_CODED_TEXT[at9032] matches {
+                                                defining_code matches {[ac9019]}    -- 5. Disruptive, impulsive behaviour/behavioural disorder (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- 6. Has poor insight into the mental disorder and/or behaviour
+                                        value matches {
+                                            DV_CODED_TEXT[at9033] matches {
+                                                defining_code matches {[ac9020]}    -- 6. Has poor insight into the mental disorder and/or behaviour (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- 7. Suspicion
+                                        value matches {
+                                            DV_CODED_TEXT[at9034] matches {
+                                                defining_code matches {[ac9021]}    -- 7. Suspicion (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- 8. Demonstrates lack of empathy
+                                        value matches {
+                                            DV_CODED_TEXT[at9035] matches {
+                                                defining_code matches {[ac9022]}    -- 8. Demonstrates lack of empathy (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- 9. Unrealistic planning
+                                        value matches {
+                                            DV_CODED_TEXT[at9036] matches {
+                                                defining_code matches {[ac9023]}    -- 9. Unrealistic planning (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- 10. Future stressful situations
+                                        value matches {
+                                            DV_CODED_TEXT[at9037] matches {
+                                                defining_code matches {[ac9024]}    -- 10. Future stressful situations (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- 11. Prior and/or current severe trauma
+                                        value matches {
+                                            DV_CODED_TEXT[at9038] matches {
+                                                defining_code matches {[ac9025]}    -- 11. Prior and/or current severe trauma (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- 12. The youth’s and parents/guardians’ own perception of violence risk
+                                        value matches {
+                                            DV_CODED_TEXT[at9039] matches {
+                                                defining_code matches {[ac9026]}    -- 12. The youth’s and parents/guardians’ own perception of violence risk (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- How great do you believe the risk of violence is for this youth?
+                                        value matches {
+                                            DV_CODED_TEXT[at9040] matches {
+                                                defining_code matches {[ac9027]}    -- How great do you believe the risk of violence is for this youth? (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0083] occurrences matches {0..1} matches {    -- Immediate implementation of preventive measures
+                                        value matches {
+                                            DV_CODED_TEXT[at9041] matches {
+                                                defining_code matches {[ac9013]}    -- Immediate implementation of preventive measures (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0081] occurrences matches {0..1} matches {    -- Description of preventive measures
+                                        value matches {
+                                            DV_TEXT[at9042]
+                                        }
+                                    }
+                                    ELEMENT[at0086] occurrences matches {0..1} matches {    -- Suggestions for additional violence risk assessments
+                                        value matches {
+                                            DV_CODED_TEXT[at9043] matches {
+                                                defining_code matches {[ac9014]}    -- Suggestions for additional violence risk assessments (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0082] occurrences matches {0..1} matches {    -- Description of additional violence risk assessments
+                                        value matches {
+                                            DV_TEXT[at9044]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0089] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0090] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Voldsrisiko Sjekkliste for Ungdom 12-18 år (V-RISK-Y)">
+                description = <"V-RISK-Y er et strukturert verktøy for vurdering av voldsrisiko blant ungdom i alderen 12–18 år. Verktøyet er utviklet for bruk ved første kontakt med ungdommen og gir grunnlag for å vurdere behovet for umiddelbare tiltak og videre risikovurdering. ">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"1. Tidligere og/eller aktuell vold">
+                description = <"">
+                comment = <"Alvorlig vold: Fysiske angrep (inkludert ulike våpen, brann) for å påføre alvorlig fysisk skade mot annen person.
+
+Moderat: Aggresjonshandlinger som spark, slag og dytting som ikke forårsaker skade hos offeret. 
+Ja: Må ha gjort minst 3 moderate eller 1 alvorlig voldshandling. 
+
+Definisjon av vold: Atferd innrettet på (intensjon) å påføre et annet menneske kroppslig smerte, skade eller krenkelse.">
+            >
+            ["at0005"] = <
+                text = <"2. Tidligere og/eller aktuelle trusler om vold">
+                description = <"">
+                comment = <"En verbal voldstrussel: Rop, utsagn eller skriftlig (inkludert sosiale medier) som truer med å utøve vold mot et annet menneske. 
+
+En fysisk voldstrussel er å vise angrepsforberedende atferd f.eks. å true med knyttneve, eller annen fysisk atferd som signaliserer fysisk angrep. Å ødelegge gjenstander er ikke voldsatferd, men kan i noen situasjoner oppfattes som en trussel (fysisk trussel vil ofte gi høyere risiko enn verbal trussel).
+
+Det kan være vanskelig å vurdere innholdet i trusler, og må etter beste skjønn karakteriseres som virkelige trusler (Moderat eller Ja), eller som «bare prat» (Nei).">
+            >
+            ["at0006"] = <
+                text = <"3. Tidligere og/eller aktuell rusbruk">
+                description = <"">
+                comment = <"Moderat: Ungdommen har en historie med misbruk av alkohol, medikamenter, narkotiske stoffer, anabole steroider eller løsemidler. 
+Ja: Ungdommen har eller har hatt omfattende misbruk/avhengighet, med nedsatt helse eller funksjon i skole-, arbeids- eller fritidsliv.">
+            >
+            ["at0007"] = <
+                text = <"4. Tidligere og/eller aktuelle alvorlige psykiske symptomer">
+                description = <"">
+                comment = <"Dette leddet fokuserer på en sviktende forståelse av virkeligheten. Ungdommen har merkelig eller upassende atferd eller uttrykker forestillinger som ikke samsvarer med utviklingsmessig alder. Dette kan være uttrykk for angstlidelser, depresjoner, autismespekter lidelser, lidelser/ symptomer med realitetsbrist, eller tilsvarende, og kan også forekomme uten at noen psykisk lidelse er påvist.
+
+Kanskje: Atferd eller forestillinger som gir mistanke om avvik.
+Ja: Åpenbar og tydelig avvikende atferd eller forestillinger.">
+            >
+            ["at0008"] = <
+                text = <"5. Forstyrrende, impulsiv atferd/atferdsforstyrrelser">
+                description = <"">
+                comment = <"Moderat: Impulsiv, forstyrrende atferd som ikke forårsaker alvorlig skade eller ubehag; f.eks. ADHD, opposisjonell atferd eller dårlig emosjonell regulering (f.eks. selvskading).
+Ja: Atferdsforstyrrelser som forårsaker alvorlig skade eller ubehag, antisosial atferd.">
+            >
+            ["at0009"] = <
+                text = <"6. Mangler innsikt i sykdom og/eller atferd">
+                description = <"">
+                comment = <"Her undersøkes i hvilken grad ungdommen eller foresatte mangler innsikt i ungdommens psykiske lidelse eller atferdsproblemer, hvilke sosiale konsekvenser disse kan medføre, og hva ungdommen trenger av hjelp, støtte, omsorgstiltak eller behandling. For yngre ungdommer vil foresattes innsikt være viktigst, for eldre ungdommer vil ungdommens egen innsikt være viktigst.
+
+Moderat: Enten ungdommen eller foresatte mangler innsikt.
+Ja: Både ungdommen og foresatte, eller ungdom 16-18 år, mangler innsikt.">
+            >
+            ["at0010"] = <
+                text = <"7. Mistenksomhet">
+                description = <"">
+                comment = <"Ungdommen gir uttrykk for mistenksomhet overfor andre personer enten verbalt eller nonverbalt, eller ser ut til å være «på vakt» overfor omgivelsene.">
+            >
+            ["at0011"] = <
+                text = <"8. Viser manglende innlevelse (empati)">
+                description = <"">
+                comment = <"Ungdommen uttrykker følelseskald atferd uten innlevelse i andres tankemessige eller følelsesmessige situasjon. Atferden skal tydelig vise at ungdommen mangler empati.">
+            >
+            ["at0012"] = <
+                text = <"9. Urealistisk planlegging">
+                description = <"">
+                comment = <"Her undersøkes i hvilken grad ungdommen selv eller foresatte har urealistiske planer for hva ungdommen trenger av hjelp, støtte eller behandling i fremtiden, og hva som kan forventes av støtte fra familie, og av sosialt og profesjonelt nettverk. Det er viktig å vurdere om foresatte og ungdommen er samarbeidsvillige og motiverte til å følge planene videre. For yngre ungdommer vil foresattes planer være viktigst, for eldre ungdommer vil egne planer være viktigst.
+
+Moderat: Enten ungdommen eller foresatte mangler realistiske planer.
+Ja: Både ungdommen og foresatte, eller ungdom 16-18 år, mangler realistiske planer.">
+            >
+            ["at0013"] = <
+                text = <"10. Framtidige stress-situasjoner">
+                description = <"">
+                comment = <"Her undersøkes muligheten for at ungdommen (1) kan bli utsatt for påkjenninger og belastende situasjoner i fremtiden, og (2) ungdommens evne til stressmestring. Det er nok å komme inn under enten (1) eller (2) for å skåre (Moderat eller Ja)
+
+I dette leddet inngår om foresatte kan være en støtte for ungdommen m.h.t. stressmestring, om det foreligger konflikt mellom ungdommen og foresatte, om foresatte eller ungdommen har antisosial livsstil eller holdninger, eller tiltrekning til voldelige miljøer som ekstremistiske sympatisører, f.eks. radikale islamister eller høyreradikale.
+
+Eksempler: Mestringssvikt overfor grensesetting, nærhet til mulige voldsofre, rusing, eksponering for voldelig miljø, etc.">
+            >
+            ["at0014"] = <
+                text = <"11. Tidligere og/eller alvorlig pågående traume">
+                description = <"">
+                comment = <"Har ungdommen vært utsatt for eller vært vitne til et alvorlig traume, vært utsatt for eller vært vitne til gjentatte fysiske, seksuelle eller psykiske overgrep, vært utsatt for omsorgssvikt?
+
+Kanskje: Mistanke om alvorlig traume. 
+Ja: Alvorlig traume.">
+            >
+            ["at0015"] = <
+                text = <"12. Ungdommens og foresattes egen oppfatning av voldsrisiko">
+                description = <"">
+                comment = <"I hvilken grad ungdommen eller de foresatte oppfatter at det er risiko for vold: 
+
+Kanskje: Ungdommen eller de foresatte oppfatter at det er litt forhøyet risiko for vold.
+Ja: Ungdommen eller de foresatte oppfatter at det er enten moderat eller
+høy voldsrisiko, eller de vil ikke svare.">
+            >
+            ["at0016"] = <
+                text = <"Hvor stor tror du voldsrisikoen er for denne pasienten?">
+                description = <"Samlet klinisk vurdering og iverksettelse av tiltak basert på V-RISK-Y, individuell klinisk vurdering, og annen tilgjengelig informasjon. ">
+            >
+            ["at0081"] = <
+                text = <"Beskrivelse av forebyggende tiltak">
+                description = <"">
+                comment = <"Eks: skjerming, fast vakt, ekstra personale, hyppig tilsyn.">
+            >
+            ["at0082"] = <
+                text = <"Beskrivelse av videre voldsrisikovurderingstiltak">
+                description = <"">
+                comment = <"Eks: kartlegging/utredning, videre voldsrisikoutredning på institusjonen, henvisning til second opinion, bruk av instrumenter (som BVC, ERM, START AV, SAVRY), etc.">
+            >
+            ["at0083"] = <
+                text = <"Umiddelbar iverksettelse av forebyggende tiltak">
+                description = <"">
+            >
+            ["at0084"] = <
+                text = <"Ingen">
+                description = <"">
+            >
+            ["at0085"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0086"] = <
+                text = <"Forslag til videre voldsrisikovurdering">
+                description = <"">
+            >
+            ["at0087"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0088"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0090"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre   referansemodeller eller formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0091"] = <
+                text = <"Nei">
+                description = <"Passer ikke.">
+            >
+            ["at0092"] = <
+                text = <"Moderat">
+                description = <"Tilstede i middels alvorlig grad.">
+            >
+            ["at0093"] = <
+                text = <"Ja">
+                description = <"Passer.">
+            >
+            ["at0094"] = <
+                text = <"Vet ikke">
+                description = <"For lite informasjon, vil særlig være aktuelt ved første kontakt.">
+            >
+            ["at0139"] = <
+                text = <"Lav">
+                description = <"">
+            >
+            ["at0140"] = <
+                text = <"Moderat">
+                description = <"">
+            >
+            ["at0141"] = <
+                text = <"Høy">
+                description = <"">
+            >
+            ["at0142"] = <
+                text = <"Nei">
+                description = <"Passer ikke.">
+            >
+            ["at0143"] = <
+                text = <"Moderat">
+                description = <"Tilstede i middels alvorlig grad.">
+            >
+            ["at0144"] = <
+                text = <"Ja">
+                description = <"Passer.">
+            >
+            ["at0145"] = <
+                text = <"Vet ikke">
+                description = <"For lite informasjon, vil særlig være aktuelt ved første kontakt.">
+            >
+            ["at0146"] = <
+                text = <"Nei">
+                description = <"Passer ikke.">
+            >
+            ["at0147"] = <
+                text = <"Moderat">
+                description = <"Tilstede i middels alvorlig grad.">
+            >
+            ["at0148"] = <
+                text = <"Ja">
+                description = <"Passer.">
+            >
+            ["at0149"] = <
+                text = <"Vet ikke">
+                description = <"For lite informasjon, vil særlig være aktuelt ved første kontakt.">
+            >
+            ["at0150"] = <
+                text = <"Nei">
+                description = <"Passer ikke.">
+            >
+            ["at0151"] = <
+                text = <"Kanskje">
+                description = <"Passer kanskje.">
+            >
+            ["at0152"] = <
+                text = <"Ja">
+                description = <"Passer.">
+            >
+            ["at0153"] = <
+                text = <"Vet ikke">
+                description = <"For lite informasjon, vil særlig være aktuelt ved første kontakt.">
+            >
+            ["at0154"] = <
+                text = <"Nei">
+                description = <"Passer ikke.">
+            >
+            ["at0155"] = <
+                text = <"Moderat">
+                description = <"Tilstede i middels alvorlig grad.">
+            >
+            ["at0156"] = <
+                text = <"Ja">
+                description = <"Passer.">
+            >
+            ["at0157"] = <
+                text = <"Vet ikke">
+                description = <"For lite informasjon, vil særlig være aktuelt ved første kontakt.">
+            >
+            ["at0158"] = <
+                text = <"Nei">
+                description = <"Passer ikke.">
+            >
+            ["at0159"] = <
+                text = <"Moderat">
+                description = <"Tilstede i middels alvorlig grad.">
+            >
+            ["at0160"] = <
+                text = <"Ja">
+                description = <"Passer.">
+            >
+            ["at0161"] = <
+                text = <"Vet ikke">
+                description = <"For lite informasjon, vil særlig være aktuelt ved første kontakt.">
+            >
+            ["at0162"] = <
+                text = <"Nei">
+                description = <"Passer ikke.">
+            >
+            ["at0163"] = <
+                text = <"Moderat">
+                description = <"Tilstede i middels alvorlig grad.">
+            >
+            ["at0164"] = <
+                text = <"Ja">
+                description = <"Passer.">
+            >
+            ["at0165"] = <
+                text = <"Vet ikke">
+                description = <"For lite informasjon, vil særlig være aktuelt ved første kontakt.">
+            >
+            ["at0166"] = <
+                text = <"Nei">
+                description = <"Passer ikke.">
+            >
+            ["at0167"] = <
+                text = <"Moderat">
+                description = <"Tilstede i middels alvorlig grad.">
+            >
+            ["at0168"] = <
+                text = <"Ja">
+                description = <"Passer.">
+            >
+            ["at0169"] = <
+                text = <"Vet ikke">
+                description = <"For lite informasjon, vil særlig være aktuelt ved første kontakt.">
+            >
+            ["at0170"] = <
+                text = <"Nei">
+                description = <"Passer ikke.">
+            >
+            ["at0171"] = <
+                text = <"Moderat">
+                description = <"Tilstede i middels alvorlig grad.">
+            >
+            ["at0172"] = <
+                text = <"Ja">
+                description = <"Passer.">
+            >
+            ["at0173"] = <
+                text = <"Vet ikke">
+                description = <"For lite informasjon, vil særlig være aktuelt ved første kontakt.">
+            >
+            ["at0174"] = <
+                text = <"Nei">
+                description = <"Passer ikke.">
+            >
+            ["at0175"] = <
+                text = <"Moderat">
+                description = <"Tilstede i middels alvorlig grad.">
+            >
+            ["at0176"] = <
+                text = <"Ja">
+                description = <"Passer.">
+            >
+            ["at0177"] = <
+                text = <"Vet ikke">
+                description = <"For lite informasjon, vil særlig være aktuelt ved første kontakt.">
+            >
+            ["at0178"] = <
+                text = <"Nei">
+                description = <"Passer ikke.">
+            >
+            ["at0179"] = <
+                text = <"Kanskje">
+                description = <"Passer kanskje.">
+            >
+            ["at0180"] = <
+                text = <"Ja">
+                description = <"Passer.">
+            >
+            ["at0181"] = <
+                text = <"Vet ikke">
+                description = <"For lite informasjon, vil særlig være aktuelt ved første kontakt.">
+            >
+            ["at0182"] = <
+                text = <"Nei">
+                description = <"Passer ikke.">
+            >
+            ["at0183"] = <
+                text = <"Kanskje">
+                description = <"Passer kanskje.">
+            >
+            ["at0184"] = <
+                text = <"Ja">
+                description = <"Passer.">
+            >
+            ["at0185"] = <
+                text = <"Vet ikke">
+                description = <"For lite informasjon, vil særlig være aktuelt ved første kontakt.">
+            >
+            ["ac9015"] = <
+                text = <"1. Tidligere og/eller aktuell vold (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9016"] = <
+                text = <"2. Tidligere og/eller aktuelle trusler om vold (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"3. Tidligere og/eller aktuell rusbruk (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9018"] = <
+                text = <"4. Tidligere og/eller aktuelle alvorlige psykiske symptomer (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9019"] = <
+                text = <"5. Forstyrrende, impulsiv atferd/atferdsforstyrrelser (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9020"] = <
+                text = <"6. Mangler innsikt i sykdom og/eller atferd (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"7. Mistenksomhet (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9022"] = <
+                text = <"8. Viser manglende innlevelse (empati) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9023"] = <
+                text = <"9. Urealistisk planlegging (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9024"] = <
+                text = <"10. Framtidige stress-situasjoner (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9025"] = <
+                text = <"11. Tidligere og/eller alvorlig pågående traume (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9026"] = <
+                text = <"12. Ungdommens og foresattes egen oppfatning av voldsrisiko (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9027"] = <
+                text = <"Hvor stor tror du voldsrisikoen er for denne pasienten? (synthesised)">
+                description = <"Samlet klinisk vurdering og iverksettelse av tiltak basert på V-RISK-Y, individuell klinisk vurdering, og annen tilgjengelig informasjon.  (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"Umiddelbar iverksettelse av forebyggende tiltak (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Forslag til videre voldsrisikovurdering (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Violence Risk Assessment Checklist for Youth aged 12-18 (V-RISK-Y)">
+                description = <"V-RISK-Y is a short screening checklist for violence risk among youth and consists of 12 items, covering historical, clinical and risk management variables.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"1. Prior and/or current acts of violence">
+                description = <"">
+                comment = <"Serious violence: Physical attacks (including the use of different weapons, fire) for the purpose of inflicting serious physical harm on another person.
+
+Moderate: Acts of aggression including kicking, hitting and pushing that do not inflict harm on the victim.
+Yes: Must have performed 3 moderate or 1 serious act of violence. 
+
+Definition of violence: Actions intended to injure, violate, or inflict physical pain on another person.">
+            >
+            ["at0005"] = <
+                text = <"2. Prior and/or current threats of violence">
+                description = <"">
+                comment = <"Verbal threats of violence: Shouting, verbal or written statements (including on social media) involving threats to commit violent acts against another person. 
+
+A physical threat of violence entails showing preparatory violent behaviour, such as threatening someone with a fist or other physical behaviour that signalises an imminent physical attack. Destroying objects is not considered violent behaviour, but this may be perceived as a threat in certain situations (physical threat will often result in a higher risk than verbal threat).
+
+It can be difficult to assess the content of threats, and they must be characterized at best judgement as real threats (Moderate or Yes), or as \"just talk\" (No).">
+            >
+            ["at0006"] = <
+                text = <"3. Prior and/or current alcohol or substance abuse">
+                description = <"">
+                comment = <"Moderate: The youth has a history of abusing alcohol, medication, narcotic drugs, anabolic steroids or solvents.
+Yes: The youth has or has had an extensive abuse/addiction problem, with impaired health or function at school, work or leisure activities.">
+            >
+            ["at0007"] = <
+                text = <"4. Prior and/or current severe symptoms of mental health disorders">
+                description = <"">
+                comment = <"This item focuses on a failing understanding of reality. The youth has strange or inappropriate behaviour or expresses ideas that do not match their developmental age. This can be an expression of anxiety disorders, depression, autism spectrum disorders, disorders/symptoms with a lack of reality, or similar, and can also occur without any evidence of mental illness or diagnosis.
+
+Maybe: Behaviour or thoughts that give rise to suspicion of abnormality
+Yes: Clear and obvious aberrant behaviour or thoughts as noted above.">
+            >
+            ["at0008"] = <
+                text = <"5. Disruptive, impulsive behaviour/behavioural disorder">
+                description = <"">
+                comment = <"Moderate: Impulsive, disruptive behaviour that does not cause serious harm or distress; such as ADHD, oppositional behaviour or poor emotional regulation (e.g. self-harm).
+Yes: Behavioural disorders causing serious harm or distress, antisocial behaviour.">
+            >
+            ["at0009"] = <
+                text = <"6. Has poor insight into the mental disorder and/or behaviour">
+                description = <"">
+                comment = <"This item examines to the extent to which the youth or parents/guardians lacks insight into the youth’s mental illness or behavioural problems, what social consequences these may entail, and what the youth needs in terms of help, support, care measures or treatment. For younger youths, their parents/guardians’ insight will be most important, while for older youths, the youth’s own insight will be most important.
+
+Moderate: Either the youth or their parents/guardians lack insight.
+Yes: Both the youth and parents/guardians, or youth 16-18 years old, lack insight.">
+            >
+            ["at0010"] = <
+                text = <"7. Suspicion">
+                description = <"">
+                comment = <"The youth expresses suspicion towards other people, either verbally or nonverbally, or appears to be “on guard” against the surroundings.">
+            >
+            ["at0011"] = <
+                text = <"8. Demonstrates lack of empathy">
+                description = <"">
+                comment = <"The youth express callous-unemotional behaviour without the ability to empathise with the mental or emotional situation of others. The behaviour must clearly show that the young person lacks empathy.">
+            >
+            ["at0012"] = <
+                text = <"9. Unrealistic planning">
+                description = <"">
+                comment = <"This examines the extent to which the youth or parents/guardians has unrealistic plans for what the young person will need in terms of help, support or treatment in the future, and what can be expected from support from family and from social and professional networks.
+
+It is important to assess whether the parents/guardians and the youth are willing to cooperate and are motivated to follow the plan. For younger youths, their parents/guardians’ plans will be most important, while for older youths, the youth’s own plans will be most important.
+
+Moderate: Either the youth or their parents/guardians lack realistic plans.
+Yes: Both the youth and their parents/guardians, or youth 16-18 years old,
+lack realistic plans.">
+            >
+            ["at0013"] = <
+                text = <"10. Future stressful situations">
+                description = <"">
+                comment = <"This examines the possibility that the youth (1) may be exposed to stressful and distressing situations in the future, and (2) their ability to cope with stress. It is enough to come in under either (1) or (2) to score (Moderate or Yes).
+
+This item entails whether parents/guardians are able to support the youth in their stress management, whether there are conflicts between the youth and their parents/guardians, whether the parents/guardians or the youth have antisocial lifestyles or attitudes, including an attraction to violent environments such as extremist sympathisers, e.g. radical Islamists or right-wing radicals.
+
+Examples: Failure to set boundaries, proximity to possible victims of violence, alcohol/substance abuse, exposure to violent environments, etc.">
+            >
+            ["at0014"] = <
+                text = <"11. Prior and/or current severe trauma">
+                description = <"">
+                comment = <"Has the youth been exposed to or witnessed severe trauma, been exposed to or witnessed repeated physical, sexual or psychological abuse, or been subjected to neglect?
+
+Maybe: Suspicion of severe trauma.
+Yes: Severe trauma.">
+            >
+            ["at0015"] = <
+                text = <"12. The youth’s and parents/guardians’ own perception of violence risk">
+                description = <"">
+                comment = <"The extent to which the youth or their parents/guardians perceive the risk of violence:
+
+Maybe: The youth or their parents/guardians perceive a slightly elevated risk of violence.
+Yes: The youth or their parents/guardians perceive either a moderate or high risk of violence, or do not wish to answer.">
+            >
+            ["at0016"] = <
+                text = <"How great do you believe the risk of violence is for this youth?">
+                description = <"Total clinical assessment and implementation of measures based on the V-RISK-Y, individual clinical assessment and other available information.">
+            >
+            ["at0081"] = <
+                text = <"Description of preventive measures">
+                description = <"">
+                comment = <"E.g. shielding, permanent guard, extra staff, frequent supervision.">
+            >
+            ["at0082"] = <
+                text = <"Description of additional violence risk assessments">
+                description = <"">
+                comment = <"E.g. mapping / investigation, further violence risk investigation at the institution, referral to second opinion, use of instruments (such as BVC, ERM, START AV, SAVRY), etc.">
+            >
+            ["at0083"] = <
+                text = <"Immediate implementation of preventive measures">
+                description = <"">
+            >
+            ["at0084"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0085"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0086"] = <
+                text = <"Suggestions for additional violence risk assessments">
+                description = <"">
+            >
+            ["at0087"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0088"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0090"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0091"] = <
+                text = <"No">
+                description = <"Not present.">
+            >
+            ["at0092"] = <
+                text = <"Moderate">
+                description = <"Present to a moderate extent.">
+            >
+            ["at0093"] = <
+                text = <"Yes">
+                description = <"Present.">
+            >
+            ["at0094"] = <
+                text = <"Don't know">
+                description = <"Insufficient information, would be particularly appropriate for the first contact.">
+            >
+            ["at0139"] = <
+                text = <"Low">
+                description = <"">
+            >
+            ["at0140"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0141"] = <
+                text = <"High">
+                description = <"">
+            >
+            ["at0142"] = <
+                text = <"No">
+                description = <"Not present.">
+            >
+            ["at0143"] = <
+                text = <"Moderate">
+                description = <"Present to a moderate extent.">
+            >
+            ["at0144"] = <
+                text = <"Yes">
+                description = <"Present.">
+            >
+            ["at0145"] = <
+                text = <"Don't know">
+                description = <"Insufficient information, would be particularly appropriate for the first contact.">
+            >
+            ["at0146"] = <
+                text = <"No">
+                description = <"Not present.">
+            >
+            ["at0147"] = <
+                text = <"Moderate">
+                description = <"Present to a moderate extent.">
+            >
+            ["at0148"] = <
+                text = <"Yes">
+                description = <"Present.">
+            >
+            ["at0149"] = <
+                text = <"Don't know">
+                description = <"Insufficient information, would be particularly appropriate for the first contact.">
+            >
+            ["at0150"] = <
+                text = <"No">
+                description = <"Not present.">
+            >
+            ["at0151"] = <
+                text = <"Maybe">
+                description = <"May be present.">
+            >
+            ["at0152"] = <
+                text = <"Yes">
+                description = <"Present">
+            >
+            ["at0153"] = <
+                text = <"Don't know">
+                description = <"Insufficient information, would be particularly appropriate for the first contact.">
+            >
+            ["at0154"] = <
+                text = <"No">
+                description = <"Not present.">
+            >
+            ["at0155"] = <
+                text = <"Moderate">
+                description = <"Present to a moderate extent.">
+            >
+            ["at0156"] = <
+                text = <"Yes">
+                description = <"Present.">
+            >
+            ["at0157"] = <
+                text = <"Don't know">
+                description = <"Insufficient information, would be particularly appropriate for the first contact.">
+            >
+            ["at0158"] = <
+                text = <"No">
+                description = <"Not present.">
+            >
+            ["at0159"] = <
+                text = <"Moderate">
+                description = <"Present to a moderate extent.">
+            >
+            ["at0160"] = <
+                text = <"Yes">
+                description = <"Present.">
+            >
+            ["at0161"] = <
+                text = <"Don't know">
+                description = <"Insufficient information, would be particularly appropriate for the first contact.">
+            >
+            ["at0162"] = <
+                text = <"No">
+                description = <"Not present.">
+            >
+            ["at0163"] = <
+                text = <"Moderate">
+                description = <"Present to a moderate extent.">
+            >
+            ["at0164"] = <
+                text = <"Yes">
+                description = <"Present.">
+            >
+            ["at0165"] = <
+                text = <"Don't know.">
+                description = <"Insufficient information, would be particularly appropriate for the first contact.">
+            >
+            ["at0166"] = <
+                text = <"No">
+                description = <"Not present.">
+            >
+            ["at0167"] = <
+                text = <"Moderate">
+                description = <"Present to a moderate extent.">
+            >
+            ["at0168"] = <
+                text = <"Yes">
+                description = <"Present.">
+            >
+            ["at0169"] = <
+                text = <"Don't know.">
+                description = <"Insufficient information, would be particularly appropriate for the first contact.">
+            >
+            ["at0170"] = <
+                text = <"No">
+                description = <"Not present.">
+            >
+            ["at0171"] = <
+                text = <"Moderate">
+                description = <"Present to a moderate extent.">
+            >
+            ["at0172"] = <
+                text = <"Yes">
+                description = <"Present.">
+            >
+            ["at0173"] = <
+                text = <"Don't know.">
+                description = <"Insufficient information, would be particularly appropriate for the first contact.">
+            >
+            ["at0174"] = <
+                text = <"No">
+                description = <"Not present.">
+            >
+            ["at0175"] = <
+                text = <"Moderate">
+                description = <"Present to a moderate extent.">
+            >
+            ["at0176"] = <
+                text = <"Yes.">
+                description = <"Present.">
+            >
+            ["at0177"] = <
+                text = <"Don't know">
+                description = <"Insufficient information, would be particularly appropriate for the first contact.">
+            >
+            ["at0178"] = <
+                text = <"No">
+                description = <"Not present.">
+            >
+            ["at0179"] = <
+                text = <"Maybe">
+                description = <"May be present.">
+            >
+            ["at0180"] = <
+                text = <"Yes">
+                description = <"Present.">
+            >
+            ["at0181"] = <
+                text = <"Don't know">
+                description = <"Insufficient information, would be particularly appropriate for the first contact.">
+            >
+            ["at0182"] = <
+                text = <"No">
+                description = <"Not present.">
+            >
+            ["at0183"] = <
+                text = <"Maybe">
+                description = <"May be present.">
+            >
+            ["at0184"] = <
+                text = <"Yes">
+                description = <"Present.">
+            >
+            ["at0185"] = <
+                text = <"Don't know">
+                description = <"Insufficient information, would be particularly appropriate for the first contact.">
+            >
+            ["ac9015"] = <
+                text = <"1. Prior and/or current acts of violence (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9016"] = <
+                text = <"2. Prior and/or current threats of violence (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"3. Prior and/or current alcohol or substance abuse (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9018"] = <
+                text = <"4. Prior and/or current severe symptoms of mental health disorders (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9019"] = <
+                text = <"5. Disruptive, impulsive behaviour/behavioural disorder (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9020"] = <
+                text = <"6. Has poor insight into the mental disorder and/or behaviour (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"7. Suspicion (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9022"] = <
+                text = <"8. Demonstrates lack of empathy (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9023"] = <
+                text = <"9. Unrealistic planning (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9024"] = <
+                text = <"10. Future stressful situations (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9025"] = <
+                text = <"11. Prior and/or current severe trauma (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9026"] = <
+                text = <"12. The youth’s and parents/guardians’ own perception of violence risk (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9027"] = <
+                text = <"How great do you believe the risk of violence is for this youth? (synthesised)">
+                description = <"Total clinical assessment and implementation of measures based on the V-RISK-Y, individual clinical assessment and other available information. (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"Immediate implementation of preventive measures (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Suggestions for additional violence risk assessments (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9013"] = <
+            id = <"ac9013">
+            members = <"at0084", "at0085">
+        >
+        ["ac9017"] = <
+            id = <"ac9017">
+            members = <"at0146", "at0147", "at0148", "at0149">
+        >
+        ["ac9016"] = <
+            id = <"ac9016">
+            members = <"at0142", "at0143", "at0144", "at0145">
+        >
+        ["ac9015"] = <
+            id = <"ac9015">
+            members = <"at0091", "at0092", "at0093", "at0094">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0087", "at0088">
+        >
+        ["ac9020"] = <
+            id = <"ac9020">
+            members = <"at0158", "at0159", "at0160", "at0161">
+        >
+        ["ac9024"] = <
+            id = <"ac9024">
+            members = <"at0174", "at0175", "at0176", "at0177">
+        >
+        ["ac9023"] = <
+            id = <"ac9023">
+            members = <"at0170", "at0171", "at0172", "at0173">
+        >
+        ["ac9022"] = <
+            id = <"ac9022">
+            members = <"at0166", "at0167", "at0168", "at0169">
+        >
+        ["ac9021"] = <
+            id = <"ac9021">
+            members = <"at0162", "at0163", "at0164", "at0165">
+        >
+        ["ac9027"] = <
+            id = <"ac9027">
+            members = <"at0139", "at0140", "at0141">
+        >
+        ["ac9026"] = <
+            id = <"ac9026">
+            members = <"at0182", "at0183", "at0184", "at0185">
+        >
+        ["ac9025"] = <
+            id = <"ac9025">
+            members = <"at0178", "at0179", "at0180", "at0181">
+        >
+        ["ac9019"] = <
+            id = <"ac9019">
+            members = <"at0154", "at0155", "at0156", "at0157">
+        >
+        ["ac9018"] = <
+            id = <"ac9018">
+            members = <"at0150", "at0151", "at0152", "at0153">
+        >
+    >

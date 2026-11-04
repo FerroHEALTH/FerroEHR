@@ -1,0 +1,279 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=7bb69181-a5b8-470d-be79-e4cc24f51cd1; build_uid=9f163008-e074-4e72-b412-490bc5cfb4c4)
+    openEHR-DEMOGRAPHIC-ROLE.individual_provider.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["ko"] = <
+            language = <[ISO_639-1::ko]>
+            author = <
+                ["name"] = <"Seung-Jjong Yu">
+                ["organisation"] = <"NOUSCO Co.,Ltd.">
+            >
+            accreditation = <"Certified Board of Family Medicine in South Korea">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Sergio Miranda Freire">
+                ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+                ["email"] = <"sergio@lampada.uerj.br">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sergio Miranda Freire & Rigoleta Dutra Mediano Dias">
+        ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+        ["email"] = <"sergio@lampada.uerj.br">
+        ["date"] = <"2009-05-22">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Rigoleta Dutra, Ministry of Defense, Brazil (openEHR Editor)", "Sergio Freire, State University of Rio de Janeiro, Brazil (openEHR Editor)", "Sebastian Garde, Ocean Informatics, Germany (Editor)", "Omer Hotomaroglu, Turkey (Editor)", "Heather Leslie, Ocean Informatics, Australia (Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"B3852D8E8E610BBA16534A822E3C6CFC">
+    >
+    details = <
+        ["ko"] = <
+            language = <[ISO_639-1::ko]>
+            purpose = <"개별 진료제공자 인적 데이터의 표현.">
+            keywords = <"*인적정보 서비스(ko)", "*개별 진료제공자(ko)">
+            use = <"개별 진료제공자의 데이터를 수집하는 인적정보 서비스에서 사용됨.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Representação de dados de uma pessoa exercendo o papel Profissional de Saúde.">
+            keywords = <"serviço demográfico", "profissional de saúde">
+            use = <"Usado em serviços demográficos para coletar dados sobre profissionais de saúde.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Representation of an individual healthcare provider demographic data.">
+            keywords = <"demographic service", "individual healthcare provider">
+            use = <"Used in demographic service to collect a individual healthcare provider's data.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    ROLE[at0000] matches {    -- Individual healthcare provider
+        identities matches {
+            allow_archetype PARTY_IDENTITY[at0001] occurrences matches {1} matches {    -- Name
+                include
+                    archetype_id/value matches {/openEHR-DEMOGRAPHIC-PARTY_IDENTITY\.person_name[a-zA-Z0-9_-]*\.v0\..*/}
+            }
+        }
+        capabilities matches {
+            allow_archetype CAPABILITY[at0002] matches {    -- Capability
+                include
+                    archetype_id/value matches {/openEHR-DEMOGRAPHIC-CAPABILITY\.individual_credentials[a-zA-Z0-9_-]*\.v0\..*/}
+            }
+        }
+        contacts matches {
+            CONTACT[at0003] matches {    -- Contact
+                addresses matches {
+                    allow_archetype ADDRESS[at0030] occurrences matches {1} matches {    -- Address
+                        include
+                            archetype_id/value matches {/openEHR-DEMOGRAPHIC-ADDRESS\.address([a-zA-Z0-9_]+)*\.v0\..*/}
+                            archetype_id/value matches {/openEHR-DEMOGRAPHIC-ADDRESS\.electronic_communication[a-zA-Z0-9_-]*\.v0\..*/}
+                    }
+                }
+            }
+        }
+        relationships matches {
+            PARTY_RELATIONSHIP[at0004] matches {    -- Relationship with a third-party payer
+                details matches {
+                    ITEM_TREE[at0040] matches {    -- Relationship details
+                        items cardinality matches {1; unique} matches {
+                            allow_archetype CLUSTER[at0041] occurrences matches {1} matches {    -- Identifier
+                                include
+                                    archetype_id/value matches {/openEHR-DEMOGRAPHIC-CLUSTER\.provider_identifier[a-zA-Z0-9_-]*\.v0\..*/}
+                            }
+                        }
+                    }
+                }
+            }
+            PARTY_RELATIONSHIP[at0005] matches {    -- Employer/employee relationship
+                details matches {
+                    ITEM_TREE[at0050] matches {    -- Details
+                        items cardinality matches {1..*} matches {
+                            allow_archetype CLUSTER[at0051] occurrences matches {1} matches {    -- Identifier
+                                include
+                                    archetype_id/value matches {/openEHR-DEMOGRAPHIC-CLUSTER\.provider_identifier[a-zA-Z0-9_-]*\.v0\..*/}
+                            }
+                            ELEMENT[at0052] occurrences matches {0..1} matches {    -- Employment role
+                                value matches {
+                                    DV_TEXT[at9000]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["ko"] = <
+            ["at0000"] = <
+                text = <"개별 진료제공자">
+                description = <"개별 진료제공자의 역할을 수행하는 개인의 데이터.">
+            >
+            ["at0001"] = <
+                text = <"이름">
+                description = <"개별 진료제공자의 이름.">
+            >
+            ["at0002"] = <
+                text = <"면허(자격)">
+                description = <"개별 진료제공자의 면허(자격).">
+            >
+            ["at0003"] = <
+                text = <"연락처">
+                description = <"개별 진료제공자의 연락처.">
+            >
+            ["at0004"] = <
+                text = <"보험 지불자와의 관계">
+                description = <"개별 진료제공자와 보험 지불자 간의 관계.">
+            >
+            ["at0005"] = <
+                text = <"피고용자/고용자 관계">
+                description = <"개별 진료제공자와 진료제공기관 간의 피고용자/고용자 관계.">
+            >
+            ["at0030"] = <
+                text = <"주소">
+                description = <"개별 진료제공자에게 연락할 수 있는 주소.">
+            >
+            ["at0040"] = <
+                text = <"상세내용">
+                description = <"피고용자/고용자 관계의 상세내용.">
+            >
+            ["at0041"] = <
+                text = <"식별자">
+                description = <"진료제공기관에서 개별 진료제공자의 식별자.">
+            >
+            ["at0050"] = <
+                text = <"상세내용">
+                description = <"피고용자/고용자 관계의 상세내용.">
+            >
+            ["at0051"] = <
+                text = <"식별자">
+                description = <"진료제공기관에서 개별 진료제공자의 식별자.">
+            >
+            ["at0052"] = <
+                text = <"고용 역할">
+                description = <"진료제공기관에서 개별 진료제공자의 역할.">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Profissional de saúde">
+                description = <"Dados sobre uma pessoa que exerce o papel de um profissional de saúde.">
+            >
+            ["at0001"] = <
+                text = <"Nome do profissional">
+                description = <"Nome do profissional de saúde.">
+            >
+            ["at0002"] = <
+                text = <"Capacitação">
+                description = <"Capacitação do Profissional.">
+            >
+            ["at0003"] = <
+                text = <"Contato">
+                description = <"Contato do profissional de saúde.">
+            >
+            ["at0004"] = <
+                text = <"Relacionamento com uma fonte pagadora">
+                description = <"Relacionamento entre um profissional de saúde e uma fonte pagadora.">
+            >
+            ["at0005"] = <
+                text = <"Relacionamento empregador/empregado">
+                description = <"Relacionamento empregador/empregado entre um profissional de saúde e uma organização prestadora de assistência à saúde.">
+            >
+            ["at0030"] = <
+                text = <"Endereço">
+                description = <"Endereço onde o profissional pode ser contactado.">
+            >
+            ["at0040"] = <
+                text = <"Detalhes">
+                description = <"Detalhes do relacionamento profissional/fonte pagadora.">
+            >
+            ["at0041"] = <
+                text = <"Documento de Identificação">
+                description = <"A identificação do profissional de saúde junto à fonte pagadora.">
+            >
+            ["at0050"] = <
+                text = <"Detalhes">
+                description = <"Detalhes do relacionamento profissional de saúde/prestador de assistência.">
+            >
+            ["at0051"] = <
+                text = <"Documento de Identificação">
+                description = <"Identificação do profissional de saúde junto à organização prestadora de assistência à saúde.">
+            >
+            ["at0052"] = <
+                text = <"Função">
+                description = <"A função do profissional de saúde junto à organização prestadora de assistência à saúde.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Individual healthcare provider">
+                description = <"Data about a person who performs the role of an individual healthcare provider.">
+            >
+            ["at0001"] = <
+                text = <"Name">
+                description = <"Individual healthcare provider's name.">
+            >
+            ["at0002"] = <
+                text = <"Capability">
+                description = <"Individual healthcare provider's capability.">
+            >
+            ["at0003"] = <
+                text = <"Contact">
+                description = <"Individual healthcare provider's contact.">
+            >
+            ["at0004"] = <
+                text = <"Relationship with a third-party payer">
+                description = <"Relationship between an individual healthcare provider and a third-party payer.">
+            >
+            ["at0005"] = <
+                text = <"Employer/employee relationship">
+                description = <"Employer/employee relationship between an individual healthcare provider and a healthcare provider organisation.">
+            >
+            ["at0030"] = <
+                text = <"Address">
+                description = <"Address where the individual provider can be contacted.">
+            >
+            ["at0040"] = <
+                text = <"Relationship details">
+                description = <"Details of an individual healthcare provider/third-party payer relationship.">
+            >
+            ["at0041"] = <
+                text = <"Identifier">
+                description = <"The identifer of the individual healthcare provider at the third-party payer.">
+            >
+            ["at0050"] = <
+                text = <"Details">
+                description = <"Details of the employer/employee relationship.">
+            >
+            ["at0051"] = <
+                text = <"Identifier">
+                description = <"The identifer of the individual healthcare provider at the healthcare provider organisation.">
+            >
+            ["at0052"] = <
+                text = <"Employment role">
+                description = <"The role of the individual healthcare provider at the healthcare provider organisation.">
+            >
+        >
+    >

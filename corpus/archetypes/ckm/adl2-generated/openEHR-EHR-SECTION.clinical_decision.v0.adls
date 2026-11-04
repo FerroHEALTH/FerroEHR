@@ -1,0 +1,140 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=99df0ccd-363e-4ba3-a741-55e87a540249; build_uid=6e271432-358d-46f2-8fe7-5a7a0f00b6de)
+    openEHR-EHR-SECTION.clinical_decision.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Aitor Eguzkitza">
+        ["organisation"] = <"Universidad Pública de Navarra - Complejo Hospitalario de Navarra">
+        ["email"] = <"aitor.eguzkiza@unavarra.es">
+        ["date"] = <"2015-06-27">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"José Andonegui, Hospital de Navarra, jose.andonegui.navarro@cfnavarra.es", "Luis Serrano, Universidad Pública de Navarra (UPNA), lserrano@unavarra.es", "Jesús D. Trigo, Universidad Pública de Navarra (UPNA), jesusdaniel.trigo@unavarra.es">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"056DF1853E24035FC9EF49BA2316AFCF">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Manage the process of reaching a decision about the diagnose regarding a specific disease.">
+            keywords = <"decision", "diagnose">
+            use = <"All decisions that physicians must take to reach an accurate diagnosis, and thus to adequate therapy, when conduct the clinical evaluation of patients should be included in this archetype.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Gestionar el proceso en el cual se llega a una decisión diagnóstica en lo que respecta a una enfermedad concreta.">
+            use = <"Todas las decisiones que los facultativos deben tomar para alcanzar un diagnóstico preciso, y en consecuencia a una terapia adecuada, al llevar a cabo la evaluación clínica de los pacientes deberían ser incluidas en este arquetipo.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    SECTION[at0000] matches {    -- Clinical decision
+        items cardinality matches {1..*; unordered} matches {
+            allow_archetype EVALUATION[at0001] matches {    -- Clinical synopsis
+                include
+                    archetype_id/value matches {/openEHR-EHR-EVALUATION\.clinical_synopsis(-[a-zA-Z0-9_]+)*\.v([0-9]+)/}
+                exclude
+                    archetype_id/value matches {/.*/}
+            }
+            allow_archetype EVALUATION[at0002] matches {    -- Problem/diagnosis
+                include
+                    archetype_id/value matches {/openEHR-EHR-EVALUATION\.problem_diagnosis(-[a-zA-Z0-9_]+)*\.v([0-9]+)/}
+                exclude
+                    archetype_id/value matches {/.*/}
+            }
+            allow_archetype EVALUATION[at0003] matches {    -- Exclusion of a problem/diagnosis
+                include
+                    archetype_id/value matches {/openEHR-EHR-EVALUATION\.exclusion-problem_diagnosis(-[a-zA-Z0-9_]+)*\.v([0-9]+)/}
+                exclude
+                    archetype_id/value matches {/.*/}
+            }
+            allow_archetype EVALUATION[at0005] matches {    -- Contraindication
+                include
+                    archetype_id/value matches {/openEHR-EHR-EVALUATION\.contraindication(-[a-zA-Z0-9_]+)*\.v([0-9]+)/}
+                exclude
+                    archetype_id/value matches {/.*/}
+            }
+            allow_archetype EVALUATION[at0004] matches {    -- Recommendation
+                include
+                    archetype_id/value matches {/openEHR-EHR-EVALUATION\.recommendation(-[a-zA-Z0-9_]+)*\.v([0-9]+)/}
+                exclude
+                    archetype_id/value matches {/.*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Clinical decision">
+                description = <"Defines the process of making a decision about the diagnosis of a specific disease.">
+            >
+            ["at0001"] = <
+                text = <"Clinical synopsis">
+                description = <"Narrative summary or overview about a patient, specifically from the perspective of a healthcare provider, and with or without associated interpretations.">
+            >
+            ["at0002"] = <
+                text = <"Problem/diagnosis">
+                description = <"An issue or obstacle which adversely impacts on the physical, mental and/or social well-being of an individual. The definition of a problem is deliberately kept rather loose and inclusive of a formal biomedical diagnosis so as to capture any real or perceived concerns that may adversely affect an individual's wellbeing to any degree.">
+            >
+            ["at0003"] = <
+                text = <"Exclusion of a problem/diagnosis">
+                description = <"Positive statement/s about problems or diagnoses that need to be recorded as clinically excluded from the health record at a specific point in time.">
+            >
+            ["at0004"] = <
+                text = <"Recommendation">
+                description = <"A suggestion, advice or proposal for current healthcare management or for future action.">
+            >
+            ["at0005"] = <
+                text = <"Contraindication">
+                description = <"Identification of a treatment, medicine, vaccine or procedure which should not be administered or performed on this subject.">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Decisión clínica">
+                description = <"Define el proceso de tomar una decisión sobre el diagnóstico de una enfermedad específica.">
+            >
+            ["at0001"] = <
+                text = <"Sinopsis clínica">
+                description = <"Sumario narrativo o visión global acerca de un paciente, específicamente desde la perspectiva de un profesional del cuidado de la salud, con o sin interpretaciones asociadas.">
+            >
+            ["at0002"] = <
+                text = <"Problema/diagnóstico">
+                description = <"Un asunto u obstáculo que incide en forma adversa sobre el bienestar físico, psíquico o social de un individuo. La definición de un problema se mantiene débilmente definida en forma deliberada a fin de permitir la detección de cualquier preocupación real o percibida que pueda afectar, en forma adversa y en cualquier grado, el bienestar del individuo.">
+            >
+            ["at0003"] = <
+                text = <"Exclusión de un problema/diagnóstico">
+                description = <"Declaraciónes acerca de los problemas o diagnósticos que deben ser excluidos de la historia clínica en un punto específico en el tiempo.">
+            >
+            ["at0004"] = <
+                text = <"Recomendación">
+                description = <"Una sugerencia, asesoramiento o propuesta de gestión de la salud actual o en vista de una acción futura.">
+            >
+            ["at0005"] = <
+                text = <"Contraindicación">
+                description = <"Identificación de un tratamiento, medicina, vacuna o procedimiento que no debe ser administrado o realizado sobre este sujeto.">
+            >
+        >
+    >

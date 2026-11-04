@@ -1,0 +1,401 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=7787049b-a4ab-44e5-b99d-fd173248eedc; build_uid=34a2d9a1-9de1-4a46-8dc6-9a0d36c72009)
+    openEHR-EHR-OBSERVATION.specular_microscopy.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Lars Fuhrmann">
+        ["organisation"] = <"German ophthalmological Society">
+        ["email"] = <"lars.fuhrmann@dog.org">
+        ["date"] = <"2026-04-23">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Lars Fuhrmann, German Ophthalmological Society (DOG)", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"McCarey BE, Edelhauser HF, Lynn MJ. Review of corneal endothelial specular microscopy for FDA clinical trials of refractive procedures, surgical devices, and new intraocular drugs and solutions. Cornea. 2008;27(1):1-16.">
+        ["2"] = <"Royal College of Ophthalmologists. Glaucoma Procedure Dataset. 2024/PROF/483. May 2024.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"10927F39F5C331C1EE0E0F8FAB6E6CDF">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record quantitative measurements of specular microscopy.">
+            keywords = <"Cornea, specular microscopy, ECD, Endothelial Cell Density.", ...>
+            use = <"Use to record the results of corneal specular microscopy, including endothelial cell density, cell size variation, and cell morphology.
+
+The primary use case is monitoring corneal endothelial health before and after intraocular surgery, including glaucoma drainage device surgery, cataract surgery, corneal transplantation, and long-term contact lens wear.
+
+An event time represents the date/time of image acquisition. Multiple events may be recorded to represent serial assessments.
+
+Aligned with the Royal College of Ophthalmologists Glaucoma Procedure Dataset (2024/PROF/483) requirement to record central endothelial cell density.">
+            misuse = <"Do not use for recording full corneal topography or pachymetry results — use a dedicated corneal topography or pachymetry archetype
+Do not use for recording confocal microscopy results.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Corneal specular microscopy
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Eye examined
+                                        value matches {
+                                            DV_CODED_TEXT[at9005] matches {
+                                                defining_code matches {[ac9000]}    -- Eye examined (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0034] occurrences matches {0..1} matches {    -- Radial localisation
+                                        value matches {
+                                            DV_CODED_TEXT[at9006] matches {
+                                                defining_code matches {[ac9001]}    -- Radial localisation (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0036] occurrences matches {0..1} matches {    -- Circumferential localisation
+                                        value matches {
+                                            DV_CODED_TEXT[at9007] matches {
+                                                defining_code matches {[ac9002]}    -- Circumferential localisation (synthesised)
+                                            }
+                                            DV_ORDINAL[at9008] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0041]}],    -- 1 o'clock
+                                                    [{2}, {[at0042]}],    -- 2 o'clock
+                                                    [{3}, {[at0043]}],    -- 3 o'clock
+                                                    [{4}, {[at0044]}],    -- 4 o'clock
+                                                    [{5}, {[at0045]}],    -- 5 o'clock
+                                                    [{6}, {[at0046]}],    -- 6 o'clock
+                                                    [{7}, {[at0047]}],    -- 7 o'clock
+                                                    [{8}, {[at0048]}],    -- 8 o'clock
+                                                    [{9}, {[at0049]}],    -- 9 o'clock
+                                                    [{10}, {[at0050]}],    -- 10 o'clock
+                                                    [{11}, {[at0051]}],    -- 11 o'clock
+                                                    [{12}, {[at0052]}]    -- 12 o'clock
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {1} matches {    -- Endothelial cell density
+                                        value matches {
+                                            DV_QUANTITY[at9009] matches {
+                                                magnitude matches {|>=0.0|}
+                                                units matches {"cells/mm2"}
+                                                precision matches {0}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0035] occurrences matches {0..1} matches {    -- Number of recognised cells
+                                        value matches {
+                                            DV_COUNT[at9010]
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Mean cell area
+                                        value matches {
+                                            DV_QUANTITY[at9011] matches {
+                                                property matches {[at9004]}    -- Area
+                                                magnitude matches {|>=0.0|}
+                                                units matches {"um2"}
+                                                precision matches {1}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Coefficient of variation
+                                        value matches {
+                                            DV_PROPORTION[at9012] matches {
+                                                type matches {2}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Percentage of hexagonal cells
+                                        value matches {
+                                            DV_PROPORTION[at9013] matches {
+                                                numerator matches {|0.0..100.0|}
+                                                type matches {2}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Interpretation
+                                        value matches {
+                                            DV_TEXT[at9014]
+                                        }
+                                    }
+                                    ELEMENT[at0029] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9015]
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0027] matches {    -- Test not done
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.exclusion_exam\.v1\..*/}
+                                    }
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Overall interpretation
+                                        value matches {
+                                            DV_TEXT[at9016]
+                                        }
+                                    }
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9017]
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0028] matches {    -- Device details
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.device\.v1\..*/}
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0013]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0015] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0025] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Corneal specular microscopy">
+                description = <"Measurements of corneal endothelial cell quantity, density and morphology obtained by specular microscopy.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point-in-time event which may be explicitly defined in a template or at run time.">
+            >
+            ["at0005"] = <
+                text = <"Eye examined">
+                description = <"Identification of the eye from which the specular microscopy results were obtained.">
+            >
+            ["at0006"] = <
+                text = <"Endothelial cell density">
+                description = <"The number of corneal endothelial cells per mm², measured in the central cornea by specular microscopy.">
+            >
+            ["at0007"] = <
+                text = <"Mean cell area">
+                description = <"The mean area of individual endothelial cells in square micrometres (µm²). Reciprocally related to cell density.">
+            >
+            ["at0008"] = <
+                text = <"Coefficient of variation">
+                description = <"Coefficient of variation (CV) of endothelial cell area, expressed as a percentage. A measure of cell size variability. ">
+            >
+            ["at0009"] = <
+                text = <"Percentage of hexagonal cells">
+                description = <"Percentage of corneal endothelial cells that are hexagonal (six-sided). A measure of pleomorphism, also called Hexagonality or 6A">
+            >
+            ["at0010"] = <
+                text = <"Interpretation">
+                description = <"Clinical interpretation of the specular microscopy findings for this eye.">
+            >
+            ["at0011"] = <
+                text = <"Overall interpretation">
+                description = <"Overall clinical interpretation of the specular microscopy examination, combining findings from both eyes where applicable.">
+            >
+            ["at0012"] = <
+                text = <"Confounding factors">
+                description = <"Factors that may have affected the quality or reliability of the specular microscopy images, such as poor fixation, corneal oedema, or patient cooperation.">
+            >
+            ["at0018"] = <
+                text = <"Right eye">
+                description = <"The right eye was examined.">
+            >
+            ["at0019"] = <
+                text = <"Left eye">
+                description = <"The left eye was examined.">
+            >
+            ["at0025"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+            >
+            ["at0027"] = <
+                text = <"Test not done">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Device details">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the measurement, not captured in other fields.
+">
+            >
+            ["at0034"] = <
+                text = <"Radial localisation">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"Number of recognised cells">
+                description = <"Number of cells which were recognised an used to calculate the results.">
+            >
+            ["at0036"] = <
+                text = <"Circumferential localisation">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"central">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"paracentral">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"mid-peripheral">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"peripheral">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"1 o'clock">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"2 o'clock">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"3 o'clock">
+                description = <"">
+            >
+            ["at0044"] = <
+                text = <"4 o'clock">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"5 o'clock">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"6 o'clock">
+                description = <"">
+            >
+            ["at0047"] = <
+                text = <"7 o'clock">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"8 o'clock">
+                description = <"">
+            >
+            ["at0049"] = <
+                text = <"9 o'clock">
+                description = <"">
+            >
+            ["at0050"] = <
+                text = <"10 o'clock">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"11 o'clock">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"12 o'clock">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"superior">
+                description = <"">
+            >
+            ["at0054"] = <
+                text = <"superior-temporal">
+                description = <"">
+            >
+            ["at0055"] = <
+                text = <"temporal">
+                description = <"">
+            >
+            ["at0056"] = <
+                text = <"temporal-inferior">
+                description = <"">
+            >
+            ["at0057"] = <
+                text = <"inferior">
+                description = <"">
+            >
+            ["at0058"] = <
+                text = <"inferior-nasal">
+                description = <"">
+            >
+            ["at0059"] = <
+                text = <"nasal">
+                description = <"">
+            >
+            ["at0060"] = <
+                text = <"nasal-superior">
+                description = <"">
+            >
+            ["at9004"] = <
+                text = <"Area">
+                description = <"Area">
+            >
+            ["ac9000"] = <
+                text = <"Eye examined (synthesised)">
+                description = <"Identification of the eye from which the specular microscopy results were obtained. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Radial localisation (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Circumferential localisation (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Circumferential localisation (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9004"] = <http://openehr.org/id/335>
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0053", "at0054", "at0055", "at0056", "at0057", "at0058", "at0059", "at0060">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0037", "at0038", "at0039", "at0040">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0018", "at0019">
+        >
+        ["ac9017"] = <
+            id = <"ac9017">
+            members = <"at0041", "at0042", "at0043", "at0044", "at0045", "at0046", "at0047", "at0048", "at0049", "at0050", "at0051", "at0052">
+        >
+    >

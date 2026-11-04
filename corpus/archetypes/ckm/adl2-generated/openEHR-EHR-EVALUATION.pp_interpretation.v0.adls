@@ -1,0 +1,126 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=96a80213-4da7-4e78-af19-4272e79e61c7; build_uid=3ae6829d-739e-49a2-a40a-13ae3140dff0)
+    openEHR-EHR-EVALUATION.pp_interpretation.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2019-09-25">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"8B9056D934831AD4C2B6C19C89DA44E9">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Phenopacket interpretation
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- id
+                        value matches {
+                            DV_IDENTIFIER[at9001]
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- resolution_status
+                        value matches {
+                            DV_ORDINAL[at9002] matches {
+                                [value, symbol] matches {
+                                    [{0}, {[at0004]}],    -- UNKNOWN
+                                    [{1}, {[at0005]}],    -- SOLVED
+                                    [{2}, {[at0006]}],    -- UNSOLVED
+                                    [{3}, {[at0007]}]    -- IN_PROGRESS
+                                }
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0010] matches {    -- phenopacket_or_family
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.pp_phenopacket_framework\.v0\..*|openEHR-EHR-CLUSTER\.pp_family_framework\.v0\..*/}
+                    }
+                    allow_archetype CLUSTER[at0008] matches {    -- diagnosis
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.pp_diagnosis\.v0\..*/}
+                    }
+                    allow_archetype CLUSTER[at0009] matches {    -- meta_data
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.pp_metadata\.v0\..*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Phenopacket interpretation">
+                description = <"Phenopacket interpretation">
+            >
+            ["at0002"] = <
+                text = <"id">
+                description = <"*">
+            >
+            ["at0003"] = <
+                text = <"resolution_status">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"UNKNOWN">
+                description = <"No information is available about the diagnosis.">
+            >
+            ["at0005"] = <
+                text = <"SOLVED">
+                description = <"The interpretation is considered to be a definitive diagnosis.">
+            >
+            ["at0006"] = <
+                text = <"UNSOLVED">
+                description = <"No definitive diagnosis was found.">
+            >
+            ["at0007"] = <
+                text = <"IN_PROGRESS">
+                description = <"No diagnosis has been found to date but additional differential diagnostic work is in progress.">
+            >
+            ["at0008"] = <
+                text = <"diagnosis">
+                description = <"*">
+            >
+            ["at0009"] = <
+                text = <"meta_data">
+                description = <"*">
+            >
+            ["at0010"] = <
+                text = <"phenopacket_or_family">
+                description = <"*">
+            >
+            ["ac9002"] = <
+                text = <"resolution_status (synthesised)">
+                description = <"* (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0004", "at0005", "at0006", "at0007">
+        >
+    >

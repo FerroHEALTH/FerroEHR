@@ -1,0 +1,549 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=91731d1b-67b4-4b14-9d45-255315828bfe; build_uid=8d018ed5-232e-4a45-98e8-00d799383351)
+    openEHR-EHR-COMPOSITION.report-result.v1.1.0
+
+specialize
+    openEHR-EHR-COMPOSITION.report.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Antje Wulff/Sarah Ballout">
+                ["organisation"] = <"Peter L. Reichertz Institute for Medical Informatics of TU BS and Hannover Medical School">
+                ["email"] = <"antje.wulff@plri.de/ballout.sarah@mh-hannover.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Jörgen Kuylenstierna, Manna Vosta, Åsa Skagerhult, Liv Laugen">
+                ["organisation"] = <"eWeave AB, Karolinska University Hospital, Region Östergötland, ​Oslo University Hospital, Norway">
+                ["email"] = <"jorgen.kuylenstierna@solvikshalsan.se, manna.vosta@regionstockholm.se, asa.skagerhult@regionostergotland.se, liv.laugen@ous-hf.no">
+            >
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+        >
+        ["ko"] = <
+            language = <[ISO_639-1::ko]>
+            author = <
+                ["name"] = <"Seung-Jong Yu">
+                ["organisation"] = <"InfoClinic Co.,Ltd.">
+                ["email"] = <"seungjong.yu@gmail.com">
+            >
+            accreditation = <"Certified Board of Family Medicine in South Korea">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Adriana Kitajima, Débora Farage, Fernanda Maia, Laíse Figueiredo, Marivan Abrahão">
+                ["organisation"] = <"Core Consulting">
+                ["email"] = <"contato@coreconsulting.com.br">
+            >
+            accreditation = <"Hospital Alemão Oswaldo Cruz (HAOC)">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            author = <
+                ["name"] = <"Francesca Frexia">
+                ["organisation"] = <"CRS4 - Center for advanced studies, research and development in Sardinia, Pula (Cagliari), Italy">
+                ["email"] = <"francesca.frexia@crs4.it">
+            >
+        >
+        ["zh-cn"] = <
+            language = <[ISO_639-1::zh-cn]>
+            author = <
+                ["name"] = <"Lin Zhang">
+                ["organisation"] = <"Freelancer">
+                ["email"] = <"linforest@163.com">
+            >
+        >
+        ["zh"] = <
+            language = <[ISO_639-1::zh]>
+            author = <
+                ["name"] = <"Yexuan Cheng">
+                ["organisation"] = <"浙江大学">
+                ["email"] = <"3160100913@zju.edu.cn">
+            >
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Clara Calleja Vega">
+                ["organisation"] = <"CatSalut. Servei Català de la Salut.">
+                ["email"] = <"ccalleja@catsalut.cat">
+            >
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            author = <
+                ["name"] = <"Alan March">
+                ["organisation"] = <"Hospital Universitario Austral - Buenos Aires - Argentina">
+                ["email"] = <"alandmarch@gmail.com">
+            >
+            accreditation = <"physician">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Kristian Berg, Line Silsand">
+                ["organisation"] = <"Universitetssykehuset Nord-Norge">
+                ["email"] = <"kristian.berg@unn.no, line.silsand@unn.no">
+            >
+        >
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            author = <
+                ["name"] = <"Clara Calleja Vega">
+                ["organisation"] = <"CatSalut. Servei Català de la Salut.">
+                ["email"] = <"ccalleja@catsalut.cat">
+            >
+            other_details = <
+                ["other_contributors"] = <"TRADCREA">
+            >
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            author = <
+                ["name"] = <"Pieter Bos, Jelte Zeilstra">
+                ["organisation"] = <"Nedap Healthcare">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2012-12-11">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway", "Koray Atalag, University of Auckland, New Zealand", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Sistine Barretto-Daniels, Ocean Informatics, Australia", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Einar Fosse, National Centre for Integrated Care and Telemedicine, Norway", "Heath Frankel, Ocean Informatics, Australia", "Heather Grain, Llewelyn Grain Informatics, Australia", "Sam Heard, Ocean Informatics, Australia", "Lars Karlsen, DIPS ASA, Norway", "Lars Morgan Karlsen, DIPS ASA, Norway", "Shinji Kobayashi, Kyoto University, Japan", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Hugh Leslie, Ocean Informatics, Australia", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Bjoern Naess, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics, heather.leslie@oceaninformatics.com">
+        ["MD5-CAM-1.0.1"] = <"BCC9F9AF2C01FAF0258B8743D079C8E7">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Ein generischer Container-Archetyp, um Informationen über das Ergebnis eines Tests oder einer Bewertung zu erhalten.">
+            keywords = <"Bericht", "Test", "Ergebnis", "Diagnostik">
+            use = <"Wird als generischer Archetype verwednet, um Informationen über das Ergebnis eines eigenständigen Tests, einer unabhängigen Bewertung oder einer Gruppe von zugehörigen Ergebnissen zu erhalten.
+
+Es wird erwartet, dass jeder COMPOSITION.Ergebnisbericht-Archetyp mindestens einen OBSERVATION-Archetyp enthält, der die Testergebnisse beinhaltet. Um den kompletten klinischen Kontext abzudecken, könnten je nach Komplexität des Tests oder der Bewertung andere Archetypen mit intigriert werden.
+
+Häufige Anwendungsfälle sind:
+- eine oder mehrere Probenbezogene Pathologie- / Labortestergebnisse;
+- ein oder mehrere zeitbezogene bildgebende Untersuchungsergebnisse;
+- ein EKG-Ergebnis; oder
+- eine Audiogramm-Hörbewertung.
+
+Der Hauptabschnitt \"Content\" wurden absichtlich ausgelassen. Dadurch kann dieser Abschnitt mit beliebigen SECTION- oder ENTRY-Archetypen gefüllt werden.">
+            misuse = <"Nicht für Berichte zu verwenden, die nicht mit einem Ergebnis für eine Prüfung oder Bewertung zusammenhängen. Verwenden Sie gegebenenfalls den generischen COMPOSITION.Bericht oder zweckspezifische COMPOSITIONs.
+
+
+Nicht für Test- oder Bewertungsergebnisse zu verwenden, die im Rahmen einer Beratungsnotiz aufgezeichnet werden, z.B. Glasgow Koma-Skala im Rahmen einer Notfallberatung - verwenden Sie dazu den Archetyp OBSERVATION.glasgow_coma_scale als eine Komponente innerhalb des COMPOSITION.encouter.">
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            purpose = <"*Generic container archetype to carry information that needs to be shared with others.(en)">
+            keywords = <"*report(en)", ...>
+            use = <"*Use as a generic archetype to carry information about the result of a stand-alone test or assessment, or a group of related results.
+
+It is anticipated that each COMPOSITION.report-result archetype will contain at least one OBSERVATION archetype that will hold the test results, but depending on the complexity of the test or assessment other archetypes may also be included to provide the complete clinical context.
+
+Common use cases are: 
+- one or more specimen-related pathology/laboratory test results; 
+- one or more time-related imaging examination test results;
+- an ECG result; or 
+- an audiogram hearing assessment.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"En generell arketyp för att hålla information om resultatet av ett test eller en bedömning.">
+            keywords = <"rapport", "test", "resultat", "diagnostik", "testresultat", "provresultat", "laboratorieresultat">
+            use = <"	
+Används som en generell arketyp för att hålla information om resultatet av enskilt test eller bedömning, eller samling av relaterade resultat.
+
+Varje COMPOSITION.report-result-arketyp ska innehålla minst en OBSERVATION-arketyp som i sin tur ska innehålla testresultaten, men beroende på komplexiteten hos testet eller bedömningen kan även andra arketyper behöva inkluderas för att ge hela det kliniska sammanhanget.
+
+Vanliga användningsfall är:
+- ett eller flera resultat från patologi- eller laboratorietester
+- ett eller flera tidsrelaterade resultat från en bildundersökning
+- ett EKG-resultat
+- bedömning av ett audiogram
+
+Innehållskomponenten har avsiktligt lämnats obegränsad. Detta möjliggör användning av valfri SECTION- eller ENTRY-arketyp lämplig för det kliniska sammanhanget.">
+            misuse = <"Ska inte användas för rapporter som inte är relaterade till resultat av ett test eller en bedömning. Använd då istället COMPOSITION.report eller andra lämpliga och ändamålsenliga COMPOSITION-arketyper.
+
+Ska inte användas för resultat av tester eller bedömningar som är kopplade till en del av ett konsultationssvar, till exempel Glasgow Coma-skalan i samband med en akut konsultation. Använd istället arketypen OBSERVATION.glasgow_coma_scale som en del i COMPOSITION.encounter.">
+        >
+        ["ko"] = <
+            language = <[ISO_639-1::ko]>
+            purpose = <"테스트나 평가의 결과에 대한 정보를 운반하기 위한 일반적인 컨테이너 아키타입">
+            keywords = <"*report(en)", "*test(en)", "*result(en)", "*diagnostic(en)", "리포트", "테스트", "결과", "진단">
+            use = <"*Use as a generic archetype to carry information about the result of a stand-alone test or assessment, or a group of related results.
+
+It is anticipated that each COMPOSITION.report-result archetype will contain at least one OBSERVATION archetype that will hold the test results, but depending on the complexity of the test or assessment other archetypes may also be included to provide the complete clinical context.
+
+Common use cases are: 
+- one or more specimen-related pathology/laboratory test results; 
+- one or more time-related imaging examination test results;
+- an ECG result; or 
+- an audiogram hearing assessment.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"테스트나 평가의 결과과 관련되지 않은 리포트를 위해 사용하면 안됨. 일반적인 COMPOSITION.report 또는 목적에 부합하는 특정 COMPOSITIONs를 사용.
+
+협진 노트의 부분으로 기록된 테스트나 평가 결과를 위해 사용하면 안됨. 예를 들어, 응급협진의 컨텍스트에서 Grasgow coma scale은 이 목적을 위해 OMPOSITION.encouter에 있는 하나의 컴포넌트로 OBSERVATION.glasgow_coma_scale 아키타입을 사용.">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Arquétipo de conteúdo genérico para carregar informação sobre o resultado de um teste ou avaliação.">
+            keywords = <"relatório", "teste", "resultado", "diagnóstico">
+            use = <"*Use as a generic archetype to carry information about the result of a stand-alone test or assessment, or a group of related results.
+
+It is anticipated that each COMPOSITION.report-result archetype will contain at least one OBSERVATION archetype that will hold the test results, but depending on the complexity of the test or assessment other archetypes may also be included to provide the complete clinical context.
+
+Common use cases are: 
+- one or more specimen-related pathology/laboratory test results; 
+- one or more time-related imaging examination test results;
+- an ECG result; or 
+- an audiogram hearing assessment.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"Não deve ser utilizado para relatórios não relacionados ao resultado de um teste ou avaliação. Use os genéricos COMPOSITION.report ou COMPOSITIONs específicos ao propósito, como apropriado. 
+
+Não deve ser utilizado para resultados de testes ou avaliações que são gravadas como parte de uma anotação de consulta, por exemplo a escala de coma de Glasgow no contexto de uma consulta de emergência - use o arquétipo OBSERVATION.glasgow_coma_scale como um componente dentro de COMPOSITION.encounter para este propósito.">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"نموذج جنيس (غير محدود الملكية) يحتوي على معلومات من أجل مشاركتها مع الجميع.">
+            keywords = <"تقرير", ...>
+            use = <"*Use as a generic archetype to carry information about the result of a stand-alone test or assessment, or a group of related results.
+
+It is anticipated that each COMPOSITION.report-result archetype will contain at least one OBSERVATION archetype that will hold the test results, but depending on the complexity of the test or assessment other archetypes may also be included to provide the complete clinical context.
+
+Common use cases are: 
+- one or more specimen-related pathology/laboratory test results; 
+- one or more time-related imaging examination test results;
+- an ECG result; or 
+- an audiogram hearing assessment.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Generic container archetype to carry information about the result of a test or assessment.">
+            keywords = <"report", "test", "result", "diagnostic">
+            use = <"Use as a generic archetype to carry information about the result of a stand-alone test or assessment, or a group of related results.
+
+It is anticipated that each COMPOSITION.report-result archetype will contain at least one OBSERVATION archetype that will hold the test results, but depending on the complexity of the test or assessment other archetypes may also be included to provide the complete clinical context.
+
+Common use cases are: 
+- one or more specimen-related pathology/laboratory test results; 
+- one or more time-related imaging examination test results;
+- an ECG result; or 
+- an audiogram hearing assessment.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template.">
+            misuse = <"Not to be used for reports that are not related to a result for a test or assessment. Use the generic COMPOSITION.report or purpose specific COMPOSITIONs as appropriate.
+
+Not to be used for test or assessment results that are recorded as part of a consultation note, for example Glasgow coma scale in the context of an emergency consultation - use the OBSERVATION.glasgow_coma_scale archetype as one component within the COMPOSITION.encouter for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            purpose = <"Archetipo contenitore generico per veicolare informazioni che devono essere condivise con gli altri.">
+            keywords = <"rapporto", ...>
+            use = <"*Use as a generic archetype to carry information about the result of a stand-alone test or assessment, or a group of related results.
+
+It is anticipated that each COMPOSITION.report-result archetype will contain at least one OBSERVATION archetype that will hold the test results, but depending on the complexity of the test or assessment other archetypes may also be included to provide the complete clinical context.
+
+Common use cases are: 
+- one or more specimen-related pathology/laboratory test results; 
+- one or more time-related imaging examination test results;
+- an ECG result; or 
+- an audiogram hearing assessment.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+        >
+        ["zh-cn"] = <
+            language = <[ISO_639-1::zh-cn]>
+            purpose = <"通用的容器类原始型，用于携带需要与他方共享的信息。">
+            keywords = <"报告", "报告单">
+            use = <"*Use as a generic archetype to carry information about the result of a stand-alone test or assessment, or a group of related results.
+
+It is anticipated that each COMPOSITION.report-result archetype will contain at least one OBSERVATION archetype that will hold the test results, but depending on the complexity of the test or assessment other archetypes may also be included to provide the complete clinical context.
+
+Common use cases are: 
+- one or more specimen-related pathology/laboratory test results; 
+- one or more time-related imaging examination test results;
+- an ECG result; or 
+- an audiogram hearing assessment.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+        >
+        ["zh"] = <
+            language = <[ISO_639-1::zh]>
+            purpose = <"用作携带共享所需信息的通用容器原型。">
+            keywords = <"报告", ...>
+            use = <"*Use as a generic archetype to carry information about the result of a stand-alone test or assessment, or a group of related results.
+
+It is anticipated that each COMPOSITION.report-result archetype will contain at least one OBSERVATION archetype that will hold the test results, but depending on the complexity of the test or assessment other archetypes may also be included to provide the complete clinical context.
+
+Common use cases are: 
+- one or more specimen-related pathology/laboratory test results; 
+- one or more time-related imaging examination test results;
+- an ECG result; or 
+- an audiogram hearing assessment.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Arquetipo contenedor genérico para contener información sobre el resultado de una prueba o evaluación.">
+            keywords = <"informe", "prueba", "resultado", "diagnóstico">
+            use = <"*Use as a generic archetype to carry information about the result of a stand-alone test or assessment, or a group of related results.
+
+It is anticipated that each COMPOSITION.report-result archetype will contain at least one OBSERVATION archetype that will hold the test results, but depending on the complexity of the test or assessment other archetypes may also be included to provide the complete clinical context.
+
+Common use cases are: 
+- one or more specimen-related pathology/laboratory test results; 
+- one or more time-related imaging examination test results;
+- an ECG result; or 
+- an audiogram hearing assessment.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"No debe utilizarse para informes que no estén relacionados con el resultado de una prueba o evaluación. Utilícese el COMPOSITION.report genérico o COMPOSITIONs con fines específicos, según proceda.
+
+No debe utilizarse para los resultados de pruebas o evaluaciones que se registran como parte de una nota de consulta, por ejemplo la escala de coma de Glasgow en el contexto de una consulta de urgencia; para ello, utilice el arquetipo OBSERVATION.glasgow_coma_scale como un componente dentro de COMPOSITION.encouter.">
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            purpose = <"Arquetipo contenedor genérico para la portación de información que necesita ser compartida con otros.">
+            keywords = <"informe", ...>
+            use = <"*Use as a generic archetype to carry information about the result of a stand-alone test or assessment, or a group of related results.
+
+It is anticipated that each COMPOSITION.report-result archetype will contain at least one OBSERVATION archetype that will hold the test results, but depending on the complexity of the test or assessment other archetypes may also be included to provide the complete clinical context.
+
+Common use cases are: 
+- one or more specimen-related pathology/laboratory test results; 
+- one or more time-related imaging examination test results;
+- an ECG result; or 
+- an audiogram hearing assessment.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"*Not to be used for reports that are not related to a result for a test or assessment. Use the generic COMPOSITION.report or purpose specific COMPOSITIONs as appropriate.
+
+Not to be used for test or assessment results that are recorded as part of a consultation note, for example Glasgow coma scale in the context of an emergency consultation - use the OBSERVATION.glasgow_coma_scale archetype as one component within the COMPOSITION.encouter for this purpose.(en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"Generisk COMPOSITION-arketype som skal inneholde informasjon om resultatet av en undersøkelse eller vurdering.">
+            keywords = <"rapport", "test", "prøve", "svar", "resultat", "diagnostikk", "undersøkelse", "informasjon", "vurdering">
+            use = <"Brukes som en generisk arketype for informasjon om resultatet av en frittstående undersøkelse eller vurdering, eller en gruppe av relaterte resultater.
+
+Det er forventet at hver COMPOSITION.report-resultat arketype vil inneholde minst én OBSERVATION-arketype som vil inneholde undersøkelsesresultatene, men avhengig av kompleksiteten av undersøkelsen eller vurderingene kan også andre arketyper inkluderes for å gi en fullstendig klinisk kontekst.
+
+Vanlige bruksområder kan være:
+- Ett eller flere patologi/laboratoriesvar;
+- Ett eller flere bildediagnostiske svar;
+- EKG-svar
+- Vurdering av audiogram.
+Innholdskomponenten er bevisst latt være ubegrenset. Dette tillater bruk av enhver SECTION- og/eller ENTRY-arketype som er nødvendig/hensiktsmessig i templaten brukt i den aktuelle kliniske konteksten.en)">
+            misuse = <"Skal ikke brukes for rapporter som ikke er knyttet til et svar på en prøve eller undersøkelse. Bruk den generiske COMPOSITION.report eller en annen passende formåls-spesifikk COMPOSITION.
+
+Skal ikke brukes til prøve- eller undersøkelsessvar som er registrert som en del av et konsultasjonsnotat, for eksempel Glasgow Coma Scale i forbindelse med en akutt konsultasjon. For dette eksempelet bruk OBSERVATION.glasgow_coma_scale arketypen som en komponent i arketypen COMPOSITION.encounter for dette formålet.">
+        >
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            purpose = <"*Generic container archetype to carry information that needs to be shared with others.(en)">
+            keywords = <"*report(en)", ...>
+            use = <"*Use as a generic archetype to carry information about the result of a stand-alone test or assessment, or a group of related results.
+
+It is anticipated that each COMPOSITION.report-result archetype will contain at least one OBSERVATION archetype that will hold the test results, but depending on the complexity of the test or assessment other archetypes may also be included to provide the complete clinical context.
+
+Common use cases are: 
+- one or more specimen-related pathology/laboratory test results; 
+- one or more time-related imaging examination test results;
+- an ECG result; or 
+- an audiogram hearing assessment.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            purpose = <"Generiek containerarchetype om informatie over te dragen die met anderen moet worden gedeeld.">
+            keywords = <"rapportage", ...>
+            use = <"*Use as a generic archetype to carry information about the result of a stand-alone test or assessment, or a group of related results.
+
+It is anticipated that each COMPOSITION.report-result archetype will contain at least one OBSERVATION archetype that will hold the test results, but depending on the complexity of the test or assessment other archetypes may also be included to provide the complete clinical context.
+
+Common use cases are: 
+- one or more specimen-related pathology/laboratory test results; 
+- one or more time-related imaging examination test results;
+- an ECG result; or 
+- an audiogram hearing assessment.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            purpose = <"Arquetip contenidor genèric per transmetre informació sobre el resultat d'una prova o avaluació.">
+            keywords = <"informe", "prova", "resultat", "diagnòstic">
+            use = <"*Use as a generic archetype to carry information about the result of a stand-alone test or assessment, or a group of related results.
+
+It is anticipated that each COMPOSITION.report-result archetype will contain at least one OBSERVATION archetype that will hold the test results, but depending on the complexity of the test or assessment other archetypes may also be included to provide the complete clinical context.
+
+Common use cases are: 
+- one or more specimen-related pathology/laboratory test results; 
+- one or more time-related imaging examination test results;
+- an ECG result; or 
+- an audiogram hearing assessment.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"No s'ha d'utilitzar per a informes que no estiguin relacionats amb els resultats d'una prova o avaluació. Utilitzar el COMPOSITION.report genèric o COMPOSITIONs amb fins específics, segons escaigui.
+
+No s'ha d'utilitzar per als resultats de proves o avaluacions que es registren com a part d'una nota de consulta, per exemple, l'escala de coma de Glasgow en el context d'una consulta d'urgències - utilitzeu l'arquetip OBSERVATION.glasgow_coma_scale com a component dins de COMPOSITION.encouter.">
+        >
+    >
+
+definition
+    COMPOSITION[at0000.1] matches {    -- Result report
+        /context[at9002]/other_context[at0001]/items matches {
+            ELEMENT[at0005] occurrences matches {0..1}
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000.1"] = <
+                text = <"Ergebnisbericht">
+                description = <"Das Dokument wird verwendet, um Informationen über das Ergebnis eines Tests oder einer Bewertung zu übermitteln.">
+            >
+        >
+        ["sv"] = <
+            ["at0000.1"] = <
+                text = <"Resultatrapport">
+                description = <"Dokument för att kommunicera information till andra om resultatet av ett test eller en bedömning.">
+            >
+        >
+        ["fi"] = <
+            ["at0000.1"] = <
+                text = <"Raportti">
+                description = <"Asiakirja tiedon välittämiseksi muille, vastauksena yleensä toisen osapuolen pyyntöön.">
+            >
+        >
+        ["ko"] = <
+            ["at0000.1"] = <
+                text = <"*Result Report(en)">
+                description = <"테스트나 평가의 결과에 대해 다른 사람들과 정보를 통신하는 문서.">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000.1"] = <
+                text = <"Relatório de resultado">
+                description = <"Documento para comunicar informações sobre o resultado de um teste ou avaliação.">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000.1"] = <
+                text = <"*Result Report(en)">
+                description = <"*Document to communicate information to others about the result of a test or assessment.(en)">
+            >
+        >
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Result report">
+                description = <"Document to communicate information to others about the result of a test or assessment.">
+            >
+        >
+        ["it"] = <
+            ["at0000.1"] = <
+                text = <"Rapporto">
+                description = <"Documento per comunicare informazioni ad altri, comunemente in risposta ad una richiesta di un altro soggetto.">
+            >
+        >
+        ["zh-cn"] = <
+            ["at0000.1"] = <
+                text = <"报告">
+                description = <"用于向他人传达信息的文档，通常是为了响应另一方的请求。">
+            >
+        >
+        ["zh"] = <
+            ["at0000.1"] = <
+                text = <"报告">
+                description = <"用于交流信息的文件，通常是为了响应某一方的请求">
+            >
+        >
+        ["es"] = <
+            ["at0000.1"] = <
+                text = <"Informe de resultados">
+                description = <"Documento para comunicar información a otras personas sobre el resultado de una prueba o evaluación.">
+            >
+        >
+        ["nb"] = <
+            ["at0000.1"] = <
+                text = <"Svarrapport">
+                description = <"Dokument for å formidle informasjon til andre om svaret på en prøve eller undersøkelse.">
+            >
+        >
+        ["es-ar"] = <
+            ["at0000.1"] = <
+                text = <"*Result Report(en)">
+                description = <"*Document to communicate information to others about the result of a test or assessment.(en)">
+            >
+        >
+        ["sl"] = <
+            ["at0000.1"] = <
+                text = <"*Result Report(en)">
+                description = <"*Document to communicate information to others about the result of a test or assessment.(en)">
+            >
+        >
+        ["ca"] = <
+            ["at0000.1"] = <
+                text = <"Informe de resultats">
+                description = <"Document per comunicar informació sobre el resultat d'una prova o avaluació.">
+            >
+        >
+        ["nl"] = <
+            ["at0000.1"] = <
+                text = <"Rapportage">
+                description = <"Document om informatie met anderen te communiceren, vaak op verzoek van een andere partij.">
+            >
+        >
+    >

@@ -1,0 +1,851 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=e1bb147f-3393-4f8d-b43f-40e4707cef3f; build_uid=e364d205-7b9f-458b-8b3f-3f89efb2b477)
+    openEHR-EHR-OBSERVATION.experiment.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::cs]>
+
+description
+    original_author = <
+        ["name"] = <"Václav Papež">
+        ["organisation"] = <"University of West Bohemia">
+        ["email"] = <"vpapez@kiv.zcu.cz">
+        ["date"] = <"2016-04-04">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Based on odML terminology http://portal.g-node.org/odml/terminologies/v1.0/experiment/experiment.xml, v.1.0, d. 2012-01-02 ">
+        ["2"] = <"                                                   http://portal.g-node.org/odml/terminologies/v1.0/dataset/dataset.xml, v.1.0, d. 2015-10-04  ">
+        ["3"] = <"                                                   http://portal.g-node.org/odml/terminologies/v1.0/protocol/protocol.xml, v.1.0, d. 2014-11-25 ">
+        ["4"] = <"                                                   http://portal.g-node.org/odml/terminologies/v1.0/event/event.xml, v.1.0, d. 2012-01-02 ">
+        ["5"] = <"                                                   http://portal.g-node.org/odml/terminologies/v1.0/setup/setup.xml, v.1.0, d. 2012-01-02 ">
+        ["6"] = <"                                                   http://portal.g-node.org/odml/terminologies/v1.0/recording/recording.xml, v.1.0, d. 2012-01-02 ">
+        ["7"] = <"Person state attributes are based on the EEGBase (http://eegdatabase.kiv.zcu.cz/) experiment metadata.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"ADC7D4371114CB9789590460F63DCCB0">
+    >
+    details = <
+        ["cs"] = <
+            language = <[ISO_639-1::cs]>
+            purpose = <"Specification of an experiment. Experiment includes protocol (with dataset, setup and recording parameters), events and person state.">
+            keywords = <"experiment", ...>
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Experiment
+        data matches {
+            HISTORY[at0001] matches {
+                period matches {
+                    DV_DURATION[at9048] matches {
+                        value matches {PT1M; PT1M}
+                    }
+                }
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] occurrences matches {0..1} matches {    -- Event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Description
+                                        value matches {
+                                            DV_TEXT[at9049]
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0007] matches {    -- Type
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.bahavior_experiment(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.electrophysiology_experiment(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.imaging_experiment(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.modeling_experiment(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.psychophysics_experiment(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Subtype
+                                        value matches {
+                                            DV_TEXT[at9050]
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- ProjectName
+                                        value matches {
+                                            DV_TEXT[at9051]
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- ProjectID
+                                        value matches {
+                                            DV_TEXT[at9052]
+                                        }
+                                    }
+                                    CLUSTER[at0033] matches {    -- Recording
+                                        items cardinality matches {1..*; unordered} matches {
+                                            CLUSTER[at0053] matches {    -- Dataset
+                                                items cardinality matches {1..*; unordered} matches {
+                                                    ELEMENT[at0065] occurrences matches {0..1} matches {    -- Start
+                                                        value matches {
+                                                            DV_DATE_TIME[at9053] matches {
+                                                                value
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0064] occurrences matches {0..1} matches {    -- End
+                                                        value matches {
+                                                            DV_DATE_TIME[at9054] matches {
+                                                                value
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0063] occurrences matches {0..1} matches {    -- StartDate
+                                                        value matches {
+                                                            DV_DATE[at9055]
+                                                        }
+                                                    }
+                                                    ELEMENT[at0062] occurrences matches {0..1} matches {    -- EndDate
+                                                        value matches {
+                                                            DV_DATE[at9056]
+                                                        }
+                                                    }
+                                                    ELEMENT[at0061] occurrences matches {0..1} matches {    -- StartTime
+                                                        value matches {
+                                                            DV_TIME[at9057]
+                                                        }
+                                                    }
+                                                    ELEMENT[at0060] occurrences matches {0..1} matches {    -- EndTime
+                                                        value matches {
+                                                            DV_TIME[at9058]
+                                                        }
+                                                    }
+                                                    ELEMENT[at0059] occurrences matches {0..1} matches {    -- Comment
+                                                        value matches {
+                                                            DV_TEXT[at9059]
+                                                        }
+                                                    }
+                                                    ELEMENT[at0056] occurrences matches {0..1} matches {    -- Quality
+                                                        value matches {
+                                                            DV_TEXT[at9060]
+                                                        }
+                                                    }
+                                                    ELEMENT[at0055] occurrences matches {0..1} matches {    -- QualityRange
+                                                        value matches {
+                                                            DV_TEXT[at9061]
+                                                        }
+                                                    }
+                                                    ELEMENT[at0057] occurrences matches {0..1} matches {    -- File
+                                                        value matches {
+                                                            DV_URI[at9062]
+                                                        }
+                                                    }
+                                                    ELEMENT[at0058] occurrences matches {0..1} matches {    -- File
+                                                        value matches {
+                                                            DV_MULTIMEDIA[at9063] matches {
+                                                                media_type matches {[ac9047]}    -- File (synthesised)
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0052] occurrences matches {0..1} matches {    -- EndTime
+                                                value matches {
+                                                    DV_TIME[at9064]
+                                                }
+                                            }
+                                            ELEMENT[at0051] occurrences matches {0..1} matches {    -- StartTime
+                                                value matches {
+                                                    DV_TIME[at9065]
+                                                }
+                                            }
+                                            ELEMENT[at0050] occurrences matches {0..1} matches {    -- EndDate
+                                                value matches {
+                                                    DV_DATE_TIME[at9066]
+                                                }
+                                            }
+                                            ELEMENT[at0049] occurrences matches {0..1} matches {    -- StartDate
+                                                value matches {
+                                                    DV_DATE[at9067]
+                                                }
+                                            }
+                                            ELEMENT[at0048] occurrences matches {0..1} matches {    -- End
+                                                value matches {
+                                                    DV_DATE_TIME[at9068] matches {
+                                                        value
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0047] occurrences matches {0..1} matches {    -- Start
+                                                value matches {
+                                                    DV_DATE_TIME[at9069] matches {
+                                                        value
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0046] occurrences matches {0..1} matches {    -- ExperimenterID
+                                                value matches {
+                                                    DV_TEXT[at9070]
+                                                }
+                                            }
+                                            allow_archetype CLUSTER[at0043] matches {    -- Experimenter
+                                                include
+                                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.bahavior_experiment(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.electrophysiology_experiment(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.imaging_experiment(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.modeling_experiment(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.psychophysics_experiment(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                            }
+                                            ELEMENT[at0042] occurrences matches {0..1} matches {    -- Comment
+                                                value matches {
+                                                    DV_TEXT[at9071]
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0011] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0012] matches {    -- Disease
+                                        value matches {
+                                            DV_TEXT[at9072]
+                                        }
+                                    }
+                                    ELEMENT[at0013] matches {    -- Pharmaceutics
+                                        value matches {
+                                            DV_TEXT[at9073]
+                                        }
+                                    }
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Sleep deprivation
+                                        value matches {
+                                            DV_TEXT[at9074]
+                                        }
+                                    }
+                                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Mood
+                                        value matches {
+                                            DV_TEXT[at9075]
+                                        }
+                                    }
+                                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Age
+                                        value matches {
+                                            DV_TEXT[at9076]
+                                        }
+                                    }
+                                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Description
+                                        value matches {
+                                            DV_TEXT[at9077]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0019] matches {
+                items cardinality matches {1..*; unordered} matches {
+                    CLUSTER[at0034] occurrences matches {1} matches {    -- Setup
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0037] occurrences matches {0..1} matches {    -- Department
+                                value matches {
+                                    DV_TEXT[at9078]
+                                }
+                            }
+                            ELEMENT[at0036] occurrences matches {0..1} matches {    -- Location
+                                value matches {
+                                    DV_TEXT[at9079]
+                                }
+                            }
+                            ELEMENT[at0035] occurrences matches {0..1} matches {    -- Description
+                                value matches {
+                                    DV_TEXT[at9080]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0038] matches {    -- Creator
+                                include
+                                    archetype_id/value matches {/.*/}
+                            }
+                            allow_archetype CLUSTER[at0039] matches {    -- Maintainer
+                                include
+                                    archetype_id/value matches {/.*/}
+                            }
+                            ELEMENT[at0040] occurrences matches {0..1} matches {    -- Config
+                                value matches {
+                                    DV_TEXT[at9081]
+                                }
+                            }
+                            ELEMENT[at0041] occurrences matches {0..1} matches {    -- ConfigID
+                                value matches {
+                                    DV_TEXT[at9082]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0066] matches {    -- Hardware
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                            }
+                            allow_archetype CLUSTER[at0068] matches {    -- Electrode
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.electrode(-[a-zA-Z0-9_]+)*\.v2\..*/}
+                            }
+                        }
+                    }
+                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Name
+                        value matches {
+                            DV_TEXT[at9083]
+                        }
+                    }
+                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9084]
+                        }
+                    }
+                    allow_archetype ELEMENT[at0023] matches {    -- Author
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0026] matches {    -- ProtocolFile
+                        value matches {
+                            DV_MULTIMEDIA[at9085] matches {
+                                media_type matches {[ac9047]}    -- File (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- ProtocolFileURL
+                        value matches {
+                            DV_URI[at9086]
+                        }
+                    }
+                    ELEMENT[at0030] occurrences matches {0..1} matches {    -- Duration
+                        value matches {
+                            DV_DURATION[at9087]
+                        }
+                    }
+                    ELEMENT[at0031] occurrences matches {0..1} matches {    -- Version
+                        value matches {
+                            DV_TEXT[at9088]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0067] matches {    -- Software
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.software(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    allow_archetype CLUSTER[at0069] matches {    -- Stimulus
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.stimulus(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["cs"] = <
+            ["at0000"] = <
+                text = <"Experiment">
+                description = <"Specification of an experiment. The Experiment is part of a Project and the recorded data for a specific Experiment are found in Datasets. Possible subsections are, for example, Dataset and Stimulus.">
+            >
+            ["at0002"] = <
+                text = <"Event">
+                description = <"Section for short annotations that are taken during an experiment to describe certain events.">
+            >
+            ["at0005"] = <
+                text = <"Description">
+                description = <"A description of the experiment.">
+            >
+            ["at0007"] = <
+                text = <"Type">
+                description = <"The type of experiment.">
+            >
+            ["at0008"] = <
+                text = <"Subtype">
+                description = <"*">
+            >
+            ["at0009"] = <
+                text = <"ProjectName">
+                description = <"The name of the project this experiment belongs to.">
+            >
+            ["at0010"] = <
+                text = <"ProjectID">
+                description = <"The ID of the project this experiment belongs to.">
+            >
+            ["at0012"] = <
+                text = <"Disease">
+                description = <"*">
+                comment = <"Taken from EEGBase">
+            >
+            ["at0013"] = <
+                text = <"Pharmaceutics">
+                description = <"*">
+                comment = <"Taken from EEGBase">
+            >
+            ["at0014"] = <
+                text = <"Sleep deprivation">
+                description = <"*">
+                comment = <"Taken from EEGBase">
+            >
+            ["at0015"] = <
+                text = <"Mood">
+                description = <"*">
+                comment = <"Taken from EEGBase">
+            >
+            ["at0016"] = <
+                text = <"Age">
+                description = <"*">
+                comment = <"Taken from EEGBase">
+            >
+            ["at0017"] = <
+                text = <"Description">
+                description = <"*">
+                comment = <"Taken from EEGBase">
+            >
+            ["at0020"] = <
+                text = <"Name">
+                description = <"The protocol name.">
+            >
+            ["at0021"] = <
+                text = <"Description">
+                description = <"Description of the experiment">
+            >
+            ["at0023"] = <
+                text = <"Author">
+                description = <"The person, who created this protocol.">
+            >
+            ["at0026"] = <
+                text = <"ProtocolFile">
+                description = <"Protocol File">
+            >
+            ["at0028"] = <
+                text = <"ProtocolFileURL">
+                description = <"URL for protocol file">
+            >
+            ["at0030"] = <
+                text = <"Duration">
+                description = <"Duration of the protocol.">
+            >
+            ["at0031"] = <
+                text = <"Version">
+                description = <"Version of the protocol">
+            >
+            ["at0033"] = <
+                text = <"Recording">
+                description = <"During a recording session in a Setup Datasets are obtained from Cells and/or a Subject by using various stimuli (Stimulus section).">
+            >
+            ["at0034"] = <
+                text = <"Setup">
+                description = <"The experimental setup used in the recordings. By using HardwareProperties as a subsection, a very detailed description of the setup can be given.">
+            >
+            ["at0035"] = <
+                text = <"Description">
+                description = <"A description of the setup.">
+            >
+            ["at0036"] = <
+                text = <"Location">
+                description = <"The location of the setup (e.g. room).">
+            >
+            ["at0037"] = <
+                text = <"Department">
+                description = <"The department where the setup is located.">
+            >
+            ["at0038"] = <
+                text = <"Creator">
+                description = <"The person who built the setup.">
+            >
+            ["at0039"] = <
+                text = <"Maintainer">
+                description = <"The person who is responsible for the setup maintanance.">
+            >
+            ["at0040"] = <
+                text = <"Config">
+                description = <"An identifier of the used setup configuration, e.g. if variations of the same setup are used.">
+            >
+            ["at0041"] = <
+                text = <"ConfigID">
+                description = <"The ID of a setup configuration stored e.g. in a database.">
+            >
+            ["at0042"] = <
+                text = <"Comment">
+                description = <"Comments on the recording session.">
+            >
+            ["at0043"] = <
+                text = <"Experimenter">
+                description = <"The name of the person actually performing the recordings.">
+            >
+            ["at0046"] = <
+                text = <"ExperimenterID">
+                description = <"If registered in a database the primary key of the person that performed the experiments.">
+            >
+            ["at0047"] = <
+                text = <"Start">
+                description = <"The date and time at which the recording started in  (YYYY-MM-DD hh:mm:ss format).">
+            >
+            ["at0048"] = <
+                text = <"End">
+                description = <"The date and time at which the recording ended in  (YYYY-MM-DD hh:mm:ss format).">
+            >
+            ["at0049"] = <
+                text = <"StartDate">
+                description = <"The date the recording session was conducted (YYYY-MM-DD format).">
+            >
+            ["at0050"] = <
+                text = <"EndDate">
+                description = <"The date the recording session ended (YYYY-MM-DD format).">
+            >
+            ["at0051"] = <
+                text = <"StartTime">
+                description = <"The time the recordings began (hh:mm:ss format).">
+            >
+            ["at0052"] = <
+                text = <"EndTime">
+                description = <"The time the recordings ended (hh:mm:ss format).">
+            >
+            ["at0053"] = <
+                text = <"Dataset">
+                description = <"Names (URLs) and times of recorded data files. Datasets are obtained during a Recording and may belong to different Experiments. Related sections that can be used as subsections, parent sections, or siblings are Stimulus, HardwareSettings, and Experiment.">
+            >
+            ["at0055"] = <
+                text = <"QualityRange">
+                description = <"A comma separated ascending list of all used values for indicating the overall quality of the dataset. E.g. \"poor,fair,good\".">
+            >
+            ["at0056"] = <
+                text = <"Quality">
+                description = <"A rough indication of the overall quality of the dataset. E.g. poor, fair, or good.">
+            >
+            ["at0057"] = <
+                text = <"File">
+                description = <"The URL of a data file.">
+            >
+            ["at0058"] = <
+                text = <"File">
+                description = <"Data of this dataset. Be aware that including the actual content of a data file by this property will blow up the the size of the metadatafile. We rather recommend to simply refer to the URL of a dataset file using the FileURL property.">
+            >
+            ["at0059"] = <
+                text = <"Comment">
+                description = <"A comment about the dataset (common to all files belonging to this dataset).">
+            >
+            ["at0060"] = <
+                text = <"EndTime">
+                description = <"The local time recording was ended.">
+            >
+            ["at0061"] = <
+                text = <"StartTime">
+                description = <"The local time recording was started.">
+            >
+            ["at0062"] = <
+                text = <"EndDate">
+                description = <"The date the recording of this dataset was ended.">
+            >
+            ["at0063"] = <
+                text = <"StartDate">
+                description = <"The date recording of this dataset was started.">
+            >
+            ["at0064"] = <
+                text = <"End">
+                description = <"The point in time the recording of this dataset was ended.">
+            >
+            ["at0065"] = <
+                text = <"Start">
+                description = <"The point in time the recording of this dataset was started.">
+            >
+            ["at0066"] = <
+                text = <"Hardware">
+                description = <"*">
+            >
+            ["at0067"] = <
+                text = <"Software">
+                description = <"*">
+            >
+            ["at0068"] = <
+                text = <"Electrode">
+                description = <"*">
+            >
+            ["at0069"] = <
+                text = <"Stimulus">
+                description = <"*">
+            >
+            ["at9000"] = <
+                text = <"* application/msword (en)">
+                description = <"* application/msword (en)">
+            >
+            ["at9001"] = <
+                text = <"* application/pdf (en)">
+                description = <"* application/pdf (en)">
+            >
+            ["at9002"] = <
+                text = <"* application/rtf (en)">
+                description = <"* application/rtf (en)">
+            >
+            ["at9003"] = <
+                text = <"* application/dicom (en)">
+                description = <"* application/dicom (en)">
+            >
+            ["at9004"] = <
+                text = <"* application/vnd.oasis.opendocument.text (en)">
+                description = <"* application/vnd.oasis.opendocument.text (en)">
+            >
+            ["at9005"] = <
+                text = <"* application/vnd.openxmlformats-officedocument.wordprocessingml.document (en)">
+                description = <"* application/vnd.openxmlformats-officedocument.wordprocessingml.document (en)">
+            >
+            ["at9006"] = <
+                text = <"* video/BT656 (en)">
+                description = <"* video/BT656 (en)">
+            >
+            ["at9007"] = <
+                text = <"* video/CelB (en)">
+                description = <"* video/CelB (en)">
+            >
+            ["at9008"] = <
+                text = <"* video/H261 (en)">
+                description = <"* video/H261 (en)">
+            >
+            ["at9009"] = <
+                text = <"* video/H263 (en)">
+                description = <"* video/H263 (en)">
+            >
+            ["at9010"] = <
+                text = <"* video/H263-1998 (en)">
+                description = <"* video/H263-1998 (en)">
+            >
+            ["at9011"] = <
+                text = <"* video/H263-2000 (en)">
+                description = <"* video/H263-2000 (en)">
+            >
+            ["at9012"] = <
+                text = <"* video/quicktime (en)">
+                description = <"* video/quicktime (en)">
+            >
+            ["at9013"] = <
+                text = <"* text/calendar (en)">
+                description = <"* text/calendar (en)">
+            >
+            ["at9014"] = <
+                text = <"* text/directory (en)">
+                description = <"* text/directory (en)">
+            >
+            ["at9015"] = <
+                text = <"* text/html (en)">
+                description = <"* text/html (en)">
+            >
+            ["at9016"] = <
+                text = <"* text/plain (en)">
+                description = <"* text/plain (en)">
+            >
+            ["at9017"] = <
+                text = <"* text/rtf (en)">
+                description = <"* text/rtf (en)">
+            >
+            ["at9018"] = <
+                text = <"* text/sgml (en)">
+                description = <"* text/sgml (en)">
+            >
+            ["at9019"] = <
+                text = <"* text/tab-separated-values (en)">
+                description = <"* text/tab-separated-values (en)">
+            >
+            ["at9020"] = <
+                text = <"* text/uri-list (en)">
+                description = <"* text/uri-list (en)">
+            >
+            ["at9021"] = <
+                text = <"* text/xml (en)">
+                description = <"* text/xml (en)">
+            >
+            ["at9022"] = <
+                text = <"* text/xml-external-parsed-entity (en)">
+                description = <"* text/xml-external-parsed-entity (en)">
+            >
+            ["at9023"] = <
+                text = <"* image/cgm (en)">
+                description = <"* image/cgm (en)">
+            >
+            ["at9024"] = <
+                text = <"* image/gif (en)">
+                description = <"* image/gif (en)">
+            >
+            ["at9025"] = <
+                text = <"* image/png (en)">
+                description = <"* image/png (en)">
+            >
+            ["at9026"] = <
+                text = <"* image/tiff (en)">
+                description = <"* image/tiff (en)">
+            >
+            ["at9027"] = <
+                text = <"* image/jpeg (en)">
+                description = <"* image/jpeg (en)">
+            >
+            ["at9028"] = <
+                text = <"* audio/DVI4 (en)">
+                description = <"* audio/DVI4 (en)">
+            >
+            ["at9029"] = <
+                text = <"* audio/G722 (en)">
+                description = <"* audio/G722 (en)">
+            >
+            ["at9030"] = <
+                text = <"* audio/G723 (en)">
+                description = <"* audio/G723 (en)">
+            >
+            ["at9031"] = <
+                text = <"* audio/G726-16 (en)">
+                description = <"* audio/G726-16 (en)">
+            >
+            ["at9032"] = <
+                text = <"* audio/G726-24 (en)">
+                description = <"* audio/G726-24 (en)">
+            >
+            ["at9033"] = <
+                text = <"* audio/G726-32 (en)">
+                description = <"* audio/G726-32 (en)">
+            >
+            ["at9034"] = <
+                text = <"* audio/G726-40 (en)">
+                description = <"* audio/G726-40 (en)">
+            >
+            ["at9035"] = <
+                text = <"* audio/G728 (en)">
+                description = <"* audio/G728 (en)">
+            >
+            ["at9036"] = <
+                text = <"* audio/L8 (en)">
+                description = <"* audio/L8 (en)">
+            >
+            ["at9037"] = <
+                text = <"* audio/L16 (en)">
+                description = <"* audio/L16 (en)">
+            >
+            ["at9038"] = <
+                text = <"* audio/LPC (en)">
+                description = <"* audio/LPC (en)">
+            >
+            ["at9039"] = <
+                text = <"* audio/G729 (en)">
+                description = <"* audio/G729 (en)">
+            >
+            ["at9040"] = <
+                text = <"* audio/G729D (en)">
+                description = <"* audio/G729D (en)">
+            >
+            ["at9041"] = <
+                text = <"* audio/G729E (en)">
+                description = <"* audio/G729E (en)">
+            >
+            ["at9042"] = <
+                text = <"* audio/mpeg (en)">
+                description = <"* audio/mpeg (en)">
+            >
+            ["at9043"] = <
+                text = <"* audio/mpeg4-generic (en)">
+                description = <"* audio/mpeg4-generic (en)">
+            >
+            ["at9044"] = <
+                text = <"* audio/L20 (en)">
+                description = <"* audio/L20 (en)">
+            >
+            ["at9045"] = <
+                text = <"* audio/L24 (en)">
+                description = <"* audio/L24 (en)">
+            >
+            ["at9046"] = <
+                text = <"* audio/telephone-event (en)">
+                description = <"* audio/telephone-event (en)">
+            >
+            ["ac9047"] = <
+                text = <"File (synthesised)">
+                description = <"Data of this dataset. Be aware that including the actual content of a data file by this property will blow up the the size of the metadatafile. We rather recommend to simply refer to the URL of a dataset file using the FileURL property. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openEHR"] = <
+            ["at9000"] = <http://openehr.org/id/517>
+            ["at9001"] = <http://openehr.org/id/518>
+            ["at9002"] = <http://openehr.org/id/519>
+            ["at9003"] = <http://openehr.org/id/637>
+            ["at9004"] = <http://openehr.org/id/682>
+            ["at9005"] = <http://openehr.org/id/683>
+            ["at9006"] = <http://openehr.org/id/401>
+            ["at9007"] = <http://openehr.org/id/402>
+            ["at9008"] = <http://openehr.org/id/404>
+            ["at9009"] = <http://openehr.org/id/405>
+            ["at9010"] = <http://openehr.org/id/406>
+            ["at9011"] = <http://openehr.org/id/407>
+            ["at9012"] = <http://openehr.org/id/414>
+            ["at9013"] = <http://openehr.org/id/415>
+            ["at9014"] = <http://openehr.org/id/416>
+            ["at9015"] = <http://openehr.org/id/417>
+            ["at9016"] = <http://openehr.org/id/418>
+            ["at9017"] = <http://openehr.org/id/419>
+            ["at9018"] = <http://openehr.org/id/420>
+            ["at9019"] = <http://openehr.org/id/421>
+            ["at9020"] = <http://openehr.org/id/422>
+            ["at9021"] = <http://openehr.org/id/423>
+            ["at9022"] = <http://openehr.org/id/424>
+            ["at9023"] = <http://openehr.org/id/425>
+            ["at9024"] = <http://openehr.org/id/426>
+            ["at9025"] = <http://openehr.org/id/427>
+            ["at9026"] = <http://openehr.org/id/428>
+            ["at9027"] = <http://openehr.org/id/429>
+            ["at9028"] = <http://openehr.org/id/387>
+            ["at9029"] = <http://openehr.org/id/388>
+            ["at9030"] = <http://openehr.org/id/389>
+            ["at9031"] = <http://openehr.org/id/390>
+            ["at9032"] = <http://openehr.org/id/391>
+            ["at9033"] = <http://openehr.org/id/392>
+            ["at9034"] = <http://openehr.org/id/393>
+            ["at9035"] = <http://openehr.org/id/394>
+            ["at9036"] = <http://openehr.org/id/395>
+            ["at9037"] = <http://openehr.org/id/396>
+            ["at9038"] = <http://openehr.org/id/397>
+            ["at9039"] = <http://openehr.org/id/398>
+            ["at9040"] = <http://openehr.org/id/399>
+            ["at9041"] = <http://openehr.org/id/400>
+            ["at9042"] = <http://openehr.org/id/409>
+            ["at9043"] = <http://openehr.org/id/410>
+            ["at9044"] = <http://openehr.org/id/411>
+            ["at9045"] = <http://openehr.org/id/412>
+            ["at9046"] = <http://openehr.org/id/413>
+        >
+        ["ODMLID"] = <
+            ["at0000"] = <http://ODMLID.org/id/ODMLID010001>
+            ["at0002"] = <http://ODMLID.org/id/ODMLID008001>
+            ["at0005"] = <http://ODMLID.org/id/ODMLID010002>
+            ["at0007"] = <http://ODMLID.org/id/ODMLID010003>
+            ["at0008"] = <http://ODMLID.org/id/ODMLID010004>
+            ["at0009"] = <http://ODMLID.org/id/ODMLID010005>
+            ["at0010"] = <http://ODMLID.org/id/ODMLID010006>
+            ["at0020"] = <http://ODMLID.org/id/ODMLID038002>
+            ["at0021"] = <http://ODMLID.org/id/ODMLID038003>
+            ["at0023"] = <http://ODMLID.org/id/ODMLID038004>
+            ["at0026"] = <http://ODMLID.org/id/ODMLID038005>
+            ["at0028"] = <http://ODMLID.org/id/ODMLID038006>
+            ["at0030"] = <http://ODMLID.org/id/ODMLID038007>
+            ["at0031"] = <http://ODMLID.org/id/ODMLID038008>
+            ["at0033"] = <http://ODMLID.org/id/ODMLID039001>
+            ["at0034"] = <http://ODMLID.org/id/ODMLID040001>
+            ["at0035"] = <http://ODMLID.org/id/ODMLID040002>
+            ["at0036"] = <http://ODMLID.org/id/ODMLID040003>
+            ["at0037"] = <http://ODMLID.org/id/ODMLID040004>
+            ["at0038"] = <http://ODMLID.org/id/ODMLID040005>
+            ["at0039"] = <http://ODMLID.org/id/ODMLID040006>
+            ["at0040"] = <http://ODMLID.org/id/ODMLID040007>
+            ["at0041"] = <http://ODMLID.org/id/ODMLID040008>
+            ["at0042"] = <http://ODMLID.org/id/ODMLID039002>
+            ["at0043"] = <http://ODMLID.org/id/ODMLID039003>
+            ["at0046"] = <http://ODMLID.org/id/ODMLID039004>
+            ["at0047"] = <http://ODMLID.org/id/ODMLID039005>
+            ["at0048"] = <http://ODMLID.org/id/ODMLID039006>
+            ["at0049"] = <http://ODMLID.org/id/ODMLID039007>
+            ["at0050"] = <http://ODMLID.org/id/ODMLID039008>
+            ["at0051"] = <http://ODMLID.org/id/ODMLID039009>
+            ["at0052"] = <http://ODMLID.org/id/ODMLID039010>
+            ["at0066"] = <http://ODMLID.org/id/ODMLID017001>
+            ["at0067"] = <http://ODMLID.org/id/ODMLID057001>
+            ["at0068"] = <http://ODMLID.org/id/ODMLID007001>
+            ["at0069"] = <http://ODMLID.org/id/ODMLID041001>
+        >
+    >
+    value_sets = <
+        ["ac9047"] = <
+            id = <"ac9047">
+            members = <"at9000", "at9001", "at9002", "at9003", "at9004", "at9005", "at9006", "at9007", "at9008", "at9009", "at9010", "at9011", "at9012", "at9013", "at9014", "at9015", "at9016", "at9017", "at9018", "at9019", "at9020", "at9021", "at9022", "at9023", "at9024", "at9025", "at9026", "at9027", "at9028", "at9029", "at9030", "at9031", "at9032", "at9033", "at9034", "at9035", "at9036", "at9037", "at9038", "at9039", "at9040", "at9041", "at9042", "at9043", "at9044", "at9045", "at9046">
+        >
+    >

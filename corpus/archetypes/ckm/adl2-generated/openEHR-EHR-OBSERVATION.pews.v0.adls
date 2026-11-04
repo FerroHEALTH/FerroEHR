@@ -1,0 +1,129 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=b4e27b0f-1f54-4523-af79-0a007a99ae09; build_uid=1b87ff43-d43d-4f74-b982-9652c9092093)
+    openEHR-EHR-OBSERVATION.pews.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-01-19">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"3648A3A736289E177933FCCC60EB951C">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the value for each component variable for the PEWS and the total sum.">
+            keywords = <"warning, triage, NEWS, Sats, EWS, deterioration", ...>
+            use = <"Use to record the value for each component variable for the PEWS and the total sum.
+
+As there is no standard model for the component variables that make up PEWS, this archetype has been designed to provide a framework in which one specific PEWS representation can be selected and added to the 'PEWS components' SLOT added as CLUSTERs in a template.">
+            misuse = <"Not to be used to record actual measurements for each variable. Use specific OBSERVATION archetypes for this purpose:
+- OBSERVATION.blood_pressure;
+- OBSERVATION.pulse;
+- OBSERVATION.respiration;
+- OBSERVATION.body_temperature;
+- OBSERVATION.acvpu; and
+- OBSERVATION.pulse_oximetry.
+
+Not to be used for adults. Use an archetype representing the National Early Warning Score (NEWS) for this purpose.
+
+Not to be used during pregnancy and the postpartum period. Use a pregnancy-specific archetype such as Maternal Early Warning Score or Modified Early Obstetric Warning Score for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Paediatric Early Warning Score (PEWS)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any point in time event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    allow_archetype CLUSTER[at0004] occurrences matches {0..1} matches {    -- PEWS components
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.pews_original\.v0\..*|openEHR-EHR-CLUSTER\.pews_simple_variables\.v0\..*/}
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9000] matches {
+                                                magnitude matches {|>=0|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Clinical risk category
+                                        value matches {
+                                            DV_TEXT[at9002]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0006] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Model
+                        value matches {
+                            DV_TEXT[at9001]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0007] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Paediatric Early Warning Score (PEWS)">
+                description = <"A simple assessment score used to identify clinical deterioration in a paediatric patient.">
+            >
+            ["at0002"] = <
+                text = <"Any point in time event">
+                description = <"Default, unspecified point in time event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"PEWS components">
+                description = <"Structured details for a specific PEWS model representation.">
+            >
+            ["at0005"] = <
+                text = <"Total score">
+                description = <"The total sum of each component parameter for the PEWS.">
+                comment = <"The maximum value for 'Total score' for most PEWS representations is 9, although maximum for the original PEWS is 11.">
+            >
+            ["at0007"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0008"] = <
+                text = <"Model">
+                description = <"The name of the PEWS model used in the 'PEWS components SLOT and/or the 'Total score'.">
+            >
+            ["at0009"] = <
+                text = <"Clinical risk category">
+                description = <"Overall category representing the urgency and scale of the clinical response required in response to the component variables.">
+            >
+        >
+    >

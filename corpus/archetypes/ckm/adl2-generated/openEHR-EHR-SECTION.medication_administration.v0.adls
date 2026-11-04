@@ -1,0 +1,94 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=0734b50b-d522-4814-8168-136c1b4299b7; build_uid=80dc3f21-91ae-4e26-95ff-63cdad810f51)
+    openEHR-EHR-SECTION.medication_administration.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Aitor Eguzkitza">
+        ["organisation"] = <"Universidad Pública de Navarra - Complejo Hospitalario de Navarra">
+        ["email"] = <"aitor.eguzkiza@unavarra.es">
+        ["date"] = <"2015-07-01">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"José Andonegui, Hospital de Navarra, jose.andonegui.navarro@cfnavarra.es", "Luis Serrano, Universidad Pública de Navarra (UPNA), lserrano@unavarra.es", "Jesús D. Trigo, Universidad Pública de Navarra (UPNA), jesusdaniel.trigo@unavarra.es">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"717D0501202E367D70AA41FC607D6475">
+    >
+    details = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registrar la información clínica correspondiente a cualquier terapia relacionada con un medicamento, vacuna o otro producto terapéutico, desde que se ordena hasta que se administra el medicamento.">
+            use = <"Utilícese cuando un proceso clínico complejo incluya el uso, administración, dispensación u otra etapa clínica relativa a un medicamento, vacuna u otro producto terapéutico.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Register the clinical details for any therapy relating to a medicine, vaccine or other therapeutic good, from it is ordered until the medication is administered.">
+            keywords = <"medication", "drug">
+            use = <"To be used whenever a complex clinical process comprehends the use, administration, dispensing or other care step relating to a medicine, vaccine or other therapeutic good.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    SECTION[at0000] matches {    -- Medication administration procedure
+        items cardinality matches {1..*; unordered} matches {
+            allow_archetype INSTRUCTION[at0001] matches {    -- Medication order
+                include
+                    archetype_id/value matches {/openEHR-EHR-INSTRUCTION\.medication_order(-[a-zA-Z0-9_]+)*\.v([0-9]+)/}
+            }
+            allow_archetype ACTION[at0002] matches {    -- Medication action
+                include
+                    archetype_id/value matches {/openEHR-EHR-ACTION\.medication(-[a-zA-Z0-9_]+)*\.v([0-9]+)/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Medication administration procedure">
+                description = <"Manages the process of planning and then carrying out an ophthalmic treatment by means of use, administration, dispensing or other care step relating to a medicine.">
+            >
+            ["at0001"] = <
+                text = <"Medication order">
+                description = <"Details about the prescription of a specific medication.">
+            >
+            ["at0002"] = <
+                text = <"Medication action">
+                description = <"Details of any administration of medication conducted.">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Procedimiento de administración de medicamentos">
+                description = <"Gestiona la planificación y posterior realización de un tratamiento oftálmico por medio de uso, administración, dosificación u otra etapa clínica relativa a un medicamento.">
+            >
+            ["at0001"] = <
+                text = <"Solicitud de medicación">
+                description = <"Detalles de un medicamento, vacuna o cualquier otro elemento terapéutico acompañado de instrucciones para su uso.">
+            >
+            ["at0002"] = <
+                text = <"Medicación realizada">
+                description = <"Acción derivada de una orden de medicación creada por un médico que especifique qué medicamentos tomar, cuándo, por cuánto tiempo, etc.">
+            >
+        >
+    >

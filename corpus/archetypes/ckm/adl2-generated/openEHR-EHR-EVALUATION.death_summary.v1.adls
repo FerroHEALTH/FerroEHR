@@ -1,0 +1,674 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=345da189-6e77-4d41-94fd-5d5b3e477764; build_uid=96f4c8c1-8f3d-42c7-a028-41eb22294c5e)
+    openEHR-EHR-EVALUATION.death_summary.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Hannes Bornhorst, Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Mikkel Johan Gaup Grønmo, John Tore Valand">
+                ["organisation"] = <"Regional forvaltning EPJ, Helse Nord RHF, Helse Bergen">
+                ["email"] = <"mikkel.johan.gaup.gronmo@helse-nord.no, john.tore.valand@helse-vest-ikt.no">
+            >
+            accreditation = <"Nasjonal IKT HF">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Mikkel Johan Gaup Grønmo">
+        ["organisation"] = <"Forvaltningssenter EPJ, Helse-Nord RHF">
+        ["email"] = <"mikkel.johan.gaup.gronmo@helse-nord.no">
+        ["date"] = <"2021-11-19">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)", "Vebjørn Arntzen, Oslo universitetssykehus HF, Norway", "Astrid Askeland, Dips AS, Norway", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (Nasjonal IKT redaktør)", "Aleocidio Balzanelo, UHG Brasil, Brazil", "Malin Berg, DIPS ASA, Norway", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Ian Bull, ACT Health, Australia", "Marte Rime Bø, Direktoratet for e-helse, Norway", "Yexuan Cheng, 浙江大学, China", "Candice de Lisser, Ministry of Health and Wellness, Jamaica", "Stefan Dubois, Dep't of Pathology and Genetics, University Hospitals of Lund and Malmö, Sweden", "Are Edvardsen, SKDE, Helse Nord RHF, Norway", "Kåre Flø, DIPS ASA, Norway", "Grant Forrest, Lunaria Ltd, United Kingdom", "Rosane Gotardo, Systema Ltda., Brazil", "Heather Grain, Llewelyn Grain Informatics, Australia", "Maria Grønmo, Norway", "Mikkel Johan Gaup Grønmo, Regional forvaltning EPJ, Helse Nord, Norway (Nasjonal IKT redaktør)", "Finn Harald Stokland, DIPS AS", "Amanda Herbrand, University Hospital Basel, Switzerland", "Anca Heyd, DIPS AS", "Joost Holslag, Nedap, Netherlands", "Evelyn Hovenga, EJSH Consulting, Australia", "Kjetil Jørgensen, DIPS AS", "Anjali Kulkarni, Karkinos, India", "Kanika Kuwelker, Helse Vest IKT, Norway (openEHR Editor)", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Siri Laronningen, Kreftregisteret, Norway", "Liv Laugen, Oslo universitetssykehus, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Michael Lutz, BITsoft, Germany", "Manisha Mantri, C-DAC, India", "Hanne Marte Bårholm, Helse Vest IKT, Norway (openEHR Editor)", "James McClay, University of Nebraska Medical Center, United States", "Hilde Mjærfoss, Norsk Helsenett SF, Norway", "Arunakiry Natarajan, medondo, Germany", "Svenne Naumann, Finnmarkssykehuset, Norway", "Anna Navarro Serra, IN2, Spain", "Karin Nilsson, Region Västmanland, Sweden", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Bjørn Næss, DIPS ASA, Norway", "Azra Resulbegovic, DIPS AS", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "Terje Sagmyr, Helse Vest IKT, Norway", "Benjamin Senst, Germany", "Frode Stenvik, Helse Sør-Øst, Norway", "Natalia Strauch, Medizinische Hochschule Hannover, Germany", "Olav Thorsen, Stavanger University Hospital, Norway", "Anders Thurin, VGR, Sweden", "Pencho Tonchev, Medical University- Pleven, Bulgaria", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Lars Uhlin Hansen, UNN, Norway", "Martijn van Eenennaam, Nedap Healthcare, Netherlands", "Ina Wille, Helse-Vest RHF, Norway", "Lin Zhang, Taikang Insurance Group, China">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Cause of Death and the Death Certificate [Internet]. College of American Pathologists (CAP); 2006 [cited 2022 Jun 05]. Available from: https://www.health.state.mn.us/people/vitalrecords/physician-me/docs/capcodbook.pdf">
+        ["2"] = <"International statistical classification of diseases and related health problems [Internet]. World Health Organisation; 2011, pp 211 & 214 [cited 2022 Jun 05]. Available from: https://icd.who.int/browse10/Content/statichtml/ICD10Volume2_en_2016.pdf.">
+        ["3"] = <"Physicians' Manual on Medical Certification of Cause of Death [Internet]. New Delhi: Office of the Registrar General, India; 2012 [cited 2022 Jun 05]. Available from: ttps://ncdirindia.org/e-mor/Download/Physician's_Manual_MCCD.pdf.">
+        ["4"] = <"Slik skal dødsmeldingen fylles ut [Internet]. Folkehelseinstituttets; 2019 Sep 13 [updated 2021 Jan 21; cited 2022 Jun 05]. Available from: https://www.fhi.no/hn/helseregistre-og-registre/dodsarsaksregisteret/slik-skal-elektronisk-dodsmelding-fylles-ut/.">
+        ["5"] = <"US Standard Certificate of Death [Internet]. Atlanta; Centre for Disease Control; revised 2003 Nov (cited 2022 Jun 05]. Available from: https://www.cdc.gov/nchs/data/dvs/DEATH11-03final-ACC.pdf.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"EE74E31BF266130B499C996EC36FB948">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung zusammenfassender Informationen über die Umstände und den Kontext des Todes einer Person, nicht jedoch die Ursache(n) des Todes.">
+            keywords = <"Zertifikat", "Tod", "MCCD (Medical Certificate of Cause of Death)", "ärztliches Totenschein", "tot", "Zusammenfassung", "Notiz", "getötet", "Bescheinigung", "tödlicher Unfall">
+            use = <"Verwenden Sie den Archetyp, um zusammenfassende Informationen über die Umstände und den Kontext des Todes einer Person zu erfassen, ausgenommen die Todesursache(n).
+
+Dieser Archetyp wurde entwickelt, um die Details über den Tod einer Person zu erfassen, die nur einmal in einer Krankenakte aufgezeichnet werden müssen, einschließlich, aber nicht beschränkt auf:
+- das Datum und die Uhrzeit des Todes;
+- den Sterbeort als Kategorie, benannter Ort oder Adresse;
+- Kontext zum Tod einer Mutter während der Geburt;
+- Kontext zum Tod eines Neugeborenen; und
+- Art und Umstände des Todes.
+
+Es wird erwartet, dass ein oder mehrere Datenfelder in diesem Archetyp in den folgenden Anwendungsfällen verwendet werden können:
+- Todesbescheinigung - Datum/Uhrzeit des Todes und Sterbeort;
+- Obduktionsbericht - Beschreibung bekannter Umstände im Zusammenhang mit dem Tod, einschließlich Informationen zum mütterlichen, fötalen oder neonatalen Tod.
+- Krankheitsregister.
+
+">
+            misuse = <"Nicht zur Darstellung von Informationen über die formale Todesursache(n) verwenden - verwenden Sie dafür den Archetyp EVALUATION.cause_of_death.
+
+Nicht zur Darstellung von Informationen über postmortale Untersuchungsergebnisse wie Leichenflecken oder Leichenstarre verwenden - verwenden Sie hierfür geeignete untersuchungsbezogene Befunde im Container-Archetyp COMPOSITION.report-post_mortem.
+
+Nicht zur Darstellung von Informationen über den Vitalstatus verwenden - verwenden Sie dafür den Archetyp OBSERVATION.vital_status für diesen Zweck.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere oppsummerende informasjon om omstendighetene og konteksten om et individs død, med unntak av dødsårsak(er).">
+            keywords = <"sertifikat", "død", "MCCD", "oppsummering", "notis", "sammendrag", "dødssammendrag", "dødsattest", "MORS", "dødsmåte", "legeerklæring", "dødsfall", "death certificate">
+            use = <"Brukes for å registrere oppsummerende informasjon om omstendighetene og konteksten om døden til et individ, med unntak av dødsårsak(er).
+
+Denne arketypen er designet for å inneholde detaljer om døden av et individ der det kun er behov for å registrere innholdet en gang i pasientjournalen, inkludert, men ikke begrenset til:
+- dødstidspunkt;
+- dødssted som en kategori, et navngitt sted eller en adresse;
+- konteksten om døden til en fødende;
+- konteksten om døden til en nyfødt;
+- måten - for eksempel: selvdrap, ulykke, naturlig, drap, ukjent; og
+- omstendighetene relatert til dødsfallet.
+
+Det er forventet at ett eller flere dataelementer i arketypen kan bli benyttet i følgende bruksbehov:
+- Dødsattest - Dødstidspunkt og dødssted;
+- Obduksjonsrapport - der omstendigheter rundt dødsfallet beskrives, inkludert informasjon relatert til dødfødsler og spedbarnsdød.
+- MSIS og liknende sykdomsregistre.">
+            misuse = <"Skal ikke brukes for å registrere informasjon om de formelle dødsårsakene - bruk EVALUATION.cause_of_death til dette formålet.
+
+Ikke ment brukt for å registrere informasjon om funn ved obduksjon som dødsflekker eller rigor mortis - benytt passende undersøkelsesrelaterte funn i COMPOSITION.report-post_mortem beholder arketypen.
+
+Ikke ment brukt for å registrere informasjon vedrørende vital status - bruk OBSERVATION.vital_status til dette formålet.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record summary information about the circumstances and context of the death of an individual, excluding the cause(s) of death.">
+            keywords = <"certificate", "death", "MCCD", "dead", "summary", "note", "killed", "attestation", "fatal accident">
+            use = <"Use to record summary information about the circumstances and context of the death of an individual, excluding the cause(s) of death.
+
+This archetype has been designed to carry the details about the death of an individual that only need to be recorded once within a health record, including, but not limited to:
+- the date and time of death;
+- the place of death, as a category, named place or an address; 
+- context about the death of a mother giving birth;
+- context about the death of a newborn; and
+- manner and circumstances related to the death.
+
+It is anticipated that one or more data elements in this archetype may be used in the following use cases:
+- Death certificate - date/time of death and location of death;
+- Post mortem report - describing known circumstances related to the death, including information related to maternal, fetal or neonatal death.
+- Disease registries.">
+            misuse = <"Not to be used to record information about the formal cause(s) of death - use EVALUATION.cause_of_death for this purpose.
+
+Not to be used to record information about post-mortem examination findings such as lividity or rigor mortis - use appropriate examination-related findings within the COMPOSITION.report-post_mortem container archetype.
+
+Not to be used to record information about vital status - use OBSERVATION.vital_status for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Death summary
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0092] occurrences matches {0..1} matches {    -- Date/time of death
+                        value matches {
+                            DV_DATE_TIME[at9001]
+                            DV_INTERVAL<DV_DATE_TIME>[at9002]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0104] matches {    -- Date of death alternatives
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.dod_alternative\.v0\..*/}
+                    }
+                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Manner of death
+                        value matches {
+                            DV_TEXT[at9003]
+                        }
+                    }
+                    ELEMENT[at0093] occurrences matches {0..1} matches {    -- Manner description
+                        value matches {
+                            DV_TEXT[at9005]
+                        }
+                    }
+                    ELEMENT[at0021] matches {    -- Place category
+                        value matches {
+                            DV_TEXT[at9006]
+                        }
+                    }
+                    ELEMENT[at0109] matches {    -- Place of death
+                        value matches {
+                            DV_TEXT[at9013]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0100] matches {    -- Structured place of death
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.address(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.organisation(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    ELEMENT[at0054] occurrences matches {0..1} matches {    -- Age at death
+                        value matches {
+                            DV_DURATION[at9007] matches {
+                                value matches {PYMWDTHM/|>=PT0S|}
+                            }
+                        }
+                    }
+                    ELEMENT[at0119] occurrences matches {0..1} matches {    -- Place of injury
+                        value matches {
+                            DV_TEXT[at9017]
+                        }
+                    }
+                    ELEMENT[at0120] occurrences matches {0..1} matches {    -- Date of injury
+                        value matches {
+                            DV_DATE_TIME[at9018]
+                        }
+                    }
+                    ELEMENT[at0121] occurrences matches {0..1} matches {    -- Activity at the time of injury
+                        value matches {
+                            DV_TEXT[at9019]
+                        }
+                    }
+                    ELEMENT[at0110] occurrences matches {0..1} matches {    -- Pregnancy context
+                        value matches {
+                            DV_CODED_TEXT[at9015] matches {
+                                defining_code matches {[ac9014]}    -- Pregnancy context (synthesised)
+                            }
+                            DV_TEXT[at9016]
+                        }
+                    }
+                    ELEMENT[at0106] occurrences matches {0..1} matches {    -- Days post partum
+                        value matches {
+                            DV_DURATION[at9014] matches {
+                                value matches {PD/|P0D..P365D|}
+                            }
+                        }
+                    }
+                    ELEMENT[at0044] occurrences matches {0..1} matches {    -- Gestation at death
+                        value matches {
+                            DV_DURATION[at9008] matches {
+                                value matches {PWD/|P0D..P350D|}
+                            }
+                        }
+                    }
+                    ELEMENT[at0116] occurrences matches {0..1} matches {    -- Stillbirth context
+                        value matches {
+                            DV_CODED_TEXT[at9020] matches {
+                                defining_code matches {[ac9016]}    -- Stillbirth context (synthesised)
+                            }
+                            DV_TEXT[at9021]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0042] matches {    -- Additional details
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0105] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9009]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0009] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0103] matches {    -- Information source(s)
+                        value matches {
+                            DV_TEXT[at9010]
+                        }
+                    }
+                    ELEMENT[at0101] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9011]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0102] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Zusammenfassung des Todes">
+                description = <"Zusammenfassende Informationen über die Umstände und den Kontext des Todes einer Person, ohne die Todesursache(n) zu nennen.">
+            >
+            ["at0010"] = <
+                text = <"Todesart">
+                description = <"Kontext oder Umgebung des Todes.">
+                comment = <"Zum Beispiel: \"Krankheit\", \"Unfal\", \"Übergriff\", \"Vergiftung\", \"Tötungsdelikt\", \"Suizid\" und \"Unbestimmt\".
+Es wird empfohlen, dass die 'Todesart' mit einer externen Terminologie codiert wird.">
+            >
+            ["at0021"] = <
+                text = <"Kategorie des Orts">
+                description = <"Die Kategorie des Ortes, an dem die Person gestorben ist.">
+                comment = <"Dieses Datenelement hat mehrere Vorkommen, um mehr als eine Kategorieebene zu ermöglichen, einschließlich Unterkategorien zum Sterbeort. Es wird empfohlen, dass die \"Ortskategorie\" mit einer externen Terminologie codiert wird. Zum Beispiel: Krankenhaus oder Zuhause; oder innerhalb des Krankenhauskontextes: \"Entbindungsraum\"; \"Station\"; oder \"Operationssaal\".">
+            >
+            ["at0042"] = <
+                text = <"Zusätzliche Angaben">
+                description = <"Zusätzliche strukturierte Informationen in Bezug auf den Tod.">
+            >
+            ["at0044"] = <
+                text = <"Gestation bei Tod">
+                description = <"Anzahl der abgeschlossenen Schwangerschaftswochen des Fötus zum Zeitpunkt des fötalen Todes.">
+            >
+            ["at0054"] = <
+                text = <"Alter beim Tod">
+                description = <"Das Alter der Person zum Zeitpunk des Todes.">
+                comment = <"Wenn das Alter ≤28 Tage beträgt, kann der Tod als neonataler Tod eingestuft werden.">
+            >
+            ["at0092"] = <
+                text = <"Datum/Uhrzeit des Todes">
+                description = <"Die bekannte oder angenommene Todesdatum und -zeit.">
+                comment = <"Teilweise Daten und das Fehlen der Todeszeit sind erlaubt, falls erforderlich. Zum Beispiel: basierend auf den Befunden, die die Untersuchung des Körpers und die Rekonstruktion der Todeszeit durch den Pathologen anhand von postmortalen Veränderungen, Temperatur usw. betreffen. Kann auch als DOD (Datum des Todes) bekannt sein. Wenn mehr als eine \"Alternative zum Todesdatum\" vorgeschlagen wurde, könnte dieses Datenelement in einem Template als \"Bestätigtes/Übereinstimmendes Todesdatum\" umbenannt werden.">
+            >
+            ["at0093"] = <
+                text = <"Beschreibung der Art">
+                description = <"Beschreibung vom Kontext und den Begebenheiten des Todes.">
+            >
+            ["at0100"] = <
+                text = <"Todesort strukturiert">
+                description = <"Strukturierte Detailangaben zum Ort, an dem die Person verstorben ist.">
+                comment = <"Zum Beispiel: Details zu der Einrichtung oder Institution oder einem Orientierungspunkt oder einer Straßenkreuzung.">
+            >
+            ["at0101"] = <
+                text = <"Zuletzt aktualisiert">
+                description = <"Das Datum, wann die Zusammenfassung des Todes zuletzt aktualisiert wurde.">
+            >
+            ["at0102"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen.">
+            >
+            ["at0103"] = <
+                text = <"Informationsquelle(n)">
+                description = <"Beschreibung über die Quelle(n) der Informationen.">
+                comment = <"Zum Beispiel: Erfassung von Informationen über eine oder mehrere Quellen für diese Informationen, einschließlich ihres Beitrags. Dies kann nützlich sein, wenn potenziell widersprüchliche Informationsquellen vorliegen und um ihre Glaubwürdigkeit/Zuverlässigkeit zu berücksichtigen.">
+            >
+            ["at0104"] = <
+                text = <"Alternative zum Todesdatum">
+                description = <"Zusätzliche Details über mögliche alternative Todeszeitpunkte.">
+                comment = <"Zum Beispiel: In Situationen, in denen es keine autoritative einzige Todesquelle gibt, können potenziell widersprüchliche Daten zu Datum und Uhrzeit des Todes aus verschiedenen Quellen vorliegen.">
+            >
+            ["at0105"] = <
+                text = <"Kommentar">
+                description = <"Zusätzliche Beschreibung des Todes, die nicht in anderen Feldern enthalten ist.">
+                comment = <"Zum Beispiel: Darstellung des Sicherheitsgrades für den Todesort.">
+            >
+            ["at0106"] = <
+                text = <"Tage nach der Entbindung">
+                description = <"Die Anzahl der Tage nach der Geburt bis zum Tod einer Mutter.">
+                comment = <"Obwohl die postpartale Periode in der Regel als 42 Tage angesehen wird, dauert die späte postnatale Periode, die in Berichten verwendet wird, bis zu 1 Jahr nach der Geburt.">
+            >
+            ["at0109"] = <
+                text = <"Todesort">
+                description = <"Der einfache Name, die Adresse oder der Orientierungspunkt des Ortes, an dem die Person gestorben ist.">
+                comment = <"Zum Beispiel: \"Stadtkrankenhaus\", \"Mutterhaus\" oder \"Krater des Vesuv\", oder \"Ecke der Straßen Smith & Brow\". Dieses Datenfeld tritt mehrfach auf, um mehr als eine Ebene an Detailinformationen über den Sterbeort anzugeben, zum Beispiel sowohl \"Stadtkrankenhaus\" als auch \"Station 6 Nord\" zu erfassen.">
+            >
+            ["at0110"] = <
+                text = <"Schwangerschaftskontext">
+                description = <"Der Zeitpunkt des Todes einer Frau wird als Phase der aktiven Schwangerschaft kategorisiert.">
+            >
+            ["at0112"] = <
+                text = <"Pränatal">
+                description = <"Die Frau verstarb während der Schwangerschaft und bevor die Wehen einsetzten.">
+            >
+            ["at0113"] = <
+                text = <"Während der Geburt">
+                description = <"Die Frau verstarb während der Geburt oder Entbindung.">
+            >
+            ["at0114"] = <
+                text = <"Postnatal">
+                description = <"Die Frau verstarb ≤42 Tage nach der Geburt.">
+            >
+            ["at0115"] = <
+                text = <"Spät postnatal">
+                description = <"Die Frau verstarb mehr als 42 Tage und weniger als 1 Jahr nach der Entbindung.">
+            >
+            ["at0116"] = <
+                text = <"Totgeburtkontext">
+                description = <"Der Zeitpunkt des Todes eines totgeborenen Fötus wird als Phase der Schwangerschaft kategorisiert.">
+            >
+            ["at0117"] = <
+                text = <"Pränatal">
+                description = <"Der Fötus ist gestorben, bevor die Wehen einsetzten.">
+            >
+            ["at0118"] = <
+                text = <"Während der Geburt">
+                description = <"Der Fötus verstarb während der Geburt oder Entbindung.">
+            >
+            ["at0119"] = <
+                text = <"Ort der Verletzung">
+                description = <"Die Kategorie des Ortes, an dem die zur Todesursache beitragende Verletzung aufgetreten ist.">
+                comment = <"Verwenden Sie dieses Datenfeld, um zusätzliche Details zu erfassen, wenn eine äußere Ursache oder eine Vergiftung unter Verwendung der \"Todesart\" aufgezeichnet wurde.
+Beispiel: \"Wohninstitution\", \"Zu Hause\", \"Straße und Autobahn\", \"Bauernhof\" und \"Sport- und Leichtathletikbereich\".">
+            >
+            ["at0120"] = <
+                text = <"Datum der Verletzung">
+                description = <"Das bekannte oder angenommene Datum und die Uhrzeit der Verletzung.">
+                comment = <"Verwenden Sie dieses Datenfeld, um zusätzliche Details zu erfassen, wenn eine äußere Ursache oder Vergiftung mit Hilfe der \"Todesart\" erfasst wurde.">
+            >
+            ["at0121"] = <
+                text = <"Aktivität zum Zeitpunkt der Verletzung">
+                description = <"Art der Aktivität zum Zeitpunkt der Verletzung.">
+                comment = <"Verwenden Sie dieses Datenfeld, um zusätzliche Details zu erfassen, wenn eine äußere Ursache oder eine Vergiftung unter Verwendung der 'Todesart' aufgezeichnet wurde.
+Beispiel: \"Autofahren\", \"Skifahren\" und \"Duschen\".">
+            >
+            ["ac9014"] = <
+                text = <"Schwangerschaftskontext (synthesised)">
+                description = <"Der Zeitpunkt des Todes einer Frau wird als Phase der aktiven Schwangerschaft kategorisiert. (synthesised)">
+            >
+            ["ac9016"] = <
+                text = <"Totgeburtkontext (synthesised)">
+                description = <"Der Zeitpunkt des Todes eines totgeborenen Fötus wird als Phase der Schwangerschaft kategorisiert. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Dødssammenfatning">
+                description = <"Oppsummerende informasjon om omstendighetene og konteksten om et individs død, med unntak av dødsårsak(er).">
+            >
+            ["at0010"] = <
+                text = <"Dødsmåte">
+                description = <"Kontekst eller omstendighet rundt dødsfallet, dette er også kjent som dødsmåte.">
+                comment = <"For eksempel: 'Naturlig'; 'Ulykke'; 'Forgiftning'; 'Mord'; 'Drap'; 'Ubestemt'.
+Det anbefales å kode \"Dødsmåte\" med en ekstern terminologi.">
+            >
+            ["at0021"] = <
+                text = <"Stedskategori">
+                description = <"Stedskategori der individet døde.">
+                comment = <"Dette dataelementet har multiple forekomster for å tillate mer enn ett kategorinivå, inkludert underkategorier om dødssted. Det anbefales å kode \"Stedskategori\" med en ekstern terminologi. For eksempel: sykehus eller hjemme; eller, innenfor sykehuskontekst: 'Intensivavdeling'; 'sengepost'; eller 'operasjonsstue'.
+Det finnes et verdisett for stedskategorier tilgjengelig i FHI sitt skjema for Dødsårsak.">
+            >
+            ["at0042"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Strukturerte detaljer relatert til død.">
+            >
+            ["at0044"] = <
+                text = <"Gestasjon ved død">
+                description = <"Antall fullførte gestasjonsuker av fosteret ved fosterdødstidspunktet.">
+            >
+            ["at0054"] = <
+                text = <"Alder ved død">
+                description = <"Individets alder ved dødstidspunktet.">
+                comment = <"Hvis alderen er ≤28 dager så kan død kategoriseres som neonatal død.">
+            >
+            ["at0092"] = <
+                text = <"Dødsdato/tidspunkt">
+                description = <"Kjent eller antatt dødsdato og tidspunkt for død.">
+                comment = <"Partiell dato og manglende tidspunkt er tillatt. For eksempel: Basert på funn ved undersøkelse av liket og patologens rekonstruksjon av dødstidspunkt basert på obduksjonsfunn, temperatur, etc. Kan også være forkortet DOD (date of death). Hvis flere enn ett 'Dødsdato alternativer' foreslås, så kan dette dataelementet omdøpes i ett templat til \"Bekreftet/omforent dødsdato\".">
+            >
+            ["at0093"] = <
+                text = <"Dødsmåte beskrivelse">
+                description = <"Fritekstlig kontekst- eller omstendighetsbeskrivelse rundt dødsfallet.">
+            >
+            ["at0100"] = <
+                text = <"Strukturert dødssted">
+                description = <"Strukturerte detaljer om dødsstedet til individet.">
+                comment = <"For eksempel: Detaljer om et anlegg eller institusjon; orienteringspunkt; eller et veikryss.">
+            >
+            ["at0101"] = <
+                text = <"Sist oppdatert">
+                description = <"Dato for når dødssammendrag sist ble oppdatert.">
+            >
+            ["at0102"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0103"] = <
+                text = <"Informasjonskilder">
+                description = <"Tekstlig beskrivelse av informasjonskilder.">
+                comment = <"For eksempel: registrere informasjon om en eller flere informasjonskilder, inkludert bidragende informasjon. Dette kan være nyttig hvis det finnes potensielle motstridende informasjonskilder og for å kunne gjøre en vurdering av informasjonskildens kredibilitet/pålitelighet.">
+            >
+            ["at0104"] = <
+                text = <"Alternativ dødsdato">
+                description = <"Ytterligere detaljer om mulig alternativ dødsdato.">
+                comment = <"I situasjoner der det ikke er et enkeltstående autorativ kilde til dødsfallet, så kan det potensielt være flere kilder til alternativ dødsdato som ikke samsvarer med den antatte dødsdatoen.
+For eksempel: Naboen har ikke sett individet siden høsten.">
+            >
+            ["at0105"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om død som ikke er fanget i andre felt.">
+                comment = <"For eksempel: Registrering av grad av visshet for dødssted.">
+            >
+            ["at0106"] = <
+                text = <"Dager post partum">
+                description = <"Antall dager fra fødsel til morens død.">
+                comment = <"Mens post partum perioden normalt sett er ansett som 42 dager, så er perioden sent postnatal brukt i rapportering i inntil 1 år etter fødsel.">
+            >
+            ["at0109"] = <
+                text = <"Dødssted">
+                description = <"Navngitt sted, beskrivelse av stedet eller et landemerke på stedet hvor individet døde.">
+                comment = <"For eksempel: 'Lokalsykehus', 'Foreldres hus'; eller 'Lyngsalpene'; eller 'Østre ende av Ring 4'. Dette dataelementet har multiple forekomster for å tillate mer enn ett detaljnivå om dødssted, som for eksempel å registrere både 'Lokalsykehus' og 'Kirurgisk sengepost nord'.
+Dette registreres som dødskommune i FHI sitt skjema for Dødsårsak.">
+            >
+            ["at0110"] = <
+                text = <"Svangerskapskontekst">
+                description = <"Tidsangivelse for kvinnens død kategorisert etter fase i svangerskap/barselperiode.">
+            >
+            ["at0112"] = <
+                text = <"Antenatal">
+                description = <"Kvinnen døde mens fortsatt gravid eller før fødselsforløpet var kommet i gang.">
+            >
+            ["at0113"] = <
+                text = <"Under fødselsforløpet/forløsning">
+                description = <"Kvinnen døde under fødselsforløpet eller ved forløsning.">
+            >
+            ["at0114"] = <
+                text = <"Postnatal">
+                description = <"Kvinnen døde ≤42 dager etter forløsning.">
+            >
+            ["at0115"] = <
+                text = <"Sent postnatal">
+                description = <"Kvinnen døde >42 dager og ≤1 år etter forløsning.">
+            >
+            ["at0116"] = <
+                text = <"Dødfødt kontekst">
+                description = <"Tidsangivelse om et dødfødt fosters død kategorisert som en fase i graviditeten.">
+            >
+            ["at0117"] = <
+                text = <"Intrauterin forsterdød">
+                description = <"Fosteret døde i livmoren før fødselen ble startet.">
+            >
+            ["at0118"] = <
+                text = <"Under fødselsforløpet/forløsning">
+                description = <"Fosteret døde under fødselsforløpet eller ved forløsning.">
+            >
+            ["at0119"] = <
+                text = <"Skadested">
+                description = <"Kategorien for stedet hvor skaden som bidro til død forekom.">
+                comment = <"Bruk dette dataelementet for å registrere tilleggsdetaljer hvis ytre årsaker eller forgiftning registreres i 'Dødsmåte'.
+For eksempel: 'Bofellesskap'; 'Hjemme'; 'Gate eller motorvei'; 'Gård' og 'Sports og idrettsarena'.">
+            >
+            ["at0120"] = <
+                text = <"Skadetidspunkt">
+                description = <"Kjent eller antatt skadedato og skadetidspunkt.">
+                comment = <"Bruk dette dataelementet for å registrere tilleggsdetaljer hvis ytre årsak eller forgiftning er registrert i 'Dødsmåte'.">
+            >
+            ["at0121"] = <
+                text = <"Skadeaktivitet">
+                description = <"Type aktivitet ved skadetidspunkt.
+">
+                comment = <"Bruk dette dataelementet for å registrere tilleggsdetaljer hvis ytre årsak eller forgiftning er registrert i 'Dødsmåte'.
+For eksempel: 'Førte bil'; 'Skikjøring' og 'Dusjing'.
+Det finnes et verdisett for skadeaktivitet tilgjengelig i FHI sitt skjema for Dødsårsak.">
+            >
+            ["ac9014"] = <
+                text = <"Svangerskapskontekst (synthesised)">
+                description = <"Tidsangivelse for kvinnens død kategorisert etter fase i svangerskap/barselperiode. (synthesised)">
+            >
+            ["ac9016"] = <
+                text = <"Dødfødt kontekst (synthesised)">
+                description = <"Tidsangivelse om et dødfødt fosters død kategorisert som en fase i graviditeten. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Death summary">
+                description = <"Summary information about the circumstances and context of the death of an individual, excluding the cause(s) of death.">
+            >
+            ["at0010"] = <
+                text = <"Manner of death">
+                description = <"Context or setting of the death.">
+                comment = <"For example: 'Disease'; 'Accident'; 'Assault'; 'Poisoning'; 'Homicide'; 'Suicide'; and 'Indeterminate'.
+It is recommended that 'Manner of death' be coded with an external terminology.">
+            >
+            ["at0021"] = <
+                text = <"Place category">
+                description = <"The category of the place where the individual died.">
+                comment = <"This data element has multiple occurrences to allow more than one level of category, including subcategories about the place of death. It is recommended that 'Place category' be coded with an external terminology. For example: hospital or home; or, within the context of a hospital: 'delivery suite'; 'ward'; or 'operating theatre'.">
+            >
+            ["at0042"] = <
+                text = <"Additional details">
+                description = <"Additional structured details related to the death.">
+            >
+            ["at0044"] = <
+                text = <"Gestation at death">
+                description = <"Number of completed weeks of gestation of the foetus at the time of foetal death.">
+            >
+            ["at0054"] = <
+                text = <"Age at death">
+                description = <"The age of the individual at the time of death.">
+                comment = <"If the age is ≤28 days, the death may be categorised as a neonatal death.">
+            >
+            ["at0092"] = <
+                text = <"Date/time of death">
+                description = <"The known, or assumed, date and time of death.">
+                comment = <"Partial dates and an absence of time of death are allowed, if necessary. For example: based on findings pertaining to examination of the body and the pathologist's reconstruction of time of death based on post-mortem changes, temperature, etc. May also be known as DOD (date of death). If more than one 'Date of death alternatives' have been proposed, this data element could be renamed in a template as the 'Confirmed/Agreed date of death'.">
+            >
+            ["at0093"] = <
+                text = <"Manner description">
+                description = <"Narrative description about the context or setting of the death.">
+            >
+            ["at0100"] = <
+                text = <"Structured place of death">
+                description = <"Structured detail about the place where the individual died.">
+                comment = <"For example: details about a facility or institution; or a landmark or a road intersection.">
+            >
+            ["at0101"] = <
+                text = <"Last updated">
+                description = <"The date when the death summary was last updated.">
+            >
+            ["at0102"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0103"] = <
+                text = <"Information source(s)">
+                description = <"Narrative description about source(s) of information.">
+                comment = <"For example: capturing information about one or more sources for this information, including their contribution. This may be useful if there is potentially conflicting sources of information and to enable consideration of their credibility/reliability.">
+            >
+            ["at0104"] = <
+                text = <"Date of death alternatives">
+                description = <"Additional details about possible alternative dates of death.">
+                comment = <"For example: In situations where there is no authoritative single source of death, there may be potentially conflicting dates & times of death from different sources.">
+            >
+            ["at0105"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the death, not captured in other fields.">
+                comment = <"For example: Recording the degree of certainty for place of death.">
+            >
+            ["at0106"] = <
+                text = <"Days post partum">
+                description = <"The number of days after birth to the death of a mother.">
+                comment = <"While the post partum period is usually regarded as 42 days, the late post natal period used in reporting lasts until 1 year after birth.">
+            >
+            ["at0109"] = <
+                text = <"Place of death">
+                description = <"The simple name, address or landmark of the place where the individual died.">
+                comment = <"For example: 'City Hospital'; 'Mother's house'; or 'Mt Vesuvius crater'; or 'Corner of Smith & Brown Streets'. This data element has multiple occurrences to allow more than one level of detail about the place of death, such as recording both 'City Hospital' and 'Ward 6 North'.">
+            >
+            ["at0110"] = <
+                text = <"Pregnancy context">
+                description = <"Timing of a woman's death categorised as a phase of the active pregnancy.">
+            >
+            ["at0112"] = <
+                text = <"Antenatal">
+                description = <"The woman died while pregnant and before labour commenced.">
+            >
+            ["at0113"] = <
+                text = <"During labour/delivery">
+                description = <"The woman died during labour or delivery.">
+            >
+            ["at0114"] = <
+                text = <"Postnatal">
+                description = <"The woman died ≤42 days after delivery.">
+            >
+            ["at0115"] = <
+                text = <"Late postnatal">
+                description = <"The woman died >42 days and ≤1 year after delivery.">
+            >
+            ["at0116"] = <
+                text = <"Stillbirth context">
+                description = <"Timing of a stillborn foetus' death categorised as a phase of pregnancy.">
+            >
+            ["at0117"] = <
+                text = <"Antenatal">
+                description = <"The foetus died before labour commenced.">
+            >
+            ["at0118"] = <
+                text = <"During labour/delivery">
+                description = <"The foetus died during labour or delivery.">
+            >
+            ["at0119"] = <
+                text = <"Place of injury">
+                description = <"The category of the place where the injury contributing to death occurred.">
+                comment = <"Use this data element to record additional details if an external cause or poisoning has been recorded using the 'Manner of death'.
+For example: 'Residential institution'; ' At home'; 'Street and highway'; 'Farm' and 'Sports and athletics area'.">
+            >
+            ["at0120"] = <
+                text = <"Date of injury">
+                description = <"The known, or assumed, date and time of injury.">
+                comment = <"Use this data element to record additional details if an external cause or poisoning has been recorded using the 'Manner of death'.">
+            >
+            ["at0121"] = <
+                text = <"Activity at the time of injury">
+                description = <"Type of activity at the time of injury.">
+                comment = <"Use this data element to record additional details if an external cause or poisoning has been recorded using the 'Manner of death'.
+For example: 'Driving a car'; 'Skiing' and 'Showering'.">
+            >
+            ["ac9014"] = <
+                text = <"Pregnancy context (synthesised)">
+                description = <"Timing of a woman's death categorised as a phase of the active pregnancy. (synthesised)">
+            >
+            ["ac9016"] = <
+                text = <"Stillbirth context (synthesised)">
+                description = <"Timing of a stillborn foetus' death categorised as a phase of pregnancy. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9016"] = <
+            id = <"ac9016">
+            members = <"at0117", "at0118">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0112", "at0113", "at0114", "at0115">
+        >
+    >

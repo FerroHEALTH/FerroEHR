@@ -1,0 +1,507 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=bab02c90-e1f6-4a9c-b03a-8d854d3242f7; build_uid=08cd5c05-f636-4e58-941c-74ac3131d5de)
+    openEHR-EHR-COMPOSITION.medication_list.v1.0.4
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Kim Sommer">
+                ["organisation"] = <"MHH">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Linda Aulin">
+                ["organisation"] = <"Region Stockholm">
+                ["email"] = <"linda.aulin@sll.se">
+            >
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            author = <
+                ["name"] = <"Edgardo Vazquez">
+                ["organisation"] = <"VinculoMedico">
+                ["email"] = <"edgardo.vazquez@vinculomedico.com">
+            >
+            accreditation = <"Medical Doctor">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand and Vebjørn Arntzen">
+                ["organisation"] = <"Helse Bergen HF and Oslo University Hospital">
+                ["email"] = <"john.tore.valand@helse-bergen.no, varntzen@ous-hf.no">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Vladimir Pizzo">
+                ["organisation"] = <"Royal Philips">
+                ["email"] = <"vrppizzo@gmail.com">
+            >
+        >
+        ["el"] = <
+            language = <[ISO_639-1::el]>
+            author = <
+                ["name"] = <"Erasmia Partafylla">
+                ["organisation"] = <"Sigmasoft">
+                ["email"] = <"c.partafylla@sigmasoft.gr">
+            >
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            author = <
+                ["name"] = <"Martijn van Eenennaam">
+                ["organisation"] = <"Nedap Healthcare">
+                ["email"] = <"martijn.vaneenennaam@nedap.com">
+            >
+            accreditation = <"Ph.D.">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Chunlan Ma">
+        ["organisation"] = <"Ocean Informatics, Australia">
+        ["email"] = <"chunlan.ma@oceaninformatics.com">
+        ["date"] = <"2006-11-06">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Fatima Almeida, Critical SW, Portugal", "Nadim Anani, Karolinska Institutet, Sweden", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Koray Atalag, University of Auckland, New Zealand", "Heidi Aursand, Oslo universitetssykehus, Norway", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Sistine Barretto-Daniels, Australia", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Rong Chen, Cambio Healthcare Systems, Sweden", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Stig Erik Hegrestad, Helse Førde, Norway", "Shahla Foozonkhah, Iran ministry of health and education, Iran", "Heather Grain, Llewelyn Grain Informatics, Australia", "Sam Heard, Ocean Informatics, Australia", "Anca Heyd, DIPS ASA, Norway", "Hilde Hollås, DIPS AS, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Lars Morgan Karlsen, DIPS ASA, Norway", "Shinji Kobayashi, Kyoto University, Japan", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Hallvard Lærum, Norwegian Directorate of e-health, Norway", "Colin Macfarlane, Elsevier, United Kingdom", "Siv Marie Lien, DIPS ASA, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Andrej Orel, Marand d.o.o., Slovenia", "Pablo Pazos, CaboLabs.com Health Informatics, Uruguay", "Jussara Rotzsch, Hospital Alemão Oswaldo Cruz, Brazil", "Gro-Hilde Severinsen, Norwegian center for ehealthresearch, Norway", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Nyree Taylor, Ocean Informatics, Australia", "Tesfay Teame, Folkehelseinstituttet, Norway", "Micaela Thierley, Helse Bergen, Norway", "Rowan Thomas, St. Vincent's Hospital Melbourne, Australia", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"E31F1B770728AFFC60431DA7D907EDA0">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Repräsentation einer beständigen und gepflegten Liste von Medikamenten für eine Person oder, alternativ, um positive und explizite Aussagen über bekannte Ausschlüsse oder das Fehlen von Informationen über Medikamente zu machen, die sich auf die klinische Entscheidung und die Erbringung von Pflegeleistungen auswirken können.">
+            keywords = <"Medikation", "Medikament", "Liste", "Arzneimittel", "aktuell", "Verschreibung">
+            use = <"	
+Zur Repräsentation einer beständigen und geführten Liste von Medikamenten für eine Person, die möglicherweise alle verschriebenen und rezeptfreien Medikamente, Ergänzungsmittel oder Naturheilmittel enthält. Alternativ können positive und explizite Aussagen über bekannte Ausschlüsse oder das Fehlen von Informationen über Medikamente enthalten sein.
+
+Der Zweck dieses Archetyps ist es, einen generischen Container für alle Medikamentenlisten zu bilden, die einen bestimmten Kontext oder eine Einschränkung des Umfangs innerhalb eines Templates haben können. Diese Liste kann als Datenquelle für eine aktive aktuelle Medikationsliste innerhalb eines klinischen Systems, für den Versorgungswechsel, den Datenaustausch oder als Grundlage für die Entscheidungsunterstützung genutzt werden. 
+
+In den meisten Fällen wird diese Liste aus drei Arten von Archetypen bestehen:
+- Aussagen über den positiven Medikamentengebrauch werden mit Hilfe der Archetypen INSTRUCTION.medication_order und/oder ACTION.medication erfasst; ODER
+- eine positive Aussage über den allgemeinen Ausschluss des Medikamentengebrauchs kann über den allgemeinen Archetyp EVALUATION.exclusion_global getroffen werden - z.B.: \"Derzeit keine Einnahme von Medikamenten\"; ODER
+- eine positive Aussage über den Ausschluss des Gebrauchs eines bestimmten Medikaments kann über den Archetyp EVALUATION.exclusion_specific getroffen werden - z.B.: \"Derzeit keine Einnahme von Penizillin.\"
+- eine positive Aussage über keine verfügbaren Informationen - weder eine positive bekannte Medikamenteneinnahme noch ein positiver Ausschluss - kann mit dem Archetyp EVALUATION.absence erfasst werden.
+
+Damit eine Medikamentenliste genau und sicher als Grundlage für Entscheidungsunterstützungsaktivitäten und für den Austausch verwendet werden kann, sollte diese Medikamentenliste idealerweise von einem für die Gesundheitsakte verantwortlichen Arzt erstellt werden und nicht automatisch vom klinischen System allein durch die Geschäftsregeln verwaltet werden.
+
+Es kann einen feinen, aber wichtigen Unterschied zwischen den Arten von Medikamentenlisten geben. Einige Beispiele sind: \"Aktuelle Medikamente\" oder \"Regelmäßige Medikamente\". Eine \"Aktuelle Medikamentenliste\" kann als eine Liste aller Medikamente angesehen werden, die die Person zu einem bestimmten Zeitpunkt in ihrem Körper haben würde, einschließlich aller Bedarfsmedikamente oder Medikamente zur sofortigen Einnahme, die bei der Verschreibung berücksichtigt werden sollten, um sicherzustellen, dass die Überprüfung der Wechselwirkung von Arzneimitteln während der Dauer ihrer physiologischen Wirkung fortgesetzt wird. Eine Liste der \"regulären Medikamente\" darf nur solche Medikamente enthalten, die von der Person regelmäßig und kontinuierlich eingenommen werden. 
+
+Darüber hinaus ist es in der klinischen Praxis üblich, Medikamentenlisten mit zeitlichen Einschränkungen zu erstellen, einschließlich der \"Aufnahmemedikation\" und der \"Entlassmedikation\", die erst zu einem bestimmten Zeitpunkt relevant sind. Weitere Beispiele sind \"Vergangene Medikamente\" oder \"Inaktive Medikamente\". Dies wird letztendlich eine Implementierungsentscheidung für jedes klinische System sein - ein alternativer Ansatz kann darin bestehen, diese kontextabhängigen klinischen Konstrukte als Ergebnis einer Abfrage oder Verwendung eines anderen, noch zu definierenden COMPOSITION-Archetyps zu erfassen.
+
+Dieser Archetyp soll als beständige Liste dargestellt und geführt werden, es gibt jedoch Situationen, in denen die Liste innerhalb der episodischen Pflege verwendet werden kann und zusätzliche Attribute wie Kontext usw. benötigt, um eine genaue Aufzeichnung zu ermöglichen. Das openEHR-Referenzmodell erlaubt derzeit nur die Aufzeichnung von Kontexten innerhalb von ereignisbasierten COMPOSITION-Archetypen. Infolgedessen wurde dieser Archetyp als Ereignis und nicht als beständige COMPOSITION modelliert, um Flexibilität zu ermöglichen, so dass einige klinische Systeme Medikamentenlisten für Episoden der Pflege sicher führen können, während andere sich dafür entscheiden werden, diese COMPOSITION zu implementieren, um beständig zu handeln.
+
+
+">
+            misuse = <"Nicht zur Erfassung von Medikamentenlisten verwenden, die nicht für die Beständigkeit und die fortlaufende Überprüfung und Pflege bestimmt sind.
+
+Nicht zur Erfassung individueller Verschreibungen verwenden - Verwenden Sie für diesen Zweck COMPOSITION.prescription.
+
+Nicht zur Erfassung tatsächlicher Änderungen der Therapie, einschließlich Dosisänderungen, neuer Medikamente und abgesetzter Medikamente, verwenden. Jede Verordnung wird mit einzelnen Instanzen des Archetyps INSTRUCTION.medication_order erfasst, und nur die neueste sollte in der neuesten Version dieser COMPOSITION dargestellt werden.
+
+Nicht zur Erfassung von durchgeführten Impfungen verwenden - Verwenden Sie zu diesem Zweck COMPOSITION.immunisation_list.">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att registrera en kvarstående och hanterad lista över läkemedel för en individ, alternativt positiva och explicita uttalanden om kända uteslutningar eller faktisk frånvaro av information om mediciner; som alla kan påverka kliniskt beslutsfattande och vård.
+
+Att registrera en bestående (persistent) och uppdaterad lista över läkemedel som en individ använder, alternativt bekräftande uttalanden om läkemedel som individen inte använder. All denna information kan påverka kliniska beslut och behandling.">
+            keywords = <"läkemedel", "medicin", "lista", "läkemedelslista", "ordination", "recept", "aktuell">
+            use = <"Används för att registrera en bestående (ihållande) och uppdaterad lista över individens läkemedel. Listan kan potentiellt innehålla både receptbelagda läkemedel och receptfria läkemedel, kosttillskott och naturmedicin. Alternativt kan listan innehålla bekräftande uttalanden om läkemedel som individen inte använder, eller läkemedel som man inte har information om huruvida individen använder eller inte.
+
+Syftet med denna arketyp är att den ska utgöra ett generiskt ramverk för alla läkemedelslistor, vilka kan ha ett specifikt sammanhang eller begränsas beroende på hur de sätts upp i en mall. Denna lista kan användas som källa för en uppdaterad lista över läkemedel i ett kliniskt system, vid överföring av patienter, utbyte av data eller som underlag för beslutsstöd.
+
+Listan omfattas vanligtvis av tre typer av arketyper:
+- Faktisk användning av läkemedel registreras i arketyperna INSTRUCTION.medication_order och/eller ACTION.medication. 
+- Ett undantag från läkemedelsanvändning registreras i den allmänna arketypen EVALUATION.exclusion_global. Till exempel \"Tar för närvarande inga mediciner\".
+- Uteslutning av ett specifikt läkemedel registreras i arketypen EVALUATION.exclusion_specific. Till exempel: \"Tar för närvarande inte penicillin\". 
+- Saknad information om läkemedel, oavsett om de används eller inte, registreras i EVALUATION.absence-arketypen.
+
+För att en läkemedelslista ska vara korrekt och säker att använda som underlag för beslutsstöd och informationsutbyte bör listan upprätthållas av en patientansvarig läkare, snarare än att den uppdateras automatiskt via affärslogik i ett kliniskt system eller applikation.
+
+Det kan finnas subtila men viktiga skillnader mellan olika typer av läkemedelslistor. Några exempel inkluderar: 'Aktuell medicinering' eller 'Regelbunden medicinering'. En ''aktuell läkemedelslista '' kan ses som en lista över alla läkemedel som individen har i kroppen, inklusive bolusdoser och akutdoser av ett läkemedel, vid en given tidpunkt och som kan användas vid kontroll av läkemedelsinteraktioner vid förskrivning. En ''Regelbunden medicinering \"- lista får endast innehålla de läkemedel som tas av individen regelbundet och fortlöpande.
+
+I många fall skapas separata läkemedelslistor som bara är giltiga vid en viss tidpunkt, till exempel \"Läkemedel vid inskrivning\" och \"Läkemedel vid utskrivning\". Sådana listor är endast giltiga vid en viss tidpunkt. Andra exempel inkluderar 'Tidigare läkemedel' eller 'Inaktiva läkemedel'. Detta kommer i slutändan att vara ett implementationsbeslut för varje kliniskt system - ett alternativt tillvägagångssätt kan vara att registrera dessa kontextuella kliniska konstruktioner som ett resultat av en fråga eller med hjälp av olika COMPOSITION-arketyper.
+
+Den här arketypen är utformad för att användas som en permanent och uppdaterad lista, men det finns situationer där listan kan användas episodiskt och kräver då att ytterligare attribut såsom sammanhang etc för att möjliggöra korrekt registrering. Referensmodellen i OpenEHR tillåter för närvarande endast att sammanhang registreras i händelsebaserade COMPOSITION-arketyper.
+
+Som ett resultat av detta har denna arketyp modellerats som en \"Event\", snarare än en \"Persistent\" COMPOSITION. Detta gör det möjligt för kliniska system att hantera läkemedelslistor för vårdepisoder, medan andra väljer att implementera denna COMPOSITION-arketyp som ett \"beständigt\" dokument.
+
+
+">
+            misuse = <"Används inte för att registrera läkemedelslistor som inte är avsedda att vara permanenta och som kan uppdateras kontinuerligt.
+
+Används inte för att registrera enskilda recept, använd arketypen COMPOSTION.prescription för detta ändamål.
+
+Används inte för att registrera faktiska förändringar i behandlingen, detta gäller även dosändringar, nya läkemedel eller avbrutna läkemedel. Varje recept registreras i sina egna instanser av arketypen INSTRUCTION.medication_order, och endast den sista representeras i den senaste versionen av denna COMPOSITION-arketyp.
+
+Får inte användas för att registrera administrerade vaccinationer - använd COMPOSITION.immunisation_list för detta ändamål.">
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            purpose = <"Registrar un listado gestionado y persistente de medicaciones razonablemente asumidas como que estan siendo tomadas por la persona, y que pueden influenciar la toma de decisiones y la provision del cuidado. Las medicinas pueden ser precriptas o adquiridas libremente.">
+            keywords = <"medicacion", "medicina", "listado", "en curso", "droga">
+            use = <"Utilizado para registrar un listado persistente y gestionado de todos los medicamentos , tanto los prescriptos como los de venta libre, que se asumen estan siendo tomados por la persona.
+
+Este listado puede ser utilizado como una fuente de actualizacion de data sobre medicamentos para intercambio o como base para una toma de decisiones.
+
+Este listado puede comprender tres tipos de arquetipos:
+-los enunciados sobre el uso positivo de medicaciones son registrado utilizando los arquetipos INSTRUCTION. medication y/o ACTION. medication; O - un enunciado positivo sobre una exclusion de medicacion puede ser registrado utilizando el arquetipo específico EVALUATION.exclusion-medication - por ejemplo \" Actualmente no se encuetra tomando medicaciones\"; O
+- un enunciado sobre la falta de disponibilidad de iformacion- ni un uso positivo de medicacion ni una exclusion positiva- puede ser registrado utilizando el arquetipo de EVALUATION. absence.
+
+Puede existir una diferencia sutil pero importante entre tipos de listados de medicaciones. Algunos ejemplos incluyen \"Medicacion Presente\" o \"Medicacion Habitual\". Un \"listado de Medicacion Presente\" puede ser considerado como un listado de todas los medicamentos que la persona deberia tener en su cuerpo en un momento determinado, incluyendo una dosis stat de un medicamento que deberia ser considerado cuando se prescribe un medicamento adicional para asegurar que continua el control de interaccion droga-droga durante la duracion de su influencia fisiologica.
+Un \"Listado de Medicacion Habitual\" puede incluir solamente aquellos medicamentos que son prescriptos o utilizados de manera regular y permanente. 
+
+En la práctica clinica es comun crear Listado de Medicamentos que tienen una restriccion contextual o temporal, incluyendo 'Listado de Medicamentos en Admision' y 'Listado de Medicamentos en el Alta', los cuales seran precisos en un punto en el tiempo pero no seran gestionados. Probablemente sea una mejor practica registrar los mismos de manera explicita, por ejemplo como el resultado de un query, registrar y/o intercambiar la data precisa aplicable para esa instancia temporal y lugar y no utilizar este arquetipo en esta situacion.
+
+Con la finalidad que esta lista sea precisa y segura de usar como base de actividades de apoyo a las decisiones y para intercambio, este Listado de Medicamentos deberia idealmente ser curada por el clinico responsable por el registro de la salud, en ves de ser solamente gestionada automaticamente por el sistema clinico a traves de reglas de negocio.
+">
+            misuse = <"No debe ser utilizado para el registro de Listado de Medicamentos no persistentes
+
+No debe ser utilizado para registrar vacunaciones administradas.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere en varig (persistent) og oppdatert liste over legemidler som et individ bruker, alternativt bekreftende utsagn om legemidler individet ikke bruker, eller legemidler man ikke har informasjon om hvorvidt individet bruker eller ikke bruker. All denne informasjonen kan påvirke kliniske beslutninger og behandling.">
+            keywords = <"legemiddel", "medisin", "liste", "forskrivning", "ordinering", "forordning">
+            use = <"Brukes for å registrere en varig (persistent) og oppdatert liste over individets legemidler. Listen kan potensielt inneholde både ordinerte og reseptfrie legemidler, kosttilskudd og naturmedisin. Alternativt kan listen inneholde bekreftende utsagn om legemidler individet ikke bruker, eller legemidler man ikke har informasjon om hvorvidt individet bruker eller ikke bruker.
+
+Hensikten med denne arketypen er at den skal være en generisk ramme (container) for en hvilken som helst legemiddeliste. De ulike listene kan ha en begrensing eller et spesifikt bruksområde i et templat. Denne listen kan brukes som kilde for en oppdatert legemiddeliste i et klinisk system, ved overflytting av pasienter, utveksling av data eller som grunnlag for beslutningsstøtte.
+
+Listen omfatter vanligvis tre arketypeklasser:
+- Faktisk bruk av legemidler registreres i arketypene INSTRUCTION.medication_order (Legemiddelordinering) og/eller ACTION.medication (Legemiddelhåndtering).
+- En eksklusjon av all legemiddelbruk registreres i arketypen EVALUATION.exclusion_global (Eksklusjonsutsagn - overordnet). For eksempel \"Bruker ingen legemidler\".
+- En eksklusjon av et spesifikt legemiddel registreres i arketypen EVALUATION.exclusion_specific (Ekslusjonsutsagn - spesifikt). For eksempel \"Bruker for øyeblikket ikke penicillin\".
+- Manglende informasjon om legemidler, enten det gjelder om legemidler brukes eller ikke brukes, registreres i arketypen EVALUATION.absence (Fravær av informasjon).
+
+For at en legemiddelliste skal være nøyaktig og trygg å bruke som basis for beslutningsstøtte og utveksling bør listen bli vedlikeholdt av en pasientansvarlig kliniker, i motsetning til å oppdateres automatisk via forretningslogikk i applikasjonen.
+
+Det kan være subtile, men viktige forskjeller mellom ulike typer legemiddellister. Det kan for eksempel være en liste som viser alle legemidler et individ har i kroppen, inkludert bolusdoser og behovsmedisin, på et tidspunkt og som kan brukes ved sjekk av legemiddelinteraksjoner ved ordinering. Et annet eksempel kan være en liste som bare inneholder de faste legemidlene et individ bruker.
+
+I mange tilfeller lages det egne legemiddellister som kun vil være gyldig på et spesifikt tidspunkt, for eksempel \"Legemidler ved innleggelse\" og \"Legemidler ved utskriving\". Slike lister vil bare være gyldige på et spesifikt tidspunkt. Et annet eksempel kan være \"Tidligere legemidler\". Programvareutvikleren må til syvende og sist velge hvilke lister som skal tilbys, en alternativ tilnærming kan være å lage slike lister som et
+resultat av en spørring eller ved å benytte ulike COMPOSITION arketyper.
+
+Denne arketypen er laget for å brukes som en varig og oppdatert liste, men det finnes situasjoner der listen kan brukes episodisk, og vil da kreve tilleggs-attributter som f.eks. kontekst ved registering. openEHR referansemodellen tillater p.t. kun registrering av kontekst i COMPOSITION-arketyper av typen \"Event\". Som et resultat av dette er denne arketypen modellert som en \"Event\"- heller enn en \"Persistent\"-COMPOSITION. Dette gir rom for at kliniske systemer kan håndtere legemiddellister for omsorgsepisoder, mens andre vil velge å implementere denne COMPOSITION-arketypen som et \"Persistent\" dokument.">
+            misuse = <"Brukes ikke for å registre legemiddellister som ikke er tenkt å være varige og gjenstand for kontinuerlig oppdatering.
+
+Brukes ikke for å registrere individuelle ordineringer, bruk arketypen COMPOSTION.prescription for dette formålet.
+
+Brukes ikke for å registrere faktiske endringer i behandling, dette gjelder også endring i dosering, nye legemidler eller avsluttede legemidler. Hver ordinering registreres i egne instanser av arketypen INSTRUCTION.medication_order, og bare den siste representeres i den siste versjonen av denne COMPOSITION-arketypen.
+
+Brukes ikke for å registrere administrerte vaksiner, bruk arketypen COMPOSTION.immunisation_list dette formålet.">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Documentar uma lista persistente e gerenciada de medicamentos para um indivíduo ou, alternativamente, declarações explícitas sobre exclusões conhecidas ou ausência de qualquer informação sobre medicamentos; todos os quais podem influenciar a tomada de decisão clínica e a prestação de cuidados.">
+            keywords = <"*medication(en)", "*medicine(en)", "*list(en)", "*drug(en)", "*current(en)", "*prescription(en)">
+            use = <"Use para documentar uma lista persistente e gerenciada de medicamentos para um indivíduo, potencialmente incluindo todos os medicamentos prescritos, os 'sem receita', suplementos ou remédios naturais. Como alternativa, pode conter declarações explícitas sobre exclusões conhecidas ou ausência de informações sobre medicamentos.
+
+A intenção desse arquétipo é ser um \"container\" genérico para qualquer lista de medicamentos, que pode ter um contexto específico ou limitação de escopo definido num template. Essa lista pode ser utilizada como uma fonte de dados de medicamentos para uma lista de medicamentos ativos em um sistema clínico, para transição de cuidados, troca de dados ou como base para suporte à decisão.
+
+Mais comumente, esta lista será composta por quatro tipos de arquétipos:
+- declarações de medicamentos em uso, que são registradas nos arquétipos INSTRUCTION.medication_order e / ou ACTION.medication; OU
+- declaração sobre a exclusão geral do uso de medicamentos, que pode ser registrada usando o arquétipo EVALUATION.exclusion_global - por exemplo: \"Não está tomando nenhum medicamento no momento\"; OU
+- declaração sobre a exclusão do uso de um medicamento específico, que pode ser registrada usando o arquétipo EVALUATION.exclusion_specific - por exemplo: \"Atualmente não está tomando penicilina\"; OU
+- declaração sobre nenhuma informação estar disponível - nem uso conhecido de medicação nem uma exclusão de uso - pode ser registrada usando o arquétipo EVALUATION.absence.
+
+Para que uma lista de medicamentos seja precisa e segura para uso como base para atividades de apoio à decisão e para troca, esta lista de medicamentos deve, idealmente, ser curada por um médico responsável pelo registro de saúde, em vez de gerenciada automaticamente pelo sistema clínico somente por meio de regras de negócios.
+
+Pode haver uma diferença sutil, mas importante, entre os tipos de listas de medicamentos. Alguns exemplos incluem: 'Medicação Atual' ou 'Medicação Regular'. Uma 'lista atual de medicamentos' pode ser considerada como uma lista de todos os medicamentos que o indivíduo teria em seu corpo em um determinado momento, incluindo quaisquer doses \"agora\" ou \"se necessário\" de um medicamento que devem ser consideradas ao prescrever para garantir que a verificação contínua da interação medicamento-medicamento aconteça durante a duração do(s) seu(s) efeito(s) fisiológico(s). Uma lista de 'Medicamentos Regulares' pode incluir apenas aqueles medicamentos que são tomados pelo indivíduo de forma regular e contínua.
+
+Além disso, é comum na prática clínica criar Listas de Medicamentos com restrições temporais, incluindo 'Lista de Medicamentos de Admissão' e 'Lista de Medicamentos de Alta', que serão relevantes apenas em um determinado momento. Outros exemplos incluem 'Medicamentos anteriores' ou 'Medicamentos inativos'. Esta será, em última análise, uma decisão de implementação para cada sistema clínico - uma abordagem alternativa pode ser registrar esses conceitos contextuais clínicos como resultado de uma consulta ou o uso de um arquétipo COMPOSITION diferente, ainda a ser determinado.
+
+Esse arquétipo deve ser representado e gerenciado como uma lista persistente; no entanto, existem situações em que a lista pode ser usada no atendimento episódico e requer atributos adicionais, como contexto, etc., para permitir um registro preciso. O modelo de referência openEHR atualmente permite apenas que o contexto seja registrado nos arquétipos COMPOSITION baseados em eventos. Como resultado, este arquétipo foi modelado como um Evento, ao invés de uma COMPOSITION Persistente, para permitir flexibilidade para que alguns sistemas clínicos possam gerenciar com segurança as listas de Medicamentos para episódios de cuidados, enquanto outros escolherão implementar esta COMPOSITION para representar de uma maneira persistente.">
+            misuse = <"*Not to be used to record lists of Medications that are not intended for persistence and ongoing revision and curation.
+
+Not to be used to record individual Prescriptions - use COMPOSITION.prescription for this purpose.
+
+Not to be used to record actual changes to therapy, including dose changes, new medicines and ceased medications. Each order will be recorded using individual instances of the INSTRUCTION.medication_order archetype, and only the latest one should be represented within the latest version of this COMPOSITION.
+
+Not to be used to record vaccinations administered - use COMPOSITION.immunisation_list for this purpose.(en)">
+        >
+        ["el"] = <
+            language = <[ISO_639-1::el]>
+            purpose = <"Για την καταγραφή ενός επίμονου και διαχειριζόμενου καταλόγου φαρμάκων για ένα άτομο ή, εναλλακτικά, θετικών και ρητών δηλώσεων σχετικά με γνωστές εξαιρέσεις ή πραγματική απουσία οποιασδήποτε πληροφορίας σχετικά με τα φάρμακα. Όλα αυτά μπορούν να επηρεάσουν τη λήψη κλινικών αποφάσεων και την παροχή φροντίδας.">
+            keywords = <"φάρμακο", "ιατρική", "λίστα", "ναρκωτικό", "τρέχων", "συνταγή">
+            use = <"*Use to record a persistent and managed list of medicines for an individual, potentially including all prescribed and 'over the counter' medicines, supplements or natural remedies. Alternatively, it may contain positive and explicit statements about known exclusions or absence of information about medications.
+
+The intent of this archetype is to be a generic container for any Medication list, which may have a specific context or limitation of scope set within a template. This list can be utilised as a source of medicines data for an active current medication list within a clinical system, for transition of care, data exchange, or as the basis for decision support. 
+
+Most commonly, this list will be comprised of three types of archetype:
+- statements about the positive use of medications are recorded using the INSTRUCTION.medication_order and/or ACTION.medication archetypes; OR
+- a positive statement about the general exclusion of medication use can be recorded using the general EVALUATION.exclusion_global archetype - for example: \"Not currently taking any medications\"; OR
+- a positive statement about the exclusion of use of a specific medication can be recorded using the EVALUATION.exclusion_specific archetype - for example: \"Not currently taking penicillin\"
+- a positive statement about no information being available - neither a positive known use of medication nor a positive exclusion - can be recorded using the EVALUATION.absence archetype.
+
+In order for a Medication list to be accurate and safe to use as the basis for decision support activities and for exchange, this Medication list should ideally be curated by a clinician responsible for the health record, rather than managed automatically by the clinical system through business rules alone.
+
+There can be a subtle but important difference between types of medication lists. Some examples include: 'Current Medication' or 'Regular Medication'. A 'Current medication list' may be regarded as a list of all medicines that the individual would have in their body at a given time, including any stat or prn doses of a medicine that should be considered when prescribing to ensure that drug-drug interaction checking continues for the duration of its physiological effect. A 'Regular Medication' list may only include those medicines that are taken by the individual on a regular and ongoing basis. 
+
+In addition, it is common in clinical practice to create Medication Lists that have temporal constraints, including 'Admission Medication List' and 'Discharge Medication List', which will be relevant only at a specified point in time. Other examples include 'Past Medications' or 'Inactive Medications'. This will ultimately be an implementation decision for each clinical system - an alternative approach may be to record these contextual clinical constructs as the result of a query or use of a different COMPOSITION archetype, yet to be determined.
+
+This archetype is intended to be represented and managed as a persistent list, however there are situations where the list may be used within episodic care and require additional attributes such as context etc to enable accurate recording. The openEHR reference model currently only allows context to be recorded within Event-based COMPOSITION archetypes. As a result, this archetype has been modelled as an Event, rather than Persistent, COMPOSITION, to allow for flexibility so that some clinical systems can safely manage Medication lists for episodes of care, while others will choose to implement this COMPOSITION to act in a persistent manner.(en)">
+            misuse = <"*Not to be used to record lists of Medications that are not intended for persistence and ongoing revision and curation.
+
+Not to be used to record individual Prescriptions - use COMPOSITION.prescription for this purpose.
+
+Not to be used to record actual changes to therapy, including dose changes, new medicines and ceased medications. Each order will be recorded using individual instances of the INSTRUCTION.medication_order archetype, and only the latest one should be represented within the latest version of this COMPOSITION.
+
+Not to be used to record vaccinations administered - use COMPOSITION.immunisation_list for this purpose.(en)">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"للمحافظة على قائمة مُحكَمة للأدوية الحالية الموصوفة للشخص.">
+            keywords = <"قائمة الدواء", "الأدوية الحالية">
+            use = <"للأدوية الحالية">
+            misuse = <"لا يستخدم للأدوية الحاضرة">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a persistent and managed list of medicines for an individual or, alternatively, positive and explicit statements about known exclusions or actual absence of any information about medications; all of which may influence clinical decision-making and care provision.">
+            keywords = <"medication", "medicine", "list", "drug", "current", "prescription">
+            use = <"Use to record a persistent and managed list of medicines for an individual, potentially including all prescribed and 'over the counter' medicines, supplements or natural remedies. Alternatively, it may contain positive and explicit statements about known exclusions or absence of information about medications.
+
+The intent of this archetype is to be a generic container for any Medication list, which may have a specific context or limitation of scope set within a template. This list can be utilised as a source of medicines data for an active current medication list within a clinical system, for transition of care, data exchange, or as the basis for decision support. 
+
+Most commonly, this list will be comprised of three types of archetype:
+- statements about the positive use of medications are recorded using the INSTRUCTION.medication_order and/or ACTION.medication archetypes; OR
+- a positive statement about the general exclusion of medication use can be recorded using the general EVALUATION.exclusion_global archetype - for example: \"Not currently taking any medications\"; OR
+- a positive statement about the exclusion of use of a specific medication can be recorded using the EVALUATION.exclusion_specific archetype - for example: \"Not currently taking penicillin\"
+- a positive statement about no information being available - neither a positive known use of medication nor a positive exclusion - can be recorded using the EVALUATION.absence archetype.
+
+In order for a Medication list to be accurate and safe to use as the basis for decision support activities and for exchange, this Medication list should ideally be curated by a clinician responsible for the health record, rather than managed automatically by the clinical system through business rules alone.
+
+There can be a subtle but important difference between types of medication lists. Some examples include: 'Current Medication' or 'Regular Medication'. A 'Current medication list' may be regarded as a list of all medicines that the individual would have in their body at a given time, including any stat or prn doses of a medicine that should be considered when prescribing to ensure that drug-drug interaction checking continues for the duration of its physiological effect. A 'Regular Medication' list may only include those medicines that are taken by the individual on a regular and ongoing basis. 
+
+In addition, it is common in clinical practice to create Medication Lists that have temporal constraints, including 'Admission Medication List' and 'Discharge Medication List', which will be relevant only at a specified point in time. Other examples include 'Past Medications' or 'Inactive Medications'. This will ultimately be an implementation decision for each clinical system - an alternative approach may be to record these contextual clinical constructs as the result of a query or use of a different COMPOSITION archetype, yet to be determined.
+
+This archetype is intended to be represented and managed as a persistent list, however there are situations where the list may be used within episodic care and require additional attributes such as context etc to enable accurate recording. The openEHR reference model currently only allows context to be recorded within Event-based COMPOSITION archetypes. As a result, this archetype has been modelled as an Event, rather than Persistent, COMPOSITION, to allow for flexibility so that some clinical systems can safely manage Medication lists for episodes of care, while others will choose to implement this COMPOSITION to act in a persistent manner.">
+            misuse = <"Not to be used to record lists of Medications that are not intended for persistence and ongoing revision and curation.
+
+Not to be used to record individual Prescriptions - use COMPOSITION.prescription for this purpose.
+
+Not to be used to record actual changes to therapy, including dose changes, new medicines and ceased medications. Each order will be recorded using individual instances of the INSTRUCTION.medication_order archetype, and only the latest one should be represented within the latest version of this COMPOSITION.
+
+Not to be used to record vaccinations administered - use COMPOSITION.immunisation_list for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            purpose = <"Voor het vastleggen in een blijvende en beheerde lijst van medicijnen voor een individu, of als alternatief het vastleggen van positieve en expliciete uitspraken over bekende uitsluitingen of afwezigheid van informatie over medicatie; welke allemaal van invloed kunnen zijn op klinische besluitvorming en zorglevering.">
+            keywords = <"medicatie", "medicijnen", "lijst", "geneesmiddel", "huidig", "voorschrift">
+            use = <"Voor het vastleggen in een blijvende en beheerde lijst van medicijnen voor een individu, of als alternatief het vastleggen van positieve en expliciete uitspraken over bekende uitsluitingen of afwezigheid van informatie over medicatie; welke allemaal van invloed kunnen zijn op klinische besluitvorming en zorglevering.
+
+De intentie van dit archetype is om een generieke container te zijn voor iedere vorm van medicatielijst, binnen een specifieke context of gelimiteerde reikwijdte binnen een template. Deze lijst kan gebruikt worden als een bron van medicatiegegevens voor de actieve, huidige medicatielijst binnen het klinische systeem, voor overdracht van zorg, data uitwisseling, of als basis voor beslissingondersteuning.
+
+Meestal zal deze lijst opgebouwd zijn uit drie typen archetype:
+- uitspraken over het positieve gebruik van medicatie is vastgelegd met INSTRUCTION.medication_order en/of ACTION.medication; OF 
+- een positieve uitspraak over de generieke uitsluiting van medicatiegebruik kan vastgelegd worden met het EVALUATION.exclusion_global archetype - bijvoorbeeld \"Neemt op het moment geen medicatie\"; OF
+- een positieve uitspraak over uitsluiting van een specifieke vorm van medicatie kan vastgelegd worden in EVALUATION.exclusion_specific - bijvoorbeeld \"Neemt momenteel geen peniciline\"
+- een positieve uitspraak dat er geen informatie beschikbaar is over het al dan niet gebruiken van medicatie, met EVALUATION.absence.
+
+Om een medicatielijst accuraat en veilig te maken voor gebruik als basis voor beslissingsondersteuningsactiviteiten en voor uitwisseling, moet deze lijst idealiter beheerd worden door een clinicus verantwoordelijk voor het medisch dossier, en niet alleen automatisch door het klinisch systeem op basis van regels.
+
+Er kan een subtiel maar belangrijk verschil zijn tussen typen medicatielijsten. Bijvoorbeeld 'Huidige medicatie' of 'Regelmatige medicatie'. Een 'Huidige medicatielijst' kan gezien worden als een lijst van medicamenten die een individu in het lichaam heeft op ieder moment, inclusief stat of prn doseringen van medicijnen die overwogen moeten worden bij het voorschrijven om er voor te zorgen dat checks op medicatie-medicatie interactie gedaan worden zolang er fysiologisch effect is. Een 'Regelmatige medicatielijst' kan medicijnen bevatten die een individu met regelmaat neemt.
+
+Daarnaast is het gangbaar in de klinische praktijk om een medicatielijst tijdgebonden restricties op te leggen, zoals 'Toelatingsmedicatielijst' en 'Ontslagmedicatielijst', welke alleen op een specifiek moment in tijd relevant zijn. Andere voorbeelden zijn 'Historische medicatie' of 'Niet-actieve medicatie'. Dit is uiteindelijk een implementatiekeuze voor ieder klinisch systeem - een alternatieve aanpak kan zijn om deze context-gebonden informatie op te leveren als het resultaat van een query, of door het gebruik van een ander COMPOSITION archetype, nader te definiëren.
+
+Dit archetype is bedoeld om weergegeven en beheerd te worden als een persistente lijst, alhoewel er situaties kunnen zijn waarin de lijst gebruikt wordt binnen zorg op basis van episoden waarbij extra attributen toegevoegd moeten worden zoals context etc. om de vastlegging accuraat te maken. Het openEHR referentie model staat momenteel alleen toe om context vast te leggen binnen event-gebasseerde COMPOSITION archetypen. Zodoende is dit archetype als een Event gemodelleerd, en niet als Persistent COMPOSITION. Dit staat flexibiliteit toe waardoor sommige klinische systemen op een veilige manier medicatielijsten kunnen beheren voor zorg op basis van episoden, terwijl anderen zullen kiezen om de COMPOSITION te gebruiken op een peristente manier.
+
+">
+            misuse = <"Niet te gebruiken voor het vastleggen van medicatie die niet bedoeld is om permanent vastgelegd te worden en revisie en beheer te ondergaan.
+
+Niet te gebruiken om individuele voorschrijvingen vast te leggen - gebruik hier COMPOSITION.prescription voor.
+
+Niet te gebruiken voor veranderingen in therapie, inclusief verandering in dosering, nieuwe medicatie of gestopte medicatie. Iedere bestelling zal vastgelegd worden met individuele instanties van het INSTRUCTION.medication_order archetype, en alleen de meest recente zou vertegenwoordigd moeten zijn in de meest recente versie van deze COMPOSITION.
+
+Niet te gebruiken voor het vastleggen van vaccinatietoediening - gebruik voor dit doel COMPOSITION.immunisation_list.">
+        >
+    >
+
+definition
+    COMPOSITION[at0000] matches {    -- Medication list
+        category matches {
+            DV_CODED_TEXT[at9001] matches {
+                defining_code matches {[at9002]}    -- event
+            }
+        }
+        context matches {
+            EVENT_CONTEXT[at9002] matches {    -- event
+                other_context matches {
+                    ITEM_TREE[at0005] matches {
+                        items cardinality matches {0..*; unordered} matches {
+                            allow_archetype CLUSTER[at0006] matches {    -- Extension
+                                include
+                                    archetype_id/value matches {/.*/}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Medikamentenliste">
+                description = <"Eine beständige und versionierte Liste von Medikamenten für eine Person.">
+            >
+            ["at0006"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen oder CIMI-Modelle.">
+            >
+            ["at9002"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Läkemedelslista">
+                description = <"En varaktig (persistent) och uppdaterad lista över individens läkemedel.">
+            >
+            ["at0006"] = <
+                text = <"Tilläggsinformation">
+                description = <"Ytterligare information behövs för att kunna registrera lokalt definierat innehåll eller för att anpassa sig till andra referensmodeller.">
+                comment = <"Exempelvis lokala informationsbehov eller ytterligare metadata för att kunna anpassning till liknande koncept i FHIR eller CIMI.">
+            >
+            ["at9002"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["es-ar"] = <
+            ["at0000"] = <
+                text = <"*Medication list(en)">
+                description = <"*A persistent and versioned list of medicines for an individual.(en)">
+            >
+            ["at0006"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local context or to align with other reference models/formalisms.(en)">
+                comment = <"*e.g. Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.(en)">
+            >
+            ["at9002"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Legemiddelliste">
+                description = <"En varig (persistent) og oppdatert liste over individets legemidler.">
+            >
+            ["at0006"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+            ["at9002"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"*Medication list(en)">
+                description = <"*A persistent and versioned list of medicines for an individual.(en)">
+            >
+            ["at0006"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local context or to align with other reference models/formalisms.(en)">
+                comment = <"*e.g. Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.(en)">
+            >
+            ["at9002"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["el"] = <
+            ["at0000"] = <
+                text = <"Λίστα φαρμάκων">
+                description = <"Ένας μόνιμος και εκδοτικός κατάλογος φαρμάκων για ένα άτομο.">
+            >
+            ["at0006"] = <
+                text = <"Επέκταση">
+                description = <"Πρόσθετες πληροφορίες που απαιτούνται για την αποτύπωση του τοπικού πλαισίου ή για την ευθυγράμμιση με άλλα μοντέλα αναφοράς/φορμαλισμούς.">
+                comment = <"π. χ. πληροφορίες τμήματος τοπικών νοσοκομείων ή πρόσθετα μεταδεδομένα για ευθυγράμμιση με ισοδύναμα FHIR ή CIMI.">
+            >
+            ["at9002"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Medication list">
+                description = <"A persistent and versioned list of medicines for an individual.">
+            >
+            ["at0006"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"e.g. Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at9002"] = <
+                text = <"event">
+                description = <"event">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"*Medication list(en)">
+                description = <"*A persistent and versioned list of medicines for an individual.(en)">
+            >
+            ["at0006"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local context or to align with other reference models/formalisms.(en)">
+                comment = <"*e.g. Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.(en)">
+            >
+            ["at9002"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["nl"] = <
+            ["at0000"] = <
+                text = <"Medicatielijst">
+                description = <"Een persistente en beheerde lijst van medicijnen gebruikt door een individu.">
+            >
+            ["at0006"] = <
+                text = <"Uitbreiding">
+                description = <"Aanvullende informatie vereist voor het vastleggen van lokale context om in lijn te zijn met andere referentiemodellen of formalismen.">
+                comment = <"Bijvoorbeeld lokale ziekenhuisafdeling informatie of aanvullende metadata om in lijn te zijn met FHIR of CIMI equivalenten.">
+            >
+            ["at9002"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9002"] = <http://openehr.org/id/433>
+        >
+    >

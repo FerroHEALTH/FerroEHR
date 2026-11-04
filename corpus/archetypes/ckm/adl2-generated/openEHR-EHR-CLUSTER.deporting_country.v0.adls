@@ -1,0 +1,56 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=8582454e-4f88-416d-afa1-3352ccdff9b5; build_uid=8179e47c-5be3-473c-8ee1-9c060ecfc7af)
+    openEHR-EHR-CLUSTER.deporting_country.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-09-23">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"E979AD59B3F4FE84D1F7B5EABBC8E20A">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Deporting country
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Deporting country
+                value matches {
+                    DV_TEXT[at9000]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Deporting country">
+                description = <"Deporting country">
+            >
+            ["at0001"] = <
+                text = <"Deporting country">
+                description = <"">
+            >
+        >
+    >

@@ -1,0 +1,141 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=7a89512f-4d71-4795-aee6-0d92330a0955; build_uid=5fe10314-0b75-4673-8e12-e6e0695bd457)
+    openEHR-EHR-COMPOSITION.vaccination_list.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            author = <
+                ["name"] = <"Wouter Zanen">
+                ["organisation"] = <"Stichting OpenEHR Nederland">
+                ["email"] = <"w.zanen@eurotransplant.org">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2013-03-12">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Hildegard Franke, freshEHR Clinical Informatics Ltd, UK">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"F2C3BD9252691BB3975C53648208D672">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a persistent and managed list of vaccinations that have been administered to an individual over time and to enable sharing of an Vaccination list between healthcare providers.">
+            keywords = <"vaccination", "immunisation", "list">
+            use = <"Use to record a persistent and managed list of vaccinations given to an individual. Alternatively, it may contain positive and explicit statements about known exclusions or absence of information about vaccinations. It is intended that the SECTION.vaccination_list archetype is nested within this archetype as design guidance for representing an Vaccination list.
+
+The intent of this archetype is to be a generic container for any Vaccination list, which may have a specific context or limitation of scope set within a template. This list can be utilised as a source of vaccination data for an active current Vaccination list within a clinical system, for the transition of care, data exchange, or as the basis for decision support. 
+
+This list can be comprised of three types of archetype:
+- statements about the positive administration of vaccinations are recorded using the ACTION.medication archetypes; OR
+- a positive statement about the general exclusion of vaccination administration can be recorded using the general EVALUATION.exclusion_global archetype - for example: \"Never received any vaccinations\"; OR
+- a positive statement about the exclusion of use of a specific medication can be recorded using the EVALUATION.exclusion_specific archetype - for example: \"Never received Hepatitis B vaccination\": OR
+- a positive statement about no information being available - neither positive known administrations of vaccinations nor a positive exclusion - can be recorded using the EVALUATION.absence archetype.
+
+In order for a Vaccination list to be accurate and safe to use as the basis for decision support activities and for exchange, this Vaccination list should ideally be curated by a clinician responsible for the health record, rather than managed automatically by the clinical system through business rules alone.
+
+In local systems it is possible to generate a list of vaccinations by querying the database for all ACTION.medication archetypes that have been used to record each vaccination. However this list is useful to support exchange of a local Vaccination list with other healthcare.
+
+This archetype is intended to be represented and managed as a persistent list, however there are situations where the list may be used within episodic care and require additional attributes such as context etc to enable accurate recording. The openEHR reference model currently only allows context to be recorded within Event-based COMPOSITION archetypes. As a result, this archetype has been modelled as an Event, rather than Persistent, COMPOSITION, to allow for flexibility so that some clinical systems can safely manage Vaccination lists for episodes of care, while others will choose to implement this COMPOSITION to act in a persistent manner.">
+            misuse = <"Not to be used to record lists of Medications that are not intended for persistence and ongoing revision and curation - use COMPOSITION.medication_list for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            purpose = <"Om een permanente en beheerde lijst van toegediende vaccinaties vast te leggen voor een individu over tijd en om het mogelijk te maken deze lijst te delen met andere zorgverleners.">
+            keywords = <"Vaccinatie", "Immunisatie", "Lijst">
+            use = <"Wordt gebruikt om een ​​permanente en beheerde lijst van een aan een persoon gegeven vaccinaties vast te leggen. Als alternatief kan het positieve en expliciete uitspraken bevatten over bekende uitsluitingen of het ontbreken van informatie over vaccinaties. Het is de bedoeling dat het archetype SECTION.vaccination_list in dit archetype wordt genest als ontwerprichtlijn voor het weergeven van een vaccinatielijst.
+
+De bedoeling van dit archetype is om een ​​generieke container te zijn voor elke vaccinatielijst, die een specifieke context of beperking van de reikwijdte kan hebben binnen een template. Deze lijst kan worden gebruikt als bron van vaccinatiegegevens voor een actieve actuele Vaccinatielijst binnen een klinisch systeem, voor zorgtransitie, gegevensuitwisseling of als basis voor beslissingsondersteuning.
+
+Deze lijst kan uit drie soorten archetypen bestaan:
+- uitspraken over het positief toedienen van vaccinaties worden vastgelegd met behulp van de ACTION.medication archetypes; OF
+- een positieve uitspraak over de algemene uitsluiting van vaccinatietoediening kan worden vastgelegd met behulp van het algemene archetype EVALUATION.exclusion_global - bijvoorbeeld: \"Nooit vaccinaties ontvangen\"; OF
+- een positieve uitspraak over het uitsluiten van het gebruik van een bepaald medicijn kan worden vastgelegd met behulp van het EVALUATION.exclusion_specific archetype - bijvoorbeeld: \"Nooit Hepatitis B-vaccinatie gekregen\": OF
+- een positieve verklaring dat er geen informatie beschikbaar is - noch positieve bekende vaccinaties noch een positieve uitsluiting - kan worden vastgelegd met behulp van het archetype EVALUATION.absence.
+
+Om ervoor te zorgen dat een vaccinatielijst nauwkeurig en veilig is om te gebruiken als basis voor beslissingsondersteunende activiteiten en voor uitwisseling, moet deze vaccinatielijst idealiter worden samengesteld door een arts die verantwoordelijk is voor het gezondheidsdossier, in plaats van automatisch te worden beheerd door het klinische systeem via zakelijke regels alleen.
+
+In lokale systemen is het mogelijk om een ​​lijst met vaccinaties te genereren door in de database te zoeken naar alle ACTION.medication-archetypen die zijn gebruikt om elke vaccinatie te registreren. Deze lijst is echter nuttig ter ondersteuning van de uitwisseling van een lokale Vaccinatielijst met andere zorginstellingen.
+
+Dit archetype is bedoeld om te worden weergegeven en beheerd als een permanente lijst, maar er zijn situaties waarin de lijst kan worden gebruikt binnen de episodische zorg en aanvullende attributen zoals context enz. vereisen om nauwkeurige registratie mogelijk te maken. Met het openEHR-referentiemodel kan momenteel alleen context worden vastgelegd binnen Event-based COMPOSITION-archetypen. Als gevolg hiervan is dit archetype gemodelleerd als een gebeurtenis, in plaats van een persistent, SAMENSTELLING, om flexibiliteit mogelijk te maken, zodat sommige klinische systemen veilig vaccinatielijsten voor zorgepisoden kunnen beheren, terwijl anderen ervoor zullen kiezen deze SAMENSTELLING te implementeren op een permanente manier.">
+            misuse = <"Niet te gebruiken om lijsten met medicijnen op te nemen die niet bedoeld zijn voor persistente en voortdurende herziening en curatie - gebruik hiervoor COMPOSITION.medication_list.">
+        >
+    >
+
+definition
+    COMPOSITION[at0000] matches {    -- Vaccination list
+        category matches {
+            DV_CODED_TEXT[at9001] matches {
+                defining_code matches {[at9002]}    -- event
+            }
+        }
+        context matches {
+            EVENT_CONTEXT[at9003] matches {
+                other_context matches {
+                    ITEM_TREE[at0004] matches {
+                        items cardinality matches {0..*; unordered} matches {
+                            allow_archetype CLUSTER[at0005] matches {    -- Extension
+                                include
+                                    archetype_id/value matches {/.*/}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Vaccination list">
+                description = <"A persistent and managed list of vaccinations that have been administered to an individual over time.">
+            >
+            ["at0005"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"For example: Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at9002"] = <
+                text = <"event">
+                description = <"event">
+            >
+        >
+        ["nl"] = <
+            ["at0000"] = <
+                text = <"Vaccinatie lijst">
+                description = <"Een permanente en beheerde lijst van toegediende vaccinaties aan een persoon over een periode van tijd">
+            >
+            ["at0005"] = <
+                text = <"Extensie">
+                description = <"Aanvullende informatie die nodig is om de lokale context vast te leggen of om af te stemmen op andere referentiemodellen/formalismen.">
+                comment = <"Bijvoorbeeld: lokale ziekenhuisafdelingsinformatie of aanvullende metadata om af te stemmen op FHIR- of CIMI-equivalenten.">
+            >
+            ["at9002"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9002"] = <http://openehr.org/id/433>
+        >
+    >

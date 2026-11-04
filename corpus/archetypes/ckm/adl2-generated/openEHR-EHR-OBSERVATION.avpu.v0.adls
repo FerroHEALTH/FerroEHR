@@ -1,0 +1,292 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=f031f209-11a9-4dd2-8828-68c11dd31962; build_uid=630e25a8-7efb-45a6-8a1f-2570075ccc7e)
+    openEHR-EHR-OBSERVATION.avpu.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke">
+                ["organisation"] = <"Helse Bergen HF">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Vladimir Pizzo">
+                ["organisation"] = <"Hospital Sirio Libanes, Brazil">
+                ["email"] = <"vladimir.pizzo@hsl.org.br">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2013-02-07">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Magnus Alvestad, Helse Bergen HF, Norway", "Anne Pauline Anderssen, Helse Nord RHF, Norway", "Vebjørn Arntzen, Oslo universitetssykehus HF, Norway (Nasjonal IKT redaktør)", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (Nasjonal IKT redaktør)", "Lars Bitsch-Larsen, Haukeland University Hospital, Bergen, Norway", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Merete Eide, Mottaksklinikken, Helse Bergen HF, Norway", "Einar Fosse, UNN HF, Norwegian Centre for Integrated Care and Telemedicine, Norway", "Andreas Hering, Helse Bergen HF, Haukeland universitetssjukehus, Norway", "Erling Are Hole, Helse Bergen, Norway", "Tom Jarl Jakobsen, Helse Bergen, Norway", "Hallvard Lærum, Oslo Universitetssykehus HF, Norway", "Lars Ivar Mehlum, Helse Bergen HF, Norway", "Mette Monsen, Helse Bergen HF, Norway", "Nils Thomas Songstad, UNN HF, BUK, Barneavdelingen., Norway", "Micaela Thierley, Helse Bergen, Norway", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)", "Nils Widnes, Helse-Bergen, Norway", "Ole Øyen, Oslo University Hospital, Norway">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"AVPU, Draft Archetype [Internet]. Australian Digital Health Agency, Australian Digital Health Agency Clinical Knowledge Manager [cited: 2017-07-07]. Available from: http://dcm.nehta.org.au/ckm/#showArchetype_1013.1.1173">
+        ["2"] = <"Kelly, CA; Upex A; Bateman DN. (February 2005). \"Comparison of consciousness level assessment in the poisoned patient using the alert/verbal/painful/unresponsive scale and the Glasgow Coma Scale\". Annals of Emergency Medicine 45 (2).">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics, heather.leslie@oceaninformatics.com">
+        ["MD5-CAM-1.0.1"] = <"1C487D3F2E18E58E6D1203AD95DEABE5">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"Brukes for å vurdere et individs bevissthetsnivå.">
+            keywords = <"AVPU", "alert", "voice", "pain", "unresponsive", "våken", "tale", "smerte", "bevisstløs", "stemme", "bevissthet", "verbal", "verbalrespons", "semikomatøs", "bevisst", "bevissthetsnivå", "komatøs">
+            use = <"For raskt og enkel vurdering av et individs bevissthetsnivå, særlig egnet til vurdering i akutte situasjoner.">
+            misuse = <"">
+            copyright = <"© Nasjonal IKT HF">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record an individual's level of consciousness.">
+            keywords = <"avpu", "alert", "voice", "pain", "unresponsive", "awake", "speech", "pain", "unconscious", "voice", "consciousness", "verbal", "verbal response", "semicomatose", "conscious", "level of consciousness", "comatose">
+            use = <"Use to record a quick and simple assessment of an individual's level of consciousness, especially in an emergency situation.">
+            misuse = <"">
+            copyright = <"© Australian Digital Health Agency, openEHR Foundation, Nasjonal IKT HF">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Registrar a responsividade de um paciente, como uma indicação do seu nível de consciência.">
+            keywords = <"avda", "alerta", "voz", "dor", "arresponsivo">
+            use = <"Usar para registrar, como parte de uma avaliação de rastreamento da responsividade de um paciente, como uma indicação do seu nível de consicência.">
+            misuse = <"">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- AVPU
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Observation
+                                        value matches {
+                                            DV_CODED_TEXT[at9001] matches {
+                                                defining_code matches {[ac9000]}    -- Observation (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9002]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0013] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9003]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0009] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Pain stimulus
+                        value matches {
+                            DV_TEXT[at9004]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0011] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"AVPU">
+                description = <"En enkel skala for å vurdere et individs bevissthetsnivå. AVPU er en forkortelse for engelsk \"Alert\", \"Voice\", \"Pain\" og \"Unresponsive\", på norsk \"Våken\", \"Tiltale\", \"Smerte\" og \"Reagerer ikke\".">
+            >
+            ["at0002"] = <
+                text = <"Uspesifikk hendelse.">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i en template eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"AVPU-observasjon">
+                description = <"Observasjonen av individets bevissthetsnivå.">
+            >
+            ["at0005"] = <
+                text = <"Våken">
+                description = <"Øynene åpnes spontant, orientert tale, adlyder kommandoer (A).">
+            >
+            ["at0006"] = <
+                text = <"Tiltale">
+                description = <"Hvilken som helst verbal, motorisk eller øye-respons på verbal tiltale (rop høyt eller rist forsiktig) (V).">
+            >
+            ["at0007"] = <
+                text = <"Smerte">
+                description = <"En hvilken som helst verbal, motorisk eller øye-respons på smertestimuli (eksempelvis press på neglerot), men ikke på verbal tiltale (P).">
+            >
+            ["at0008"] = <
+                text = <"Reagerer ikke">
+                description = <"Ingen respons på tale- eller smertestimuli (U).">
+            >
+            ["at0010"] = <
+                text = <"Smertestimuli">
+                description = <"Beskrivelse av type smertestimuli. Bør kodes ved hjelp av kodeverk eller terminologi.">
+                comment = <"Eksempler: Trykk på neglerot og press mot sternum.">
+            >
+            ["at0011"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+            ["at0012"] = <
+                text = <"Comment">
+                description = <"Ytterligere fritekst om observasjonen som ikke passer inn i andre elementer.">
+            >
+            ["at0014"] = <
+                text = <"Konfunderende faktorer">
+                description = <"Fritekstbeskrivelse av problemer eller faktorer som kan ha påvirkning på observasjonen.">
+            >
+            ["ac9000"] = <
+                text = <"AVPU-observasjon (synthesised)">
+                description = <"Observasjonen av individets bevissthetsnivå. (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"AVDA">
+                description = <"Escala simples utilizada como parte de uma medida de avaliação e registro da responsividade de um paciente, indicando o seu nível de consciência. AVDA é um acrônimo para 'Alerta', 'Voz', 'Dor' e \"Arresponsivo'">
+            >
+            ["at0002"] = <
+                text = <"Qualquer evento">
+                description = <"Padrão, evento ponto no tempo ou intervalo não especificado que pode ser definido explicitamente num template ou no tempo corrente.">
+            >
+            ["at0004"] = <
+                text = <"Observação AVDA">
+                description = <"A observação da responsividade do paciente.">
+            >
+            ["at0005"] = <
+                text = <"Alerta">
+                description = <"O paciente está completamente acordado e alerta.">
+            >
+            ["at0006"] = <
+                text = <"Voz">
+                description = <"O paciente responde de alguma forma a um estímulo vocal.">
+            >
+            ["at0007"] = <
+                text = <"Dor">
+                description = <"O paciente responde de alguma forma a um estímulo doloroso.">
+            >
+            ["at0008"] = <
+                text = <"Arresponsivo">
+                description = <"O paciente não responde de forma alguma a um estímulo vocal ou doloroso.">
+            >
+            ["at0010"] = <
+                text = <"*Pain stimulus(en)">
+                description = <"*Description of the type of pain stimulus used to elicit the observation.(en)">
+                comment = <"* This element should be coded with a terminology, where possible. For example: pressing the nail root or the sternum.(en)">
+            >
+            ["at0011"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms.(en)">
+                comment = <"*e.g. Local information requirements or additional metadata to align with FHIR or CIMI equivalents.(en)">
+            >
+            ["at0012"] = <
+                text = <"*Comment(en)">
+                description = <"*Additional narrative about the observation, not captured in other fields.(en)">
+            >
+            ["at0014"] = <
+                text = <"*Confounding factors(en)">
+                description = <"*Narrative descripiton of any issues or factors that may impact on the observation.(en)">
+            >
+            ["ac9000"] = <
+                text = <"Observação AVDA (synthesised)">
+                description = <"A observação da responsividade do paciente. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"AVPU">
+                description = <"Simple scale used as part of an assessment to measure and record an individual's level of consciousness. AVPU is an acronym for 'Alert', 'Voice', 'Pain', 'Unresponsive'.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Observation">
+                description = <"The observation of the patient's level of consciousness.">
+            >
+            ["at0005"] = <
+                text = <"Alert">
+                description = <"Eyes open spontaneously, oriented speech, obeys commands.">
+            >
+            ["at0006"] = <
+                text = <"Voice">
+                description = <"Any verbal, motor or eye response to a voice stimulus.">
+            >
+            ["at0007"] = <
+                text = <"Pain">
+                description = <"Any verbal, motor or eye response to a pain stimulus, such as pressing the nail root, but not to voice stimulus.">
+            >
+            ["at0008"] = <
+                text = <"Unresponsive">
+                description = <"No response to voice or pain stimuli.">
+            >
+            ["at0010"] = <
+                text = <"Pain stimulus">
+                description = <"Description of the type of pain stimulus used to elicit the observation.">
+                comment = <"This element should be coded with a terminology, where possible. For example: pressing the nail root or the sternum.">
+            >
+            ["at0011"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"e.g. Local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0012"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the observation, not captured in other fields.">
+            >
+            ["at0014"] = <
+                text = <"Confounding factors">
+                description = <"Narrative description of any issues or factors that may impact on the observation.">
+            >
+            ["ac9000"] = <
+                text = <"Observation (synthesised)">
+                description = <"The observation of the patient's level of consciousness. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0005", "at0006", "at0007", "at0008">
+        >
+    >

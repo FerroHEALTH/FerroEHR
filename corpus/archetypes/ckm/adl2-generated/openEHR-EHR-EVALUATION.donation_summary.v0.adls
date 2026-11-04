@@ -1,0 +1,166 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=7f371f86-8d09-4a03-8a78-ea46eb808bc7; build_uid=a819844c-569f-4f22-88e2-2054e4d0accd)
+    openEHR-EHR-EVALUATION.donation_summary.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2025-07-14">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"881394BE53F3696A7A8B90DBD1927B78">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a summary of donations of biological products by an individual, including blood, plasma, stem cells, semen, ova or other human-derived materials.">
+            use = <"Use to record a summary of donations of biological products by an individual, including blood, plasma, stem cells, semen, ova or other human-derived materials.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Biological donation summary
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Biological product type
+                        value matches {
+                            DV_TEXT[at9001]
+                        }
+                    }
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Status
+                        value matches {
+                            DV_CODED_TEXT[at9002] matches {
+                                defining_code matches {[ac9000]}    -- Status (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Total number of donations
+                        value matches {
+                            DV_COUNT[at9003]
+                        }
+                    }
+                    CLUSTER[at0005] matches {    -- Per donation event
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Specific product type
+                                value matches {
+                                    DV_TEXT[at9004]
+                                }
+                            }
+                            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Donation date
+                                value matches {
+                                    DV_DATE_TIME[at9005]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0008] matches {    -- Location of donation
+                                include
+                                    archetype_id/value matches {/.*/}
+                            }
+                            ELEMENT[at0009] occurrences matches {0..1} matches {    -- Comment
+                                value matches {
+                                    DV_TEXT[at9006]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0010] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9007]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0011] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Biological donation summary">
+                description = <"A summary of donation events made by an individual, for biological products including blood, plasma, stem cells, semen, ova or other human-derived materials.">
+            >
+            ["at0002"] = <
+                text = <"Status">
+                description = <"">
+            >
+            ["at0003"] = <
+                text = <"Never donated">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"Donated">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Per donation event">
+                description = <"">
+                comment = <"May only record date if the blood product is not known.">
+            >
+            ["at0006"] = <
+                text = <"Specific product type">
+                description = <"Specific type of biological product.">
+                comment = <"For example: 'Plasma' when the recorded 'Biological product type is 'Blood and blood component'. This data element may be redundant if the type of product is fully identified in 'Biological product type'.  ">
+            >
+            ["at0007"] = <
+                text = <"Donation date">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Location of donation">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Comment">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Extension">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Last updated">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Biological product type">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Total number of donations">
+                description = <"">
+            >
+            ["ac9000"] = <
+                text = <"Status (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0003", "at0004">
+        >
+    >

@@ -1,0 +1,406 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=6f3d8069-611c-43c5-a30d-a583c71b5850; build_uid=42626015-8de0-45cd-b228-84b1a29678dc)
+    openEHR-EHR-CLUSTER.exam_embryo.v1.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Peter Fedorcsak, Vebjørn Arntzen">
+                ["organisation"] = <"University of Oslo, Oslo University Hospital">
+                ["email"] = <"peterfe@uio.no, varntzen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Peter Fedorcsak">
+        ["organisation"] = <"Oslo University Hospital">
+        ["email"] = <"peter.fedorcsak@medisin.uio.no">
+        ["date"] = <"2021-10-26">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Peter Fedorcsak, University of Oslo, Norway (openEHR Editor)", "Rosane Gotardo, Systema Ltda., Brazil", "Heather Grain, Llewelyn Grain Informatics, Australia", "Gareth Greggains, Oslo University Hospital", "Evelyn Hovenga, EJSH Consulting, Australia", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Manisha Mantri, C-DAC, India", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Bjørn Næss, DIPS ASA, Norway", "Trine Skuland, Oslo University Hospital", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "John Tore Valand, Haukeland Universitetssjukehus, Norway", "Julius Hreinsson, Laboratory Director at Reproductive Medicine, Sahlgrenska University Hospital, Sweden">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Alpha Scientists in Reproductive, M. and E.S.I.G.o. Embryology, The Istanbul consensus workshop on embryo assessment: proceedings of an expert meeting. Human Reproduction, 2011. 26(6): p. 1270-1283.">
+        ["2"] = <"Prados, F.J., et al., The cleavage stage embryo. Human Reproduction, 2012. 27(suppl_1): p. i50-i71.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"31EAAB7D52805EA5BA18B731984C63AB">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere strukturerte observasjoner av et humant embryo i tidlige delingsstadier.">
+            keywords = <"in vitro, befruktning, IVF, reproduksjon, zygote, fertilisert, befruktet, egg, eggcelle, oocytt, embryo, blastocyst, assistert", ...>
+            use = <"Brukes til å registrere morfologiske observasjoner som passer for tidlige delingsstadier av embryoutviklingen, vanligvis som del av assistert befruktning.
+
+Arketypen er laget spesifikt for å brukes i SLOT 'et \"Undersøkelsesdetaljer\" i arketypen 'OBSERVATION.embryo_assessment' eller 'ACTION.procedure', men kan også brukes innen andre ENTRY- og CLUSTER-arketyper der det er klinisk passende.">
+            misuse = <"Skal ikke brukes til å registrere morfologiske observasjoner av oocytter, zygoter og blastocyster - bruk spesifikke CLUSTER arketyper.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record structured observations about a human cleavage-stage embryo.">
+            keywords = <"in vitro, fertilization, IVF, reproductive medicine, zygote, fertilised, fertilized, oocyte, egg, fertilisation, embryo, reproduction, ART, blastocyst", ...>
+            use = <"Use to record morphological observations appropriate for the cleavage-stage of human embryo development, usually as part of assisted reproduction treatment. 
+
+This archetype has been specifically designed to be used in the 'Observations detail' SLOT within the 'OBSERVATION.embryo_assessment' or 'ACTION.procedure' archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.">
+            misuse = <"Not to be used for recording observations on oocytes, zygotes and blastocysts - use specific CLUSTER archetypes for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Examination of a cleavage-stage embryo
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0028] occurrences matches {0..1} matches {    -- Number of cells
+                value matches {
+                    DV_COUNT[at9004]
+                }
+            }
+            ELEMENT[at0030] occurrences matches {0..1} matches {    -- Fragmentation
+                value matches {
+                    DV_CODED_TEXT[at9005] matches {
+                        defining_code matches {[ac9000]}    -- Fragmentation (synthesised)
+                    }
+                    DV_TEXT[at9006]
+                    DV_PROPORTION[at9007]
+                }
+            }
+            ELEMENT[at0035] occurrences matches {0..1} matches {    -- Blastomere size
+                value matches {
+                    DV_CODED_TEXT[at9008] matches {
+                        defining_code matches {[ac9001]}    -- Blastomere size (synthesised)
+                    }
+                    DV_TEXT[at9009]
+                }
+            }
+            ELEMENT[at0038] occurrences matches {0..1} matches {    -- Nucleation
+                value matches {
+                    DV_CODED_TEXT[at9010] matches {
+                        defining_code matches {[ac9002]}    -- Nucleation (synthesised)
+                    }
+                    DV_TEXT[at9011]
+                }
+            }
+            ELEMENT[at0042] occurrences matches {0..1} matches {    -- Cytoplasmic morphology
+                value matches {
+                    DV_TEXT[at9012]
+                }
+            }
+            ELEMENT[at0043] occurrences matches {0..1} matches {    -- Spatial distribution of cells
+                value matches {
+                    DV_TEXT[at9013]
+                }
+            }
+            ELEMENT[at0044] occurrences matches {0..1} matches {    -- Compaction
+                value matches {
+                    DV_CODED_TEXT[at9014] matches {
+                        defining_code matches {[ac9003]}    -- Compaction (synthesised)
+                    }
+                    DV_TEXT[at9015]
+                }
+            }
+            ELEMENT[at0049] matches {    -- Other morphological features
+                value matches {
+                    DV_TEXT[at9016]
+                }
+            }
+            ELEMENT[at0055] occurrences matches {0..1} matches {    -- Morphology grade
+                value matches {
+                    DV_TEXT[at9017]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Undersøkelse av et humant embryo i tidlige delingsstadier">
+                description = <"Morfologiske funn ved mikroskopisk undersøkelse av et humant embryo i tidlige delingsstadier.">
+            >
+            ["at0028"] = <
+                text = <"Antall celler">
+                description = <"Antall celler i embryoet.">
+            >
+            ["at0030"] = <
+                text = <"Fragmenteringsgrad">
+                description = <"Grad av cytoplasmisk fragmentering i et embryo i delingsstadie.">
+                comment = <"For en mer presis vurdering, kan datatypen Proportion brukes.">
+            >
+            ["at0031"] = <
+                text = <"Ingen">
+                description = <"Ingen cytoplasmatiske fragmenter.">
+            >
+            ["at0032"] = <
+                text = <"Mild fragmentering">
+                description = <"Cytoplasmatiske fragmenter dekker mindre enn 10% av totalt cytoplasmatisk volum.">
+            >
+            ["at0033"] = <
+                text = <"Moderat fragmentering">
+                description = <"Cytoplasmatiske fragmenter dekker 10 - 25% av totalt cytoplasmatisk volum.">
+            >
+            ["at0034"] = <
+                text = <"Alvorlig fragmentering">
+                description = <"Cytoplasmatiske fragmenter dekker mer enn 25% av totalt cytoplasmatisk volum.">
+            >
+            ["at0035"] = <
+                text = <"Cellestørrelse">
+                description = <"Relativ størrelse på cellene i embryoet.">
+            >
+            ["at0036"] = <
+                text = <"Lik, stadium-spesifikk">
+                description = <"Celler av lik, stadium-spesifikk strørrelse.">
+            >
+            ["at0037"] = <
+                text = <"Ulik, stadium-spesifikk">
+                description = <"Celler av ulik, stadium-spesifikk strørrelse.">
+            >
+            ["at0038"] = <
+                text = <"Kjerner">
+                description = <"Tilstedeværelse eller fravær av kjerner i embryoets celler i tidlig delingsstadie.">
+            >
+            ["at0039"] = <
+                text = <"Ingen synlige kjerner">
+                description = <"Kjernene er ikke synlige.">
+            >
+            ["at0040"] = <
+                text = <"Enkeltkjernede celler">
+                description = <"Bare én kjerne sees i alle cellene i embryoet.">
+            >
+            ["at0041"] = <
+                text = <"Tokjernet celle">
+                description = <"To synlige kjerner i en celle.">
+            >
+            ["at0042"] = <
+                text = <"Morfologi av cytoplasma">
+                description = <"Morfologi av cytoplasmaet i cellene til embryoet i tidlig delingsstadium.">
+                comment = <"Kan brukes for å beskrive avvikende cytoplasmamorfologi, slik som granulering, dannelse av groper og vakuoler.">
+            >
+            ["at0043"] = <
+                text = <"Organisering av celler">
+                description = <"Geometrisk organisering av cellene i embryoet.">
+                comment = <"Ved publikasjon av arketypen finnes det ingen omforent verdisett for dette elementet. Hvis det oppnås konsensus om dette i fremtiden, kan det legges til i arketypen. I mellomtiden, bruk et verdisett som passer til bruksområdet, og legg det til i templat.">
+            >
+            ["at0044"] = <
+                text = <"Kompaktering">
+                description = <"Grad av kompaktering i embryo i delingsstadiene.">
+            >
+            ["at0045"] = <
+                text = <"Ingen">
+                description = <"Ingen kompaktering.">
+            >
+            ["at0046"] = <
+                text = <"Minimal">
+                description = <"Mindre enn 50% av embryoets totalt volum er kompaktert.">
+            >
+            ["at0047"] = <
+                text = <"Moderat">
+                description = <"Over 50% av embryoets totalt volum er kompaktert.">
+            >
+            ["at0048"] = <
+                text = <"Komplett">
+                description = <"Alle embryoets celler er kompaktert.">
+            >
+            ["at0049"] = <
+                text = <"Andre morfologiske observasjoner">
+                description = <"Ytterligere morfologiske observasjoner av embryoet som ikke dekkes av de andre spesifiserte elementene.">
+                comment = <"Dette dataelementet er mulig å repetere for å legge til rette for flere verdier skal kunne velges fra en liste av kodede verdier.">
+            >
+            ["at0051"] = <
+                text = <"Flerkjernet celle">
+                description = <"Flere synlige kjerner i en celle.">
+            >
+            ["at0052"] = <
+                text = <"Flerkjernede celler.">
+                description = <"To eller flere synlige kjerner i to eller flere celler.">
+            >
+            ["at0053"] = <
+                text = <"Lik, ikke stadium-spesifikk">
+                description = <"Celler av lik, ikke stadium-spesifikk strørrelse.">
+            >
+            ["at0054"] = <
+                text = <"Ulik, ikke stadium-spesifikk">
+                description = <"Celler av ulik, ikke stadium-spesifikk strørrelse.">
+            >
+            ["at0055"] = <
+                text = <"Morfologisk gradering">
+                description = <"Overordnet gradering eller skår basert på embryoets registrerte, morfologiske egenskaper.">
+                comment = <"Bruk av en etablert skala for vurdering av embryoets morfologi anbefales.">
+            >
+            ["ac9000"] = <
+                text = <"Fragmenteringsgrad (synthesised)">
+                description = <"Grad av cytoplasmisk fragmentering i et embryo i delingsstadie. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Cellestørrelse (synthesised)">
+                description = <"Relativ størrelse på cellene i embryoet. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Kjerner (synthesised)">
+                description = <"Tilstedeværelse eller fravær av kjerner i embryoets celler i tidlig delingsstadie. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Kompaktering (synthesised)">
+                description = <"Grad av kompaktering i embryo i delingsstadiene. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Examination of a cleavage-stage embryo">
+                description = <"Morphological findings obtained by microscopy of the human cleavage-stage embryo.">
+            >
+            ["at0028"] = <
+                text = <"Number of cells">
+                description = <"Number of cells in a cleavage-stage embryo.">
+            >
+            ["at0030"] = <
+                text = <"Fragmentation">
+                description = <"Cytoplasmic fragmentation in a cleavage-stage embryo.">
+                comment = <"The proportion data type can be used to record a more precise assessment.">
+            >
+            ["at0031"] = <
+                text = <"None">
+                description = <"Absence of cytoplasmic fragments.">
+            >
+            ["at0032"] = <
+                text = <"Mild fragmentation">
+                description = <"Cytoplasmic fragments cover < 10% of the total cytoplasmic volume.">
+            >
+            ["at0033"] = <
+                text = <"Moderate fragmentation">
+                description = <"Cytoplasmic fragments cover 10 - 25% of the total cytoplasmic volume.">
+            >
+            ["at0034"] = <
+                text = <"Severe fragmentation">
+                description = <"Cytoplasmic fragments cover > 25% of the total cytoplasmic volume.">
+            >
+            ["at0035"] = <
+                text = <"Blastomere size">
+                description = <"Relative blastomere size.">
+            >
+            ["at0036"] = <
+                text = <"Equal, stage specific">
+                description = <"Equally sized blastomeres, stage specific cell size.">
+            >
+            ["at0037"] = <
+                text = <"Unequal, stage specific">
+                description = <"Unequally sized blastomeres, stage specific cell size.">
+            >
+            ["at0038"] = <
+                text = <"Nucleation">
+                description = <"Presence or absence of nuclei in the blastomeres of the cleavage-stage embryo.">
+            >
+            ["at0039"] = <
+                text = <"No visible nuclei">
+                description = <"Nuclei are not visible.">
+            >
+            ["at0040"] = <
+                text = <"Mononucleation">
+                description = <"Only a single visible nucleus in all blastomeres.">
+            >
+            ["at0041"] = <
+                text = <"Binucleation">
+                description = <"Two visible nuclei in one blastomere.">
+            >
+            ["at0042"] = <
+                text = <"Cytoplasmic morphology">
+                description = <"Morphology of the cytoplasm of cells in cleavage-stage embryo.">
+                comment = <"May contain description of anomalies, such as granularity, pitting, and presence of vacuoles.">
+            >
+            ["at0043"] = <
+                text = <"Spatial distribution of cells">
+                description = <"Spatial distribution of cells in a cleavage-stage embryo.">
+                comment = <"A candidate value cannot be identified as the time of publication. If consensus can be achieved in the future, it can be added to the archetype. In the meantime, a use case-appropriate value set can be added in the template.">
+            >
+            ["at0044"] = <
+                text = <"Compaction">
+                description = <"Degree of compaction in a cleavage-stage embryo.">
+            >
+            ["at0045"] = <
+                text = <"None">
+                description = <"Absence of compaction.">
+            >
+            ["at0046"] = <
+                text = <"Minimal">
+                description = <"Less than 50% of the total embryonic volume is compacted.">
+            >
+            ["at0047"] = <
+                text = <"Moderate">
+                description = <"Over 50% of the total embryonic volume is compacted.">
+            >
+            ["at0048"] = <
+                text = <"Complete">
+                description = <"The complete volume of the embryo is compacted.">
+            >
+            ["at0049"] = <
+                text = <"Other morphological features">
+                description = <"Additional morphological features not captured by specific parameters.">
+                comment = <"The occurrences for this data element is set to 0..* to allow for more than one morphological attribute to be added as a coded value.">
+            >
+            ["at0051"] = <
+                text = <"Multinucleation">
+                description = <"Multiple visible nuclei in one blastomere.">
+            >
+            ["at0052"] = <
+                text = <"Broad multinucleation">
+                description = <"Two or more visible nuclei in two or more blastomeres.">
+            >
+            ["at0053"] = <
+                text = <"Equal, non-stage specific">
+                description = <"Equally sized blastomeres, non-stage specific cell size.">
+            >
+            ["at0054"] = <
+                text = <"Unequal, non-stage specific">
+                description = <"Unequally sized blastomeres, non-stage specific cell size.">
+            >
+            ["at0055"] = <
+                text = <"Morphology grade">
+                description = <"Overall grading or score based on recorded morphological features of the cleavage-stage embryo.">
+                comment = <"Use of an established morphology assessment classification is preferred.">
+            >
+            ["ac9000"] = <
+                text = <"Fragmentation (synthesised)">
+                description = <"Cytoplasmic fragmentation in a cleavage-stage embryo. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Blastomere size (synthesised)">
+                description = <"Relative blastomere size. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Nucleation (synthesised)">
+                description = <"Presence or absence of nuclei in the blastomeres of the cleavage-stage embryo. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Compaction (synthesised)">
+                description = <"Degree of compaction in a cleavage-stage embryo. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0039", "at0040", "at0041", "at0051", "at0052">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0036", "at0037", "at0053", "at0054">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0031", "at0032", "at0033", "at0034">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0045", "at0046", "at0047", "at0048">
+        >
+    >

@@ -1,0 +1,206 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=09a4756c-9716-4a11-aafb-6d4bbcfea870; build_uid=4f0a30ea-2f00-4835-9dd8-eab0446b51ca)
+    openEHR-EHR-CLUSTER.lab_microscopy_parasitology.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2024-09-07">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Nicola Ewen, SERHA/Ministry of Health and Wellness, Jamaica", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Yohann White, Ministry of Health and Wellness, Jamaica">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"47DABC3156E661A45DD12BF57B533782">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record findings about parasites or their developmental forms in a specimen, using microscopy.">
+            use = <"Use to record findings about parasites or their developmental forms, such as eggs, larvae, cysts, trophozoites in a specimen, using microscopy.">
+            misuse = <"Not to be used to record findings related to parasites that use molecular, antigen or antibody testing. Use CLUSTER.laboratory_test_molecular_microbial, CLUSTER.laboratory_test_antigen or CLUSTER.laboratory_test_antibody for this purpose.">
+            copyright = <"© openEHR Foundation, Ministry of Health and Wellness Jamaica">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Microbiology parasitology findings
+        items cardinality matches {1..*; unordered} matches {
+            allow_archetype CLUSTER[at0002] matches {    -- Specimen
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Clinical description
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            CLUSTER[at0003] matches {    -- Per parasite
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0004] occurrences matches {1} matches {    -- Parasite name
+                        value matches {
+                            DV_TEXT[at9004]
+                        }
+                    }
+                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Developmental form
+                        value matches {
+                            DV_TEXT[at9005]
+                        }
+                    }
+                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Presence
+                        value matches {
+                            DV_CODED_TEXT[at9006] matches {
+                                defining_code matches {[ac9000]}    -- Presence (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Qualitative result
+                        value matches {
+                            DV_CODED_TEXT[at9007] matches {
+                                defining_code matches {[ac9001]}    -- Qualitative result (synthesised)
+                            }
+                            DV_TEXT[at9008]
+                        }
+                    }
+                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Quantitative result
+                        value matches {
+                            DV_QUANTITY[at9009] matches {
+                                property matches {[at9002]}    -- Proportion
+                                units matches {"%"}
+                            }
+                        }
+                    }
+                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9011]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0009] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9010]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Microbiology parasitology findings">
+                description = <"A laboratory test to directly detect, identify and quantify parasites or their developmental forms in a specimen, using microscopy.">
+            >
+            ["at0001"] = <
+                text = <"Clinical description">
+                description = <"Narrative description about all parasitology-related findings on microscopy.">
+            >
+            ["at0002"] = <
+                text = <"Specimen">
+                description = <"">
+            >
+            ["at0003"] = <
+                text = <"Per parasite">
+                description = <"Per targeted parasite and developmental form.">
+            >
+            ["at0004"] = <
+                text = <"Parasite name">
+                description = <"Name of the parasite.">
+                comment = <"Coding with an external terminology is recommended, if available. For example: Giardia, Entamoeba, Hookworm, Toxoplasma, Plasmodium or Trypanosoma">
+            >
+            ["at0005"] = <
+                text = <"Presence">
+                description = <"Statement about detection of the identified parasite in the specimen.">
+            >
+            ["at0006"] = <
+                text = <"Detected">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Not detected">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Indeteminate">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the overall parasitology findings, not captured in other fields.">
+            >
+            ["at0010"] = <
+                text = <"Developmental form">
+                description = <"Name of the developmental stage or lifecycle of the parasite.">
+                comment = <"Coding with an external terminology is recommended, if available. For example: egg, cyst, larva, trophozoite.">
+            >
+            ["at0011"] = <
+                text = <"Qualitative result">
+                description = <"Qualitative assessment of the amount of identified parasite in the specimen.">
+            >
+            ["at0012"] = <
+                text = <"Absent">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Scant">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Low">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"High">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Quantitative result">
+                description = <"Quantitative assessment of the amount of identified parasite in the specimen.">
+                comment = <"For example: 2% parasitaemia detected in a blood smear.">
+            >
+            ["at0018"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the findings for the identified parasite, not captured in other fields.">
+            >
+            ["at9002"] = <
+                text = <"Proportion">
+                description = <"Proportion">
+            >
+            ["ac9000"] = <
+                text = <"Presence (synthesised)">
+                description = <"Statement about detection of the identified parasite in the specimen. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Qualitative result (synthesised)">
+                description = <"Qualitative assessment of the amount of identified parasite in the specimen. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9002"] = <http://openehr.org/id/507>
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0012", "at0013", "at0014", "at0015", "at0016">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0006", "at0007", "at0008">
+        >
+    >

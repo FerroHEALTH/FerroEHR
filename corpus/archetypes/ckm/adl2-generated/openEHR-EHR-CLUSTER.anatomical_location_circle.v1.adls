@@ -1,0 +1,858 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=f114b64a-30e8-4646-a6dd-fee53863cc33; build_uid=edd7cbdb-bc37-46a9-8e0a-ab559dcc63c5)
+    openEHR-EHR-CLUSTER.anatomical_location_circle.v1.1.3
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Linda Aulin">
+                ["organisation"] = <"Region Stockholm, Karolinska University Hospital">
+                ["email"] = <"linda.aulin@sll.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke">
+                ["organisation"] = <"Nasjonal IKT HF">
+                ["email"] = <"silje.ljosland.bakke@nasjonalikt.no">
+            >
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            author = <
+                ["name"] = <"Biljana Princic">
+            >
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            author = <
+                ["name"] = <"Tradcrea - Laura Moral López, Laura Moral Lopez">
+                ["organisation"] = <"Servei Català de Salut, Sistema de Salut de Catalunya">
+                ["email"] = <"lauramoral@catsalut.cat">
+            >
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Clara Calleja Vega">
+                ["organisation"] = <"CatSalut. Servei Català de la Salut.">
+                ["email"] = <"ccalleja@catsalut.cat">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2008-11-10">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Marit Alice Venheim, Helse Vest IKT, Norway", "Tomas Alme, DIPS, Norway", "Erling Are Hole, Helse Bergen, Norway", "Stein Arne Rimehaug, Sunnaas sykehus, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Koray Atalag, University of Auckland, New Zealand", "Heidi Aursand, Oslo universitetssykehus, Norway", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Nsah Bernard, UCL Institute of Health Informatics, United Kingdom", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Greg Burch, Tiny Medical Apps, United Kingdom", "Ady Angelica Castro Acosta, CIBERES-Hospital 12 de Octubre, Spain", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Stig Erik Hegrestad, Helse Førde, Norway", "Shahla Foozonkhah, Ocean Informatics, Australia", "Einar Fosse, National Centre for Integrated Care and Telemedicine, Norway", "Sebastian Garde, Ocean Informatics, Germany", "Heather Grain, Llewelyn Grain Informatics, Australia", "Dunmail Hodkinson, Black Pear Software Ltd, UK", "Hilde Hollås, DIPS AS, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Tom Jarl Jakobsen, Helse Bergen, Norway", "Brit Jorun Liseth, Haukeland Universitetssykehus, Norway", "Lars Karlsen, DIPS ASA, Norway", "Thomas Kilvær, Universitetssykehuset Nord Norge, Norway", "Shinji Kobayashi, Kyoto University, Japan", "Nils Kolstrup, Skansen Legekontor og Nasjonalt Senter for samhandling og telemedisin, Norway", "Sabine Leh, Helse Bergen, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Vesna Levasic, Orthopaedic Hospital Valdoltra, Slovenia", "Neranga Liyanaarachchi, Ministry of Health, Postgraduate Institute of Medicine, Sri Lanka", "Rikard Lovstrom, Swedish Medical Association, Sweden", "Hallvard Lærum, Oslo University Hospital, Norway", "Luis Marco Ruiz, Norwegian Center for Integrated Care and Telemedicine, Norway", "Siv Marie Lien, DIPS ASA, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Andrej Orel, Marand d.o.o., Slovenia", "Jayashree Panickar, Karolinska Institute, Sweden", "Ana Pereira, CINTESIS, CUF-Porto, Portugal", "Osmeire Sanzovo, Sanzovo & Chamelette, Brazil", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Trine Strand, Oslo Universitetssykehus (OUS), Norway", "Nyree Taylor, Ocean Informatics, Australia", "Rowan Thomas, St. Vincent's Hospital Melbourne, Australia", "Anders Thurin, SU, Sweden", "Richard Townley-O'Neill, NEHTA, Australia", "Gro-Hilde Ulriksen, Norwegian center for ehealthresearch, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Dmitri Wall, Irish Skin Foundation, Ireland">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Johnson CC, Roberts S, Mintz D, Fabricant PD, Hotchkiss RN, Daluiski A. Location of Osteochondritis Dissecans Lesions of the Capitellum. J Hand Surg Am. 2018 Apr 17. pii: S0363-5023(17)31317-5. doi: 10.1016/j.jhsa.2018.03.017. [Epub ahead of print] PubMed PMID: 29678428.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"9D4671A3EC612FCA6F5DE51D22762470">
+    >
+    details = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Registrering av strukturerade detaljer om en fysisk plats på eller i människokroppen som beskrivs i termer av riktning och eventuellt avståndet från platsen till ett centralt landmärke.">
+            keywords = <"plats", "lokalisation", "anatomisk", "kroppsställe", "lokalisering", "placering", "cirkulär riktning", "mittpunkt", "klocka", "referensriktning", "anatomi", "topografisk anatomi", "makroskopisk anatomi", "makroskopisk", "anatomiskt område">
+            use = <"Används för att registrera strukturerade detaljer om en fysisk plats på eller i människokroppen som beskrivs med hjälp av riktningen och eventuellt avståndet till platsen från ett centralt landmärke. Riktningen kommer att vara relativt den identifierade referensriktningen som kan antydas i vissa undersökningar - till exempel klockan 12 vid undersökning av bröst eller anus.
+
+Den här arketypen är speciellt utformad för att användas inom ramen för alla lämpliga ENTRY- eller CLUSTER-arketyper som anger kroppsställets sammanhang. Den kan också användas i CLUSTER.anatomical_location-arketypen i SLOT för \"Alternativ struktur\".
+
+I situationer där CLUSTER.anatomical_location endast kan användas för att ange ett större och/eller ospecifikt kroppsområde kan användningen av denna arketyp inom SLOT för \"Alternativ struktur\" stödja en mer exakt registrering. Till exempel hemorrojder vid klockan 7, där referenspunkten vid klockan 12 är perineum eller den främre ytan av kroppen, med patienten i litotomiläge.">
+            misuse = <"Används inte för att ange en enkel plats för en namngiven plats på kroppen, t.ex. vänster lårben eller den mediala aspekten av näsan. Använd CLUSTER.anatomical_location för detta ändamål.
+
+Används inte för att ange en relativ plats för en fysisk plats på kroppen, t.ex. ett blåmärke som ligger 5 cm under naveln. Använd CLUSTER.anatomical_location_relative för detta ändamål.
+">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere strukturerte detaljer om ett enkelt fysisk sted på eller i menneskekroppen, beskrevet ved retningen og valgfritt avstanden av stedet fra et sentralt landemerke.">
+            keywords = <"sted", "lokasjon", "anatomisk", "kroppssted", "lokalisering", "omtrentlig", "ur", "klokke", "anatomi", "topografisk anatomi", "makroskopisk anatomi", "makroskopisk", "anatomisk område", "urskive", "plassering">
+            use = <"Brukes for å registrere strukturerte detaljer om ett enkelt fysisk sted på eller i menneskekroppen, beskrevet ved retningen og valgfritt avstanden av stedet fra et sentralt landemerke. Retningen beskrives i forhold til en referanseretning som i noen undersøkelser er underforstått, for eksempel kl. 12 ved undersøkelse av bryster eller anus.
+
+Arketypen er spesifikt utviklet for å brukes innenfor en hvilken som helst passende ENTRY- eller CLUSTER-arketype som gir kroppsstedet en kontekst. Den kan også brukes i arketypen CLUSTER.anatomical_location, i SLOTet \"Alternativ struktur\".
+
+I situasjoner der CLUSTER.anatomical_location kun kan brukes for å angi et større og/eller uspesifikt kroppsområde, kan bruk av denne arketypen innenfor \"Alternativ struktur\"-SLOTet støtte en mer presis registrering. For eksempel en hemorroide kl 7, der referansepunktet kl 12 er perineum eller den anteriore overflaten av kroppen, med pasienten i litotomiposisjon.">
+            misuse = <"Brukes ikke for å angi en enkel lokalisering av et navngitt sted på kroppen, som f.eks. venstre femur eller det mediale aspektet av nesen. Bruk CLUSTER.anatomical_location for dette formålet.
+
+Brukes ikke for å angi en relativ lokalisering av et fysisk sted på kroppen, som f.eks. et blåmerke som ligger 5 cm under navlen. Bruk CLUSTER.anatomical_location_relative for dette formålet.
+">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"تسجيل المكان التشريحي بالتفصيل">
+            keywords = <"الموقع", "المكان", "تشريحي">
+            use = <"">
+            misuse = <"لا يستخدم لتحديد حالات الحدوث في جانب واحد أو في الجانبين - حيث إن ذلك متعلق بتقييم قد يتضمن العديد من الأماكن">
+            copyright = <"© openEHR Foundation">
+        >
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            purpose = <"*To record details about anatomical location.(en)">
+            keywords = <"*location(en)", "*site(en)", "*anatomical(en)">
+            use = <"">
+            misuse = <"*Not for specifiying unilateral/bilateral occurence - this is related to an evaluation which perhaps includes multiple locations.(en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record structured details about a physical site on or within the human body that is described in terms of the direction, and optionally the distance, of the site from a central landmark.">
+            keywords = <"location", "site", "anatomical", "relative", "approximate", "anatomic region", "topographic anatomy", "macroscopic anatomy", "macroscopic", "anatomic", "anatomy", "clock", "o'clock", "position", "surface anatomy">
+            use = <"Use to record structured details about a physical site on or within the human body that is described in terms of the direction, and optionally the distance, of the site from a central landmark. The direction will be relative to the identified reference direction which may be implied in some examinations - for example, the 12 o'clock in examination of the breast or anus.
+
+This archetype is specifically designed to be used within the context of any appropriate ENTRY or CLUSTER archetypes which supply the context of the identified body site, or nesting in the 'Alternative Structure' SLOT within the CLUSTER.anatomical_location.
+
+In the situation where the CLUSTER.anatomical_location can only be used to name a large and/or non-specific body part, the use of this archetype within the 'Alternative Structure' SLOT will support recording of a more precise location - for example, a haemorrhoid located at 7 o'clock, where the 12 o'clock reference point is the perineum, or anterior surface of the body, with the patient in the lithotomy position.">
+            misuse = <"Not to be used to specify a simple location of a named physical site in the body, such as left femur or medial aspect of nose. Use the CLUSTER.anatomical_location archetype for this purpose.
+
+Not to be used to specify a relative location of a physical site in the body, such as a bruise that is 5 cm inferior to the umbilicus. Use the CLUSTER.anatomical_location_relative for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            purpose = <"Registrar detalls estructurats sobre una part dins o del cos que es descriu en termes de la direcció, i opcionalment la distància, del lloc des d'una posició central.">
+            keywords = <"ubicació", "lloc", "anatòmica", "relativa", "aproximada", "regió anatòmica", "anatomia topogràfica", "anatomia macroscòpica", "macroscòpic", "anatòmica", "anatomia", "rellotge", "posició", "anatomia", "superficial">
+            use = <"S'utilitza per registrar detalls estructurats sobre una part dins o del cos que es descriu en termes de la direcció, i opcionalment la distància, del lloc des d'una posició central. La direcció serà relativa a la direcció de referència identificada que pot estar implicada en alguns exàmens - per exemple, les 12 en l'examen del pit o l'anus.
+
+Aquest arquetip està dissenyat específicament per a ser utilitzat en el context de qualsevol arquetip d'ENTRADA o CLUSTER apropiat que subministri el context del lloc del cos identificat, o nidificant en la RANURA 'Estructura alternativa' dins del CLUSTER.anatomical.location.
+
+En la situació en què el CLUSTER.anatomical_location només es pugui utilitzar per nomenar una part corporal gran i/o no específica, l'ús d'aquest arquetip dins de la RANURA 'Estructura alternativa' permetrà registrar una ubicació més precisa - per exemple, una hemorroide situada a les 7 en punt, on el punt de referència de les 12 en punt és el perineu, o superfície anterior del cos, amb el pacient en la posició de litotomia.">
+            misuse = <"No s'ha d'utilitzar per especificar una part senzilla del cos, com el fèmur esquerre o l'aspecte medial del nas. Utilitzar l'arquetip CLUSTER.anatomical.location per a aquest propòsit.
+
+No s'ha d'utilitzar per especificar una ubicació relativa d'un lloc físic en el cos, com un blau que és 5 cm inferior del mèlic. Utilitzeu el CLUSTER.anatomical.location.relative per a aquesta finalitat.">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registrar detalles estructurados sobre una localización física en el cuerpo humano o dentro de él, que se describe en términos de la dirección y, opcionalmente, la distancia del sitio desde un punto de referencia central.">
+            keywords = <"ubicación", "sitio", "anatómico", "relativo", "aproximado", "región anatómica", "anatomía topográfica", "anatomía macroscópica", "anatomía macroscópica", "anatomía", "reloj", "en punto", "posición", "anatomía de superficie">
+            use = <"Se utiliza para registrar detalles estructurados sobre una localización anatómica del cuerpo humano, descrita en términos de su dirección y, opcionalmente, su distancia desde un punto de referencia central. La dirección será relativa a la dirección de referencia identificada, que puede estar implícita en algunos exámenes; por ejemplo, las 12 en punto en un examen de mama o ano.
+
+Este arquetipo está diseñado específicamente para usarse en el contexto de cualquier arquetipo de ENTRY o CLUSTER que proporcione el contexto de la zona corporal identificada, o que se anide en la ranura \"Estructura alternativa\" dentro de CLUSTER.anatomical_location.
+
+En caso de que CLUSTER.anatomical_location solo pueda usarse para nombrar una parte corporal grande o inespecífica, el uso de este arquetipo dentro de l SLOT \"Estructura alternativa\" facilitará el registro de una ubicación más precisa; por ejemplo, una hemorroide ubicada a las 7 en punto, donde el punto de referencia de las 12 en punto es el perineo, o la superficie anterior del cuerpo, con la paciente en posición de litotomía.">
+            misuse = <"No debe usarse para especificar la ubicación simple de un sitio físico en el cuerpo, como el fémur izquierdo o la cara medial de la nariz. Para ello, utilice el arquetipo CLUSTER.anatomical_location.
+
+No debe usarse para especificar la ubicación relativa de un sitio físico en el cuerpo, como un hematoma 5 cm por debajo del ombligo. Para ello, utilice el arquetipo CLUSTER.anatomical_location_relative.">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Circular anatomical location
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0065] occurrences matches {0..1} matches {    -- Reference direction
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            ELEMENT[at0079] occurrences matches {0..1} matches {    -- Centre landmark
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0061] occurrences matches {0..1} matches {    -- Circular direction
+                value matches {
+                    DV_CODED_TEXT[at9003] matches {
+                        defining_code matches {[ac9000]}    -- Circular direction (synthesised)
+                    }
+                    DV_DURATION[at9004] matches {
+                        value matches {PTHM/|PT0S..PT12H|}
+                    }
+                    DV_QUANTITY[at9005] matches {
+                        magnitude matches {|>-360.0..<360.0|}
+                        units matches {"deg"}
+                    }
+                }
+            }
+            ELEMENT[at0080] occurrences matches {0..1} matches {    -- Distance from landmark
+                value matches {
+                    DV_QUANTITY[at9008] matches {
+                        property matches {[at9007]}    -- Length
+                        [magnitude, units, precision] matches {
+                            [{|>=0.0|}, {"cm"}, {1}],
+                            [{|>=0.0|}, {"[in_i]"}, {1}],
+                            [{|>=0.0|}, {"mm"}, {1}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0023] occurrences matches {0..1} matches {    -- Description
+                value matches {
+                    DV_TEXT[at9006]
+                }
+            }
+            allow_archetype CLUSTER[at0054] matches {    -- Multimedia representation
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.media_file(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Cirkulär anatomisk lokalisation">
+                description = <"En fysisk plats på eller inom människokroppen som beskrivs i termer av riktningen och eventuellt avståndet till platsen från ett centralt landmärke.
+
+">
+            >
+            ["at0023"] = <
+                text = <"Beskrivning">
+                description = <"Fritextbeskrivning som kan användas för att ytterligare specificera detaljer om det cirkulära stället.">
+            >
+            ["at0054"] = <
+                text = <"Digital representation">
+                description = <"Bild eller annat media som används för att stödja identifiering av kroppsstället.
+">
+            >
+            ["at0061"] = <
+                text = <"Cirkulär riktning">
+                description = <"Riktningens vinkel mot det fysiska stället i förhållande till referensriktningen, antingen som positionen för en timme på en urtavla eller som ett antal grader.
+">
+                comment = <"Till exempel: lokalisering av hemorrojder i analkanalen beskrivs ofta som klockan 3, 7 och 11. I detta exempel är perineum klockan tolv när patienten är i litotomiläge och betraktas som referensriktningen. För grader är positiva värden medsols, medan negativa värden är moturs.
+">
+            >
+            ["at0065"] = <
+                text = <"Referensriktning">
+                description = <"En enda riktning som representerar klockan 12 eller 0° på en imaginär cirkel placerad över en plats på kroppen, som observerats av den person som utför undersökningen.
+">
+                comment = <"Till exempel: referensaxeln är vanligtvis mot huvudet när man undersöker ett bröst eller en detalj av en hudskada, mot perineum när man undersöker anus i litotomiläge eller mot den främre övre extremitetslinjen när man undersöker humerus.
+">
+            >
+            ["at0067"] = <
+                text = <"Klockan ett">
+                description = <"Kroppsstället är beläget klockan ett i förhållande till den identifierade referenspunkten.">
+            >
+            ["at0068"] = <
+                text = <"Klockan två">
+                description = <"Kroppsstället ligger vid klockan två i förhållande till den identifierade referenspunkten.">
+            >
+            ["at0069"] = <
+                text = <"Klockan tre">
+                description = <"Kroppsstället ligger vid klockan tre i förhållande till den identifierade referenspunkten.">
+            >
+            ["at0070"] = <
+                text = <"Klockan fyra">
+                description = <"Kroppsstället ligger vid klockan fyra i förhållande till den identifierade referenspunkten.">
+            >
+            ["at0071"] = <
+                text = <"Klockan fem">
+                description = <"Kroppsstället ligger vid klockan fem i förhållande till den identifierade referenspunkten.">
+            >
+            ["at0072"] = <
+                text = <"Klockan sex">
+                description = <"Kroppsstället ligger vid klockan sex i förhållande till den identifierade referenspunkten.">
+            >
+            ["at0073"] = <
+                text = <"Klockan sju">
+                description = <"Kroppsstället ligger vid klockan sju i förhållande till den identifierade referenspunkten.">
+            >
+            ["at0074"] = <
+                text = <"Klockan åtta">
+                description = <"Kroppsstället ligger vid klockan åtta i förhållande till den identifierade referenspunkten.">
+            >
+            ["at0075"] = <
+                text = <"Klockan nio">
+                description = <"Kroppsstället ligger vid klockan nio i förhållande till den identifierade referenspunkten.">
+            >
+            ["at0076"] = <
+                text = <"Klockan tio">
+                description = <"Kroppsstället ligger vid klockan tio i förhållande till den identifierade referenspunkten.">
+            >
+            ["at0077"] = <
+                text = <"Klockan elva">
+                description = <"Kroppsstället ligger vid klockan elva i förhållande till den identifierade referenspunkten.">
+            >
+            ["at0078"] = <
+                text = <"Klockan tolv">
+                description = <"Kroppsstället ligger vid klockan tolv i förhållande till den identifierade referenspunkten.">
+            >
+            ["at0079"] = <
+                text = <"Mittpunkt">
+                description = <"Identifierat kroppsställe som används som mittpunkt för den imaginära cirkeln.">
+                comment = <"Till exempel: bröstvårtan när man undersöker ett bröst, eller anus vid undersökning av hemorrojder.">
+            >
+            ["at0080"] = <
+                text = <"Avstånd från mittpunkten">
+                description = <"Avstånd till platsen från den identifierade mittpunkten.">
+            >
+            ["at9007"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac9000"] = <
+                text = <"Cirkulär riktning (synthesised)">
+                description = <"Riktningens vinkel mot det fysiska stället i förhållande till referensriktningen, antingen som positionen för en timme på en urtavla eller som ett antal grader.
+ (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Sirkulær anatomisk lokalisering">
+                description = <"Et fysisk sted på eller i menneskekroppen, beskrevet ved retningen og valgfritt avstanden av stedet fra et sentralt landemerke.">
+            >
+            ["at0023"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstbeskrivelse som kan brukes for å ytterligere presisere og støtte den sirkulære lokaliseringen.">
+                comment = <"For eksempel \"en tatovering dekker den nedre delen av området\".">
+            >
+            ["at0054"] = <
+                text = <"Multimediarepresentasjon">
+                description = <"Bilde eller annet medium brukt for å understøtte identifikasjonen av kroppsstedet.">
+            >
+            ["at0061"] = <
+                text = <"Sirkulær retning">
+                description = <"Retningens vinkel til det fysiske stedet i forhold til referanseretningen, enten som posisjonen av en timeviser på en urskive eller som et antall grader.">
+                comment = <"For eksempel: lokalisering av hemoroider i analkanalen beskrives ofte som klokken 3, klokken 7 og klokken 11. I dette eksempelet er perineum klokken tolv når pasienten er i litotomiposisjonen og blir regnet som referanseretningen. For grader er positive verdier vinkler i retning med urviseren, mens negative verdier er mot urviseren.">
+            >
+            ["at0065"] = <
+                text = <"Referanseretning">
+                description = <"En enkelt retning som representerer klokken 12 eller 0° på en tenkt sirkel som er plassert over et sted på kroppen, som observert av den som utfører undersøkelsen.">
+                comment = <"For eksempel: referanseaksen er vanligvis mot hodet når man undersøker et bryst eller en detalj på en hudlesjon, mot perineum når man undersøker anus i litotomiposisjonen, eller mot den anteriore overamslinjen når man undersøker humerus.">
+            >
+            ["at0067"] = <
+                text = <"Klokken 1">
+                description = <"Kroppsstedet er kl. 1 relativt til referansepunktet.">
+            >
+            ["at0068"] = <
+                text = <"Klokken 2">
+                description = <"Kroppsstedet er kl. 2 relativt til referansepunktet.">
+            >
+            ["at0069"] = <
+                text = <"Klokken 3">
+                description = <"Kroppsstedet er kl. 3 relativt til referansepunktet.">
+            >
+            ["at0070"] = <
+                text = <"Klokken 4">
+                description = <"Kroppsstedet er kl. 4 relativt til referansepunktet.">
+            >
+            ["at0071"] = <
+                text = <"Klokken 5">
+                description = <"Kroppsstedet er kl. 5 relativt til referansepunktet.">
+            >
+            ["at0072"] = <
+                text = <"Klokken 6">
+                description = <"Kroppsstedet er kl. 6 relativt til referansepunktet.">
+            >
+            ["at0073"] = <
+                text = <"Klokken 7">
+                description = <"Kroppsstedet er kl. 7 relativt til referansepunktet.">
+            >
+            ["at0074"] = <
+                text = <"Klokken 8">
+                description = <"Kroppsstedet er kl. 8 relativt til referansepunktet.">
+            >
+            ["at0075"] = <
+                text = <"Klokken 9">
+                description = <"Kroppsstedet er kl. 9 relativt til referansepunktet.">
+            >
+            ["at0076"] = <
+                text = <"Klokken 10">
+                description = <"Kroppsstedet er kl. 10 relativt til referansepunktet.">
+            >
+            ["at0077"] = <
+                text = <"Klokken 11">
+                description = <"Kroppsstedet er kl. 11 relativt til referansepunktet.">
+            >
+            ["at0078"] = <
+                text = <"Klokken 12">
+                description = <"Kroppsstedet er kl. 12 relativt til referansepunktet.">
+            >
+            ["at0079"] = <
+                text = <"Midtpunkt">
+                description = <"Stedet på kroppen som brukes som referansepunkt for midtpunktet i den tenkte sirkelen.">
+                comment = <"For eksempel: brystvorten når man undersøker et bryst eller anus når man undersøker hemoroider.">
+            >
+            ["at0080"] = <
+                text = <"Avstand fra midtpunktet">
+                description = <"Avstanden av lokaliseringen fra det beskrevne midtpunktet.">
+            >
+            ["at9007"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac9000"] = <
+                text = <"Sirkulær retning (synthesised)">
+                description = <"Retningens vinkel til det fysiske stedet i forhold til referanseretningen, enten som posisjonen av en timeviser på en urskive eller som et antall grader. (synthesised)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"*Circular anatomical location(en)">
+                description = <"*A physical site on or within the human body that is described in terms of the 2D position of the hour hand of a clock, relative to an identified reference point.">
+            >
+            ["at0023"] = <
+                text = <"*Description(en)">
+                description = <"*Narrative description that can be used to further refine and support structured data about the circular location. (en)">
+                comment = <"*For example: a tattoo covers the bottom half of this area.(en)">
+            >
+            ["at0054"] = <
+                text = <"*Cluster(en)">
+                description = <"**(en)">
+            >
+            ["at0061"] = <
+                text = <"*Circular direction(en)">
+                description = <"*Identification of a single direction by describing it as a position of the hour hand or a number of degrees with respect to the reference direction, as seen by the examiner.">
+                comment = <"*For example: the position of haemorrhoids in the anal canal are commonly described at 3 o'clock, 7 o'clock and 11 o'clock. In this situation the perineum is situated at 12 o'clock with patient in the lithotomy position, and regarded as the reference point.(en)">
+            >
+            ["at0065"] = <
+                text = <"*Reference direction(en)">
+                description = <"*Identification of a single axis or direction which represents the 12 o'clock or 0° position on an imaginary 2D circle superimposed over the body site, as seen by the examiner.">
+                comment = <"*For example: the reference point is commonly the head if examining the breast or detail on a skin lesion; or the perineum if examining the anus in the lithotomy position.(en)">
+            >
+            ["at0067"] = <
+                text = <"*One o'clock(en)">
+                description = <"*The body site is located at the one o'clock position relative to the identified reference point.(en)">
+            >
+            ["at0068"] = <
+                text = <"*Two o'clock(en)">
+                description = <"*The body site is located at the two o'clock position relative to the identified reference point.(en)">
+            >
+            ["at0069"] = <
+                text = <"*Three o'clock(en)">
+                description = <"*The body site is located at the three o'clock position relative to the identified reference point.(en)">
+            >
+            ["at0070"] = <
+                text = <"*Four o'clock(en)">
+                description = <"*The body site is located at the four o'clock position relative to the identified reference point.(en)">
+            >
+            ["at0071"] = <
+                text = <"*Five o'clock(en)">
+                description = <"*The body site is located at the five o'clock position relative to the identified reference point.(en)">
+            >
+            ["at0072"] = <
+                text = <"*Six o'clock(en)">
+                description = <"*The body site is located at the six o'clock position relative to the identified reference point.(en)">
+            >
+            ["at0073"] = <
+                text = <"*Seven o'clock(en)">
+                description = <"*The body site is located at the seven o'clock position relative to the identified reference point.(en)">
+            >
+            ["at0074"] = <
+                text = <"*Eight o'clock(en)">
+                description = <"*The body site is located at the eight o'clock position relative to the identified reference point.(en)">
+            >
+            ["at0075"] = <
+                text = <"*Nine o'clock(en)">
+                description = <"*The body site is located at the nine o'clock position relative to the identified reference point.(en)">
+            >
+            ["at0076"] = <
+                text = <"*Ten o'clock(en)">
+                description = <"*The body site is located at the ten o'clock position relative to the identified reference point.(en)">
+            >
+            ["at0077"] = <
+                text = <"*Eleven o'clock(en)">
+                description = <"*The body site is located at the eleven o'clock position relative to the identified reference point.(en)">
+            >
+            ["at0078"] = <
+                text = <"*Twelve o'clock(en)">
+                description = <"*The body site is located at the twelve o'clock position relative to the identified reference point.(en)">
+            >
+            ["at0079"] = <
+                text = <"*Centre landmark(en)">
+                description = <"*">
+            >
+            ["at0080"] = <
+                text = <"*Distance from landmark (en)">
+                description = <"*Distance of location from the identified central landmark. (en)">
+            >
+            ["at9007"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac9000"] = <
+                text = <"*Circular direction(en) (synthesised)">
+                description = <"*Identification of a single direction by describing it as a position of the hour hand or a number of degrees with respect to the reference direction, as seen by the examiner. (synthesised)">
+            >
+        >
+        ["sl"] = <
+            ["at0000"] = <
+                text = <"*Circular anatomical location(en)">
+                description = <"*A physical site on or within the human body that is described in terms of the 2D position of the hour hand of a clock, relative to an identified reference point.">
+            >
+            ["at0023"] = <
+                text = <"*Description(en)">
+                description = <"*Narrative description that can be used to further refine and support structured data about the circular location. (en)">
+                comment = <"*For example: a tattoo covers the bottom half of this area.(en)">
+            >
+            ["at0054"] = <
+                text = <"*Cluster(en)">
+                description = <"**(en)">
+            >
+            ["at0061"] = <
+                text = <"*Circular direction(en)">
+                description = <"*Identification of a single direction by describing it as a position of the hour hand or a number of degrees with respect to the reference direction, as seen by the examiner.">
+                comment = <"*For example: the position of haemorrhoids in the anal canal are commonly described at 3 o'clock, 7 o'clock and 11 o'clock. In this situation the perineum is situated at 12 o'clock with patient in the lithotomy position, and regarded as the reference point.(en)">
+            >
+            ["at0065"] = <
+                text = <"*Reference direction(en)">
+                description = <"*Identification of a single axis or direction which represents the 12 o'clock or 0° position on an imaginary 2D circle superimposed over the body site, as seen by the examiner.">
+                comment = <"*For example: the reference point is commonly the head if examining the breast or detail on a skin lesion; or the perineum if examining the anus in the lithotomy position.(en)">
+            >
+            ["at0067"] = <
+                text = <"*One o'clock(en)">
+                description = <"*The body site is located at the one o'clock position relative to the identified reference point.(en)">
+            >
+            ["at0068"] = <
+                text = <"*Two o'clock(en)">
+                description = <"*The body site is located at the two o'clock position relative to the identified reference point.(en)">
+            >
+            ["at0069"] = <
+                text = <"*Three o'clock(en)">
+                description = <"*The body site is located at the three o'clock position relative to the identified reference point.(en)">
+            >
+            ["at0070"] = <
+                text = <"*Four o'clock(en)">
+                description = <"*The body site is located at the four o'clock position relative to the identified reference point.(en)">
+            >
+            ["at0071"] = <
+                text = <"*Five o'clock(en)">
+                description = <"*The body site is located at the five o'clock position relative to the identified reference point.(en)">
+            >
+            ["at0072"] = <
+                text = <"*Six o'clock(en)">
+                description = <"*The body site is located at the six o'clock position relative to the identified reference point.(en)">
+            >
+            ["at0073"] = <
+                text = <"*Seven o'clock(en)">
+                description = <"*The body site is located at the seven o'clock position relative to the identified reference point.(en)">
+            >
+            ["at0074"] = <
+                text = <"*Eight o'clock(en)">
+                description = <"*The body site is located at the eight o'clock position relative to the identified reference point.(en)">
+            >
+            ["at0075"] = <
+                text = <"*Nine o'clock(en)">
+                description = <"*The body site is located at the nine o'clock position relative to the identified reference point.(en)">
+            >
+            ["at0076"] = <
+                text = <"*Ten o'clock(en)">
+                description = <"*The body site is located at the ten o'clock position relative to the identified reference point.(en)">
+            >
+            ["at0077"] = <
+                text = <"*Eleven o'clock(en)">
+                description = <"*The body site is located at the eleven o'clock position relative to the identified reference point.(en)">
+            >
+            ["at0078"] = <
+                text = <"*Twelve o'clock(en)">
+                description = <"*The body site is located at the twelve o'clock position relative to the identified reference point.(en)">
+            >
+            ["at0079"] = <
+                text = <"*Centre landmark(en)">
+                description = <"*">
+            >
+            ["at0080"] = <
+                text = <"*Distance from landmark (en)">
+                description = <"*Distance of location from the identified central landmark. (en)">
+            >
+            ["at9007"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac9000"] = <
+                text = <"*Circular direction(en) (synthesised)">
+                description = <"*Identification of a single direction by describing it as a position of the hour hand or a number of degrees with respect to the reference direction, as seen by the examiner. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Circular anatomical location">
+                description = <"A physical site on or within the human body that is described in terms of the direction, and optionally the distance, of the site from a central landmark.">
+            >
+            ["at0023"] = <
+                text = <"Description">
+                description = <"Narrative description that can be used to further refine and support structured data about the circular location.">
+            >
+            ["at0054"] = <
+                text = <"Multimedia representation">
+                description = <"Image or other media used to support identification of the location on the body.">
+            >
+            ["at0061"] = <
+                text = <"Circular direction">
+                description = <"Identification of the angle of the direction to the physical site relative to the reference direction, either as the position of an hour hand on a clockface or number of degrees.">
+                comment = <"For example: the position of haemorrhoids in the anal canal are commonly described at 3 o'clock, 7 o'clock and 11 o'clock. In this situation the perineum is situated at 12 o'clock with patient in the lithotomy position, and regarded as the reference direction. For degrees, positive values are angles in the clockwise direction, while negative values are in the anti-clockwise direction.">
+            >
+            ["at0065"] = <
+                text = <"Reference direction">
+                description = <"Identification of a single direction which represents the 12 o'clock or 0° position on an imaginary circle superimposed over the body site, as seen by the examiner.">
+                comment = <"For example: the reference axis is commonly towards the head if examining the breast or detail on a skin lesion; towards the perineum if examining the anus in the lithotomy position; or towards the anterior humeral line if examining the humerus.">
+            >
+            ["at0067"] = <
+                text = <"One o'clock">
+                description = <"The body site is located at the one o'clock position relative to the identified reference point.">
+            >
+            ["at0068"] = <
+                text = <"Two o'clock">
+                description = <"The body site is located at the two o'clock position relative to the identified reference point.">
+            >
+            ["at0069"] = <
+                text = <"Three o'clock">
+                description = <"The body site is located at the three o'clock position relative to the identified reference point.">
+            >
+            ["at0070"] = <
+                text = <"Four o'clock">
+                description = <"The body site is located at the four o'clock position relative to the identified reference point.">
+            >
+            ["at0071"] = <
+                text = <"Five o'clock">
+                description = <"The body site is located at the five o'clock position relative to the identified reference point.">
+            >
+            ["at0072"] = <
+                text = <"Six o'clock">
+                description = <"The body site is located at the six o'clock position relative to the identified reference point.">
+            >
+            ["at0073"] = <
+                text = <"Seven o'clock">
+                description = <"The body site is located at the seven o'clock position relative to the identified reference point.">
+            >
+            ["at0074"] = <
+                text = <"Eight o'clock">
+                description = <"The body site is located at the eight o'clock position relative to the identified reference point.">
+            >
+            ["at0075"] = <
+                text = <"Nine o'clock">
+                description = <"The body site is located at the nine o'clock position relative to the identified reference point.">
+            >
+            ["at0076"] = <
+                text = <"Ten o'clock">
+                description = <"The body site is located at the ten o'clock position relative to the identified reference point.">
+            >
+            ["at0077"] = <
+                text = <"Eleven o'clock">
+                description = <"The body site is located at the eleven o'clock position relative to the identified reference point.">
+            >
+            ["at0078"] = <
+                text = <"Twelve o'clock">
+                description = <"The body site is located at the twelve o'clock position relative to the identified reference point.">
+            >
+            ["at0079"] = <
+                text = <"Centre landmark">
+                description = <"Identified body site used as a reference point for centre of the imaginary circle.">
+                comment = <"For example: the nipple when examining a breast; or the anus when examining haemorrhoids.">
+            >
+            ["at0080"] = <
+                text = <"Distance from landmark">
+                description = <"Distance of location from the identified central landmark.">
+            >
+            ["at9007"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["ac9000"] = <
+                text = <"Circular direction (synthesised)">
+                description = <"Identification of the angle of the direction to the physical site relative to the reference direction, either as the position of an hour hand on a clockface or number of degrees. (synthesised)">
+            >
+        >
+        ["ca"] = <
+            ["at0000"] = <
+                text = <"Ubicació anatòmica circular">
+                description = <"Una part dins o del cos que es descriu en termes de la direcció, i opcionalment la distància, del lloc des d'una posició central.">
+            >
+            ["at0023"] = <
+                text = <"Descripció">
+                description = <"Descripció narrativa que es pot utilitzar per refinar i donar suport a dades estructurades sobre la ubicació circular.">
+            >
+            ["at0054"] = <
+                text = <"Representació multimèdia">
+                description = <"Imatge o altres suports utilitzats per donar suport a la identificació de la ubicació en el cos.">
+            >
+            ["at0061"] = <
+                text = <"Direcció circular">
+                description = <"Identificació de l'angle de la direcció cap al lloc físic en relació amb la direcció de referència, ja sigui com la posició d'una mà d'una hora en un rellotge o nombre de graus.">
+                comment = <"Exemple: la posició de les hemorroides en el canal anal es descriu comunament a les 3 en punt, 7 en punt i 11 en punt. En aquesta situació, el perineu està situat a les 12 en punt amb pacient en la posició de litotomia, i considerat com la direcció de referència. Per graus, els valors positius són angles en la direcció en el sentit de les agulles del rellotge, mentre que els valors negatius són en la direcció antihorari.">
+            >
+            ["at0065"] = <
+                text = <"Direcció de referència">
+                description = <"Identificació d'una única direcció que representa la posició de les 12 o 0° en un cercle imaginari sobreposat sobre el lloc del cos, com veu l'examinador.">
+                comment = <"Exemple: l'eix de referència és comunament cap al cap si s'examina el pit o el detall en una lesió de la pell; cap al perineu si s'examina l'anus en la posició de litotomia; o cap a la línia humeral anterior si s'examina l'húmer.">
+            >
+            ["at0067"] = <
+                text = <"Una en punt">
+                description = <"El lloc del cos es troba a la posició de la una en punt en relació amb el punt de referència identificat.">
+            >
+            ["at0068"] = <
+                text = <"Dos en punt">
+                description = <"El lloc del cos es troba a la posició de les dues en punt en relació amb el punt de referència identificat.">
+            >
+            ["at0069"] = <
+                text = <"Tres en punt">
+                description = <"El lloc del cos es troba a la posició de les tres en punt en relació amb el punt de referència identificat.">
+            >
+            ["at0070"] = <
+                text = <"Quatre en punt">
+                description = <"El lloc del cos es troba a la posició de les quatre en punt en relació amb el punt de referència identificat.">
+            >
+            ["at0071"] = <
+                text = <"Cinc en punt">
+                description = <"El lloc del cos es troba a la posició de les cinc en punt en relació amb el punt de referència identificat.">
+            >
+            ["at0072"] = <
+                text = <"Sis en punt">
+                description = <"El lloc del cos es troba a la posició de les sis en punt en relació amb el punt de referència identificat.">
+            >
+            ["at0073"] = <
+                text = <"Set en punt">
+                description = <"El lloc del cos es troba a la posició de les set en punt en relació amb el punt de referència identificat.">
+            >
+            ["at0074"] = <
+                text = <"Vuit en punt">
+                description = <"El lloc del cos es troba a la posició de les vuit en punt en relació amb el punt de referència identificat.">
+            >
+            ["at0075"] = <
+                text = <"Nou en punt">
+                description = <"El lloc del cos es troba a la posició de les nou en punt en relació amb el punt de referència identificat.">
+            >
+            ["at0076"] = <
+                text = <"Deu en punt">
+                description = <"El lloc del cos es troba a la posició de les deu en punt en relació amb el punt de referència identificat.">
+            >
+            ["at0077"] = <
+                text = <"Onze en punt">
+                description = <"El lloc del cos es troba a la posició de les onze en punt en relació amb el punt de referència identificat.">
+            >
+            ["at0078"] = <
+                text = <"Dotze en punt">
+                description = <"El lloc del cos es troba a la posició de les dotze en punt en relació amb el punt de referència identificat.">
+            >
+            ["at0079"] = <
+                text = <"Punt de referència del centre">
+                description = <"Lloc del cos identificat utilitzat com a punt de referència per al centre del cercle imaginari.">
+                comment = <"Exemple: el mugró quan s'examina un pit; o l'anus quan s'examinen hemorroides.">
+            >
+            ["at0080"] = <
+                text = <"Distància des de la posició central">
+                description = <"Distància d'ubicació des de la posició central identificada.">
+            >
+            ["at9007"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac9000"] = <
+                text = <"Direcció circular (synthesised)">
+                description = <"Identificació de l'angle de la direcció cap al lloc físic en relació amb la direcció de referència, ja sigui com la posició d'una mà d'una hora en un rellotge o nombre de graus. (synthesised)">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Ubicación anatómica circular">
+                description = <"Un sitio físico en o dentro del cuerpo humano que se describe en términos de la dirección, y opcionalmente la distancia, del sitio desde un punto de referencia central.">
+            >
+            ["at0023"] = <
+                text = <"Descripción">
+                description = <"Descripción narrativa que puede utilizarse para refinar y respaldar datos estructurados sobre la ubicación circular.">
+            >
+            ["at0054"] = <
+                text = <"Representación multimedia">
+                description = <"Imagen u otro medio utilizado para respaldar la identificación de la ubicación en el cuerpo.">
+            >
+            ["at0061"] = <
+                text = <"Dirección circular">
+                description = <"Identificación del ángulo de la dirección con respecto al sitio físico en relación con la dirección de referencia, ya sea como la posición de la manecilla de la hora en la esfera de un reloj o en grados.">
+                comment = <"Por ejemplo: la posición de las hemorroides en el canal anal se describe comúnmente a las 3, 7 y 11 en punto. En esta situación, el perineo se sitúa a las 12 en punto con el paciente en posición de litotomía, y se considera la dirección de referencia. Para grados, los valores positivos corresponden a ángulos en sentido horario, mientras que los negativos corresponden a ángulos en sentido antihorario.">
+            >
+            ["at0065"] = <
+                text = <"Dirección de referencia">
+                description = <"Identificación de una sola dirección que representa las 12 en punto o los 0° en un círculo imaginario superpuesto sobre el sitio corporal, tal como lo ve el examinador.">
+                comment = <"Por ejemplo: el eje de referencia comúnmente es hacia la cabeza si se examina la mama o el detalle de una lesión de la piel; hacia el perineo si se examina el ano en posición de litotomía; o hacia la línea humeral anterior si se examina el húmero.">
+            >
+            ["at0067"] = <
+                text = <"Una en punto">
+                description = <"El sitio corporal se encuentra a la una en punto con respecto al punto de referencia identificado.">
+            >
+            ["at0068"] = <
+                text = <"Dos en punto">
+                description = <"El sitio corporal se encuentra a las dos en punto con respecto al punto de referencia identificado.">
+            >
+            ["at0069"] = <
+                text = <"Tres en punto">
+                description = <"El sitio corporal se encuentra a las tres en punto con respecto al punto de referencia identificado.">
+            >
+            ["at0070"] = <
+                text = <"Cuatro en punto">
+                description = <"El sitio corporal se encuentra a las cuatro en punto con respecto al punto de referencia identificado.">
+            >
+            ["at0071"] = <
+                text = <"Cinco en punto">
+                description = <"El sitio corporal se encuentra a las cinco en punto con respecto al punto de referencia identificado.">
+            >
+            ["at0072"] = <
+                text = <"Seis en punto">
+                description = <"El sitio corporal se encuentra a las seis en punto con respecto al punto de referencia identificado.">
+            >
+            ["at0073"] = <
+                text = <"Siete en punto">
+                description = <"El sitio corporal se encuentra a las siete en punto con respecto al punto de referencia identificado.">
+            >
+            ["at0074"] = <
+                text = <"Ocho en punto">
+                description = <"El sitio corporal se encuentra a las ocho en punto con respecto al punto de referencia identificado.">
+            >
+            ["at0075"] = <
+                text = <"Nueve en punto">
+                description = <"El punto del cuerpo se encuentra a las nueve en punto con respecto al punto de referencia identificado.">
+            >
+            ["at0076"] = <
+                text = <"Diez en punto">
+                description = <"El punto del cuerpo se encuentra a las diez en punto con respecto al punto de referencia identificado.">
+            >
+            ["at0077"] = <
+                text = <"Once en punto">
+                description = <"El punto del cuerpo se encuentra a las once en punto con respecto al punto de referencia identificado.">
+            >
+            ["at0078"] = <
+                text = <"Doce en punto">
+                description = <"El punto del cuerpo se encuentra a las doce en punto con respecto al punto de referencia identificado.">
+            >
+            ["at0079"] = <
+                text = <"Punto de referencia central">
+                description = <"El punto del cuerpo identificado se utiliza como punto de referencia para el centro del círculo imaginario.">
+                comment = <"Por ejemplo: el pezón al examinar una mama; o el ano al examinar hemorroides.">
+            >
+            ["at0080"] = <
+                text = <"Distancia desde el punto de referencia">
+                description = <"Distancia de la ubicación desde el punto de referencia central identificado.">
+            >
+            ["at9007"] = <
+                text = <"Longitud">
+                description = <"Longitud">
+            >
+            ["ac9000"] = <
+                text = <"Dirección circular (synthesised)">
+                description = <"Identificación del ángulo de la dirección con respecto al sitio físico en relación con la dirección de referencia, ya sea como la posición de la manecilla de la hora en la esfera de un reloj o en grados. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9007"] = <http://openehr.org/id/122>
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0067", "at0068", "at0069", "at0070", "at0071", "at0072", "at0073", "at0074", "at0075", "at0076", "at0077", "at0078">
+        >
+    >

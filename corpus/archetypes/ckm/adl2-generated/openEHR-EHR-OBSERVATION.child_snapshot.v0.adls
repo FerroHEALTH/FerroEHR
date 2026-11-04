@@ -1,0 +1,227 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=4b196d22-0f1e-4059-8831-76afad2c063b; build_uid=d9a7694c-0e1e-4a41-b660-c1dd6b710ae1)
+    openEHR-EHR-OBSERVATION.child_snapshot.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2022-07-01">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"4A772E2ECD7A107F36CB1AC565FE3C4D">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record summary information about an identified child, who is not the subject of care, at a specified point in time.">
+            use = <"Use to record summary information about an identified child, who is not the subject of care, at a specified point in time.
+
+This archetype has been designed to be used as a component of a maternal mortality surveillance report and specifically to record details about the neonate(s)/child(ren) of a deceased mother.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Child snapshot
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Name
+                                        value matches {
+                                            DV_TEXT[at9002]
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Label
+                                        value matches {
+                                            DV_TEXT[at9003]
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Alive or deceased?
+                                        value matches {
+                                            DV_CODED_TEXT[at9004] matches {
+                                                defining_code matches {[ac9000]}    -- Alive or deceased? (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- General health description
+                                        value matches {
+                                            DV_TEXT[at9005]
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Sex assigned at birth
+                                        value matches {
+                                            DV_TEXT[at9006]
+                                            DV_CODED_TEXT[at9007] matches {
+                                                defining_code matches {[ac9001]}    -- Sex assigned at birth (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Current age
+                                        value matches {
+                                            DV_DURATION[at9008] matches {
+                                                value matches {PYMW/|P0D..P120Y|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0016] matches {    -- Primary caregiver
+                                        value matches {
+                                            DV_TEXT[at9009]
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0017] matches {    -- Usual primary care clinician
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                    allow_archetype CLUSTER[at0018] matches {    -- Usual primary care clinic
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.organisation(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Last check-up
+                                        value matches {
+                                            DV_DATE_TIME[at9010]
+                                        }
+                                    }
+                                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Last immunisation
+                                        value matches {
+                                            DV_DATE_TIME[at9011]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0021] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0022] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Child snapshot">
+                description = <"Key summary information about an identified child, who is not the subject of care, at a specified point in time.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"Name">
+                description = <"Identification of a child by name.">
+            >
+            ["at0005"] = <
+                text = <"Label">
+                description = <"A label to distinguish this child from other children.">
+            >
+            ["at0006"] = <
+                text = <"Alive or deceased?">
+                description = <"The vital status of the child.">
+            >
+            ["at0007"] = <
+                text = <"Alive">
+                description = <"The child is alive.">
+            >
+            ["at0008"] = <
+                text = <"Deceased">
+                description = <"The child has died.">
+            >
+            ["at0009"] = <
+                text = <"General health description">
+                description = <"Narrative description about the general health of the child.">
+            >
+            ["at0010"] = <
+                text = <"Sex assigned at birth">
+                description = <"The formal sex assigned to the child at or around birth.">
+            >
+            ["at0011"] = <
+                text = <"Male">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Female">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Intersex">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Unknown">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Current age">
+                description = <"The current age of the child.">
+            >
+            ["at0016"] = <
+                text = <"Primary caregiver">
+                description = <"Identification of the primary caregiver category for the child.">
+                comment = <"This data element has multiple occurrences to allow for more than one caregiver to be identified.">
+            >
+            ["at0017"] = <
+                text = <"Usual primary care clinician">
+                description = <"Identification of the usual general practitioner or primary care clinician for the child.">
+            >
+            ["at0018"] = <
+                text = <"Usual primary care clinic">
+                description = <"Identification of the usual general practitice or primary care clinic for the child.">
+            >
+            ["at0019"] = <
+                text = <"Last check-up">
+                description = <"Date of the last health check-up.">
+            >
+            ["at0020"] = <
+                text = <"Last immunisation">
+                description = <"Date of the last immunisation.">
+            >
+            ["at0022"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["ac9000"] = <
+                text = <"Alive or deceased? (synthesised)">
+                description = <"The vital status of the child. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Sex assigned at birth (synthesised)">
+                description = <"The formal sex assigned to the child at or around birth. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0011", "at0012", "at0013", "at0014">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0007", "at0008">
+        >
+    >

@@ -1,0 +1,618 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=677a2484-3ebd-49c9-81fc-b8341fae7a33; build_uid=b0a5f2b4-f7a1-43fd-ac35-a3a392df19f8)
+    openEHR-EHR-OBSERVATION.hscore.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Marit Alice Venheim">
+                ["organisation"] = <"Helse Vest IKT">
+                ["email"] = <"marit.alice.venheim@helse-vest-ikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Liv Laugen">
+        ["organisation"] = <"Oslo universitetssykehus">
+        ["email"] = <"liv.laugen@ous-hf.no">
+        ["date"] = <"2020-03-30">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Vebjørn Arntzen, Oslo university hospital, Norway", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway", "Marit Alice Venheim, Helse Vest IKT AS, Norway">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Fardet L, Galicier L, Lambotte O, Marzac C, Aumont C, Chahwan D, Coppo P, Hejblum G. Development and validation of the HScore, a score for the diagnosis of reactive hemophagocytic syndrome. Arthritis Rheumatol. 2014 Sep;66(9):2613-20. doi: 10.1002/art.38690. PubMed PMID: 24782338.">
+        ["2"] = <"Mehta P, McAuley DF, Brown M, Sanchez E, Tattersall RS, Manson JJ. COVID-19: consider cytokine storm syndromes and immunosuppression. Lancet. 2020 Mar 16;. doi: 10.1016/S0140-6736(20)30628-0. [Epub ahead of print] PubMed PMID: 32192578. ">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"2F7A9970BE5A959CEFD5211DB1907494">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere et estimat av ett individs risiko for å ha sekundær hemofagocytisk lymfohistiocytose.">
+            keywords = <"HLH, sHLH, sekundær Hemofagisk lymfohistocytose, COVID-19, infeksjon, Reaktiv Heomfagocytisksyndrom, RAS, Makrofag Aktiveringsyndrom, MAS, Sekundær/reaktiv HLH", ...>
+            use = <"Brukes for å registrere et estimat av ett individs risiko for å ha sekundær hemofagocytisk lymfohistiocytose.">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record an estimation of an individual's risk of having reactive hemophagocytic syndrome.">
+            keywords = <"HLH, Hemophagocytic lymphohistiocytosis, COVID-19, infection,", ...>
+            use = <"Use to record an estimation of an individual's risk of having reactive hemophagocytic syndrome.">
+            misuse = <"">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- HScore
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Temperature
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0005]}],    -- <38.4°C
+                                                    [{33}, {[at0006]}],    -- 38.4-39.4°C
+                                                    [{49}, {[at0007]}]    -- >39.4°C
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Organomegaly
+                                        value matches {
+                                            DV_ORDINAL[at9010] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0009]}],    -- None
+                                                    [{23}, {[at0010]}],    -- Hepatomegaly or splenomegaly
+                                                    [{38}, {[at0011]}]    -- Hepatomegaly and splenomegaly
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Number of cytopenias
+                                        value matches {
+                                            DV_ORDINAL[at9011] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0013]}],    -- One lineage
+                                                    [{24}, {[at0014]}],    -- Two lineages
+                                                    [{34}, {[at0015]}]    -- Three lineages
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Triglycerides
+                                        value matches {
+                                            DV_ORDINAL[at9012] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0024]}],    -- <1.5 mmol/L
+                                                    [{44}, {[at0025]}],    -- 1.5-4.0 mmol/L
+                                                    [{64}, {[at0026]}]    -- >4.0 mmol/L
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Fibrinogen
+                                        value matches {
+                                            DV_ORDINAL[at9013] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0027]}],    -- >2.5 g/L
+                                                    [{30}, {[at0028]}]    -- ≤2.5 g/L
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Ferritin
+                                        value matches {
+                                            DV_ORDINAL[at9014] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0029]}],    -- <2000 ng/ml
+                                                    [{35}, {[at0030]}],    -- 2000–6000 ng/ml
+                                                    [{50}, {[at0031]}]    -- >6000 ng/ml
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Aspartate aminotransferase
+                                        value matches {
+                                            DV_ORDINAL[at9015] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0032]}],    -- <30 U/L
+                                                    [{19}, {[at0033]}]    -- ≥30 U/L
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Haemophagocytosis on bone marrow aspirate
+                                        value matches {
+                                            DV_ORDINAL[at9016] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0034]}],    -- No
+                                                    [{35}, {[at0035]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Known immunosuppression
+                                        value matches {
+                                            DV_ORDINAL[at9017] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0022]}],    -- No
+                                                    [{18}, {[at0023]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0036] occurrences matches {0..1} matches {    -- Total HScore
+                                        value matches {
+                                            DV_COUNT[at9018] matches {
+                                                magnitude matches {|0..337|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0037] occurrences matches {0..1} matches {    -- Probability of HS
+                                        value matches {
+                                            DV_PROPORTION[at9019] matches {
+                                                numerator matches {|0.0..100.0|}
+                                                type matches {2}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0038] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0039] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"HScore">
+                description = <"Estimerer ett individs risiko for å ha sekundær hemofagocytisk lymfohistiocytose.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Tempratur">
+                description = <"Måling av kroppstemperatur.">
+            >
+            ["at0005"] = <
+                text = <"<38,4°C">
+                description = <"Kroppstemperaturen til individet er mindre enn 38,4°C.">
+            >
+            ["at0006"] = <
+                text = <"38,4-39,4°C">
+                description = <"Kroppstemperaturen til individet er mellom 38,4 og 39,4°C.">
+            >
+            ["at0007"] = <
+                text = <">39.4°C">
+                description = <"Kroppstemperaturen til individet er større enn 39,4°C.">
+            >
+            ["at0008"] = <
+                text = <"Organomegali">
+                description = <"Funn av forstørret lever og/eller milt hos individet.">
+            >
+            ["at0009"] = <
+                text = <"Ingen">
+                description = <"Ingen forstørret lever og/eller milt hos individet.">
+            >
+            ["at0010"] = <
+                text = <"Hepatomegali eller splenomegali">
+                description = <"Forstørret lever eller milt.">
+            >
+            ["at0011"] = <
+                text = <"Hepatomegali og splenomegali">
+                description = <"Forstørret lever og milt.">
+            >
+            ["at0012"] = <
+                text = <"Antall cytopenier">
+                description = <"Antall cytopenier til stede - i den røde cellelinjen, hvite cellelinjen og/eller blodplatelinjen.">
+                comment = <"Definert som enten hemoglobinkonsentrasjon på 9,2 g/dL eller mindre (≤5,71 mmol/L), et antall hvite blodlegemer på 5000 hvite blodlegemer per mm³ (5,0 x 10E9/L) eller mindre, eller antall blodplater på 110 000 blodplater per mm³ (110 x 10E9/L) eller mindre, eller alle disse kriteriene kombinert.">
+            >
+            ["at0013"] = <
+                text = <"En linje">
+                description = <"Cytopeni i kun en cellelinje.">
+            >
+            ["at0014"] = <
+                text = <"To linjer">
+                description = <"Cytopeni i to cellelinjer.">
+            >
+            ["at0015"] = <
+                text = <"Tre linjer">
+                description = <"Cytopeni i tre cellelinjer.">
+            >
+            ["at0016"] = <
+                text = <"Triglyserider">
+                description = <"Triglyseridkonsentrasjonen målt i mmol/L eller mg/dL.">
+            >
+            ["at0017"] = <
+                text = <"Fibrinogen">
+                description = <"Fibrinogenkonsentrasjonen målt i g/L eller mg/dL.">
+            >
+            ["at0018"] = <
+                text = <"Ferritin">
+                description = <"Ferritinkonsentrasjonen mål i ng/mL or μg/L.">
+            >
+            ["at0019"] = <
+                text = <"Aspartataminotransferase">
+                description = <"Ett individs aspartataminotransferasekonsentrasjon målt i U/L.">
+                comment = <"Dette er også kjent som AST, AspAT, ASAT, AAT eller SGOT.">
+            >
+            ["at0020"] = <
+                text = <"Hemofagocytose i benmargsaspirat">
+                description = <"Funn av fagocytose i benmargsaspiratet.">
+            >
+            ["at0021"] = <
+                text = <"Kjent immunsuppresjon">
+                description = <"Tilstedeværelse av kjent immunsuppresjon.">
+                comment = <"For eksempel HIV-positiv eller pågående langvarig immunsuppressiv behandling.">
+            >
+            ["at0022"] = <
+                text = <"Nei">
+                description = <"Ingen kjent immunsuppresjon.">
+            >
+            ["at0023"] = <
+                text = <"Ja">
+                description = <"Kjent immunsuppresjon.">
+            >
+            ["at0024"] = <
+                text = <"<1,5 mmol/L">
+                description = <"Triglyseridkonsentrasjonen er mindre enn 1,5 mmol/L eller 132,7 mg/dL.">
+            >
+            ["at0025"] = <
+                text = <"1,5-4,0 mmol/L">
+                description = <"Triglyseridkonsentrasjonen er 1,5-4,0 mmol/L eller 132,7-354 mg/dL.">
+            >
+            ["at0026"] = <
+                text = <">4,0 mmol/L">
+                description = <"Triglyseridkonsentrasjonen er større enn 4,0 mmol/L eller 354 mg/dL.">
+            >
+            ["at0027"] = <
+                text = <">2,5 g/L">
+                description = <"Fibrinogenkonsentrasjonen er større enn 2,5 g/L eller 250 mg/dL.">
+            >
+            ["at0028"] = <
+                text = <"≤2,5 g/L">
+                description = <"Fibrinogenkonsentrasjonen er mindre enn eller er lik 2,5 g/L eller 250 mg/dL.">
+            >
+            ["at0029"] = <
+                text = <"<2000 ng/ml">
+                description = <"Ferritinkonsentrasjonen er mindre enn 2000 ng/ml eller 2000 μg/L.">
+            >
+            ["at0030"] = <
+                text = <"2000–6000 ng/ml">
+                description = <"Ferritinkonsentrasjonen er 2000-6000 ng/ml eller 2000-6000 μg/L.">
+            >
+            ["at0031"] = <
+                text = <">6000 ng/ml">
+                description = <"Ferritin nivået er større enn 6000 ng/ml eller 6000 μg/L.">
+            >
+            ["at0032"] = <
+                text = <"<30 U/L">
+                description = <"Aspartataminotransferasekonsentrasjonen er mindre enn 30 U/L.">
+            >
+            ["at0033"] = <
+                text = <"≥30 U/L">
+                description = <"Aspartataminotransferasekonsentrasjonen er mer enn eller er lik 30 U/L.">
+            >
+            ["at0034"] = <
+                text = <"Nei">
+                description = <"Det er ikke funnet hemofagocytose i benmargsaspiratet.">
+            >
+            ["at0035"] = <
+                text = <"Ja">
+                description = <"Det er funnet hemofagocytose i benmargsaspiratet.">
+            >
+            ["at0036"] = <
+                text = <"Total HScore">
+                description = <"Summen av skår av hver enkelt kategori.">
+            >
+            ["at0037"] = <
+                text = <"Sannsynligheten for sekundær HLH">
+                description = <"Sannsynligheten for at ett individ har sekundær hemofagocytisk lymfohistiocytose.">
+                comment = <"I følge tabell 5 i originalstudien av Fardet et al, https://doi.org/10.1002/art.38690.">
+            >
+            ["at0039"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+            ["ac9019"] = <
+                text = <"Tempratur (synthesised)">
+                description = <"Måling av kroppstemperatur. (synthesised)">
+            >
+            ["ac9020"] = <
+                text = <"Organomegali (synthesised)">
+                description = <"Funn av forstørret lever og/eller milt hos individet. (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"Antall cytopenier (synthesised)">
+                description = <"Antall cytopenier til stede - i den røde cellelinjen, hvite cellelinjen og/eller blodplatelinjen. (synthesised)">
+            >
+            ["ac9022"] = <
+                text = <"Triglyserider (synthesised)">
+                description = <"Triglyseridkonsentrasjonen målt i mmol/L eller mg/dL. (synthesised)">
+            >
+            ["ac9023"] = <
+                text = <"Fibrinogen (synthesised)">
+                description = <"Fibrinogenkonsentrasjonen målt i g/L eller mg/dL. (synthesised)">
+            >
+            ["ac9024"] = <
+                text = <"Ferritin (synthesised)">
+                description = <"Ferritinkonsentrasjonen mål i ng/mL or μg/L. (synthesised)">
+            >
+            ["ac9025"] = <
+                text = <"Aspartataminotransferase (synthesised)">
+                description = <"Ett individs aspartataminotransferasekonsentrasjon målt i U/L. (synthesised)">
+            >
+            ["ac9026"] = <
+                text = <"Hemofagocytose i benmargsaspirat (synthesised)">
+                description = <"Funn av fagocytose i benmargsaspiratet. (synthesised)">
+            >
+            ["ac9027"] = <
+                text = <"Kjent immunsuppresjon (synthesised)">
+                description = <"Tilstedeværelse av kjent immunsuppresjon. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"HScore">
+                description = <"Estimate an individual's risk of having reactive hemophagocytic syndrome.
+">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Temperature">
+                description = <"Range category for the body temperature measurement.">
+            >
+            ["at0005"] = <
+                text = <"<38.4°C">
+                description = <"The body temperature of the individual is less than 38.4°C.">
+            >
+            ["at0006"] = <
+                text = <"38.4-39.4°C">
+                description = <"The body temperature of the individual is between 38.4 and 39.4°C.">
+            >
+            ["at0007"] = <
+                text = <">39.4°C">
+                description = <"The body temperature of the individual is greater than 39.4°C.">
+            >
+            ["at0008"] = <
+                text = <"Organomegaly">
+                description = <"Findings of any enlargement of the liver or/and spleen in the individual.">
+            >
+            ["at0009"] = <
+                text = <"None">
+                description = <"No enlargement of the liver or the spleen.">
+            >
+            ["at0010"] = <
+                text = <"Hepatomegaly or splenomegaly">
+                description = <"Enlargment of the liver or the spleen.">
+            >
+            ["at0011"] = <
+                text = <"Hepatomegaly and splenomegaly">
+                description = <"Enlargement of both the liver and the spleen.">
+            >
+            ["at0012"] = <
+                text = <"Number of cytopenias">
+                description = <"Number of cytopenias present - in red cells, white cells and/or platelets.">
+                comment = <"Defined as either haemoglobin concentration of 9.2 g/dL or less (≤5.71 mmol/L), a white blood cell count of 5000 white blood cells per mm³ (5,0 x 10E9/L) or less, or platelet count of 110 000 platelets per mm³ (110 x 10E9/L) or less, or all of these criteria combined.
+">
+            >
+            ["at0013"] = <
+                text = <"One lineage">
+                description = <"Cytopenia in only one cell lineage.">
+            >
+            ["at0014"] = <
+                text = <"Two lineages">
+                description = <"Cytopenia in two cell lineages.">
+            >
+            ["at0015"] = <
+                text = <"Three lineages">
+                description = <"Cytopenia in three cell lineages.">
+            >
+            ["at0016"] = <
+                text = <"Triglycerides">
+                description = <"The triglycerides category, measured in mmol/L or mg/dL.">
+            >
+            ["at0017"] = <
+                text = <"Fibrinogen">
+                description = <"The fibrinogen category, measured in g/L or mg/dL.">
+            >
+            ["at0018"] = <
+                text = <"Ferritin">
+                description = <"The ferritin category, measured in ng/mL or μg/L.">
+            >
+            ["at0019"] = <
+                text = <"Aspartate aminotransferase">
+                description = <"An individvals serum aspartate aminotransferase level measured in U/L.">
+                comment = <"This is also known as AST, AspAT, ASAT, AAT or SGOT.">
+            >
+            ["at0020"] = <
+                text = <"Haemophagocytosis on bone marrow aspirate">
+                description = <"Presence of hemophagocytosis features in bone marrow aspirate.">
+            >
+            ["at0021"] = <
+                text = <"Known immunosuppression">
+                description = <"Presence of known underlying immunosuppression.">
+                comment = <"For example HIV positive or receiving long-term immunosuppressive therapy.">
+            >
+            ["at0022"] = <
+                text = <"No">
+                description = <"No known underlying immunosuppression.">
+            >
+            ["at0023"] = <
+                text = <"Yes">
+                description = <"Known underlying immunosuppression.">
+            >
+            ["at0024"] = <
+                text = <"<1.5 mmol/L">
+                description = <"The Triglyceride level is less than 1.5 mmol/L or 132.7 mg/dL.">
+            >
+            ["at0025"] = <
+                text = <"1.5-4.0 mmol/L">
+                description = <"The Triglyceride level is 1.5-4.0 mmol/L or 132.7-354 mg/dL.">
+            >
+            ["at0026"] = <
+                text = <">4.0 mmol/L">
+                description = <"The Triglyceride level is greater than 4.0 mmol/L or 354 mg/dL.">
+            >
+            ["at0027"] = <
+                text = <">2.5 g/L">
+                description = <"The fibinogen level is greater than 2.5 g/L or 250 mg/dL.">
+            >
+            ["at0028"] = <
+                text = <"≤2.5 g/L">
+                description = <"The fibinogen level is less than or equal to 2.5 g/L 250 mg/dL.">
+            >
+            ["at0029"] = <
+                text = <"<2000 ng/ml">
+                description = <"The ferritin level is less than 2000 ng/ml or 2000 μg/L.">
+            >
+            ["at0030"] = <
+                text = <"2000–6000 ng/ml">
+                description = <"The ferritin level is 2000-6000 ng/ml or 2000-6000 μg/L.">
+            >
+            ["at0031"] = <
+                text = <">6000 ng/ml">
+                description = <"The ferritin level is greater than 6000 ng/ml or 6000 μg/L.">
+            >
+            ["at0032"] = <
+                text = <"<30 U/L">
+                description = <"The aspartate aminotransferase level is less than 30 U/L.">
+            >
+            ["at0033"] = <
+                text = <"≥30 U/L">
+                description = <"The aspartate aminotransferase level is greater than or equal to 30 U/L.">
+            >
+            ["at0034"] = <
+                text = <"No">
+                description = <"No hemophagocytosis features are present in bone marrow aspirate.">
+            >
+            ["at0035"] = <
+                text = <"Yes">
+                description = <"Hemophagocytosis features are present in bone marrow aspirate.">
+            >
+            ["at0036"] = <
+                text = <"Total HScore">
+                description = <"The total sum for each component variable for the HScore.">
+            >
+            ["at0037"] = <
+                text = <"Probability of HS">
+                description = <"Probability of an individual having reactive hemophagocytic syndrome.">
+                comment = <"According to table 5 in the original original paper by Fardet et al, https://doi.org/10.1002/art.38690.">
+            >
+            ["at0039"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.
+">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["ac9019"] = <
+                text = <"Temperature (synthesised)">
+                description = <"Range category for the body temperature measurement. (synthesised)">
+            >
+            ["ac9020"] = <
+                text = <"Organomegaly (synthesised)">
+                description = <"Findings of any enlargement of the liver or/and spleen in the individual. (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"Number of cytopenias (synthesised)">
+                description = <"Number of cytopenias present - in red cells, white cells and/or platelets. (synthesised)">
+            >
+            ["ac9022"] = <
+                text = <"Triglycerides (synthesised)">
+                description = <"The triglycerides category, measured in mmol/L or mg/dL. (synthesised)">
+            >
+            ["ac9023"] = <
+                text = <"Fibrinogen (synthesised)">
+                description = <"The fibrinogen category, measured in g/L or mg/dL. (synthesised)">
+            >
+            ["ac9024"] = <
+                text = <"Ferritin (synthesised)">
+                description = <"The ferritin category, measured in ng/mL or μg/L. (synthesised)">
+            >
+            ["ac9025"] = <
+                text = <"Aspartate aminotransferase (synthesised)">
+                description = <"An individvals serum aspartate aminotransferase level measured in U/L. (synthesised)">
+            >
+            ["ac9026"] = <
+                text = <"Haemophagocytosis on bone marrow aspirate (synthesised)">
+                description = <"Presence of hemophagocytosis features in bone marrow aspirate. (synthesised)">
+            >
+            ["ac9027"] = <
+                text = <"Known immunosuppression (synthesised)">
+                description = <"Presence of known underlying immunosuppression. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9020"] = <
+            id = <"ac9020">
+            members = <"at0009", "at0010", "at0011">
+        >
+        ["ac9024"] = <
+            id = <"ac9024">
+            members = <"at0029", "at0030", "at0031">
+        >
+        ["ac9023"] = <
+            id = <"ac9023">
+            members = <"at0027", "at0028">
+        >
+        ["ac9022"] = <
+            id = <"ac9022">
+            members = <"at0024", "at0025", "at0026">
+        >
+        ["ac9021"] = <
+            id = <"ac9021">
+            members = <"at0013", "at0014", "at0015">
+        >
+        ["ac9027"] = <
+            id = <"ac9027">
+            members = <"at0022", "at0023">
+        >
+        ["ac9026"] = <
+            id = <"ac9026">
+            members = <"at0034", "at0035">
+        >
+        ["ac9025"] = <
+            id = <"ac9025">
+            members = <"at0032", "at0033">
+        >
+        ["ac9019"] = <
+            id = <"ac9019">
+            members = <"at0005", "at0006", "at0007">
+        >
+    >

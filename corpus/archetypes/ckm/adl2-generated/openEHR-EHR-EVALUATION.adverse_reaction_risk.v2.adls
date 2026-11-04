@@ -1,0 +1,1994 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=6c812c8c-ca00-496a-97dd-6e4916bd1ccf; build_uid=482bdcef-5e18-4505-9ded-b3413b054824)
+    openEHR-EHR-EVALUATION.adverse_reaction_risk.v2.0.2
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch, Darin Leonhardt, Severin Kohler">
+                ["organisation"] = <"Medizinische Hochschule Hannover, PLRI">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de, leonhardt.darin@mh-hannover.de, kohlerseverin@posteo.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Emma Malm, Rikard Lovstrom, Manna Vosta">
+                ["organisation"] = <"Karolinska Universitetssjukhuset, Karolinska University Hospital">
+                ["email"] = <"emma.malm@cambio.se, rikard.lovstrom@gmail.com, manna.vosta@regionstockholm.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke">
+                ["organisation"] = <"Helse Vest IKT AS">
+                ["email"] = <"silje.ljosland.bakke@helse-vest-ikt.no">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Osmeire Chamelette Sanzovo">
+                ["organisation"] = <"Hospital Sírio Libanês">
+                ["email"] = <"osmeire.acsanzovo@hsl.org.br">
+            >
+        >
+        ["el"] = <
+            language = <[ISO_639-1::el]>
+            author = <
+                ["name"] = <"Christos Antoniadis">
+                ["organisation"] = <"SigmaSoft">
+                ["email"] = <"c.antoniadis@sigmasoft.gr">
+            >
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            author = <
+                ["name"] = <"Jonas Bucher">
+                ["organisation"] = <"Cistec AG">
+                ["email"] = <"jonas.bucher@cistec.com">
+            >
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            author = <
+                ["name"] = <"Manuel José Zafra Doménech">
+                ["organisation"] = <"TRADCREA, S.L.">
+                ["email"] = <"mzafra@tradcrea.com">
+            >
+            other_details = <
+                ["other_contributors"] = <"Servei Català de la Salut">
+            >
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Laura Moral Lopez">
+                ["organisation"] = <"Sistema de Salut de Catalunya">
+                ["email"] = <"lauramoral@catsalut.cat">
+            >
+            other_details = <
+                ["other_contributors"] = <"Tradcrea">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2010-11-08">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Fatima Almeida, Critical SW, Portugal", "Grethe Almenning, Bergen kommune, Norway", "Magnus Alsaker, Helsedirektoratet, Norway", "Torunn Apelseth, Helse Bergen, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway", "Bent Asgeir Larsen, Helsedirektoratet, Norway", "Koray Atalag, University of Auckland, New Zealand", "Elaine Ayres, US National Institutes of Health, United States", "Russell B Leftwich MD, United States (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "John Bennett, NEHTA, Australia", "Steve Bentley, Allscripts, United Kingdom", "Sharmila Biswas, Dr Sharmila Biswas GP, Australia", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Terje Bless, Helse Nord FIKS, Norway", "Laila Bruun, Oslo universitetssykehus HF, Norway", "Claire Chalopin, ICCAS, University of Leipzig, Germany", "Rong Chen, Cambio Healthcare Systems, Sweden", "Stephen Chu, Queensland Health, Australia", "Matthew Cordell, NEHTA, Australia", "Howard Edidin, Edidin Group, Inc, United States", "Brett Esler, Oridashi, Australia", "David Evans, Queensland Health, Australia", "Jerry Fahrni, Kaweah Delta Health Care District, United States", "Shahla Foozonkhah, Iran ministry of health and education, Iran", "Einar Fosse, National Centre for Integrated Care and Telemedicine, Norway", "Joanne Foster, School of Nursing & Midwifery, QLD University of Technology & Nursing Informatics Australia, Australia", "Sebastian Garde, Ocean Informatics, Germany", "Jacquie Garton-Smith, Royal Perth Hospital and DoHWA, Australia", "Sarah Gaunt, NEHTA, Australia", "Andrew Goodchild, NEHTA, Australia", "Heather Grain, Llewelyn Grain Informatics, Australia", "Trina Gregory, cpc, Australia", "Grahame Grieve, Health Intersections, Australia (Editor)", "Robert Hausam, Hausam Consulting LLC, United States", "Sam Heard, Ocean Informatics, Australia", "Kristian Heldal, Telemark Hospital Trust, Norway", "Anca Heyd, DIPS ASA, Norway", "Hilde Hollås, Norway", "Roar Holm, Helse Vest IKT A/S, Norway", "Andrew James, University of Toronto, Canada", "Julie James, Blue Wave Informatics LLP, United Kingdom", "Tom Jarl Jakobsen, Helse Bergen, Norway", "Ivor Jones, Queensalnd Helath, Australia", "Lars Jostein Silihagen, Sopra Steria / Sykehuspartner / Sykehuset Innlandet, Norway", "Silje Kaada, Helse-Bergen, Avdeling for immunologi og transfusjonsmedisin, Norway", "Konstantinos Kalliamvakos, Cambio Healthcare Systems, Sweden", "Lars Karlsen, DIPS ASA, Norway", "Lars Morgan Karlsen, DIPS ASA, Norway", "Goran Karlstrom, County Of Värmland, Sweden", "Mary Kelaher, NEHTA, Australia", "Diane Kirkham, NEHTA, Australia", "Shinji Kobayashi, NPO openEHR Japan, Japan", "Robert L'egan, NEHTA, Australia", "Jobst Landgrebe, ii4sm, Switzerland", "Russell Leftwich, Russell B Leftwich MD, United States", "Fest Legemiddelverket, Statens Legemiddelverk, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Hugh Leslie, Ocean Informatics, Australia", "Rikard Lovstrom, Swedish Medical Association, Sweden", "Hallvard Lærum, Oslo Universitetssykehus HF, Norway", "Arne Løberg Sæter, DIPS ASA, Norway", "Sarah Mahoney, Australia", "Luis Marco Ruiz, Norwegian Center for Integrated Care and Telemedicine, Norway", "Siv Marie Lien, DIPS ASA, Norway", "Mike Martyn, The Hobart Anaesthetic Group, Australia", "Lloyd McKenzie, Gordon Point Informatics, Canada", "David McKillop, NEHTA, Australia", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Chris Mitchell, RACGP, Australia", "Stewart Morrison, NEHTA, Australia", "Jörg Niggemann, Compugroup, Germany", "Bjørn Næss, DIPS ASA, Norway", "Tom Oniki, Intermountain Healthcare, United States", "Chris Pearce, Melbourne East GP Network, Australia", "Rune Pedersen, Universitetssykehuset i Nord Norge, Norway", "General Practice Computing Group, Australia", "Camilla Preeston, Royal Australian College of General Practitioners, Australia", "Margaret Prichard, NEHTA, Australia", "Jodie Pycroft, Adelaide Northern Division of General Practice Ltd, Australia", "Cathy Richardson, NEHTA, Australia", "Robyn Richards, NEHTA - Clinical Terminology, Australia", "Tanja Riise, Nasjonal IKT HF, Norway", "Jussara Rotzsch, Hospital Alemão Oswaldo Cruz, Brazil", "Stefan Sauermann, University of Applied Sciences Technikum Wien, Austria", "Thomas Schopf, University Hospital of North-Norway, Norway", "Thilo Schuler, Australia", "Jason Scott, Plymouth Hospitals NHS Trust, United Kingdom", "Peter Scott, Medical Objects, Australia", "Elena Shabanova, UMMSSOft, Russian Federation", "Anoop Shah, University College London, United Kingdom", "Elizabeth Stanick, Hobart Anaesthetic Group, Australia", "Laila Storesund, Haraldsplass diakonale sykehus, Norway", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "Line Sæle, Nasjonal IKT HF, Norway", "Hwei-Yee Tai, Tan Tock Seng Hospital, Singapore", "John Taylor, NEHTA, Australia", "Micaela Thierley, Helse Bergen, Norway", "Gordon Tomes, Australian Institute of Health and Welfare, Australia", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)", "Richard Townley-O'Neill, Australian Digital Health Agency, Australia", "Ines Vaz, UFN, Portugal", "Nils Widnes, Helse-Bergen, Norway", "Andrew Yap, Australia", "Kylie Young, The Royal Australian College of General Practitioners, Australia", "Lin Zhang, Taikang Insurance Group, China">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Adverse Reaction, draft archetype, Australian Digital Health Agency [Internet]. NEHTA Clinical Knowledge Manager. Authored: 08 Nov 2010. No longer available.">
+        ["2"] = <"Allergy and Intolerance Domain Analysis Model, Release 1, HL7 [Internet]. Publication pending, expected August 2014; Available at http://wiki.hl7.org/images/1/1b/Allergy_and_Intolerance_INFORM_2013_MAY.pdf (accessed 06 July 2014). ">
+        ["3"] = <"Allergy, clinical element model, GE/Intermountain Healthcare. Clinical Element Model Search. Available at: http://intermountainhealthcare.org/cem/Pages/Detail.aspx?NCID=520861661&k=allergy (accessed Jan 16, 2012).">
+        ["4"] = <"Edwards IR, Aronson JK. Adverse drug reactions: definitions, diagnosis, and management. Lancet. 2000 Oct 7;356(9237):1255-9. PubMed PMID: 11072960. ">
+        ["5"] = <"HL7 FHIR Resource - AllergyIntolerance R1.2.0 STU3 draft [Internet]. Health Level Seven International; [accessed 2020 Jan 17]. Available from: http://hl7.org/fhir/2016Jan/allergyintolerance.html.">
+        ["6"] = <"Horsfield P, Sibeko S. Representation in Electronic Patient Records of Allergic Reactions, Adverse Reactions, and Intolerance of Pharmaceutical Products [Internet]. London, UK: National Health Service; 2006 Sep 07 [cited 2011 Jun 21]; Available at https://svn.connectingforhealth.nhs.uk/svn/public/nhscontentmodels/TRUNK/ref/NPfIT/Allergy_ADR_Intolerance%20v%201.2Final.doc.">
+        ["7"] = <"Long R, Bentley S. SCG Guidance on the Representation of Allergies and Adverse Reaction Information Using NHS Message Templates [Internet]. London, UK: National Health Service; 2008 Apr 30 [cited 2011 Jun 21]; Available at http://www.connectingforhealth.nhs.uk/systemsandservices/data/scg/scg0001.pdf.">
+        ["8"] = <"Microsoft. Design Guidance: Displaying Adverse Drug Reaction Risks [Internet]. 2009 January 28 [cited 2011 Jun 21]; Available at www.mscui.net/DesignGuide/DisplayingAllergies.aspx.">
+        ["9"] = <"Microsoft. Design Guidance: Recording Adverse Drug Reaction Risks [Internet]. 2009 March 27 [cited 2011 Jun 21]; Available at www.mscui.net/DesignGuide/RecordingAllergies.aspx.">
+        ["10"] = <"Mosby. Mosby's Pocket Dictionary of Medicine, Nursing and Health Professions. 6th Edition. USA: Mosby Elsevier; 2010">
+        ["11"] = <"National E-Health Transition Authority. Adverse Reactions (Data Specifications) Version 1.1 [Internet]. Sydney, Australia: NEHTA; 2008 Feb 29 [cited 2011 Jun 21]; Available at http://www.nehta.gov.au/component/docman/doc_download/453-adverse-reaction-data-specification-v11.">
+        ["12"] = <"Riedl MA, Casillas AM. Adverse drug reactions: types and treatment options. Am Fam Physician. 2003 Nov 1;68(9):1781-90. Review. PubMed PMID: 14620598.">
+        ["13"] = <"Royal Australian College of General Practitioners. Fact Sheet: Allergies & Adverse Reactions (Draft). 2010.">
+        ["14"] = <"Thien FC. Drug hypersensitivity. Med J Aust. 2006 Sep 18;185(6):333-8. Review. PubMed PMID: 16999678.">
+        ["15"] = <"- Uppsala Monitoring Centre (WHO): http://www.who-umc.org/">
+        ["16"] = <"- European Medicines Agency: http://www.ema.europa.eu/ema/">
+        ["17"] = <"- DIRECTIVE 2010/84/EU OF THE EUROPEAN PARLIAMENT AND OF THE COUNCIL, of 15 December 2010, amending, as regards pharmacovigilance, Directive 2001/83/EC on the Community code relating to medicinal products for human use: http://ec.europa.eu/health/files/eudralex/vol-1/dir_2010_84/dir_2010_84_en.pdf">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, Australia">
+        ["MD5-CAM-1.0.1"] = <"9EF636F951CD7E56F009E24CD7840632">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Aufzeichnung der klinischen Beurteilung der Neigung einer Person, eine unerwünschte Reaktion zu verspüren, wenn sie einem bestimmten Stoff oder einer bestimmten Stoffklasse ausgesetzt oder erneut ausgesetzt wird.">
+            keywords = <"Reaktion", "Allergie", "allergisch", "unerwünscht", "Ereignis", "Wirkung", "Empfindlichkeit", "Intoleranz", "Überempfindlichkeit", "Nebenwirkung", "Toxizität", "Arzneimittel", "Lebensmittel", "Agent", "Substanz", "immun", "nicht immun", "chemisch", "Anaphylaxie", "Allergen", "Medikation", "Ergänzung", "Medizin", "Naturarzneimittel", "immunologisch", "nicht immunologisch", "Risiko">
+            use = <"Wird verwendet, um eine klinische Bewertung der Neigung zu unerwünschten Reaktionen bei künftiger Exposition gegenüber einem bestimmten Stoff oder einer bestimmten Stoffklasse aufzuzeichnen, einschließlich, aber nicht beschränkt auf Ausgangs- und Hilfsstoffe in Arzneimitteln, biologischen Produkten, Metallsalzen und organischen chemischen Verbindungen.
+
+Dieser Archetyp soll einen einzigen Ort in der Gesundheitsakte bieten, um die Neigung zu allen möglichen Reaktionen, von trivial bis lebensbedrohlich, zu dokumentieren:
+- immunvermittelt: Typ I-IV (einschließlich allergischer Reaktionen und Überempfindlichkeiten); oder
+- nicht immunvermittelt: einschließlich pseudoallergischer Reaktionen, Nebenwirkungen, Unverträglichkeiten und Arzneimitteltoxizitäten.
+In der klinischen Praxis kann es schwierig sein, zwischen immunvermittelten und nicht immunvermittelten Reaktionen zu unterscheiden. Die Identifizierung der Art der Reaktion ist kein Indikator für die Schwere oder das Risiko einer Schädigung des Patienten.
+
+Wenn eine Neigung identifiziert wird, können Informationen oder Beweise zu einem oder mehreren Reaktionsereignissen mithilfe des Archetyps CLUSTER.adverse_reaction_event im SLOT „Zusammenfassung des Reaktionsereignisses“ aufgezeichnet werden.
+
+Die Identifizierung der Schwere der Manifestation der Reaktion, die im Archetyp CLUSTER.adverse_reaction_event aufgezeichnet wird, kann Aufschluss über die „Kritikalität“ des Risiko einer unerwünschten Reaktion geben. Wenn beispielsweise bei der ersten Exposition gegenüber einer Substanz eine Anaphylaxie auftritt, müsste die „Kritikalität“ auf „hoch“ gesetzt werden, da das Risiko hoch ist, dass die Anaphylaxie bei der zweiten und weiteren Expositionen erneut auftritt.
+
+Dieser Archetyp wurde entwickelt, um die Aufzeichnung von Informationen über eine bestimmte Substanz (Amoxicillin, Austern oder Bienenstichgift) oder alternativ eine Substanzklasse (z. B. Penicilline) zu ermöglichen. Wenn eine Substanzklasse erfasst wird, kann mithilfe des Archetyps CLUSTER.adverse_reaction_event die Identifizierung der genauen Substanz pro Reaktion erfasst werden.
+
+Zur Aufzeichnung von Informationen über das positive Vorliegen des Risikos einer Nebenwirkung:
+- zur Unterstützung der direkten klinischen Versorgung einer Person;
+- als Teil einer Liste verwalteter Nebenwirkungen oder Allergien/Unverträglichkeiten;
+- den Austausch von Informationen über die Neigung und Ereignisse im Zusammenhang mit Nebenwirkungen zu unterstützen;
+- um die Meldung von Nebenwirkungen zu informieren; Und
+- Unterstützung bei computergestützten wissensbasierten Aktivitäten wie klinischer Entscheidungsunterstützung und Warnungen.
+
+Das Risiko einer unerwünschten Reaktion oder Manifestation muss immer auf einen auslösenden Stoff oder eine auslösende Stoffklasse schließen lassen. Wenn ein gewisser Grad an Unsicherheit darüber besteht, dass ein bestimmter Stoff die Ursache ist, kann der Grad der Unsicherheit mithilfe des Datenelements „Verifizierungsstatus“ erfasst werden. Wenn mehr als eine mögliche Substanz eine Reaktion/Manifestation verursacht haben könnte, sollte jede Substanz mithilfe einer separaten Instanz dieses Archetyps des Risiko einer Unerwünschten Reaktion aufgezeichnet werden, wobei der „Verifizierungsstatus“ auf den Anfangsstatus „Unbestätigt“ gesetzt ist, damit die Nebenwirkungsprüfung durchgeführt werden kann in klinischen Systemen aktiviert werden. Wenn sich später herausstellt, dass die Substanz nicht ursächlich ist, kann der „Verifizierungsstatus“ auf „Widerlegt“ geändert werden – beispielsweise nach einem Allergietest.">
+            misuse = <"Nicht zur Aufzeichnung physiologischer Reaktionen auf physikalische Einwirkungen wie Hitze, Kälte, Sonnenlicht, Vibration, körperliche Betätigung, Infektionserreger oder Lebensmittelverunreinigungen geeignet. Verwenden Sie zu diesem Zweck einen bestimmten Archetyp für EVALUATION.problem/diagnosis oder CLUSTER.symptom/sign.
+
+Nicht zur Aufzeichnung unerwünschter Ereignisse, einschließlich Fehlern bei klinischen Prozessen, Interventionen oder Produkten, geeignet. Zum Beispiel: anormaler Gebrauch, falsche Dosierung oder fehlerhafte Verabreichung eines Wirkstoffs oder einer Substanz; falsche Etikettierung; Schäden oder Verletzungen, die durch einen Eingriff oder eine Prozedur verursacht werden; Überdosis/Vergiftung usw. Verwenden Sie für diesen Zweck einen bestimmten Archetyp.
+
+Darf nicht zur Aufzeichnung einer Nebenwirkung verwendet werden, bei der der Stoff unbekannt ist. Verwenden Sie EVALUATION.problem_diagnosis oder CLUSTER.symptom_sign, um als Teil der Gesundheitsakte aufzuzeichnen, bis eine mögliche Substanz identifiziert wird.
+
+Nicht zur Aufzeichnung von Reaktionen auf Transfusionen von Blutprodukten geeignet. Verwenden Sie zu diesem Zweck einen bestimmten Archetyp.
+
+Darf nicht für die Aufzeichnung von „Alarmen“ verwendet werden. Verwenden Sie zu diesem Zweck EVALUATION.precaution, EVALUATION.contraindication oder verwandte Archetypen.
+
+Nicht für die Aufzeichnung fehlgeschlagener Therapien geeignet.
+
+Darf nicht für die explizite Aufzeichnung des Fehlens (oder des negativen Vorliegens) einer Reaktion auf „irgendeine Substanz“ oder auf identifizierte Substanzen verwendet werden, zum Beispiel „Keine bekannten Allergien oder Nebenwirkungen“ oder „Keine bekannten Allergien gegen Penicillin“. Verwenden Sie die Archetypen EVALUATION.exclusion_global oder EVALUATION.exclusion_special, um eine positive Aussage zum Ausschluss von Nebenwirkungen auszudrücken.
+
+Nicht zu verwenden für die explizite Erfassung, dass keine Informationen über den Nebenwirkungsstatus eines Patienten eingeholt werden konnten. Verwenden Sie den Archetyp EVALUATION.absence, um eine positive Aussage zu erfassen, dass Informationen nicht eingeholt werden konnten, beispielsweise wenn ein nicht kooperativer Patient sich weigert, Fragen zu beantworten.">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att registrera den kliniska bedömningen av risken hos en individ att uppleva en ogynnsam reaktion vid exponering eller återexponering till ett specificerat ämne eller klass av ämnen.">
+            keywords = <"reaktion", "allergi", "allergisk", "ogynnsam", "händelse", "effekt", "känslighet", "intolerans", "överkänslighet", "biverkning", "toxicitet", "läkemedel", "födoämne", "agens", "substans", "immun", "icke-immun", "kemiskt ämne", "anafylaxi", "allergen", "medicin", "hjälpämne", "tillsats", "läkemedel", "naturläkemedel", "immunologisk", "icke-immunologisk", "risk">
+            use = <"Används för att registrera en klinisk bedömning av risken för en ogynnsam reaktion vid framtida exponering för ett specificerat ämne eller klass av ämnen, inklusive men inte begränsat till aktiva substanser och hjälpämnen i läkemedel, biologiska produkter, metallsalter och organiska kemiska föreningar.
+
+Denna arketyp är avsedd att tillhandahålla en plats i journalen för att registrera risken för hela spektrumet av ogynnsamma reaktioner, från lindriga till livshotande:
+- immunmedierad: typ I-IV (inklusive allergiska reaktioner och överkänslighetsreaktioner); eller
+- icke-immunmedierad: inklusive pseudo-allergiska reaktioner, biverkningar, intoleranser och läkemedelstoxicitet.
+I klinisk praxis kan det vara svårt att skilja mellan immunmedierade och icke-immunmedierade reaktioner. Typen av reaktion är inte ett mått på reaktionens allvarlighetsgrad eller risken för att patienten ska komma till skada.
+
+När en risk för en ogynnsam reaktion har identifierats kan information eller belägg om en eller flera inträffade reaktioner registreras i SLOT \"Sammanfattning av inträffade reaktioner\" med hjälp av CLUSTER.adverse_reaction_event.
+
+Identifiering av svårighetsgraden av manifestationen av reaktionen, dokumenterad i arketypen CLUSTER.adverse_reaction_event, kan ange allvarlighetsgraden för biverkningsrisken. Om man till exempel upplever anafylaxi vid första exponeringen för ett ämne skulle det motivera att man anger allvarlighetsgraden som hög (livshotande), på grund av den höga risken för att anafylaxi sannolikt återkommer vid den andra och efterföljande exponeringar.
+
+Denna arketyp har utformats för att möjliggöra dokumentation av information om ett specifikt ämne (amoxicillin, ostron eller bisticksgift) eller, alternativt, en ämnesklass (till exempel penicilliner). Om en ämnesklass dokumenteras kan identifiering av det exakta ämnet dokumenteras per reaktion med hjälp av arketypen CLUSTER.adverse_reaction_event.
+
+Använd för att dokumentera information om förekomsten av risk för en biverkning:
+- för att stödja den direkta vården av en individ;
+- som en del av en lista över hanterade reaktioner eller allergier/intoleranser;
+- för att stödja utbyte av information om benägenhet och händelser relaterade till reaktioner;
+- för biverkningsrapportering; och
+- för att hjälpa till med datoriserade kunskapsbaserade aktiviteter såsom kliniska beslutsstöd och varningar.
+
+Den dokumenterade risken för en biverkningshändelse eller -manifestation ska alltid föreslå ett orsakande ämne eller ämnesklass. Om det finns en viss grad av osäkerhet om att ett specifikt ämne är orsaken kan den osäkerhetsnivån registreras med hjälp av dataelementet ”visshetsgrad”. Om mer än ett möjligt ämne kan ha orsakat en reaktion/manifestation, bör varje ämne registreras med en separat instans av arketypen denna Reaktionsrisk-arketyp med ”visshetsgrad” angiven till utgångsvärdet ”misstänkt” (enligt SoS terminologi) så att varningssystem mot aktuella reaktioner kan aktiveras i vårdinformationssystem. Om ämnet senare visar sig inte ha ett orsakssamband kan ”verifieringsstatus” ändras till ”avstyrkt” - till exempel efter allergitestning.">
+            misuse = <"Ska inte användas för att dokumentera fysiologiska reaktioner på fysiska faktorer, såsom värme, kyla, solljus, vibrationer, träningsaktiviteter, smittämnen eller livsmedelsföroreningar. Använd en specifik arketyp för EVALUATION.problem/diagnosis eller CLUSTER.symptom/sign för det syftet.
+
+Ska inte användas för att dokumentera avvikelser, inkluderande brister i verksamhetsprocesser, interventioner eller produkter. Till exempel: felaktig användning, felaktig dosering eller felaktig administrering av en faktor eller ett ämne; felmärkning; skada orsakad av en intervention eller aktivitet; överdos/förgiftning etc. Använd en specifik arketyp för det syftet.
+
+Ska inte användas för att dokumentera en biverkning där ämnet är okänt. Använd i stället EVALUATION.problem_diagnosis eller CLUSTER.symptom_sign för att dokumentera det i journalen tills ett möjligt ämne har identifierats.
+
+Ska inte användas för att dokumentera reaktioner mot blodtransfusioner. Använd en specifik arketyp för det syftet.
+
+Ska inte användas för att dokumentera varningar generellt. Använd EVALUATION.precaution, EVALUATION.contraindication eller relaterade arketyper för det syftet.
+
+Ska inte användas för att dokumentera utebliven effekt av behandlingar.
+
+Ska inte användas för dokumentation av en uttalad avsaknad av en reaktion mot \"vilken substans som helst\" eller mot identifierade substanser, till exempel \"Inga kända allergier eller biverkningar\" eller \"Inga kända allergier mot penicillin\". Använd arketyperna EVALUATION.exclusion_global eller EVALUATION.exclusion_specific för att dokumentera att biverkningar saknas.
+
+Ska inte användas för att dokumentera avsaknad av information om reaktioner för patienten. Använd arketypen EVALUATION.absence för att dokumentera att information inte kunde fås, till exempel om en icke samarbetande patient vägrar besvara frågor.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere en klinisk vurdering om et individs tendens til overfølsomhetsreaksjoner ved eksponering eller re-eksponering for en angitt substans eller substansklasse.">
+            keywords = <"reaksjon", "allergi", "allergisk", "uønsket", "hendelse", "virkning", "effekt", "følsomhet", "intoleranse", "hypersensitivtet", "bivirkning", "toksisitet", "legemiddel", "mat", "medisinering", "medisin", "substans", "immun", "non-immun", "kjemisk", "anafylakse", "allergen", "naturmedisin", "immunologisk", "ikke-immunologisk", "non-immunologisk", "risk", "risiko", "supplement", "kosttilskudd", "tilskudd", "anafylaksi", "anafylaktisk", "naturmidler", "medikament", "ernæring", "stoff", "rusmiddel", "agens", "overfølsomhet", "atopi", "cave">
+            use = <"Brukes for å registrere en klinisk vurdering om et individs tendens til overfølsomhetsreaksjoner ved fremtidig eksponering for en substans eller substansklasse. Substanser kan omfatte men er ikke begrenset til: aktive stoffer eller hjelpestoffer i legemidler, biologiske produkter, metallsalter eller organiske substanser.
+	
+Arketypen gir ett enkelt sted i pasientjournalen for å dokumentere tendensen til hele spekteret av reaksjoner, fra trivielle til livstruende:
+- immunmediert reaksjon - Typene I-IV (allergiske reaksjoner og hypersensitivitet)
+- ikke-immunmediert reaksjon - inkludert annen overfølsomhet, bivirkninger, intoleranse og legemiddeltoksisitet
+I klinisk praksis kan det være vanskelig å skille mellom immunmedierte og ikke-immunmedierte reaksjoner. Identifisering av reaksjonstypen er ikke et substitutt for alvorlighetsgrad eller risiko for skade på pasienten.
+
+Der en tendens er identifisert, kan informasjon eller evidens om en eller flere reaksjonshendelser registreres ved hjelp av arketypen CLUSTER.adverse_reaction_event brukt i SLOTet \"Sammendrag av reaksjonshendelse\".
+
+Reaksjonsmanifestasjonens alvorlighetsgrad, dokumentert ved hjelp av arketypen CLUSTER.adverse_reaction_event, kan brukes til å utlede reaksjonsrisikoens alvorlighetsgrad. For eksempel kan anafylakse ved første eksponering for en substans være grunnlag for å sette alvorlighetsgraden til \"høy\", siden det da vil være høy risiko for en anafylaktisk reaksjon også ved andre gangs eller senere eksponeringer.
+
+Denne arketypen er designet for å tillate registrering av informasjon om en bestemt substans (f.eks. amoxycillin, østers eller biegift) eller en substansklasse (f.eks. Penicilliner). Hvis en substansklasse registreres kan den spesifikke substansen registreres per reaksjon ved hjelp av arketypen CLUSTER.adverse_reaction_event.
+
+Brukes til å registrere informasjon om at en risiko for en overfølsomhetsreaksjon er tilstede:
+- for å støtte direkte klinisk omsorg for et individ
+- som en del av en vedlikeholdt liste over overfølsomhetsreaksjoner
+- for å støtte utveksling av informasjon om tendenser og hendelser knyttet til overfølsomhetsreaksjoner
+- for å støtte rapportering av reaksjonshendelser
+- for å støtte kunnskapsbaserte aktiviteter som klinisk beslutningsstøtte og varsler
+
+Risikoen for en reaksjonshendelse eller reaksjonsmanifestasjon må alltid foreslår en utløsende substans eller substansklasse. Hvis det er usikkerhet om hvilken spesifikke substans som er årsak til overfølsomhetsreaksjonen, kan denne usikkerheten angis ved hjelp dataelementet \"Verifikasjonsstatus\". Dersom flere mulige substanser kan ha forårsaket en reaksjon/manifestasjon bør hver substans registreres for seg i denne arketypen med \"Verifikasjonsstatus\" i utgangspunktet satt til \"Ubekreftet\", slik at kontroll av overfølsomhetsreaksjoner kan aktiveres i kliniske systemer. Dersom en substans eller substansklasse senere viser seg å ikke være årsaken til reaksjonen, kan \"Verifikasjonsstatus\" endres til \"Avkreftet\".">
+            misuse = <"Brukes ikke til registrering av fysiologiske reaksjoner på fysiske fenomener, som for eksempel varme, kulde, sollys, vibrasjon, treningsaktivitet, smittestoffer eller forurensninger i mat. Til dette brukes en spesifikk arketype som EVALUATION.problem_diagnosis eller CLUSTER.symptom_sign.
+
+Brukes ikke til å registrere avvik, inkludert svikt i kliniske prosesser, intervensjoner eller produkter. For eksempel: Feil bruk, feil dosering eller feil administrasjon av en substans, feilmerking, skade forårsaket av en intervensjon eller prosedyre, overdose/forgiftning etc. Bruk en spesifikk arketype for dette formålet.
+
+Brukes ikke til å registerere en uønsket reaksjon hvor substansen er ukjent. Bruk arketypen EVALUATION.problem_diagnosis eller CLUSTER.symptom_sign for å registrere disse inntil substansen blir identifisert.
+
+Brukes ikke til å registrere reaksjoner på transfusjoner av blodkomponenter. Bruk en spesifikk arketype for dette formålet.
+
+Brukes ikke for å registrere generiske 'varsler'. Bruk EVALUATION.precaution, EVALUATION.contraindication eller relaterte arketyper for dette formålet.
+
+Brukes ikke til å registrere mislykket behandling.
+
+Skal ikke brukes for eksplisitt registrering av et fravær (eller negativ tilstedeværelse) av en reaksjon på en hvilken som helst substans eller til spesifikke substanser, for eksempel \"Ingen kjente allergier eller uønskede reaksjoner\" eller \"Ingen kjent allergi mot penicillin\". Bruk arketypene EVALUATION.exclusion_global eller EVALUATION.exclusion_specific til å uttrykke et eksplisitt utsagn om fravær av uønskede reaksjoner.
+
+Skal ikke brukes for eksplisitt registrering av at ingen informasjon er tilgjengelig om et individs status med tanke på uønskede reaksjoner. Bruk arketypen EVALUATION.absence til å registrere at informasjon ikke er tilgjengelig, for eksempel dersom en ikke-samarbeidsvillig pasient nekter å svare på spørsmål.">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"*To record the clinical assessment of the propensity for an individual to experience an adverse reaction if exposed, or re-exposed, to a specified substance or class of substances. (en)">
+            keywords = <"reação", "alergia", "alérgico", "adversa", "evento", "efeito", "sensibilidade", "intolerância", "hipersensibilidade", "efeito colateral", "toxicidade", "droga", "alimento", "agente", "substância", "imune", "não imune", "químico", "anafilaxia", "alérgeno", "medicação", "suplemento", "medicamento", "remédio natural", "imunológico", "não imunológico", "risco">
+            use = <"*Use to record a clinical assessment of a propensity for an adverse reaction upon future exposure to a specified substance or class of substances including, but not limited to, incipients and excipients in medicinal preparations, biological products, metal salts, and organic chemical compounds.  
+
+This archetype is intended to provide a single place within the health record to document the propensity for the full range of reactions, from trivial to life-threatening:
+- immune-mediated: Types I-IV (including allergic reactions and hypersensitivities); or 
+- non-immune-mediated: including pseudo-allergic reactions, side effects, intolerances, and drug toxicities.
+In clinical practice distinguishing between immune-mediated and non-immune-mediated reactions can be difficult. Identification of the type of reaction is not a proxy for seriousness or risk of harm to the patient.
+
+Identification of the severity of the manifestation of the reaction can inform the 'Criticality' of the adverse reaction risk - for example, experiencing anaphylaxis on first exposure to a substance would warrant setting a 'Criticality' of 'high', due to the high risk that anaphylaxis is likely to recur on second and subsequent exposures.
+
+Where a propensity is identified, information or evidence about one or more reaction events can be recorded using the CLUSTER.adverse_reaction_event archetype in the 'Reaction event summary' SLOT.
+
+This archetype has been designed to allow the recording of information about a specific substance (amoxycillin, oysters, or bee sting venom) or, alternatively, a class of substance (e.g. Penicillins). If a class of substance is recorded, identification of the exact substance can be recorded on a per-reaction basis using the CLUSTER.adverse_reaction_event archetype.
+
+Use to record information about the positive presence of the risk of an adverse reaction:
+- to support the direct clinical care of an individual; 
+- as part of a managed adverse reaction or allergy/intolerance list; 
+- to support the exchange of information about the propensity and events related to adverse reactions; 
+- to inform adverse reaction reporting; and 
+- to assist with computerised knowledge-based activities such as clinical decision support and alerts.
+
+The risk of an adverse reaction event or manifestation must always propose a causative substance or class of substance. If there is a degree of uncertainty that a specific substance is the cause, the level of uncertainty can be recorded using the ‘Verification status’ data element. If more than one possible substance may have caused a reaction/manifestation, each substance should be recorded using a separate instance of this adverse reaction risk archetype with the ‘Verification status’ set to an initial state of ‘Unconfirmed’ so that adverse reaction checking can be activated in clinical systems. If the substance is later proven not to be causal then the ‘Verification status’ can be modified to ‘Refuted’ - for example, after allergy testing.
+
+The scope of this archetype has deliberately focused on identifying a pragmatic data set that are used in most clinical systems or will be suitable for most common clinical scenarios; however, it permits extension of the model when additional detail is required, using the 'Reaction details', 'Exposure details', and 'Reporting details' slots. An extension may be required if a specialist allergist or immunologist needed to record a more detailed assessment as part of a report to regulatory bodies or within the context of a clinical trial. (en)">
+            misuse = <"*Not to be used for recording physiological reactions to physical agents, such as heat, cold, sunlight, vibration, exercise activity, by infectious agents or food contaminants. Use a specific archetype for EVALUATION.problem/diagnosis or CLUSTER.symptom/sign for this purpose.
+
+Not to be used to record adverse events, including failures of clinical process, interventions or products. For example: abnormal use, incorrect dosage or maladministration of an agent or substance; mislabelling; harm or injury caused by an intervention or procedure; overdose/poisoning etc. Use a specific archetype for the purpose. 
+
+Not to be used to record an adverse reaction where the substance is unknown. Use EVALUATION.problem_diagnosis or CLUSTER.symptom_sign to record as part of the health record until a possible substance is identified.
+
+Not to be used to record reactions to transfusions of blood products. Use a specific archetype for this purpose. 
+
+Not to be used for recording 'alerts'. Use EVALUATION.precaution, EVALUATION.contraindication or related archetypes for this purpose.
+
+Not to be used for recording failed therapy.
+
+Not to be used for the explicit recording of an absence (or negative presence) of a reaction to 'any substances' or to identified substances, for example ‘No known allergies or adverse reactions’ or ‘No known allergies to Penicillin’. Use the EVALUATION.exclusion_global or EVALUATION.exclusion_specific archetypes to express a positive statement of adverse reaction exclusion.
+
+Not to be used for the explicit recording that no information was able to be obtained about the adverse reaction status of a patient. Use the EVALUATION.absence archetype to record that a positive statement that information was not able to be obtained, for example, if a non-cooperative patient refuses to answer questions. (en)">
+        >
+        ["el"] = <
+            language = <[ISO_639-1::el]>
+            purpose = <"*To record the clinical assessment of the propensity for an individual to experience an adverse reaction if exposed, or re-exposed, to a specified substance or class of substances.(en)">
+            keywords = <"*reaction(en)", "*allergy(en)", "*allergic(en)", "*adverse(en)", "*event(en)", "*effect(en)", "*sensitivity(en)", "*intolerance(en)", "*hypersensitivity(en)", "*side effect(en)", "*toxicity(en)", "*drug(en)", "*food(en)", "*agent(en)", "*substance(en)", "*immune(en)", "*non-immune(en)", "*chemical(en)", "*anaphylaxis(en)", "*allergen(en)", "*medication(en)", "*supplement(en)", "*medicine(en)", "*natural remedies(en)", "*immunological(en)", "*non-immunological(en)", "*risk(en)">
+            use = <"*Use to record a clinical assessment of a propensity for an adverse reaction upon future exposure to a specified substance or class of substances including, but not limited to, incipients and excipients in medicinal preparations, biological products, metal salts, and organic chemical compounds. 
+
+This archetype is intended to provide a single place within the health record to document the propensity for the full range of reactions, from trivial to life-threatening:
+- immune-mediated: Types I-IV (including allergic reactions and hypersensitivities); or 
+- non-immune-mediated: including pseudo-allergic reactions, side effects, intolerances, and drug toxicities.
+In clinical practice distinguishing between immune-mediated and non-immune-mediated reactions can be difficult. Identification of the type of reaction is not a proxy for seriousness or risk of harm to the patient.
+
+Where a propensity is identified, information or evidence about one or more reaction events can be recorded using the CLUSTER.adverse_reaction_event archetype in the 'Reaction event summary' SLOT.
+
+Identification of the severity of the manifestation of the reaction, recorded in the CLUSTER.adverse_reaction_event archetype, can inform the 'Criticality' of the adverse reaction risk. For example, experiencing anaphylaxis on first exposure to a substance would warrant setting a 'Criticality' of 'high', due to the high risk that anaphylaxis is likely to recur on second and subsequent exposures.
+
+This archetype has been designed to allow the recording of information about a specific substance (amoxycillin, oysters, or bee sting venom) or, alternatively, a class of substance (e.g. Penicillins). If a class of substance is recorded, identification of the exact substance can be recorded on a per-reaction basis using the CLUSTER.adverse_reaction_event archetype.
+
+Use to record information about the positive presence of the risk of an adverse reaction:
+- to support the direct clinical care of an individual; 
+- as part of a managed adverse reaction or allergy/intolerance list; 
+- to support the exchange of information about the propensity and events related to adverse reactions; 
+- to inform adverse reaction reporting; and 
+- to assist with computerised knowledge-based activities such as clinical decision support and alerts.
+
+The risk of an adverse reaction event or manifestation must always propose a causative substance or class of substance. If there is a degree of uncertainty that a specific substance is the cause, the level of uncertainty can be recorded using the ‘Verification status’ data element. If more than one possible substance may have caused a reaction/manifestation, each substance should be recorded using a separate instance of this adverse reaction risk archetype with the ‘Verification status’ set to an initial state of ‘Unconfirmed’ so that adverse reaction checking can be activated in clinical systems. If the substance is later proven not to be causal then the ‘Verification status’ can be modified to ‘Refuted’ - for example, after allergy testing.(en)">
+            misuse = <"*Not to be used for recording physiological reactions to physical agents, such as heat, cold, sunlight, vibration, exercise activity, by infectious agents or food contaminants. Use a specific archetype for EVALUATION.problem/diagnosis or CLUSTER.symptom/sign for this purpose.
+
+Not to be used to record adverse events, including failures of clinical process, interventions or products. For example: abnormal use, incorrect dosage or maladministration of an agent or substance; mislabelling; harm or injury caused by an intervention or procedure; overdose/poisoning etc. Use a specific archetype for the purpose. 
+
+Not to be used to record an adverse reaction where the substance is unknown. Use EVALUATION.problem_diagnosis or CLUSTER.symptom_sign to record as part of the health record until a possible substance is identified.
+
+Not to be used to record reactions to transfusions of blood products. Use a specific archetype for this purpose. 
+
+Not to be used for recording 'alerts'. Use EVALUATION.precaution, EVALUATION.contraindication or related archetypes for this purpose.
+
+Not to be used for recording failed therapy.
+
+Not to be used for the explicit recording of an absence (or negative presence) of a reaction to 'any substances' or to identified substances, for example ‘No known allergies or adverse reactions’ or ‘No known allergies to Penicillin’. Use the EVALUATION.exclusion_global or EVALUATION.exclusion_specific archetypes to express a positive statement of adverse reaction exclusion.
+
+Not to be used for the explicit recording that no information was able to be obtained about the adverse reaction status of a patient. Use the EVALUATION.absence archetype to record that a positive statement that information was not able to be obtained, for example, if a non-cooperative patient refuses to answer questions.(en)">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the clinical assessment of the propensity for an individual to experience an adverse reaction if exposed, or re-exposed, to a specified substance or class of substances.">
+            keywords = <"reaction", "allergy", "allergic", "adverse", "event", "effect", "sensitivity", "intolerance", "hypersensitivity", "side effect", "toxicity", "drug", "food", "agent", "substance", "immune", "non-immune", "chemical", "anaphylaxis", "allergen", "medication", "supplement", "medicine", "natural remedies", "immunological", "non-immunological", "risk">
+            use = <"Use to record a clinical assessment of a propensity for an adverse reaction upon future exposure to a specified substance or class of substances including, but not limited to, incipients and excipients in medicinal preparations, biological products, metal salts, and organic chemical compounds. 
+
+This archetype is intended to provide a single place within the health record to document the propensity for the full range of reactions, from trivial to life-threatening:
+- immune-mediated: Types I-IV (including allergic reactions and hypersensitivities); or 
+- non-immune-mediated: including pseudo-allergic reactions, side effects, intolerances, and drug toxicities.
+In clinical practice distinguishing between immune-mediated and non-immune-mediated reactions can be difficult. Identification of the type of reaction is not a proxy for seriousness or risk of harm to the patient.
+
+Where a propensity is identified, information or evidence about one or more reaction events can be recorded using the CLUSTER.adverse_reaction_event archetype in the 'Reaction event summary' SLOT.
+
+Identification of the severity of the manifestation of the reaction, recorded in the CLUSTER.adverse_reaction_event archetype, can inform the 'Criticality' of the adverse reaction risk. For example, experiencing anaphylaxis on first exposure to a substance would warrant setting a 'Criticality' of 'high', due to the high risk that anaphylaxis is likely to recur on second and subsequent exposures.
+
+This archetype has been designed to allow the recording of information about a specific substance (amoxycillin, oysters, or bee sting venom) or, alternatively, a class of substance (e.g. Penicillins). If a class of substance is recorded, identification of the exact substance can be recorded on a per-reaction basis using the CLUSTER.adverse_reaction_event archetype.
+
+Use to record information about the positive presence of the risk of an adverse reaction:
+- to support the direct clinical care of an individual; 
+- as part of a managed adverse reaction or allergy/intolerance list; 
+- to support the exchange of information about the propensity and events related to adverse reactions; 
+- to inform adverse reaction reporting; and 
+- to assist with computerised knowledge-based activities such as clinical decision support and alerts.
+
+The risk of an adverse reaction event or manifestation must always propose a causative substance or class of substance. If there is a degree of uncertainty that a specific substance is the cause, the level of uncertainty can be recorded using the ‘Verification status’ data element. If more than one possible substance may have caused a reaction/manifestation, each substance should be recorded using a separate instance of this adverse reaction risk archetype with the ‘Verification status’ set to an initial state of ‘Unconfirmed’ so that adverse reaction checking can be activated in clinical systems. If the substance is later proven not to be causal then the ‘Verification status’ can be modified to ‘Refuted’ - for example, after allergy testing.">
+            misuse = <"Not to be used for recording physiological reactions to physical agents, such as heat, cold, sunlight, vibration, exercise activity, by infectious agents or food contaminants. Use a specific archetype for EVALUATION.problem/diagnosis or CLUSTER.symptom/sign for this purpose.
+
+Not to be used to record adverse events, including failures of clinical process, interventions or products. For example: abnormal use, incorrect dosage or maladministration of an agent or substance; mislabelling; harm or injury caused by an intervention or procedure; overdose/poisoning etc. Use a specific archetype for the purpose. 
+
+Not to be used to record an adverse reaction where the substance is unknown. Use EVALUATION.problem_diagnosis or CLUSTER.symptom_sign to record as part of the health record until a possible substance is identified.
+
+Not to be used to record reactions to transfusions of blood products. Use a specific archetype for this purpose. 
+
+Not to be used for recording 'alerts'. Use EVALUATION.precaution, EVALUATION.contraindication or related archetypes for this purpose.
+
+Not to be used for recording failed therapy.
+
+Not to be used for the explicit recording of an absence (or negative presence) of a reaction to 'any substances' or to identified substances, for example ‘No known allergies or adverse reactions’ or ‘No known allergies to Penicillin’. Use the EVALUATION.exclusion_global or EVALUATION.exclusion_specific archetypes to express a positive statement of adverse reaction exclusion.
+
+Not to be used for the explicit recording that no information was able to be obtained about the adverse reaction status of a patient. Use the EVALUATION.absence archetype to record that a positive statement that information was not able to be obtained, for example, if a non-cooperative patient refuses to answer questions.">
+            copyright = <"© Australian Digital Health Agency, openEHR Foundation, HL7 International, Nasjonal IKT">
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            purpose = <"Pour enregistrer l'évaluation clinique de la propension d'un individu à présenter un effet indésirable en cas d'exposition ou de réexposition à une substance ou à une classe de substances spécifiée.">
+            keywords = <"réaction", "allergie", "allergique", "indésirable", "événement", "effet", "sensibilité", "intolérance", "hypersensibilité", "effet secondaire", "toxicité", "médicament", "alimentation", "agent", "substance", "immunitaire", "non immunitaire", "chimique", "anaphylaxie", "allergène", "médicament", "supplément", "médecine", "remèdes naturels", "immunologique", "non immunologique", "risque">
+            use = <"À utiliser pour enregistrer une évaluation clinique de la propension à présenter un effet indésirable lors d’une future exposition à une substance ou à une classe de substances spécifiées, y compris, sans s’y limiter, les principes actifs et les excipients présents dans les médicament, les produits biologiques, les sels métalliques et les composés chimiques organiques. 
+
+Cet archétype a pour but de fournir un emplacement unique au sein du dossier médical pour documenter la propension à présenter toute la gamme des réactions, des plus bénignes à celles mettant la vie en danger :
+- à médiation immunitaire : types I à IV (y compris les réactions allergiques et les hypersensibilités) ; ou 
+- à médiation non immunitaire : y compris les réactions pseudo-allergiques, les effets secondaires, les intolérances et les toxicités médicamenteuses.
+Dans la pratique clinique, il peut être difficile de distinguer les réactions à médiation immunitaire de celles qui ne le sont pas. L’identification du type de réaction ne permet pas d’évaluer la gravité ou le risque nuire au patient.
+
+Lorsqu’une propension est identifiée, les informations ou preuves relatives à un ou plusieurs événements de réaction peuvent être enregistrées à l’aide de l’archétype CLUSTER.adverse_reaction_event dans le SLOT « Résumé de l’événement de réaction ».
+
+L’identification de la gravité de la manifestation de la réaction, enregistrée dans l’archétype CLUSTER.adverse_reaction_event, peut éclairer la « criticité » du risque lié à l’effet indésirable. Par exemple, le fait de présenter une anaphylaxie lors de la première exposition à une substance justifierait de définir une « criticité » « élevée », en raison du risque élevé que l’anaphylaxie se reproduise lors de la deuxième exposition et des expositions suivantes.
+
+Cet archétype a été conçu pour permettre l’enregistrement d’informations concernant une substance spécifique (amoxicilline, huîtres ou venin d’abeille) ou, à défaut, une classe de substances (par exemple, les pénicillines). Si une classe de substances est enregistrée, l’identification de la substance exacte peut être enregistrée pour chaque réaction à l’aide de l’archétype CLUSTER.adverse_reaction_event.
+
+À utiliser pour enregistrer des informations concernant la présence avérée d’un risque d’effet indésirable :
+- pour soutenir la prise en charge clinique directe d’un individu ; 
+- dans le cadre d’une liste d’effets indésirables ou d’allergies/intolérances gérée ; 
+- pour faciliter l’échange d’informations sur la propension et les événements liés aux effets indésirables ; 
+- pour alimenter les déclarations d’effets indésirables ; et 
+- pour faciliter les activités informatisées fondées sur la connaissance, telles que l’aide à la décision clinique et les alertes.
+
+Le risque d’événement ou de manifestation d’effet indésirable doit toujours proposer une substance ou une classe de substances en cause. S’il existe un degré d’incertitude quant à la responsabilité d’une substance spécifique, ce niveau d’incertitude peut être consigné à l’aide de l’élément de données « Statut de vérification ». Si plusieurs substances sont susceptibles d’avoir provoqué une réaction ou une manifestation, chacune d’entre elles doit être enregistrée à l’aide d’une instance distincte de cet archétype de risque d’effet indésirable, avec le « Statut de vérification » défini initialement sur « Non confirmé », afin que la vérification des effets indésirables puisse être activée dans les systèmes cliniques. S’il s’avère par la suite que la substance n’est pas en cause, le « Statut de vérification » peut être modifié en « Réfuté » – par exemple, après des tests d’allergie.">
+            misuse = <"À ne pas utiliser pour enregister les réactions physiologiques à des agents physiques, tels que la chaleur, le froid, la lumière du soleil, les vibrations, l’activité physique, ni celles provoquées par des agents infectieux ou des contaminants alimentaires. Utiliser à cette fin un archétype spécifique de type EVALUATION.problem/diagnosis ou CLUSTER.symptom/sign.
+
+À ne pas utiliser pour enregister des événements indésirables, y compris les défaillances de processus cliniques, d’interventions ou de produits. Par exemple : utilisation anormale, posologie incorrecte ou mauvaise administration d’un agent ou d’une substance ; étiquetage erroné ; dommage ou blessure causé(e) par une intervention ou une procédure ; surdosage/empoisonnement, etc. Utilisez un archétype spécifique à cet effet. 
+
+À ne pas utiliser pour enregistrer un effet indésirable lorsque la substance est inconnue. Utilisez EVALUATION.problem_diagnosis ou CLUSTER.symptom_sign pour enregistrer ces informations dans le dossier médical jusqu’à ce qu’une substance potentielle soit identifiée.
+
+À ne pas utiliser pour enregistrer les réactions à des transfusions de produits sanguins. Utilisez un archétype spécifique à cet effet. 
+
+À ne pas utiliser pour enregistrer des « alertes ». Utilisez les archétypes EVALUATION.precaution, EVALUATION.contraindication ou des archétypes apparentés à cette fin.
+
+À ne pas utiliser pour enregistrer un échec thérapeutique.
+
+À ne pas utiliser pour enregistrer explicitement l’absence (ou la présence négative) d’une réaction à « toute substance » ou à des substances identifiées, par exemple « Aucune allergie ou effet indésirable connu » ou « Aucune allergie connue à la pénicilline ». Utilisez les archétypes EVALUATION.exclusion_global ou EVALUATION.exclusion_specific pour exprimer une affirmation positive d’exclusion d’un effet indésirable.
+
+À ne pas utiliser pour enregister explicitement qu’aucune information n’a pu être obtenue concernant le statut d’un patient en matière d’effets indésirables. Utilisez l’archétype EVALUATION.absence pour enregister une affirmation positive indiquant qu’aucune information n’a pu être obtenue, par exemple si un patient non coopératif refuse de répondre aux questions.">
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            purpose = <"Registrar l'avaluació clínica de la propensió d’un pacient d’experimentar una reacció adversa en cas d'exposició, o reexposició, d'una substància específica o substàncies d’una altra categoria.">
+            keywords = <"reacció", "al·lèrgia", "al·lèrgic", "advers", "esdeveniment", "efecte", "sensibilitat", "intolerància", "hipersensibilitat", "efecte secundari", "toxicitat", "medicament", "aliments", "agent", "substància", "immune", "no immune", "químic", "anafilaxi", "al·lergen", "medicació", "suplement", "medicina", "remeis naturals", "immunològic", "no-immunològic", "risc">
+            use = <"Utilitzar per a registrar una avaluació clínica d’una propensió a una reacció adversa de cap a una futura exposició a una substància específica o a una altra categoria de substàncies, inclosos, però sense limitar-se a, incipients i excipients en els medicaments, productes biològics, sals metàl·liques, i compostos químics orgànics. 
+
+Aquest arquetip pretén proporcionar un únic lloc dins de la història clínica per a documentar la propensió de tota mena de reaccions, des de les trivials fins a les mortals: 
+
+- immunomediades: Tipus I-IV (incloses reaccions al·lèrgiques i hipersensibilitat); o
+
+- no immunomediades: incloses reaccions pseudoal·lèrgiques, efectes secundaris, intoleràncies i toxicitat dels medicaments. 
+
+En la pràctica clínica, distingir entre les reaccions immunomediades i no immunomediades pot resultat difícil. Identificar el tipus de recció no és un indici de la gravetat o el risc de dany per al pacient. 
+
+Quan s'identifica una propensió, es pot registrar la informació o l'evidència d'un o més esdeveniments de reacció mitjançant l'ús de l’arquetip CLUSTER.adverse_reaction_event dins del SLOT «Sumari d’esdeveniments de reacció». 
+
+Identificar la gravetat de la manifestació de la reacció, registrada en l'arquetip CLUSTER.adverse_reaction_event pot indicar la «Criticitat» del risc d’una reacció adversa. Per exemple, sofrir anafilaxi en la primera exposició a una substància justificaria la fixació de la «Criticitat» com a «Elevada», com que el risc elevat d'anafilaxi pot tornar a ocórrer en segones i subseqüents exposicions. 
+
+Aquest arquetip s’ha dissenyat per a permetre l'enregistrament de la informació de substàncies específiques (amoxicil·lina, ostres, o el verí d’una picada d’abella) o, alternativament, una categoria de substàncies (ex. Penicil·lina). Si una categoria de substàncies no es troba registrada, la identificació de la substància exacta es pot registrar en una base de perreacció utilitzant l’arquetip CLUSTER.adverse_reaction_event. 
+
+Utilitzar la informació registrada de la presència positiva de risc d'una reacció adversa:
+
+- per ajudar al cuidat clínic directe d'un pacient; 
+
+- com a part d'una reacció adversa controlada o com a llista d'al·lèrgies/intoleràncies;
+
+- per ajudar a l’intercanvi d'informació sobre la propensió i esdeveniments relacionats amb les reaccions adverses; 
+
+- per informar d'un informe de reacció adversa, i
+
+- per ajudar en les activitats informatitzades basades en el coneixement, com ajudes a les decisions i alertes clíniques. 
+
+El risc d’un esdeveniment de reacció adversa o d’una manifestació suggereix sempre una substància o categoria de substàncies causant. Si existeix un cert grau d’incertesa que una substància específica sigui la causa, el nivell d’incertesa es pot registrar utilitzant les dades «Estat de verificació». Si més d’una substància poden ser les causants d’una reacció/manifestació, cada substància s’ha de registrar utilitzant una instància separada d’aquest arquetip de risc de reacció adversa amb el nom d'«Estat de verificació», establert en un inici com «No confirmat». D’aquesta manera la comprovació de la reacció adversa es pot activar en els sistemes clínics. Si es prova posteriorment que la substància no ha sigut la causant, doncs «L’estat de verificació» es pot modificar a «Refutat», per exemple, després d’unes proves d’al·lèrgia.">
+            misuse = <"No utilitzar per a registrar reaccions fisiològiques d’agents físics, com la calor, el fred, la llum solar, la vibració, les activitats esportives, per agents infecciosos o contaminants alimentaris. Utilitzar un arquetip específic EVALUATION.problem/diagnosis o CLUSTER.symptom/sign per aquesta finalitat. 
+
+No utilitzar per a registrar esdeveniments adversos, incloses les errades en els processos, intervencions o productes clínics. Per exemple, ús indegut, dosificació incorrecta o mala administració d’un agent o substància; error d’etiquetatge; sobredosi/enverinament, etc. Utilitzar un arquetip específic per aquesta finalitat. 
+
+No utilitzar per a registrar reaccions adverses quan la substància és desconeguda. Utilitzar EVALUATION.problem_diagnosis o CLUSTER.symptom_sign per a registrar com a part d’una història clínica fins que s’identifiqui una possible substància. 
+
+No utilitzar per a registrar reaccions a transfusions de productes sanguinis. Utilitzar un arquetip específic per aquesta finalitat. 
+
+No utilitzar per a registrar «alertes». Utilitzar EVALUATION.precaution, EVALUATION.contraindication o arquetips relacionats amb aquesta finalitat. 
+
+No utilitzar per a registrar teràpies fallides. 
+
+No utilitzar per a l’enregistrament explícit d’una absència (o absència negativa) d’una reacció a «Cap substància» o a substàncies identificades, per exemple «Al·lèrgies o reaccions adverses desconegudes» o «Cap reacció al·lèrgica coneguda a la Penicil·lina». Utilitzar l’arquetip EVALUATION.exclusion_global o EVALUATION.exclusion_specific per a expressar una afirmació positiva de l’exclusió d’una reacció adversa. 
+
+No utilitzar per a l’enregistrament explícit de què cap informació no es va poder obtindre sobre l’estat de la reacció adversa del pacient. Utilitzar l’arquetip EVALUATION.absence per a registrar que d’una declaració positiva, no s’ha pogut obtindre informació, per exemple, si un pacient no cooperatiu nega respondre les qüestions.">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registrar la evaluación cínica de la propensión de un paciente a experimentar una reacción adversa en caso de exposición, o reexposición, de una substancia específica o substancias de otra categoría.">
+            keywords = <"reacción", "alergia", "alérgico", "adverso", "evento", "efecto", "sensibilidad", "intolerancia", "hipersensibilidad", "efecto secundario", "toxicidad", "medicamento", "alimentos", "agente", "substancia", "inmune", "no inmune", "químico", "anafiláctico", "alergeno", "medicación", "suplemento", "medicina", "remedio natural", "inmunológico", "no inmunológico", "riesgo">
+            use = <"Usar para registrar una evaluación clínica de una propensión a una reacción adversa ante una futura exposición a una sustancia específica o a otra categoría de sustancias, incluidas, pero no limitadas a, excipientes y principios activos en los medicamentos, productos biológicos, sales metálicas y compuestos químicos orgánicos.
+
+Este arquetipo tiene como objetivo proporcionar un único lugar dentro de la historia clínica para documentar la propensión a todo tipo de reacciones, desde las triviales hasta las mortales:
+
+Inmunomediadas: Tipo I-IV (incluidas reacciones alérgicas e hipersensibilidad); o
+
+No inmunomediadas: incluidas reacciones pseudoalérgicas, efectos secundarios, intolerancias y toxicidad medicamentosa.
+
+En la práctica clínica, puede resultar difícil distinguir entre las reacciones inmunomediadas y no inmunomediadas. Identificar el tipo de reacción no implica necesariamente una indicación de la gravedad o el riesgo de daño para el paciente.
+
+Cuando se identifica una propensión, se puede registrar la información o evidencia de uno o más eventos de reacción mediante el uso del arquetipo CLUSTER.adverse_reaction_event dentro del SLOT «Resumen de eventos de reacción».
+
+Identificar la gravedad de la manifestación de la reacción, registrada en el arquetipo CLUSTER.adverse_reaction_event, puede indicar la \"criticidad\" del riesgo de una reacción adversa. Por ejemplo, sufrir anafilaxia en la primera exposición a una sustancia justificaría clasificar la \"criticidad\" como \"Alta\", ya que existe un alto riesgo de que la anafilaxia vuelva a ocurrir en exposiciones posteriores.
+
+Este arquetipo ha sido diseñado para permitir el registro de información sobre sustancias específicas (amoxicilina, ostras, o el veneno de una picadura de abeja) o, alternativamente, sobre una categoría de sustancias (p. ej., penicilina). Si no se ha registrado una categoría de sustancias, la identificación de la sustancia exacta puede hacerse en una base por reacción, utilizando el arquetipo CLUSTER.adverse_reaction_event.
+
+Usar la información registrada sobre la existencia positiva de un riesgo de reacción adversa:
+
+- Para apoyar la atención clínica directa del paciente;
+- Como parte de una lista controlada de reacciones adversas o como lista de alergias/intolerancias;
+- Para facilitar el intercambio de información sobre la propensión y eventos relacionados con reacciones adversas;
+- Para la elaboración de informes de reacciones adversas, y
+- Para apoyar actividades informatizadas basadas en el conocimiento, como ayudas a la decisión y alertas clínicas.
+
+El riesgo de un evento de reacción adversa o de una manifestación siempre sugiere una sustancia o categoría de sustancias causante. Si existe cierto grado de incertidumbre respecto a que una sustancia específica sea la causa, dicho nivel de incertidumbre puede registrarse utilizando los datos de \"Estado de verificación\". Si varias sustancias pudieran ser las causantes de una reacción o manifestación, cada sustancia debe registrarse utilizando una instancia separada de este arquetipo de riesgo de reacción adversa, con el campo de \"Estado de verificación\" inicialmente establecido como \"No confirmado\". De este modo, la comprobación de reacciones adversas puede activarse en los sistemas clínicos. Si posteriormente se demuestra que la sustancia no fue la causa, entonces el \"Estado de verificación\" puede modificarse a \"Refutado\", por ejemplo, tras realizar pruebas de alergia.">
+            misuse = <"No usar para registrar reacciones fisiológicas provocadas por agentes físicos, como el calor, el frío, la luz solar, la vibración, las actividades deportivas, agentes infecciosos o contaminantes alimentarios. Para este propósito, utilizar un arquetipo específico como EVALUATION.problem_diagnosis o CLUSTER.symptom_sign.
+
+No usar para registrar eventos adversos, incluidas fallas en procesos, intervenciones o productos clínicos. Por ejemplo: uso indebido, dosificación incorrecta o mala administración de un agente o sustancia; error de etiquetado; sobredosis/envenenamiento, etc. Para ello, utilizar un arquetipo específico.
+
+No usar para registrar reacciones adversas cuando la sustancia es desconocida. En estos casos, utilizar EVALUATION.problem_diagnosis o CLUSTER.symptom_sign como parte de la historia clínica, hasta que se identifique una posible sustancia causante.
+
+No usar para registrar reacciones a transfusiones de productos sanguíneos. Utilizar un arquetipo específico para ese propósito.
+
+No usar para registrar “alertas”. Para ello, utilizar EVALUATION.precaution, EVALUATION.contraindication o arquetipos relacionados con ese fin.
+
+No usar para registrar terapias fallidas.
+
+No usar para registrar explícitamente la ausencia (o ausencia negativa) de una reacción a “ninguna sustancia” o a sustancias específicas, por ejemplo: “Alergias o reacciones adversas desconocidas” o “Ninguna reacción alérgica conocida a la penicilina”. En estos casos, utilizar el arquetipo EVALUATION.exclusion_global o EVALUATION.exclusion_specific para expresar una declaración positiva de exclusión de una reacción adversa.
+
+No usar para registrar explícitamente que no se pudo obtener información sobre el estado de reacciones adversas del paciente. Para ello, utilizar el arquetipo EVALUATION.absence para documentar, mediante una declaración positiva, que no se ha podido obtener información, por ejemplo, cuando un paciente no cooperativo se niega a responder preguntas.">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Adverse reaction risk
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {1} matches {    -- Substance
+                        value matches {
+                            DV_TEXT[at9006]
+                        }
+                    }
+                    ELEMENT[at0130] occurrences matches {0..1} matches {    -- Active/inactive status
+                        value matches {
+                            DV_CODED_TEXT[at9045] matches {
+                                defining_code matches {[ac9031]}    -- Active/inactive status (synthesised)
+                            }
+                            DV_TEXT[at9046]
+                        }
+                    }
+                    ELEMENT[at0063] occurrences matches {0..1} matches {    -- Verification status
+                        value matches {
+                            DV_CODED_TEXT[at9007] matches {
+                                defining_code matches {[ac9032]}    -- Verification status (synthesised)
+                            }
+                            DV_TEXT[at9008]
+                        }
+                    }
+                    ELEMENT[at0101] occurrences matches {0..1} matches {    -- Criticality
+                        value matches {
+                            DV_CODED_TEXT[at9009] matches {
+                                defining_code matches {[ac9001]}    -- Criticality (synthesised)
+                            }
+                            DV_TEXT[at9047]
+                        }
+                    }
+                    ELEMENT[at0120] occurrences matches {0..1} matches {    -- Category
+                        value matches {
+                            DV_CODED_TEXT[at9010] matches {
+                                defining_code matches {[ac9002]}    -- Category (synthesised)
+                            }
+                            DV_TEXT[at9011]
+                        }
+                    }
+                    ELEMENT[at0117] occurrences matches {0..1} matches {    -- Onset of last reaction
+                        value matches {
+                            DV_DATE_TIME[at9012]
+                            DV_DURATION[at9048]
+                            DV_INTERVAL<DV_DATE_TIME>[at9049]
+                            DV_INTERVAL<DV_DURATION>[at9050]
+                            DV_TEXT[at9039]
+                        }
+                    }
+                    ELEMENT[at0133] occurrences matches {0..1} matches {    -- Onset of first reaction
+                        value matches {
+                            DV_DATE_TIME[at9040]
+                            DV_DURATION[at9041]
+                            DV_TEXT[at9042]
+                            DV_INTERVAL<DV_DATE_TIME>[at9043]
+                            DV_INTERVAL<DV_DURATION>[at9044]
+                        }
+                    }
+                    ELEMENT[at0058] occurrences matches {0..1} matches {    -- Reaction mechanism
+                        value matches {
+                            DV_CODED_TEXT[at9013] matches {
+                                defining_code matches {[ac9003]}    -- Reaction mechanism (synthesised)
+                            }
+                            DV_TEXT[at9014]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0129] matches {    -- Reaction event summary
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.adverse_reaction_event(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-CLUSTER\.adverse_reaction_event(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9015]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0042] matches {
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0062] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9030]
+                        }
+                    }
+                    ELEMENT[at0047] matches {    -- Supporting clinical record information
+                        value matches {
+                            DV_EHR_URI[at9031]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0128] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Risiko einer unerwünschten Reaktion">
+                description = <"Klinische Beurteilung der Neigung einer Person, eine schädliche oder unerwünschte physiologische Reaktion zu erfahren, wenn sie einer Substanz ausgesetzt oder erneut ausgesetzt wird.">
+                comment = <"Zu den Substanzen gehören, ohne darauf beschränkt zu sein: eine therapeutische Substanz, die korrekt in einer für die Person geeigneten Dosierung verabreicht wird; Lebensmittel; pflanzliche oder tierische Rohstoffe; oder Gift von Insektenstichen.">
+                source = <"openEHR, FHIR">
+            >
+            ["at0002"] = <
+                text = <"Substanz">
+                description = <"Identifizierung einer Substanz oder Substanzklasse, von der angenommen wird, dass sie die Person einem Risiko für ein Auftreten von unerwünschter Reaktion aussetzt.">
+                comment = <"Sowohl ein einzelner Stoff als auch eine Stoffklasse sind gültige Einträge in „Stoff“. Ein Stoff kann eine Verbindung einfacherer Stoffe sein, beispielsweise ein Arzneimittel. Es wird dringend empfohlen, die „Substanz“ nach Möglichkeit mit einer Terminologie zu kodieren, die eine Entscheidungsunterstützung auslösen kann. Zum Beispiel: Snomed CT, DM+D, RxNorm, NDFRT, ATC, New Zealand Universal List of Medicines und Australian Medicines Terminology. Die Freitexteingabe sollte nur dann genutzt werden, wenn keine entsprechende Terminologie verfügbar ist.">
+                source = <"openEHR, FHIR, DAM">
+            >
+            ["at0006"] = <
+                text = <"Kommentar">
+                description = <"Zusätzliche Beschreibung ber die Tendenz zur Nebenwirkung, die in anderen Bereichen nicht erfasst wurde.">
+                comment = <"Zum Beispiel: einschließlich des Grundes für die Kennzeichnung des Risikos mit einer hohen \"Gefährlichkeit\" und Anweisungen in Bezug auf die zukünftige Exposition oder Verabreichung der Substanz, wie zum Beispiel die Verabreichung auf einer Intensivstation oder unter Kortikosteroidabdeckung.">
+                source = <"openEHR">
+            >
+            ["at0047"] = <
+                text = <"Unterstützung von klinischen Informationen">
+                description = <"Link zu weiteren Informationen über die Präsentation und den Befunden, die an anderer Stelle in der Gesundheitsakte vorhanden sind, einschließlich Allergietestberichten.">
+                comment = <"Zum Beispiel Darstellung von Symptomen, Untersuchungsbefunden, Diagnose etc.">
+                source = <"FHIR, openEHR, DAM">
+            >
+            ["at0058"] = <
+                text = <"Reaktionsmechanismus">
+                description = <"Identifizierung des zugrunde liegenden physiologischen Mechanismus für die Nebenwirkung.">
+                comment = <"Immunvermittelte Reaktionen wurden üblicherweise als Indikator für die Eskalation eines signifikanten künftigen Risikos betrachtet. Aktuelles Wissen führt zur Annahme, dass einige bisher als immun betrachteten Reaktionen, tatsächlich nicht immun sind und dennoch ein lebensbedrohliches Risiko bergen.
+
+Immunologische Tests können Belege für den Mechanismus und die verursachende Substanz liefern, aber keine Tests sind 100% sensitiv oder spezifisch für eine Sensitivität.
+
+Es wird anerkannt, dass die meisten Kliniker den Mechanismus einer bestimmten Reaktion NICHT unterscheiden können. Dieses Datenelement ist jedoch enthalten, da viele veraltete Systeme diese Eigenschaft erfasst haben.">
+                source = <"FHIR, DAM">
+            >
+            ["at0059"] = <
+                text = <"Immunvermittelt">
+                description = <"Immunvermittelte Reaktion, einschließlich allergischer Reaktionen und Überempfindlichkeit.">
+            >
+            ["at0060"] = <
+                text = <"Nicht-Immunvermittelt">
+                description = <"Eine nicht immunvermittelte Reaktion, die pseudoallergische Reaktionen, Nebenwirkungen, Unverträglichkeiten und Arzneimitteltoxizitäten (z. B. gegen Gentamicin) umfassen kann.">
+            >
+            ["at0062"] = <
+                text = <"Letzte Aktualisierung">
+                description = <"Datum, an dem die Neigung zur Reaktion oder der Fall einer Reaktion aktualisiert wurde.">
+                source = <"openEHR, FHIR, DAM">
+            >
+            ["at0063"] = <
+                text = <"Verifizierungsstatus">
+                description = <"Aussage zur Sicherheit über die Tendenz oder über das potenzielle zukünftige Risiko der identifizierten „Substanz“, eine Reaktion auszulösen.">
+                comment = <"Die Entscheidungsunterstützung löst in der Regel Warnungen für „Unbestätigt“ und „Bestätigt“ aus und ignoriert eine „Widerlegt“-Reaktion. Klinische Systeme können sich dafür entscheiden, Einträge zu unerwünschten Reaktionen mit dem Status „Widerlegt“ in der Liste der unerwünschten Reaktionen nicht anzuzeigen. „Widerlegt“ kann jedoch für den Abgleich der Liste oder bei der Kommunikation zwischen Systemen nützlich sein. Einige Implementierungen entscheiden sich möglicherweise dafür, dieses Feld obligatorisch zu machen. Der Freitext-Datentyp ermöglicht lokale Variationen, indem er die Anwendung anderer Wertesätze auf dieses Datenelement in einer Vorlage ermöglicht. In dieser Situation wird empfohlen, Werte mithilfe einer Terminologie zu codieren.">
+                source = <"FHIR, DAM">
+            >
+            ["at0064"] = <
+                text = <"Nicht bestätigt">
+                description = <"*The propensity for a reaction to the identified 'Substance' has not been objectively verified.(en)">
+            >
+            ["at0065"] = <
+                text = <"Bestätigt">
+                description = <"*The propensity for a reaction to the identified 'Substance' has been objectively verified. This may include clinical evidence by testing, re-challenge or observation.(en)">
+            >
+            ["at0066"] = <
+                text = <"Widerlegt">
+                description = <"*A propensity for a reaction to the identified 'Substance' has been disputed or disproven with a sufficient level of clinical certainty to justify invalidating the assertion. This may include clinical evidence by testing, re-challenge or observation.(en)">
+            >
+            ["at0101"] = <
+                text = <"Kritikalität">
+                description = <"Ein Hinweis auf das Potenzial für kritische Systemorganschäden oder lebensbedrohliche Folgen.">
+                comment = <"Dies kann als vorausschauende Beurteilung eines „Worst-Case-Szenarios“ angesehen werden. In den meisten Zusammenhängen wird „Niedrig“ als Standardwert angesehen.">
+                source = <"DAM, openEHR">
+            >
+            ["at0102"] = <
+                text = <"Niedrig">
+                description = <"Die Exposition gegenüber Substanzen führt wahrscheinlich nicht zu kritischen Schäden von Systemorganen oder zu lebensbedrohlichen Folgen. Eine künftige Exposition gegenüber der identifizierten „Substanz“ sollte unter normalen klinischen Umständen als relative Kontraindikation angesehen werden.">
+            >
+            ["at0103"] = <
+                text = <"Hoch">
+                description = <"Die Exposition gegenüber Substanzen kann zu kritischen Schäden von Systemorganen oder zu lebensbedrohlichen Folgen führen. Eine künftige Exposition gegenüber der identifizierten „Substanz“ sollte unter normalen klinischen Umständen als absolute Kontraindikation angesehen werden.">
+            >
+            ["at0117"] = <
+                text = <"Beginn der letzten Reaktion">
+                description = <"Datum und/ oder Uhrzeit des Beginns des letzten bekannten Auftretens eines Reaktionsereignisses.">
+                comment = <"Zum Beispiel: das tatsächliche Datum und/oder die tatsächliche Uhrzeit des Beginns; das Zeitintervall, in dem der Beginn erfolgte; das Alter der Person zum Zeitpunkt des Ausbruchs; oder die Zeitspanne seit dem Ausbruch. Bei Verwendung des Datentyps DV_DATE_TIME ist ein Teildatum gültig, um nur ein Jahr aufzuzeichnen.">
+                source = <"IMH">
+            >
+            ["at0120"] = <
+                text = <"Kategorie">
+                description = <"Kategorie der identifizierten \"Substanz\".">
+                comment = <"Dieses Datenelement wurde aufgenommen, da es derzeit in einigen klinischen Systemen erfasst wird. Diese Daten können von der Substanz abgeleitet werden, in der Codierungssysteme verwendet werden und sind in dieser Situation effektiv redundant.">
+            >
+            ["at0121"] = <
+                text = <"Lebensmittel">
+                description = <"Jede Substanz, die konsumiert wird, um dem Körper Nahrung zu liefern, wie Erdnuss oder Ei.">
+            >
+            ["at0122"] = <
+                text = <"Medikament">
+                description = <"Jede Substanz, die verabreicht wird, um eine physiologische Wirkung zu erzielen.">
+            >
+            ["at0123"] = <
+                text = <"Andere">
+                description = <"Alle anderen auftretende Substanzen, einschließlich Gift, Latex und anderer Substanzen aus der Umwelt.">
+            >
+            ["at0124"] = <
+                text = <"Unbestimmt">
+                description = <"Eine Bewertung ist mit verfügbaren Informationen nicht möglich.">
+            >
+            ["at0126"] = <
+                text = <"Unbestimmt">
+                description = <"Der physiologische Mechanismus konnte nicht bestimmt werden.">
+            >
+            ["at0128"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: lokale Informationsanforderungen oder zusätzliche Metadaten zur Anpassung an FHIR-Äquivalente.">
+            >
+            ["at0129"] = <
+                text = <"Zusammenfassung des Reaktionsereignis">
+                description = <"Zusammenfassende Details zu jedem Nebenwirkungsereignis im Zusammenhang mit der Exposition gegenüber dem identifizierten „Stoff“.">
+            >
+            ["at0130"] = <
+                text = <"Aktiver/inaktiver Status">
+                description = <"Status darüber, ob die Risikoerklärung zu unerwünschten Reaktionen aktiv oder inaktiv ist.">
+            >
+            ["at0131"] = <
+                text = <"Aktiv">
+                description = <"Bei der Person kommt es derzeit zu einer Reaktion auf die identifizierte Substanz oder es besteht die Gefahr einer solchen.">
+            >
+            ["at0132"] = <
+                text = <"Inaktiv">
+                description = <"Für den Probanden besteht kein Risiko mehr, dass er auf den identifizierten Stoff reagiert.">
+            >
+            ["at0133"] = <
+                text = <"Beginn der ersten Reaktion">
+                description = <"Der Beginn des ersten bekannten Auftretens eines Reaktionsereignisses.">
+                comment = <"Zum Beispiel: das tatsächliche Datum und/oder die tatsächliche Uhrzeit des Beginns; das Zeitintervall, in dem der Beginn erfolgte; das Alter der Person zum Zeitpunkt des Ausbruchs; oder die Zeitspanne seit dem Ausbruch. Bei Verwendung des Datentyps DV_DATE_TIME ist ein Teildatum gültig, um nur ein Jahr aufzuzeichnen.">
+            >
+            ["ac9031"] = <
+                text = <"Aktiver/inaktiver Status (synthesised)">
+                description = <"Status darüber, ob die Risikoerklärung zu unerwünschten Reaktionen aktiv oder inaktiv ist. (synthesised)">
+            >
+            ["ac9032"] = <
+                text = <"Verifizierungsstatus (synthesised)">
+                description = <"Aussage zur Sicherheit über die Tendenz oder über das potenzielle zukünftige Risiko der identifizierten „Substanz“, eine Reaktion auszulösen. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Kritikalität (synthesised)">
+                description = <"Ein Hinweis auf das Potenzial für kritische Systemorganschäden oder lebensbedrohliche Folgen. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Kategorie (synthesised)">
+                description = <"Kategorie der identifizierten \"Substanz\". (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Reaktionsmechanismus (synthesised)">
+                description = <"Identifizierung des zugrunde liegenden physiologischen Mechanismus für die Nebenwirkung. (synthesised)">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Risk för ogynnsam reaktion">
+                description = <"Klinisk bedömning av benägenheten hos en individ att få en skadlig eller oönskad reaktion vid exponering eller vid reexponering av ett ämne.">
+                comment = <"Dessa substanser inkluderar bland annat terapeutiska substanser administrerade korrekt med för individen lämplig dosering; födoämnen; ämnen från växter eller djur; eller gift från bett av insekt.">
+                source = <"openEHR, FHIR">
+            >
+            ["at0002"] = <
+                text = <"Ämne">
+                description = <"Identifiering av ett ämne eller ämnesklass som anses utgöra en risk för en enskild reaktion.">
+                comment = <"Både enskilda ämnen och ämnesklasser är giltiga värden för \"Ämne\". Ett ämne kan vara en kombination av enklare ämnen, till exempel som i en läkemedelsprodukt. Det rekommenderas att \"Ämne\" kodas med en terminologi som kan trigga beslutsstöd där så är möjligt. Till exempel: Snomed CT, DM+D, RxNorm, NDFRT, ATC, New Zealand Universal List of Medicines och Australian Medicines Terminology. Fritext ska endast användas om någon lämplig terminologi inte finns tillgänglig.">
+                source = <"openEHR,FHIR,DAM">
+            >
+            ["at0006"] = <
+                text = <"Kommentar">
+                description = <"Kommentarer avseende benägenheten för reaktionen vilka inte beskrivs i övriga fält.">
+                comment = <"Exempelvis skäl för markering av allvarlighetsgraden \"livshotande\" eller \"skadlig\"; och instruktioner relaterade till framtida exponering eller administrering av ämnet, såsom administrering på en intensivvårdsavdelning eller under kortikosteroidskydd.">
+                source = <"openEHR">
+            >
+            ["at0047"] = <
+                text = <"Kompletterande journalinformation">
+                description = <"Koppling till ytterligare information om presentationen och fynd lokaliserad på annan plats i journalen, inklusive allergitester.">
+                comment = <"Till exempel symptom, undersökningsfynd, diagnos etc.">
+                source = <"FHIR, openEHR, DAM">
+            >
+            ["at0058"] = <
+                text = <"Reaktionsmekanism">
+                description = <"Identifiering av den underliggande fysiologiska mekanismen för reaktionen.">
+                comment = <"Immunmedierad respons har traditionellt betraktats som en indikator för upptrappning av framtida risk. Dagens forskning tyder på att vissa reaktioner som man tidigare trodde var immuna i stället är icke-immuna och medför livshotande risk.
+
+Immunologiska tester kan ge bevis för mekanismen och orsakande substans. Inga tester kan dock ge 100% sensitivitet eller specificitet.
+
+Att de flesta kliniker INTE kommer att kunna urskilja mekanismen för en specifik reaktion är välkänt. Detta dataelement ingår dock då många nedärvda system har innefattat detta attribut.">
+                source = <"FHIR, DAM">
+            >
+            ["at0059"] = <
+                text = <"Immunmedierad">
+                description = <"Immunmedierad reaktion, inklusive allergiska reaktioner och överkänsligheter.">
+            >
+            ["at0060"] = <
+                text = <"Icke immunmedierad">
+                description = <"En icke immunmedierad reaktion, vilken kan inkludera pseudoallergiska reaktioner, biverkningar, intoleranser, läkemedelstoxicitet (exempelvis gentamicin).">
+            >
+            ["at0062"] = <
+                text = <"Senast uppdaterad">
+                description = <"Datum då benägenheten eller reaktionshändelsen uppdaterades.">
+            >
+            ["at0063"] = <
+                text = <"Visshetsgrad">
+                description = <"Grad av visshet för att benägenheten, eller den potentiella framtida risken, föreligger för att det identifierade ämnet ska ge en reaktion.">
+                comment = <"Beslutsstöd är vanligtvis tänkta att trigga varningar för en \"misstänkt\" och \"bekräftad\" men ignorera en \"vederlagd\" reaktion. Vårdinformationssystem kan välja att inte visa angivelser för överkänslighetsrisk med statusen \"vederlagd\" i reaktionslistan. Statusen \"vederlagd\" kan dock vara användbar för att stämma av överkänslighetshändelselistan eller vid kommunikation mellan system. Vissa implementeringar kan välja att göra detta fält obligatoriskt. Fritextdatatypen tillåter lokal variation genom att andra värdeuppsättningar kan tillämpas på detta dataelement i en template - i den situationen rekommenderas att värden ska kodas med en terminologi.">
+                source = <"FHIR, DAM">
+            >
+            ["at0064"] = <
+                text = <"Ej konfirmerad (alt. Misstänkt, enligt Socialstyrelsen visshetsgrad för denna typ av angivelse av reaktionsrisk som inte har verifierats.)">
+                description = <"Benägenheten för en reaktion mot det identifierade ämnet har inte objektivt bekräftats.">
+            >
+            ["at0065"] = <
+                text = <"Bekräftad">
+                description = <"Benägenheten för en reaktion mot ett identifierat ämne har verifierats på ett objektivt sätt. Detta kan inkludera kliniska belägg i form av testning, provokation eller observation.">
+            >
+            ["at0066"] = <
+                text = <"Vederlagd">
+                description = <"En benägenhet för en reaktion mot den identifierade substansen har motbevisats med en tillräckligt hög grad av klinisk säkerhet för att risken ska kunna konstateras inte gälla längre. Motbeviset kan innefatta kliniskt underlag i form av testning, provokation eller observation.">
+            >
+            ["at0101"] = <
+                text = <"Allvarlighetsgrad">
+                description = <"Angivelse av hur allvarlig risken är för kritiska organskador eller livshotande konsekvenser.">
+                comment = <"Detta kan betraktas som en bedömd grad av allvarlighet hos en överkänslighetsreaktion vid en ny exponering. De tre graderna är livshotande, skadlig och besvärande (ref. Socialstyrelsen). I de flesta situationer skulle den lägsta nivån \"besvärande\" ses som utgångsvärdet.">
+                source = <"DAM, openEHR">
+            >
+            ["at0102"] = <
+                text = <"Låg/besvärande">
+                description = <"Exponering för ämnet som sannolikt inte kan leda till kritiska organskador eller livshotande konsekvenser. Framtida exponering för det identifierade ämnet bör betraktas som en relativt kontraindikation under normala kliniska omständigheter.">
+            >
+            ["at0103"] = <
+                text = <"Hög/livshotande eller skadlig">
+                description = <"Exponering för ämnet kan leda till kritiska organskador eller livshotande konsekvenser. Framtida exponering för det identifierade ämnet bör betraktas som en absolut kontraindikation under normala kliniska omständigheter.">
+            >
+            ["at0117"] = <
+                text = <"Debut av sista reaktionen">
+                description = <"Datum och/eller tid då den senast kända reaktionen startade.">
+                comment = <"Till exempel: det aktuella datumet och/eller tiden för starten av reaktionen; patientens ålder vid starten på reaktionen, eller hur länge sedan reaktionen uppträdde. Det är tillåtet att ge ett partiellt datum med endast ett årtal genom att använda datatypen DV_DATE_TIME.">
+                source = <"IMH">
+            >
+            ["at0120"] = <
+                text = <"Kategori">
+                description = <"Kategori för identifierat ämne.">
+                comment = <"Detta dataelement har inkluderats då det för närvarande dokumenteras i vissa vårdinformationssystem. Denna data kan härledas från ämnet ifall kodningssystem för det används, och är då överflödigt i sådana situationer.">
+            >
+            ["at0121"] = <
+                text = <"Mat">
+                description = <"Alla ämnen som konsumeras för att ge kroppen näringsstöd, såsom jordnötter eller ägg.">
+            >
+            ["at0122"] = <
+                text = <"Läkemedel">
+                description = <"Alla ämnen som administreras för att uppnå en fysiologisk effekt.">
+            >
+            ["at0123"] = <
+                text = <"Annat">
+                description = <"Alla andra ämnen som påträffas inklusive gift, latex och andra substanser i miljön.">
+            >
+            ["at0124"] = <
+                text = <"Obestämbar">
+                description = <"Det går inte att bedöma med tillgänglig information.">
+            >
+            ["at0126"] = <
+                text = <"Obestämd">
+                description = <"Den fysiologiska mekanismen kunde inte bestämmas.">
+            >
+            ["at0128"] = <
+                text = <"Tilläggsinformation">
+                description = <"Plats för att infoga tilläggsinformation som krävs för lokala anpassningar eller anpassning till andra referensmodeller eller formella krav.">
+                comment = <"Till exempel: lokala informationskrav eller metadata för att anpassas till överföring med FHIR.">
+            >
+            ["at0129"] = <
+                text = <"Sammanfattning av inträffade reaktioner">
+                description = <"Sammanfattning som beskriver varje biverkning kopplad till det identifierade ämnet.">
+            >
+            ["at0130"] = <
+                text = <"Aktivt/inaktivt status">
+                description = <"Status avseende om angivelsen av risk för reaktion är aktiv eller inaktiv.">
+            >
+            ["at0131"] = <
+                text = <"Aktiv">
+                description = <"Patienten upplever, eller riskerar att uppleva, en reaktion mot det identifierade ämnet.">
+            >
+            ["at0132"] = <
+                text = <"Inaktiv">
+                description = <"Patienten har inte längre någon risk för en reaktion mot det identifierade ämnet.">
+            >
+            ["at0133"] = <
+                text = <"Start för första reaktionen">
+                description = <"Starten för den första kända reaktionen.">
+                comment = <"Till exempel: det aktuella datumet och/eller tiden för starten; tidsintervallet för när reaktionen startade; patientens ålder vid starten på reaktionen; eller hur lång tid det gått sedan starten på reaktionen. Det är tillåtet att ge ett partiellt datum med endast ett årtal genom att använda datatypen DV_DATE_TIME.">
+            >
+            ["ac9031"] = <
+                text = <"Aktivt/inaktivt status (synthesised)">
+                description = <"Status avseende om angivelsen av risk för reaktion är aktiv eller inaktiv. (synthesised)">
+            >
+            ["ac9032"] = <
+                text = <"Visshetsgrad (synthesised)">
+                description = <"Grad av visshet för att benägenheten, eller den potentiella framtida risken, föreligger för att det identifierade ämnet ska ge en reaktion. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Allvarlighetsgrad (synthesised)">
+                description = <"Angivelse av hur allvarlig risken är för kritiska organskador eller livshotande konsekvenser. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Kategori (synthesised)">
+                description = <"Kategori för identifierat ämne. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Reaktionsmekanism (synthesised)">
+                description = <"Identifiering av den underliggande fysiologiska mekanismen för reaktionen. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Risiko for overfølsomhetsreaksjon">
+                description = <"Klinisk vurdering av tendensen for et individ til å oppleve en skadelig eller uønsket fysiologisk reaksjon ved eksponering eller re-eksponering for en substans.">
+                comment = <"Substanser omfatter men er ikke begrenset til: terapeutiske substanser korrekt administrert ved en passende dose for individet, mat, materiale fra planter eller dyr, eller gift fra insektstikk.">
+            >
+            ["at0002"] = <
+                text = <"Substans">
+                description = <"Den spesifikke substansen eller substansklassen som setter individet i faresonen for en reaksjonshendelse.">
+                comment = <"Feltet tillater en registrering av enten en spesifikk substans eller en substansklasse. En substans kan være en blanding av enkeltsubstanser, for eksempel et legemiddelprodukt. Det er sterkt anbefalt at \"Substans\" kodes med en terminologi som kan utløse beslutningsstøtte, der det er mulig. For eksempel: FEST, ATC eller SNOMED CT. Fritekst bør bare brukes hvis en hensiktsmessig terminologi ikke er tilgjengelig.">
+            >
+            ["at0006"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekstbeskrivelse om risikoen for overfølsomhetsreaksjon, som ikke fanges opp i andre felter.">
+                comment = <"For eksempel: Grunnlag for at \"Alvorlighetsgrad\" er satt til \"Høy\", instruksjoner relatert til fremtidige eksponeringer for eller administrasjon av substansen, som administrasjon ved en intensivenhet eller under kortikosteroidbehandling.">
+            >
+            ["at0047"] = <
+                text = <"Understøttende klinisk informasjon">
+                description = <"Lenke til ytterligere informasjon om symptomer, tegn og funn som finnes andre steder i journalen, inklusiv allergitestrapporter.">
+                comment = <"For eksempel symptomer, undersøkelsesfunn eller diagnoser.">
+            >
+            ["at0058"] = <
+                text = <"Reaksjonsmekanisme">
+                description = <"Identifisering av overfølsomhetsreaksjonens underliggende fysiologiske mekanisme.">
+                comment = <"Immunmediert respons har tradisjonelt blitt ansett som en indikator for eskalering av signifikant fremtidig risiko. Moderne kunnskap tyder på at noen reaksjoner tidligere antatt å være immune faktisk er ikke-immune og likevel innebærer livstruende risiko. I tillegg kan mange antatt ikke-immunologiske reaksjoner faktisk være immunologiske, siden det finnes mangler i vårt diagnostiske apparat som gjør at vi ikke klarer å identifisere mekanismen.
+
+Immunologiske tester kan gi evidens for identifisering av mekanisme og årsakssubstans, men ingen tester er 100% sensitive eller spesifikke.
+
+Det erkjennes at klinikere ofte ikke kan identifisere mekanismen for en gitt reaksjon. Dette dataelementet er likevel inkludert fordi det blir brukt i mange eldre systemer.">
+            >
+            ["at0059"] = <
+                text = <"Immunmediert">
+                description = <"Immunmediert reaksjon, inklusive allergiske reaksjoner og hypersensitiviteter.">
+            >
+            ["at0060"] = <
+                text = <"Ikke-immunmediert">
+                description = <"En ikke-immunmediert reaksjon, som kan omfatte pseudoallergiske reaksjoner, bivirkninger, intoleranser eller legemiddeltoksisitet (f.eks gentamicin).">
+            >
+            ["at0062"] = <
+                text = <"Sist oppdatert">
+                description = <"Dato da informasjonen sist ble oppdatert.">
+            >
+            ["at0063"] = <
+                text = <"Verifikasjonsstatus">
+                description = <"Påstand om hvor sikkert det er at individet har en tendens eller framtidig risiko på få en overfølsomhetsreaksjon på den angitte substansen.">
+                comment = <"Beslutningsstøttesystemer vil typisk reagere på statusene \"Ubekreftet\" og \"Bekreftet\", og ignorere \"Avkreftet\". Kliniske systemer kan velge å ikke vise overfølsomhetsreaksjoner som har status \"Avkreftet\" i listen over overfølsomhetsreaksjoner. Imidlertid kan \"Avkreftet\" være nyttig for samstemming av listen over overfølsomhetsreaksjoner, eller ved kommunikasjon mellom systemer. Noen implementasjoner kan velge å gjøre dette elementet obligatorisk. Fritekst-datatypen tillater lokal variasjon ved å gjøre det mulig å legge til andre verdisett i et templat. I disse tilfellene er det anbefalt at verdiene kodes med en terminologi.">
+            >
+            ["at0064"] = <
+                text = <"Ubekreftet">
+                description = <"Tendensen til reaksjon på den angitte substansen har ikke blitt objektivt verifisert.">
+            >
+            ["at0065"] = <
+                text = <"Bekreftet">
+                description = <"Tendensen til reaksjon på den angitte substansen har blitt objektivt verifisert. Dette kan omfatte klinisk evidens fra testing, provokasjonstesting eller observasjon.">
+            >
+            ["at0066"] = <
+                text = <"Avkreftet">
+                description = <"Tendensen til å reagere på den angitte substansen har blitt avkreftet med tilstrekkelig nivå av klinisk sikkerhet til at utsagnet kan invalideres. Dette kan omfatte klinisk evidens fra testing, provokasjonstesting eller observasjon.">
+            >
+            ["at0101"] = <
+                text = <"Alvorlighetsgrad">
+                description = <"En indikasjon på potensialet for kritisk organskade eller livstruende konsekvenser.">
+                comment = <"Dette kan ses på som en vurdering av et \"worst case scenario\". I de fleste kontekster vil \"Lav\" være en standardverdi.">
+            >
+            ["at0102"] = <
+                text = <"Lav">
+                description = <"Eksponering for substansen vil sannsynligvis ikke resultere i kritisk organskade eller livstruende konsekvenser. Fremtidig eksponering for den angitte substansen bør regnes som en relativ kontraindikasjon under ordinære kliniske omstendigheter.">
+            >
+            ["at0103"] = <
+                text = <"Høy">
+                description = <"Eksponering for substansen kan resultere i kritisk organskade eller livstruende konsekvenser. Fremtidig eksponering for den angitte substansen bør regnes som en absolutt kontraindikasjon under ordinære kliniske omstendigheter.">
+            >
+            ["at0117"] = <
+                text = <"Debut av siste reaksjon">
+                description = <"Dato og/eller tid da den siste kjente reaksjonshendelsen startet.">
+                comment = <"For eksempel: Den faktiske datoen og/eller tidspunktet for debuten, tidsintervallet debuten inntraff innenfor, individets alder da debuten inntraff, eller tid siden debuten inntraff. Det kan registreres deldatoer ved å bruke datatypen DV_DATE_TIME, for å registrere kun et årstall.">
+            >
+            ["at0120"] = <
+                text = <"Kategori">
+                description = <"Kategorien til den angitte substansen.">
+                comment = <"Dette dataelementet er inkludert fordi det brukes i enkelte kliniske systemer. Dataene kan avledes fra substansen dersom man bruker hierarkiske kodesystemer, og er i slike tilfeller overflødig.">
+            >
+            ["at0121"] = <
+                text = <"Mat">
+                description = <"Enhver substans som spises eller drikkes som næring for kroppen, som f.eks. peanøtter eller egg.">
+            >
+            ["at0122"] = <
+                text = <"Legemiddel">
+                description = <"Enhver substans som administreres for å oppnå en fysiologisk effekt.">
+            >
+            ["at0123"] = <
+                text = <"Annet">
+                description = <"Enhver annen substans, inklusive animalsk gift, latex og andre substanser i omgivelsene.">
+            >
+            ["at0124"] = <
+                text = <"Ubestemt">
+                description = <"Umulig å vurdere med tilgjengelig informasjon.">
+            >
+            ["at0126"] = <
+                text = <"Uviss">
+                description = <"Den fysiologiske mekanismen kunne ikke fastslås.">
+            >
+            ["at0128"] = <
+                text = <"Utvidelse">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0129"] = <
+                text = <"Sammendrag av reaksjonshendelse">
+                description = <"Detaljert sammendrag om hver enkelt reaksjonshendelse, koblet til eksponering for den angitte substansen.">
+            >
+            ["at0130"] = <
+                text = <"Aktiv/inaktiv status">
+                description = <"Status for hvorvidt risikoen for overfølsomhetsreaksjon er aktiv eller inaktiv.">
+            >
+            ["at0131"] = <
+                text = <"Aktiv">
+                description = <"Individet har ved registreringstidspunktet en risiko for å få en reaksjon på den angitte substansen.">
+            >
+            ["at0132"] = <
+                text = <"Inaktiv">
+                description = <"Individet har ved registreringstidspunktet ikke lenger en risiko for å få en reaksjon på den angitte substansen.">
+            >
+            ["at0133"] = <
+                text = <"Debut av første reaksjon">
+                description = <"Dato og/eller tid da den første kjente reaksjonshendelsen startet.">
+                comment = <"For eksempel: Den faktiske datoen og/eller tidspunktet for debuten, tidsintervallet debuten inntraff innenfor, individets alder da debuten inntraff, eller tid siden debuten inntraff. Det kan registreres deldatoer ved å bruke datatypen DV_DATE_TIME, for å registrere kun et årstall.">
+            >
+            ["ac9031"] = <
+                text = <"Aktiv/inaktiv status (synthesised)">
+                description = <"Status for hvorvidt risikoen for overfølsomhetsreaksjon er aktiv eller inaktiv. (synthesised)">
+            >
+            ["ac9032"] = <
+                text = <"Verifikasjonsstatus (synthesised)">
+                description = <"Påstand om hvor sikkert det er at individet har en tendens eller framtidig risiko på få en overfølsomhetsreaksjon på den angitte substansen. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Alvorlighetsgrad (synthesised)">
+                description = <"En indikasjon på potensialet for kritisk organskade eller livstruende konsekvenser. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Kategori (synthesised)">
+                description = <"Kategorien til den angitte substansen. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Reaksjonsmekanisme (synthesised)">
+                description = <"Identifisering av overfølsomhetsreaksjonens underliggende fysiologiske mekanisme. (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Risco de Reação Adversa">
+                description = <"*Clinical assessment of the propensity for an individual to experience a harmful or undesirable physiological response if exposed, or re-exposed, to a substance. (en)">
+                comment = <"As substâncias incluem , mas não estão limitadas a: uma substância terapêutica administrada corretamente a uma dosagem apropriada para o indivíduo; alimento; material derivado de plantas ou animais ; ou veneno de picadas de insetos">
+            >
+            ["at0002"] = <
+                text = <"*Substance(en)">
+                description = <"*Identification of a substance, or substance class, that is considered to put the individual at risk of an adverse reaction event.(en)">
+                comment = <"*Both an individual substance and a substance class are valid entries in 'Substance'. A substance may be a compound of simpler substances, for example a medicinal product. It is strongly recommended that the 'Substance' is coded with a terminology capable of triggering decision support, where possible. For example: Snomed CT, DM+D, RxNorm, NDFRT, ATC, New Zealand Universal List of Medicines and Australian Medicines Terminology. Free text entry should only be used if there is no appropriate terminology available. (en)">
+                source = <"*openEHR,FHIR,DAM(en)">
+            >
+            ["at0006"] = <
+                text = <"Comentários">
+                description = <"Narrativa adicional sobre a propensão para a reação adversa, não capturada em outros campos.">
+                comment = <"Por exemplo: incluir motivo para sinalizar uma criticidade de alto risco; e instruções relacionadas com a exposição futura ou a administração da substância, tais como a administração dentro de uma unidade de terapia intensiva ou sob cobertura de corticosteróide">
+            >
+            ["at0047"] = <
+                text = <"Apoio às informações clínicas do registro">
+                description = <"Link para mais informações sobre a apresentação e as conclusões que existe em outro lugar no registro de saúde, incluindo relatórios de teste de alergia.">
+                comment = <"*For example, presenting symptoms, examination findings, diagnosis etc. (en)">
+            >
+            ["at0058"] = <
+                text = <"Mecanismo da Reação">
+                description = <"Identificação do mecanismo fisiológico subjacente para a reação adversa">
+                comment = <"Respostas imune-mediada tem sido tradicionalmente consideradas como um indicador para a escalada de risco significativo no futuro. Conhecimentos atuais sugerem que algumas reações que previamente se pensava serem imunes são na verdade não imunes e ainda carregam o risco de ameaça à vida.
+
+Testes imunológicos podem fornecer elementos de prova para o mecanismo e a substância causal, mas os testes não são 100% sensíveis ou específicos para uma sensibilidade.
+
+É reconhecido que a maioria dos clínicos não serão capazes de distinguir o mecanismo de qualquer reação específica. No entanto, este elemento de dados está incluído porque muitos sistemas legados tem capturado esse atributo">
+            >
+            ["at0059"] = <
+                text = <"Imune - mediada">
+                description = <"Reação imune-mediada, incluindo hipersensibilidade e reações alérgicas.">
+            >
+            ["at0060"] = <
+                text = <"Não imune-mediada">
+                description = <"Reação Não Imuno-mediada, que inclui pseudo alergias, intolerâncias, efeitos colaterais, toxicidade de drogas (por exemplo, a gentamicina).">
+            >
+            ["at0062"] = <
+                text = <"Ultima atualização">
+                description = <"Data quando a propensão ou o evento de reação foi atualizado.">
+            >
+            ["at0063"] = <
+                text = <"*Verification status (en)">
+                description = <"Declaração sobre a certeza da propensão ou potenciais riscos futuros, da substância identificada para causar uma reação.">
+                comment = <"*Decision support would typically raise alerts for 'Unconfirmed' and 'Confirmed', and ignore a 'Refuted' reaction. Clinical systems may choose not to display Adverse reaction entries with a 'Refuted' status in the Adverse Reaction List. However, 'Refuted' may be useful for reconciliation of the adverse reaction list or when communicating between systems. Some implementations may choose to make this field mandatory. The free text data type will allow for local variation by enabling other value sets to be applied to this data element in a template - in this situation it is recommended that values should be coded using a terminology. (en)">
+            >
+            ["at0064"] = <
+                text = <"*Unconfirmed (en)">
+                description = <"*The propensity for a reaction to the identified 'Substance' has not been objectively verified. (en)">
+            >
+            ["at0065"] = <
+                text = <"Confirmada">
+                description = <"*The propensity for a reaction to the identified 'Substance' has been objectively verified. This may include clinical evidence by testing, re-challenge or observation. (en)">
+            >
+            ["at0066"] = <
+                text = <"Refutada">
+                description = <"*A propensity for a reaction to the identified 'Substance' has been disputed or disproven with a sufficient level of clinical certainty to justify invalidating the assertion. This may include clinical evidence by testing, re-challenge or observation. (en)">
+            >
+            ["at0101"] = <
+                text = <"Criticidade">
+                description = <"Uma indicação do potencial de danos nos órgãos críticos do sistema ou conseqüência de ameaça à vida">
+                comment = <"*This can be regarded as a predictive judgement of a 'worst case scenario'. In most contexts 'Low' would be regarded as the default value. (en)">
+            >
+            ["at0102"] = <
+                text = <"Baixo">
+                description = <"Exposição a substâncias passíveis de danos nos órgãos críticos do sistema ou conseqüência de ameaça à vida. Futura exposição à substância identificada deve ser considerada uma contra-indicação relativa em circunstâncias clínicas normais.">
+            >
+            ["at0103"] = <
+                text = <"Alto">
+                description = <"Exposição à substância pode resultar em danos ao sistema, órgão crítico ou conseqüência de ameaça à vida. Futura exposição à substância identificada deve ser considerada uma contra-indicação absoluta em circunstâncias clínicas normais.">
+            >
+            ["at0117"] = <
+                text = <"Início da última reação">
+                description = <"A data e/ou hora do início da última ocorrência de um evento de reação conhecida.">
+                comment = <"*For example: the actual date and/or time of onset; the interval of time during which the onset occurred; the age of the individual at the time of the onset; or the duration of time since the onset occurred. A partial date is valid, using the DV_DATE_TIME data type, to record only a year. (en)">
+            >
+            ["at0120"] = <
+                text = <"Categoria">
+                description = <"Categoria da substância identificada">
+                comment = <"Este elemento de dados foi incluído porque atualmente está sendo capturado em alguns sistemas clínicos. Esses dados podem ser derivados da substância onde são utilizados sistemas de codificação e é efetivamente redundante nessa situação.">
+            >
+            ["at0121"] = <
+                text = <"Alimentos">
+                description = <"Qualquer substância consumida para fornecer suporte nutricional para o organismo, tais como o amendoim ou ovo.">
+            >
+            ["at0122"] = <
+                text = <"Medicação">
+                description = <"Qualquer substância administrada para alcançar um efeito fisiológico.">
+            >
+            ["at0123"] = <
+                text = <"Outros">
+                description = <"Qualquer outra substância encontrada incluindo veneno, látex e outras substâncias ambientais.">
+            >
+            ["at0124"] = <
+                text = <"Indeterminado">
+                description = <"Não é possível avaliar com informações disponíveis.">
+            >
+            ["at0126"] = <
+                text = <"Indeterminada">
+                description = <"O mecanismo fisiológico não pôde ser determinado.">
+            >
+            ["at0128"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms.(en)">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR equivalents. (en)">
+            >
+            ["at0129"] = <
+                text = <"*Reaction event summary (en)">
+                description = <"*Summary details about each adverse reaction event linked to exposure to the identified 'Substance'. (en)">
+            >
+            ["at0130"] = <
+                text = <"*Active/inactive status (en)">
+                description = <"*Status about whether the adverse reaction risk statement is active or inactive. (en)">
+            >
+            ["at0131"] = <
+                text = <"*Active (en)">
+                description = <"*The subject is currently experiencing, or is at risk of, a reaction to the identified substance. (en)">
+            >
+            ["at0132"] = <
+                text = <"*Inactive (en)">
+                description = <"*The subject is no longer at risk of a reaction to the identified substance. (en)">
+            >
+            ["at0133"] = <
+                text = <"*Onset of first reaction (en)">
+                description = <"*The onset of the first known occurrence of a reaction event. (en)">
+                comment = <"*For example: the actual date and/or time of onset; the interval of time during which the onset occurred; the age of the individual at the time of the onset; or the duration of time since the onset occurred. A partial date is valid, using the DV_DATE_TIME data type, to record only a year. (en)">
+            >
+            ["ac9031"] = <
+                text = <"*Active/inactive status (en) (synthesised)">
+                description = <"*Status about whether the adverse reaction risk statement is active or inactive. (en) (synthesised)">
+            >
+            ["ac9032"] = <
+                text = <"*Verification status (en) (synthesised)">
+                description = <"Declaração sobre a certeza da propensão ou potenciais riscos futuros, da substância identificada para causar uma reação. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Criticidade (synthesised)">
+                description = <"Uma indicação do potencial de danos nos órgãos críticos do sistema ou conseqüência de ameaça à vida (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Categoria (synthesised)">
+                description = <"Categoria da substância identificada (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Mecanismo da Reação (synthesised)">
+                description = <"Identificação do mecanismo fisiológico subjacente para a reação adversa (synthesised)">
+            >
+        >
+        ["el"] = <
+            ["at0000"] = <
+                text = <"*Adverse reaction risk(en)">
+                description = <"*Clinical assessment of the propensity for an individual to experience a harmful or undesirable physiological response if exposed, or re-exposed, to a substance.(en)">
+                comment = <"*Substances include, but are not limited to: a therapeutic substance administered correctly at an appropriate dosage for the individual; food; material derived from plants or animals; or venom from insect stings.(en)">
+            >
+            ["at0002"] = <
+                text = <"Ουσία">
+                description = <"Αναγνώριση μιας ουσίας ή κατηγορία της ουσίας που θέτει το άτομο σε κίνδυνο ανεπιθύμητης αντίδρασης.">
+                comment = <"*Both an individual substance and a substance class are valid entries in 'Substance'. A substance may be a compound of simpler substances, for example a medicinal product. It is strongly recommended that the 'Substance' is coded with a terminology capable of triggering decision support, where possible. For example: Snomed CT, DM+D, RxNorm, NDFRT, ATC, New Zealand Universal List of Medicines and Australian Medicines Terminology. Free text entry should only be used if there is no appropriate terminology available.(en)">
+            >
+            ["at0006"] = <
+                text = <"*Comment(en)">
+                description = <"*Additional narrative about the propensity for the adverse reaction, not captured in other fields.(en)">
+                comment = <"*For example: including reason for flagging a 'Criticality' of 'High risk'; and instructions related to future exposure or administration of the Substance, such as administration within an Intensive Care Unit or under corticosteroid cover.(en)">
+            >
+            ["at0047"] = <
+                text = <"*Supporting clinical record information(en)">
+                description = <"*Link to further information about the presentation and findings that exist elsewhere in the health record, including allergy test reports.(en)">
+                comment = <"*For example, presenting symptoms, examination findings, diagnosis etc.(en)">
+            >
+            ["at0058"] = <
+                text = <"*Reaction mechanism(en)">
+                description = <"*Identification of the underlying physiological mechanism for the adverse reaction.(en)">
+                comment = <"*Immune-mediated responses have been traditionally regarded as an indicator for escalation of significant future risk. Contemporary knowledge suggests that some reactions previously thought to be immune are actually non-immune and still carry life threatening risk. 
+
+Immunological testing may provide supporting evidence for the mechanism and causative substance , but no tests are 100% sensitive or specific for a sensitivity. 
+
+It is acknowledged that most clinicians will NOT be able to distinguish the mechanism of any specific reaction. However this data element is included because many legacy systems have captured this attribute.(en)">
+            >
+            ["at0059"] = <
+                text = <"*Immune mediated(en)">
+                description = <"*Immune mediated reaction, including allergic reactions and hypersensitivities.(en)">
+            >
+            ["at0060"] = <
+                text = <"*Non-immune mediated(en)">
+                description = <"*A non-immune mediated reaction, which can include pseudo-allergic reactions, side effects, intolerances, drug toxicities (for example, to Gentamicin).(en)">
+            >
+            ["at0062"] = <
+                text = <"*Last updated(en)">
+                description = <"*Date when the propensity or the reaction event was updated.(en)">
+            >
+            ["at0063"] = <
+                text = <"*Verification status(en)">
+                description = <"*Assertion about the certainty of the propensity, or potential future risk, of the identified 'Substance' to cause a reaction.(en)">
+                comment = <"*Decision support would typically raise alerts for 'Unconfirmed' and 'Confirmed', and ignore a 'Refuted' reaction. Clinical systems may choose not to display Adverse reaction entries with a 'Refuted' status in the Adverse Reaction List. However, 'Refuted' may be useful for reconciliation of the adverse reaction list or when communicating between systems. Some implementations may choose to make this field mandatory. The free text data type will allow for local variation by enabling other value sets to be applied to this data element in a template - in this situation it is recommended that values should be coded using a terminology.(en)">
+            >
+            ["at0064"] = <
+                text = <"Μη επιβεβαιωμένη">
+                description = <"*The propensity for a reaction to the identified 'Substance' has not been objectively verified.(en)">
+            >
+            ["at0065"] = <
+                text = <"επιβεβαιωμένη">
+                description = <"*The propensity for a reaction to the identified 'Substance' has been objectively verified. This may include clinical evidence by testing, re-challenge or observation.(en)">
+            >
+            ["at0066"] = <
+                text = <"*Refuted(en)">
+                description = <"*A propensity for a reaction to the identified 'Substance' has been disputed or disproven with a sufficient level of clinical certainty to justify invalidating the assertion. This may include clinical evidence by testing, re-challenge or observation.(en)">
+            >
+            ["at0101"] = <
+                text = <"*Criticality(en)">
+                description = <"*An indication of the potential for critical system organ damage or life threatening consequence.(en)">
+                comment = <"*This can be regarded as a predictive judgement of a 'worst case scenario'. In most contexts 'Low' would be regarded as the default value.(en)">
+            >
+            ["at0102"] = <
+                text = <"Χαμηλή">
+                description = <"*Exposure to substance unlikely to result in critical system organ damage or life threatening consequence. Future exposure to the identified 'Substance' should be considered a relative contra-indication in normal clinical circumstances.(en)">
+            >
+            ["at0103"] = <
+                text = <"Υψηλή">
+                description = <"*Exposure to substance may result in critical organ system damage or life threatening consequence. Future exposure to the identified 'Substance' should be considered an absolute contra-indication in normal clinical circumstances.(en)">
+            >
+            ["at0117"] = <
+                text = <"*Onset of last reaction(en)">
+                description = <"*The date and/or time of the onset of the last known occurrence of a reaction event.(en)">
+                comment = <"*For example: the actual date and/or time of onset; the interval of time during which the onset occurred; the age of the individual at the time of the onset; or the duration of time since the onset occurred. A partial date is valid, using the DV_DATE_TIME data type, to record only a year.(en)">
+            >
+            ["at0120"] = <
+                text = <"*Category(en)">
+                description = <"*Category of the identified 'Substance'.(en)">
+                comment = <"*This data element has been included because it is currently being captured in some clinical systems. This data can be derived from the Substance where coding systems are used, and is effectively redundant in that situation.(en)">
+            >
+            ["at0121"] = <
+                text = <"Φαγητό">
+                description = <"*Any substance consumed to provide nutritional support for the body, such as peanut or egg.(en)">
+            >
+            ["at0122"] = <
+                text = <"Αγωγή">
+                description = <"*Any substance administered to achieve a physiological effect.(en)">
+            >
+            ["at0123"] = <
+                text = <"Άλλα">
+                description = <"*Any other substance encountered including venom, latex and other environmental substances.(en)">
+            >
+            ["at0124"] = <
+                text = <"Μέτρια">
+                description = <"*Unable to assess with information available.(en)">
+            >
+            ["at0126"] = <
+                text = <"*Indeterminate(en)">
+                description = <"*The physiological mechanism could not be determined.(en)">
+            >
+            ["at0128"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms.(en)">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR equivalents.(en)">
+            >
+            ["at0129"] = <
+                text = <"*Reaction event summary(en)">
+                description = <"*Summary details about each adverse reaction event linked to exposure to the identified 'Substance'.(en)">
+            >
+            ["at0130"] = <
+                text = <"*Active/inactive status(en)">
+                description = <"*Status about whether the adverse reaction risk statement is active or inactive.(en)">
+            >
+            ["at0131"] = <
+                text = <"Ενεργή">
+                description = <"*The subject is currently experiencing, or is at risk of, a reaction to the identified substance.(en)">
+            >
+            ["at0132"] = <
+                text = <"Ανενεργή">
+                description = <"*The subject is no longer at risk of a reaction to the identified substance.(en)">
+            >
+            ["at0133"] = <
+                text = <"*Onset of first reaction(en)">
+                description = <"*The onset of the first known occurrence of a reaction event.(en)">
+                comment = <"*For example: the actual date and/or time of onset; the interval of time during which the onset occurred; the age of the individual at the time of the onset; or the duration of time since the onset occurred. A partial date is valid, using the DV_DATE_TIME data type, to record only a year.(en)">
+            >
+            ["ac9031"] = <
+                text = <"*Active/inactive status(en) (synthesised)">
+                description = <"*Status about whether the adverse reaction risk statement is active or inactive.(en) (synthesised)">
+            >
+            ["ac9032"] = <
+                text = <"*Verification status(en) (synthesised)">
+                description = <"*Assertion about the certainty of the propensity, or potential future risk, of the identified 'Substance' to cause a reaction.(en) (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"*Criticality(en) (synthesised)">
+                description = <"*An indication of the potential for critical system organ damage or life threatening consequence.(en) (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"*Category(en) (synthesised)">
+                description = <"*Category of the identified 'Substance'.(en) (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"*Reaction mechanism(en) (synthesised)">
+                description = <"*Identification of the underlying physiological mechanism for the adverse reaction.(en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Adverse reaction risk">
+                description = <"Clinical assessment of the propensity for an individual to experience a harmful or undesirable physiological response if exposed, or re-exposed, to a substance.">
+                comment = <"Substances include, but are not limited to: a therapeutic substance administered correctly at an appropriate dosage for the individual; food; material derived from plants or animals; or venom from insect stings.">
+                source = <"openEHR,FHIR">
+            >
+            ["at0002"] = <
+                text = <"Substance">
+                description = <"Identification of a substance, or substance class, that is considered to put the individual at risk of an adverse reaction event.">
+                comment = <"Both an individual substance and a substance class are valid entries in 'Substance'. A substance may be a compound of simpler substances, for example a medicinal product. It is strongly recommended that the 'Substance' is coded with a terminology capable of triggering decision support, where possible. For example: Snomed CT, DM+D, RxNorm, NDFRT, ATC, New Zealand Universal List of Medicines and Australian Medicines Terminology. Free text entry should only be used if there is no appropriate terminology available.">
+            >
+            ["at0006"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the propensity for the adverse reaction, not captured in other fields.">
+                comment = <"For example: including reason for flagging a 'Criticality' of 'High risk'; and instructions related to future exposure or administration of the Substance, such as administration within an Intensive Care Unit or under corticosteroid cover.">
+            >
+            ["at0047"] = <
+                text = <"Supporting clinical record information">
+                description = <"Link to further information about the presentation and findings that exist elsewhere in the health record, including allergy test reports.">
+                comment = <"For example, presenting symptoms, examination findings, diagnosis etc.">
+            >
+            ["at0058"] = <
+                text = <"Reaction mechanism">
+                description = <"Identification of the underlying physiological mechanism for the adverse reaction.">
+                comment = <"Immune-mediated responses have been traditionally regarded as an indicator for escalation of significant future risk. Contemporary knowledge suggests that some reactions previously thought to be immune are actually non-immune and still carry life threatening risk. 
+
+Immunological testing may provide supporting evidence for the mechanism and causative substance , but no tests are 100% sensitive or specific for a sensitivity. 
+
+It is acknowledged that most clinicians will NOT be able to distinguish the mechanism of any specific reaction. However this data element is included because many legacy systems have captured this attribute.">
+            >
+            ["at0059"] = <
+                text = <"Immune mediated">
+                description = <"Immune mediated reaction, including allergic reactions and hypersensitivities.">
+            >
+            ["at0060"] = <
+                text = <"Non-immune mediated">
+                description = <"A non-immune mediated reaction, which can include pseudo-allergic reactions, side effects, intolerances, drug toxicities (for example, to Gentamicin).">
+            >
+            ["at0062"] = <
+                text = <"Last updated">
+                description = <"Date when the propensity or the reaction event was updated.">
+            >
+            ["at0063"] = <
+                text = <"Verification status">
+                description = <"Assertion about the certainty of the propensity, or potential future risk, of the identified 'Substance' to cause a reaction.">
+                comment = <"Decision support would typically raise alerts for 'Unconfirmed' and 'Confirmed', and ignore a 'Refuted' reaction. Clinical systems may choose not to display Adverse reaction entries with a 'Refuted' status in the Adverse Reaction List. However, 'Refuted' may be useful for reconciliation of the adverse reaction list or when communicating between systems. Some implementations may choose to make this field mandatory. The free text data type will allow for local variation by enabling other value sets to be applied to this data element in a template - in this situation it is recommended that values should be coded using a terminology.">
+            >
+            ["at0064"] = <
+                text = <"Unconfirmed">
+                description = <"The propensity for a reaction to the identified 'Substance' has not been objectively verified.">
+            >
+            ["at0065"] = <
+                text = <"Confirmed">
+                description = <"The propensity for a reaction to the identified 'Substance' has been objectively verified. This may include clinical evidence by testing, re-challenge or observation.">
+            >
+            ["at0066"] = <
+                text = <"Refuted">
+                description = <"A propensity for a reaction to the identified 'Substance' has been disputed or disproven with a sufficient level of clinical certainty to justify invalidating the assertion. This may include clinical evidence by testing, re-challenge or observation.">
+            >
+            ["at0101"] = <
+                text = <"Criticality">
+                description = <"An indication of the potential for critical system organ damage or life threatening consequence.">
+                comment = <"This can be regarded as a predictive judgement of a 'worst case scenario'. In most contexts 'Low' would be regarded as the default value.">
+            >
+            ["at0102"] = <
+                text = <"Low">
+                description = <"Exposure to substance unlikely to result in critical system organ damage or life threatening consequence. Future exposure to the identified 'Substance' should be considered a relative contra-indication in normal clinical circumstances.">
+            >
+            ["at0103"] = <
+                text = <"High">
+                description = <"Exposure to substance may result in critical organ system damage or life threatening consequence. Future exposure to the identified 'Substance' should be considered an absolute contra-indication in normal clinical circumstances.">
+            >
+            ["at0117"] = <
+                text = <"Onset of last reaction">
+                description = <"The date and/or time of the onset of the last known occurrence of a reaction event.">
+                comment = <"For example: the actual date and/or time of onset; the interval of time during which the onset occurred; the age of the individual at the time of the onset; or the duration of time since the onset occurred. A partial date is valid, using the DV_DATE_TIME data type, to record only a year.">
+            >
+            ["at0120"] = <
+                text = <"Category">
+                description = <"Category of the identified 'Substance'.">
+                comment = <"This data element has been included because it is currently being captured in some clinical systems. This data can be derived from the Substance where coding systems are used, and is effectively redundant in that situation.">
+            >
+            ["at0121"] = <
+                text = <"Food">
+                description = <"Any substance consumed to provide nutritional support for the body, such as peanut or egg.">
+            >
+            ["at0122"] = <
+                text = <"Medication">
+                description = <"Any substance administered to achieve a physiological effect.">
+            >
+            ["at0123"] = <
+                text = <"Other">
+                description = <"Any other substance encountered including venom, latex and other environmental substances.">
+            >
+            ["at0124"] = <
+                text = <"Indeterminate">
+                description = <"Unable to assess with information available.">
+            >
+            ["at0126"] = <
+                text = <"Indeterminate">
+                description = <"The physiological mechanism could not be determined.">
+            >
+            ["at0128"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR equivalents.">
+            >
+            ["at0129"] = <
+                text = <"Reaction event summary">
+                description = <"Summary details about each adverse reaction event linked to exposure to the identified 'Substance'.">
+            >
+            ["at0130"] = <
+                text = <"Active/inactive status">
+                description = <"Status about whether the adverse reaction risk statement is active or inactive.">
+            >
+            ["at0131"] = <
+                text = <"Active">
+                description = <"The subject is currently experiencing, or is at risk of, a reaction to the identified substance.">
+            >
+            ["at0132"] = <
+                text = <"Inactive">
+                description = <"The subject is no longer at risk of a reaction to the identified substance.">
+            >
+            ["at0133"] = <
+                text = <"Onset of first reaction">
+                description = <"The onset of the first known occurrence of a reaction event.">
+                comment = <"For example: the actual date and/or time of onset; the interval of time during which the onset occurred; the age of the individual at the time of the onset; or the duration of time since the onset occurred. A partial date is valid, using the DV_DATE_TIME data type, to record only a year.">
+            >
+            ["ac9031"] = <
+                text = <"Active/inactive status (synthesised)">
+                description = <"Status about whether the adverse reaction risk statement is active or inactive. (synthesised)">
+            >
+            ["ac9032"] = <
+                text = <"Verification status (synthesised)">
+                description = <"Assertion about the certainty of the propensity, or potential future risk, of the identified 'Substance' to cause a reaction. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Criticality (synthesised)">
+                description = <"An indication of the potential for critical system organ damage or life threatening consequence. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Category (synthesised)">
+                description = <"Category of the identified 'Substance'. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Reaction mechanism (synthesised)">
+                description = <"Identification of the underlying physiological mechanism for the adverse reaction. (synthesised)">
+            >
+        >
+        ["fr"] = <
+            ["at0000"] = <
+                text = <"Risque d'effet indésirable">
+                description = <"Évaluation clinique de la propension d'un individu à présenter une réaction physiologique nocive ou indésirable en cas d'exposition ou de réexposition à une substance.">
+                comment = <"Ces substances comprennent, sans s’y limiter : une substance thérapeutique administrée correctement à une posologie adaptée à la personne concernée ; les aliments ; les matières d’origine végétale ou animale ; ou le venin issu de piqûres d’insectes.">
+                source = <"openEHR,FHIR">
+            >
+            ["at0002"] = <
+                text = <"Substance">
+                description = <"Identification d’une substance ou d’une classe de substances considérée comme exposant la personne à un risque d’effet indésirable.">
+                comment = <"Une substance individuelle et une classe de substances constituent toutes deux des entrées valides dans le champ « Substance ». Une substance peut être un composé de substances plus simples, par exemple un médicament. Il est fortement recommandé, dans la mesure du possible, de coder le champ « Substance » à l’aide d’une terminologie capable de déclencher une aide à la décision. Par exemple : Snomed CT, DM+D, RxNorm, NDFRT, ATC, la liste universelle des médicaments de Nouvelle-Zélande et la terminologie australienne des médicaments. La saisie en texte libre ne doit être utilisée que s’il n’existe aucune terminologie appropriée.">
+            >
+            ["at0006"] = <
+                text = <"Commentaire">
+                description = <"Informations supplémentaires sur la propension à présenter un effet indésirable, non reprises dans d’autres champs.">
+                comment = <"Par exemple : incluant la raison justifiant l’attribution d’un niveau de « criticité » correspondant à un « risque élevé » ; et les consignes relatives à une exposition ou à une administration future de la substance, telles que l’administration au sein d’une unité de soins intensifs ou sous traitement corticostéroïdien.">
+            >
+            ["at0047"] = <
+                text = <"Information complémentaire issue du dossier clinique">
+                description = <"Lien vers des informations complémentaires concernant le tableau clinique et les résultats figurant ailleurs dans le dossier médical, y compris les rapports de tests d'allergie.">
+                comment = <"Par exemple, les symptômes présentés, les résultats d'examen, le diagnostic, etc.">
+            >
+            ["at0058"] = <
+                text = <"Mécanisme de réaction">
+                description = <"Identification du mécanisme physiologique sous-jacent à l'effet indésirable.">
+                comment = <"Les réactions à médiation immunitaire ont traditionnellement été considérées comme un indicateur d’aggravation d’un risque futur significatif. Les connaissances actuelles suggèrent que certaines réactions auparavant considérées comme immunitaires sont en réalité de nature non immunitaire et présentent néanmoins un risque potentiellement mortel. 
+
+Les tests immunologiques peuvent fournir des éléments probants concernant le mécanisme et la substance responsable, mais aucun test n’est sensible ou spécifique à 100 % pour une réaction de sensibilité. 
+
+Il est admis que la plupart des cliniciens ne seront PAS en mesure de distinguer le mécanisme d’une réaction spécifique. Toutefois, cet élément de données est inclus car de nombreux systèmes hérités ont enregistré cet attribut.">
+            >
+            ["at0059"] = <
+                text = <"À médiation immunitaire">
+                description = <"Réaction à médiation immunitaire, y compris les réactions allergiques et les hypersensibilités.">
+            >
+            ["at0060"] = <
+                text = <"À médiation non immunitaire">
+                description = <"Réaction à médiation non immunitaire, pouvant inclure des réactions pseudo-allergiques, des effets indésirables, des intolérances et des toxicités médicamenteuses (par exemple, à la gentamicine).">
+            >
+            ["at0062"] = <
+                text = <"Dernière mise à jour">
+                description = <"Date à laquelle la propension ou l'événement indésirable a été mis à jour.">
+            >
+            ["at0063"] = <
+                text = <"Statut de vérification">
+                description = <"Assertion concernant la certitude de la propension, ou du risque futur potentiel, de la « substance » identifiée à provoquer une réaction.">
+                comment = <"L'aide à la décision déclencherait généralement des alertes pour les statuts « Non confirmé » et « Confirmé », et ignorerait une réaction « Réfutée ». Les systèmes cliniques peuvent choisir de ne pas afficher les entrées d’effets indésirables ayant le statut « Réfutée » dans la liste des effets indésirables. Toutefois, le statut « Réfutée » peut s’avérer utile pour la conciliation de la liste des effets indésirables ou lors des échanges entre systèmes. Certaines implémentations peuvent choisir de rendre ce champ obligatoire. Le type de données « texte libre » permettra des adaptations locales en autorisant l’application d’autres ensembles de valeurs à cet élément de données dans un modèle ; dans ce cas, il est recommandé de coder les valeurs à l’aide d’une terminologie.">
+            >
+            ["at0064"] = <
+                text = <"Non confirmé">
+                description = <"La propension à présenter une réaction à la « substance » identifiée n’a pas été vérifiée de manière objective.">
+            >
+            ["at0065"] = <
+                text = <"Confirmé">
+                description = <"La propension à présenter une réaction à la « substance » identifiée a été objectivement vérifiée. Cela peut inclure des preuves cliniques issues de tests, d’une nouvelle exposition ou d’une observation.">
+            >
+            ["at0066"] = <
+                text = <"Réfuté">
+                description = <"La propension à présenter une réaction à la « substance » identifiée a été contestée ou réfutée avec un niveau de certitude clinique suffisant pour justifier l’invalidation de cette affirmation. Cela peut inclure des preuves cliniques issues de tests, d’une nouvelle exposition ou d’une observation.">
+            >
+            ["at0101"] = <
+                text = <"Criticité">
+                description = <"Une indication du risque de lésions graves touchant des organes vitaux ou de conséquences pouvant mettre la vie en danger.">
+                comment = <"Cela peut être considéré comme une estimation prédictive du « scénario le plus défavorable ». Dans la plupart des contextes, la valeur « Faible » serait considérée comme la valeur par défaut.">
+            >
+            ["at0102"] = <
+                text = <"Faible">
+                description = <"L'exposition à cette substance est peu susceptible d'entraîner des lésions graves des organes vitaux ou des conséquences mettant la vie en danger. Une exposition future à la « substance » identifiée doit être considérée comme une contre-indication relative dans des circonstances cliniques normales.">
+            >
+            ["at0103"] = <
+                text = <"Élevé">
+                description = <"L'exposition à cette substance peut entraîner des lésions graves au niveau des systèmes organiques ou avoir des conséquences potentiellement mortelles. Une exposition future à la « substance » identifiée doit être considérée comme une contre-indication absolue dans des circonstances cliniques normales.">
+            >
+            ["at0117"] = <
+                text = <"Apparition de la dernière réaction">
+                description = <"Date/heure de l'apparition du dernier épisode connu d'une réaction indésirable.">
+                comment = <"Par exemple : la date et/ou l’heure exacte de l’apparition ; l’intervalle de temps au cours duquel l’apparition s’est produite ; l’âge de la personne au moment de l’apparition ; ou la durée écoulée depuis l’apparition. Une date partielle est valable, en utilisant le type de données DV_DATE_TIME, pour enregistrer uniquement l’année.">
+            >
+            ["at0120"] = <
+                text = <"Catégorie">
+                description = <"Catégorie de la « substance » identifiée.">
+                comment = <"Cet élément de données a été inclus car il est actuellement enregistré dans certains systèmes cliniques. Ces données peuvent être dérivées de l’élément « Substance » lorsque des systèmes de codage sont utilisés, et sont alors redondantes.">
+            >
+            ["at0121"] = <
+                text = <"Alimentation">
+                description = <"Toute substance consommée pour apporter un soutien nutritionnel à l'organisme, telle que les cacahuètes ou les œufs.">
+            >
+            ["at0122"] = <
+                text = <"Médicament">
+                description = <"Toute substance administrée dans le but d'obtenir un effet physiologique.">
+            >
+            ["at0123"] = <
+                text = <"Autres">
+                description = <"Toute autre substance rencontrée, y compris le venin, le latex et d’autres substances présentes dans l’environnement.">
+            >
+            ["at0124"] = <
+                text = <"Indéterminé">
+                description = <"Impossible à évaluer à partir des informations disponibles.">
+            >
+            ["at0126"] = <
+                text = <"Indéterminé">
+                description = <"Le mécanisme physiologique n'a pas pu être déterminé.">
+            >
+            ["at0128"] = <
+                text = <"Extension">
+                description = <"Informations supplémentaires nécessaires pour représenter un contenu local ou pour assurer l’alignement avec d’autres modèles de référence ou formalismes.">
+                comment = <"Par exemple : exigences d’information locales ou métadonnées supplémentaires permettant l’alignement avec des équivalents FHIR.">
+            >
+            ["at0129"] = <
+                text = <"Résumé des événements liés aux réactions">
+                description = <"Résumé des détails concernant chaque effet indésirable lié à l'exposition à la « substance » identifiée.">
+            >
+            ["at0130"] = <
+                text = <"Statut actif/inactif">
+                description = <"Statut indiquant si la déclaration relative au risque d'effet indésirable est active ou inactive.">
+            >
+            ["at0131"] = <
+                text = <"Actif">
+                description = <"Le sujet présente actuellement une réaction à la substance identifiée ou risque d'en présenter une.">
+            >
+            ["at0132"] = <
+                text = <"Inactif">
+                description = <"Le sujet ne court plus de risque de réaction à la substance identifiée.">
+            >
+            ["at0133"] = <
+                text = <"Apparition de la première réaction">
+                description = <"Apparition de la première manifestation connue d’un événement indésirable.">
+                comment = <"Par exemple : la date et/ou l’heure exacte de l’apparition ; l’intervalle de temps au cours duquel l’apparition s’est produite ; l’âge de la personne au moment de l’apparition ; ou la durée écoulée depuis l’apparition. Une date partielle est valable, en utilisant le type de données DV_DATE_TIME, pour enregistrer seulement l’année.">
+            >
+            ["ac9031"] = <
+                text = <"Statut actif/inactif (synthesised)">
+                description = <"Statut indiquant si la déclaration relative au risque d'effet indésirable est active ou inactive. (synthesised)">
+            >
+            ["ac9032"] = <
+                text = <"Statut de vérification (synthesised)">
+                description = <"Assertion concernant la certitude de la propension, ou du risque futur potentiel, de la « substance » identifiée à provoquer une réaction. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Criticité (synthesised)">
+                description = <"Une indication du risque de lésions graves touchant des organes vitaux ou de conséquences pouvant mettre la vie en danger. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Catégorie (synthesised)">
+                description = <"Catégorie de la « substance » identifiée. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Mécanisme de réaction (synthesised)">
+                description = <"Identification du mécanisme physiologique sous-jacent à l'effet indésirable. (synthesised)">
+            >
+        >
+        ["ca"] = <
+            ["at0000"] = <
+                text = <"Risc de reacció adversa">
+                description = <"Avaluació clínica de la propensió d’un pacient experimentant una resposta fisiològica nociva o no desitjable si s’exposa, o es reexposa, a una substància.">
+                comment = <"Les substàncies inclouen, però no es limiten a: una substància terapèutica administrada correctament amb la seva dosi apropiada per a la persona; aliments; material derivat de plantes o animals; o verí d’una picada d’insecte.">
+                source = <"openEHR,FHIR">
+            >
+            ["at0002"] = <
+                text = <"Substància">
+                description = <"Identificació d’una substància, o categoria de substàncies, que es considera que posa al pacient en risc d’un esdeveniment de reacció adversa.">
+                comment = <"La substància personal, així com el tipus de substància, són entrades vàlides en «Substància». Una substància pot ser un compost de substàncies més pures, per exemple, un medicament. Es recomana encaridament que «Substància» es trobi programada amb una terminologia capaç d’activar l’ajuda de la presa de decisions, en la mesura del possible. Per exemple, Snomed CT, DM+D, RxNorm, NDFRT, ATC, Llista Universal de Medicines de Nova Zelanda o Terminologia de Medicines d’Austràlia. L’entrada de text lliure només s’ha d’utilitzar si no es disposa de la terminologia adequada.">
+            >
+            ["at0006"] = <
+                text = <"Observacions">
+                description = <"Informació addicional de la propensa a la reacció adversa, no recollida en altres caselles.">
+                comment = <"Per exemple: inclosa la raó per a marcar una «Criticitat» de «Risc elevat»; amb instruccions relacionades amb l'exposició futura o l'administració de la Substància, com l’administració dins d’una Unitat de Cures Intensives o amb l’ajut de corticoesteroides.">
+            >
+            ["at0047"] = <
+                text = <"Informació auxiliar de la història clínica">
+                description = <"Enllaç a informació complementària, inclosos els informes de proves d’al·lèrgia, sobre la presentació i els descobriments que es troben en altra part en la història clínica.">
+                comment = <"Per exemple, presentar símptomes, descobriments dels exàmens, diagnòstics, etc.">
+            >
+            ["at0058"] = <
+                text = <"Mecanisme de reacció">
+                description = <"Identificació del mecanisme fisiològic subjacent de la reacció adversa.">
+                comment = <"Les respostes immunomediades sempre s’han considerat tradicionalment com un indicador de l’escalada de riscs futurs significatius. 
+
+El coneixement actual suggereix que algunes reaccions que abans es pensaven que eren immunes, actualment no són immunes i encara contenen risc de conseqüències mortals. 
+
+Els tests immunològics poden proporcionar evidència addicional per al mecanisme i substància causant, però cap test és 100 % sensible o específic per a una sensibilitat. 
+
+Es reconeix que la major part dels metges NO serà capaç de diferenciar els mecanismes de qualsevol reacció específica. No obstant això, aquest element de dades s’inclou perquè molts sistemes tradicionals han adoptat aquest atribut.">
+            >
+            ["at0059"] = <
+                text = <"Immunomediat">
+                description = <"Reacció immunomediada, incloses les reaccions al·lèrgiques i hipersensibilitat.">
+            >
+            ["at0060"] = <
+                text = <"No immunomediat">
+                description = <"Reacció no immunomediada, que pot incloure reaccions pseudoal·lèrgiques, efectes secundaris, intoleràncies, toxicitat dels medicaments (per exemple, a la Gentamicina).">
+            >
+            ["at0062"] = <
+                text = <"Última actualització">
+                description = <"Datar quan es va actualitzar la propensió o l’esdeveniment de reacció.">
+            >
+            ["at0063"] = <
+                text = <"Estat de verificació">
+                description = <"L’afirmació de la certesa de la propensió, o el potencial risc futur, que la «Substància» identificada pugui provocar una reacció.">
+                comment = <"Els sistemes de suport normalment augmenten les alertes per «No confirmat» i «Confirmat», i ignoren una reacció «Refutada». Els sistemes clínics poden optar per no mostrar les entrades de les reaccions adverses amb un estat de «Refutat» en la Llista de Reaccions Adverses. No obstant, «Refutat» pot ser útil per a la reconciliació de la llista de reaccions adverses o quan es comunique entre els sistemes. Algunes implementacions poden elegir fer obligatori aquest camp. El tipus de dades en text lliure permetrà la variació local en habilitar que altres conjunts de valors s’apliquen a aquest element de dades en una plantilla – en aquesta situació, es recomana que es programen els valors utilitzant terminologia.">
+            >
+            ["at0064"] = <
+                text = <"No confirmat">
+                description = <"La propensió d’una reacció a la «Substància» identificada no s’ha verificat objectivament.">
+            >
+            ["at0065"] = <
+                text = <"Confirmat">
+                description = <"La propensió d’una reacció a la «Substància» identificada s’ha verificat objectivament. Això pot incloure indicis clínics mitjançant proves, reexposició o observació.">
+            >
+            ["at0066"] = <
+                text = <"Refutat">
+                description = <"La propensió d’una reacció a la «Substància» identificada s’ha qüestionat o s’ha desmentit amb prou grau de certesa clínica per a justificar la invalidesa de l'asserció. Això pot incloure un indici clínic mitjançant proves, reexposició o observació.">
+            >
+            ["at0101"] = <
+                text = <"Crític">
+                description = <"Indici de la possibilitat que hi haja danys o conseqüències mortals crítiques en òrgans del sistema.">
+                comment = <"Això es pot registrar com una decisió predictiva en el pitjor dels casos. En la majoria dels contexts, «Baix» es consideraria com el valor predeterminat.">
+            >
+            ["at0102"] = <
+                text = <"Baix">
+                description = <"L’exposició a la substància és poc probable que resulti en danys crítics en òrgans del sistema o conseqüències mortals. Les exposicions futures a la «Substància» identificada s’han de considerar contraindicacions relatives en circumstàncies clíniques normals.">
+            >
+            ["at0103"] = <
+                text = <"Elevat">
+                description = <"L’exposició a la substància pot resultar en danys crítics en òrgans del sistema o conseqüències mortals. Les exposicions futures a la «Substància» identificada s’han de considerar contraindicacions absolutes en circumstàncies clíniques normals.">
+            >
+            ["at0117"] = <
+                text = <"Aparició de l’última reacció">
+                description = <"La data o hora de l’aparició de l’últim incident conegut d’un esdeveniment de reacció.">
+                comment = <"Per exemple: la data o hora actual de l’aparició; l’interval de temps durant el qual l’aparició es va iniciar; l’edat de la persona quan l’aparició va iniciar; o la duració de temps des que l’aparició va iniciar. Una data parcial és vàlida, utilitzant el tipus de dades DV_DATE_TIME per a registrar solament un any.">
+            >
+            ["at0120"] = <
+                text = <"Categoria">
+                description = <"Categoria de la «Substància» identificada.">
+                comment = <"Aquest element de dades s’ha inclòs perquè actualment es recull en alguns sistemes clínics. Aquestes dades poden derivar de la Substància on s’utilitzen sistemes de codificació, i és essencialment redundant en aquestes situacions.">
+            >
+            ["at0121"] = <
+                text = <"Aliments">
+                description = <"Qualsevol substància consumida per a donar suport nutricional al cos, com els cacauets o els ous.">
+            >
+            ["at0122"] = <
+                text = <"Medicació">
+                description = <"Qualsevol substància administrada per a obtindre un efecte fisiològic.">
+            >
+            ["at0123"] = <
+                text = <"Altres">
+                description = <"Qualsevol altra substància trobada, inclosos verí, làtex i altres substàncies del medi ambient.">
+            >
+            ["at0124"] = <
+                text = <"Indeterminat">
+                description = <"Impossible d’avaluar amb la informació disponible.">
+            >
+            ["at0126"] = <
+                text = <"Indeterminat">
+                description = <"El mecanisme fisiològic no es pot determinar.">
+            >
+            ["at0128"] = <
+                text = <"Extensió">
+                description = <"Informació addicional requerida per a capturar el contingut local o per alinear-se amb altres models/formalismes de referència.">
+                comment = <"Per exemple: requisits d’informació local o metadades addicionals per alinear-se amb equivalents FHIR.">
+            >
+            ["at0129"] = <
+                text = <"Sumari d’esdeveniments de reacció">
+                description = <"Dades del sumari de cada esdeveniment de reacció adversa lligada a l'exposició a la «Substància» identificada.">
+            >
+            ["at0130"] = <
+                text = <"Estat actiu/inactiu">
+                description = <"Estat sobre si la declaració del risc de reacció adversa està actiu o inactiu.">
+            >
+            ["at0131"] = <
+                text = <"Actiu">
+                description = <"El pacient es troba actualment experimentant, o amb risc d’experimentar, una reacció a la substància identificada.">
+            >
+            ["at0132"] = <
+                text = <"Inactiu">
+                description = <"El pacient ja no es troba amb risc d’experimentar una reacció a la substància identificada.">
+            >
+            ["at0133"] = <
+                text = <"Aparició de la primera reacció">
+                description = <"L’aparició del primer incident conegut d’un esdeveniment de reacció.">
+                comment = <"Per exemple: la data o hora actual de l’aparició; l’interval de temps durant el qual l’aparició va iniciar; l’edat de la persona quan l’aparició va iniciar; o la duració de temps des que l’aparició va iniciar. Una data parcial és vàlida, utilitzant el tipus de dades DV_DATE_TIME per a registrar solament un any.">
+            >
+            ["ac9031"] = <
+                text = <"Estat actiu/inactiu (synthesised)">
+                description = <"Estat sobre si la declaració del risc de reacció adversa està actiu o inactiu. (synthesised)">
+            >
+            ["ac9032"] = <
+                text = <"Estat de verificació (synthesised)">
+                description = <"L’afirmació de la certesa de la propensió, o el potencial risc futur, que la «Substància» identificada pugui provocar una reacció. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Crític (synthesised)">
+                description = <"Indici de la possibilitat que hi haja danys o conseqüències mortals crítiques en òrgans del sistema. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Categoria (synthesised)">
+                description = <"Categoria de la «Substància» identificada. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Mecanisme de reacció (synthesised)">
+                description = <"Identificació del mecanisme fisiològic subjacent de la reacció adversa. (synthesised)">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Riesgo de reacción adversa">
+                description = <"Evaluación clínica de la propensión de un paciente experimentando una respuesta fisiológica nociva o no deseable si se expone, o se reexpone, a una sustancia.">
+                comment = <"Las sustancias incluyen, pero no se limitan, a: una sustancia terapéutica administrada correctamente con su dosis apropiada para la persona; alimentos; material derivado de plantas o animales; o veneno de una picada de insecto.">
+                source = <"openEHR, FHIR">
+            >
+            ["at0002"] = <
+                text = <"Sustancia">
+                description = <"Identificación de una sustancia, o categoría de sustancias, que se considera que pone al paciente en riesgo de evento de reacción adversa.">
+                comment = <"La sustancia personal, así como el tipo de sustancia, son entradas válidas en \"Sustancia\". Una sustancia puede ser un compuesto de sustancias más puras, por ejemplo, un medicamento. Se recomienda encarecidamente que \"Sustancia\" se encuentre codificada con una terminología capaz de activar la ayuda a la toma de decisiones, en la medida de lo posible. Por ejemplo, SNOMED CT, DM+D, RxNorm, NDFRT, ATC, Listado Universal de Medicinas de Nueva Zelanda o Terminologia de Medicinas de Australia. La entrada de texto libre solamente se ha de utilizar si no se dispone de una terminología adecuada.">
+            >
+            ["at0006"] = <
+                text = <"Comentario">
+                description = <"Información adicional de la propensión a la reacción adversa, no recogida en otros campos.">
+                comment = <"Por ejemplo: incluir la razón para marcar una \"Criticidad\" o \"Riesgo elevado\"; e instrucciones relacionadas con la exposición futura o la administración de la Sustancia, como la administración dentro de una Unidad de Curas intensivas o con la ayuda de corticosteroides.">
+            >
+            ["at0047"] = <
+                text = <"Información de soporte de la historia clínica">
+                description = <"Enlace a la información complementaria, incluidos los informes de pruebas de alergia, sobre la presentación y los descubrimientos que se encuentras en la otra parte de la historia clínica.">
+                comment = <"Por ejemplo, presentar síntomas, descubrimientos de exámenes, diagnósticos, etc.">
+            >
+            ["at0058"] = <
+                text = <"Mecanismo de reacción">
+                description = <"Identificación del mecanismo fisiológico subyacente de la reacción adversa.">
+                comment = <"Las respuestas inmunomediadas siempre se han considerado tradicionalmente como un indicador de escalada de riesgos futuros significativos. El conocimiento actual sugiere que algunas reacciones que antes se pensaba que eran inmunes, actualmente no son inmunes y todavía contienen riesgo de consecuencias mortales.
+
+Los tests inmunológicos pueden proporcionar evidencia adicional para el mecanismo y sustancia causante, pero ningún test es 100% sensible o específico para una sensibilidad.
+
+Se reconoce que la mayor parte de los médicos NO serán capaces de diferenciar los mecanismos de cualquier reacción específica. No obstante, este elemento de datos se incluye porque muchos sistemas tradicionales han adoptado este atributo.">
+            >
+            ["at0059"] = <
+                text = <"Inmunomediado">
+                description = <"Reacción inmunomediada, incluidas las reacciones alérgicas y la hipersensibilidad.">
+            >
+            ["at0060"] = <
+                text = <"No inmunomediado">
+                description = <"Reacción no inmunomediada, que puede incluir reacciones pseudo alérgicas, efectos secundarios, intolerancias, toxicidad de los medicamentos (por ejemplo, a la gentamicina).">
+            >
+            ["at0062"] = <
+                text = <"Última actualización">
+                description = <"Fecha cuando se actualizó la propensión al evento de reacción.">
+            >
+            ["at0063"] = <
+                text = <"Estado de verificación">
+                description = <"Afirmación de la certeza de la propensión, o el potencial riesgo futuro, que la \"sustancia\" identificada pueda provocar una reacción.">
+                comment = <"Los sistemas de soporte normalmente aumentan las alertas por \"No confirmado\" y \"Confirmado\", e ignoran una reacción \"Refutado\". Los sistemas clínicos pueden optar por no mostrar las entradas de las reacciones adversas con un estado de \"Refutado\" en la lista de Reacciones Adversas. No obstante, \"Refutado\" puede ser útil para la reconciliación de la lista de reacciones adversas o cuando se comunique entre los sistemas. Algunas implementaciones puede elegir hacer obligatorio este campo. El tipo de datos en texto libre permitirá la variación local al habilitar que otros conjuntos de valores se apliquen a este elemento de datos en una plantilla - en esta situación, se recomienda que se programen los valores utilizando una terminología.">
+            >
+            ["at0064"] = <
+                text = <"No confirmado">
+                description = <"La propensión de una reacción a la sustancia identificado no se ha verificado objetivamente.">
+            >
+            ["at0065"] = <
+                text = <"Confirmado">
+                description = <"La propensión a una reacción a la \"Sustancia\" identificada se ha verificado objetivamente. Esto puede incluir indicios clínicos mediante pruebas, reexposición u observación.">
+            >
+            ["at0066"] = <
+                text = <"Refutado">
+                description = <"La propensión de una reacción a la \"Sustancia\" identificada se ha cuestionado o se ha desmentido con suficiente grado de certeza para justificar la invalidez de la aserción. Esto puede incluir un indicio mediante pruebas, reexposición u observación.">
+            >
+            ["at0101"] = <
+                text = <"Criticidad">
+                description = <"Indicio de la posibilidad que haya daños">
+                comment = <"Esto se puede registrar como una decisión predictiva en el peor de los casos. En la mayoría de los contextos, \"Bajo\" se consideraría como el valor predeterminado.">
+            >
+            ["at0102"] = <
+                text = <"Bajo">
+                description = <"La exposición a la sustancia es poco probable que resulte en daños críticos en órganos del sistema o consecuencias mortales. Las exposiciones futuras a la \"Sustancia\" identificada se han de considerar contraindicaciones relativas en circunstancias clínicas normales.">
+            >
+            ["at0103"] = <
+                text = <"Alto">
+                description = <"La exposición a la sustancia puede resultar en daños críticos en órganos del sistema o consecuencias mortales. Las exposiciones futuras a la \"Sustancia\" identificada se han de considerar contraindicaciones absolutas en circunstancias clínicas normales.">
+            >
+            ["at0117"] = <
+                text = <"Aparición de la última reacción">
+                description = <"La aparición del primer incidente conocido de un evento de reacción.">
+                comment = <"Por ejemplo: la fecha u hora actual de la aparición; el intervalo de tiempo durante el cual la aparición se inició; la edad de la persona cuando la aparición se inició; o la duración de tiempo desde que la aparición se inició. Una fecha parcial es válida, utilizando el tipo de dato DV_DATE_TIME para registrar solamente un año.">
+            >
+            ["at0120"] = <
+                text = <"Categoría">
+                description = <"Categoría de la \"Sustancia\" identificada.">
+                comment = <"Este elemento de datos se ha incluido porque actualmente se recoge en algunos sistemas clínicos. Estos datos pueden derivar de la sustancia donde se utilizan sistemas de codificación, y es esencialmente redundante en estas situaciones.">
+            >
+            ["at0121"] = <
+                text = <"Alimentos">
+                description = <"Cualquier sustancia consumida puede para dar soporte nutricional al cuerpo, como los cacahuetes o los huevos.">
+            >
+            ["at0122"] = <
+                text = <"Medicación">
+                description = <"Cualquier sustancia administrada para obtener un efecto fisiológico.">
+            >
+            ["at0123"] = <
+                text = <"Otros">
+                description = <"Cualquier otra sustancia encontrada, incluso venenos, látex y otras sustancias del medio ambiente.">
+            >
+            ["at0124"] = <
+                text = <"Indeterminado">
+                description = <"Imposible de evaluar con la información disponible.">
+            >
+            ["at0126"] = <
+                text = <"Indeterminado">
+                description = <"El mecanismo fisiológico no se puede determinar.">
+            >
+            ["at0128"] = <
+                text = <"Extensión">
+                description = <"Información adicional requerida para capturar el contenido local o para alinearse con otros modelos/formalismos de referencia.">
+                comment = <"Por ejemplo: requisitos de información adicional local o metadatos adicionales para alinearse con equivalentes FHIR.">
+            >
+            ["at0129"] = <
+                text = <"Resumen del evento de reacción">
+                description = <"Resumen detallado sobre cada evento de reacción adversa ligada a la exposición a la \"Sustancia\" identificada.">
+            >
+            ["at0130"] = <
+                text = <"Estado activo/inactivo">
+                description = <"Estado sobre si la declaración del riesgo de reacción adversa está activo o inactivo.">
+            >
+            ["at0131"] = <
+                text = <"Activo">
+                description = <"El sujeto se encuentra actualmente experimentando, o con un riesgo de experimentar, una reacción a la sustancia identificada.">
+            >
+            ["at0132"] = <
+                text = <"Inactivo">
+                description = <"El sujeto ya no se encuentra con riesgo de experimentar una reacción a la sustancia identificada.">
+            >
+            ["at0133"] = <
+                text = <"Aparición de la primera reacción">
+                description = <"La aparición del primer incidente conocido como un evento de reacción.">
+                comment = <"Por ejemplo: la fecha u hora actual de la aparición; el intervalo de tiempo durante el cual la aparición se inició; la edad de la persona cuando la aparición se inició; o la duración de tiempo desde que la aparición se inició. Una fecha parcial es válida, utilizando el tipo de dato DV_DATE_TIME para registrar únicamente un año.">
+            >
+            ["ac9031"] = <
+                text = <"Estado activo/inactivo (synthesised)">
+                description = <"Estado sobre si la declaración del riesgo de reacción adversa está activo o inactivo. (synthesised)">
+            >
+            ["ac9032"] = <
+                text = <"Estado de verificación (synthesised)">
+                description = <"Afirmación de la certeza de la propensión, o el potencial riesgo futuro, que la \"sustancia\" identificada pueda provocar una reacción. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Criticidad (synthesised)">
+                description = <"Indicio de la posibilidad que haya daños (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Categoría (synthesised)">
+                description = <"Categoría de la \"Sustancia\" identificada. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Mecanismo de reacción (synthesised)">
+                description = <"Identificación del mecanismo fisiológico subyacente de la reacción adversa. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9031"] = <
+            id = <"ac9031">
+            members = <"at0131", "at0132">
+        >
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0121", "at0122", "at0123">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0102", "at0103", "at0124">
+        >
+        ["ac9032"] = <
+            id = <"ac9032">
+            members = <"at0064", "at0065", "at0066">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0059", "at0060", "at0126">
+        >
+    >

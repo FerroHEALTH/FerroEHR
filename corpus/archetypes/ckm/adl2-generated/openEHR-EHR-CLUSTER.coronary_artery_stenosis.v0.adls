@@ -1,0 +1,300 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=7fcc9ef1-40f3-444f-a934-c2b1a84d241b; build_uid=070c6768-4f5b-4876-ae52-8e607e3775bc)
+    openEHR-EHR-CLUSTER.coronary_artery_stenosis.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["date"] = <"2020-08-31">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"45C75D44B81CB8FA426302BB3DDE841A">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Coronary artery stenosis
+        items cardinality matches {1..*; unordered} matches {
+            allow_archetype CLUSTER[at0046] matches {    -- Calcium score [Cluster]
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            ELEMENT[at0047] occurrences matches {0..1} matches {    -- Presence of plaque
+                value matches {
+                    DV_BOOLEAN[at9004]
+                }
+            }
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Stenosis location
+                value matches {
+                    DV_CODED_TEXT[at9005] matches {
+                        defining_code matches {[ac9000]}    -- Stenosis location (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Stenosis severity
+                value matches {
+                    DV_ORDINAL[at9006] matches {
+                        [value, symbol] matches {
+                            [{0}, {[at0015]}],    -- Normal
+                            [{1}, {[at0016]}],    -- Minimal
+                            [{2}, {[at0017]}],    -- Mild
+                            [{3}, {[at0018]}],    -- Moderate
+                            [{4}, {[at0019]}],    -- Severe
+                            [{5}, {[at0020]}]    -- Occluded
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Lesion length
+                value matches {
+                    DV_CODED_TEXT[at9007] matches {
+                        defining_code matches {[ac9002]}    -- Lesion length (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Plaque type
+                value matches {
+                    DV_TEXT[at9008]
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Modifier
+                value matches {
+                    DV_CODED_TEXT[at9009] matches {
+                        defining_code matches {[ac9003]}    -- Modifier (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0048] occurrences matches {0..1} matches {    -- Vulnerable plaque assessment
+                value matches {
+                    DV_TEXT[at9010]
+                }
+            }
+            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9011]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Coronary artery stenosis">
+                description = <"Details of coronary arterial calcific plaque and the situation of stenosis.">
+            >
+            ["at0001"] = <
+                text = <"Stenosis location">
+                description = <"A standardized approach to coronary segmentation.">
+            >
+            ["at0004"] = <
+                text = <"Stenosis severity">
+                description = <"Quantitative assessment of stenosis severity.">
+            >
+            ["at0005"] = <
+                text = <"Lesion length">
+                description = <"Quantitative assessment of stenosis severity.">
+            >
+            ["at0006"] = <
+                text = <"Plaque type">
+                description = <"The type of detected plaque.">
+            >
+            ["at0007"] = <
+                text = <"Modifier">
+                description = <"To indicate that a study is not fully evaluable or non-diagnostic (N) or to indicate the presence of stents (S), grafts (G), and vulnerable plaque (V).">
+            >
+            ["at0008"] = <
+                text = <"Comment">
+                description = <"To describe uninterpretable segments.">
+            >
+            ["at0015"] = <
+                text = <"Normal">
+                description = <"absence of plaque and no luminal stenosis">
+            >
+            ["at0016"] = <
+                text = <"Minimal">
+                description = <"plaque with <25% stenosis">
+            >
+            ["at0017"] = <
+                text = <"Mild">
+                description = <"25% to 49% stenosis">
+            >
+            ["at0018"] = <
+                text = <"Moderate">
+                description = <"50% to 69% stenosis">
+            >
+            ["at0019"] = <
+                text = <"Severe">
+                description = <"70% to 99% stenosis">
+            >
+            ["at0020"] = <
+                text = <"Occluded">
+                description = <"apparent occlusion">
+            >
+            ["at0021"] = <
+                text = <"Proximal RCA (pRCA)">
+                description = <"Ostium of the RCA(right coronary artery) to one-half the distance to the acute margin of heart.">
+            >
+            ["at0022"] = <
+                text = <"Mid RCA (mRCA)">
+                description = <"End of proximal RCA to the acute margin of heart.">
+            >
+            ["at0023"] = <
+                text = <"Distal RCA (dRCA)">
+                description = <"End of mid RCA to origin of the PDA (posterior descending artery)">
+            >
+            ["at0024"] = <
+                text = <"PDA-R (R-PDA)">
+                description = <"PDA from RCA.">
+            >
+            ["at0025"] = <
+                text = <"Left main (LM)">
+                description = <"Ostium of LM to bifurcation of LAD (left anterior descending artery) and LCx (left circumflex artery).">
+            >
+            ["at0026"] = <
+                text = <"Proximal LAD (pLAD)">
+                description = <"End of LM to the first large septal or D1 (first diagonal; >1.5 mm in size) whichever is most proximal.">
+            >
+            ["at0027"] = <
+                text = <"Mid LAD (mLAD)">
+                description = <"End of proximal LAD to one-half the distance to the apex.">
+            >
+            ["at0028"] = <
+                text = <"Distal LAD (dLAD)">
+                description = <"End of mid LAD to end of LAD.">
+            >
+            ["at0029"] = <
+                text = <"D1">
+                description = <"First diagonal branch D1.">
+            >
+            ["at0030"] = <
+                text = <"D2">
+                description = <"Second diagonal branch D2.">
+            >
+            ["at0031"] = <
+                text = <"Proximal LCx (pCx)">
+                description = <"End of LM to the origin of the OM1 (first obtuse marginal).">
+            >
+            ["at0032"] = <
+                text = <"OM1">
+                description = <"First OM1 traversing the lateral wall of the left ventricle.">
+            >
+            ["at0033"] = <
+                text = <"Mid and distal LCx (LCx)">
+                description = <"Traveling in the atrioventricular groove, distal to the OM1 branch to the end of the vessel or origin of the L-PDA (left PDA).">
+            >
+            ["at0034"] = <
+                text = <"OM2">
+                description = <"Second marginal OM2.">
+            >
+            ["at0035"] = <
+                text = <"PDA-L (L-PDA)">
+                description = <"PDA from LCx.">
+            >
+            ["at0036"] = <
+                text = <"PLB-R (R-PLB)">
+                description = <"PLB(posterior-lateral branch) from RCA.">
+            >
+            ["at0037"] = <
+                text = <"Ramus intermedius (RI)">
+                description = <"Vessel originating from the left main between the LAD and LCx in case of a trifurcation.">
+            >
+            ["at0038"] = <
+                text = <"PLB-L (L-PLB)">
+                description = <"PLB from LCx.">
+            >
+            ["at0039"] = <
+                text = <"Discrete">
+                description = <"The lesion length is below 10mm.">
+            >
+            ["at0040"] = <
+                text = <"Tubular">
+                description = <"The lesion length is between 10-20mm.">
+            >
+            ["at0041"] = <
+                text = <"Diffuse">
+                description = <"The lesion length is above 20mm.">
+            >
+            ["at0042"] = <
+                text = <"S">
+                description = <"To indicate the presence of stents.">
+            >
+            ["at0043"] = <
+                text = <"V">
+                description = <"To indicate vulnerable plaque.">
+            >
+            ["at0044"] = <
+                text = <"N">
+                description = <"Not fully evaluable or non-diagnostic.">
+            >
+            ["at0045"] = <
+                text = <"G">
+                description = <"To indicate grafts.">
+            >
+            ["at0046"] = <
+                text = <"Calcium score [Cluster]">
+                description = <"">
+            >
+            ["at0047"] = <
+                text = <"Presence of plaque">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"Vulnerable plaque assessment">
+                description = <"">
+            >
+            ["ac9000"] = <
+                text = <"Stenosis location (synthesised)">
+                description = <"A standardized approach to coronary segmentation. (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Stenosis severity (synthesised)">
+                description = <"Quantitative assessment of stenosis severity. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Lesion length (synthesised)">
+                description = <"Quantitative assessment of stenosis severity. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Modifier (synthesised)">
+                description = <"To indicate that a study is not fully evaluable or non-diagnostic (N) or to indicate the presence of stents (S), grafts (G), and vulnerable plaque (V). (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0039", "at0040", "at0041">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0021", "at0022", "at0023", "at0024", "at0025", "at0026", "at0027", "at0028", "at0029", "at0030", "at0031", "at0032", "at0033", "at0034", "at0035", "at0036", "at0037", "at0038">
+        >
+        ["ac9011"] = <
+            id = <"ac9011">
+            members = <"at0015", "at0016", "at0017", "at0018", "at0019", "at0020">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0042", "at0043", "at0044", "at0045">
+        >
+    >

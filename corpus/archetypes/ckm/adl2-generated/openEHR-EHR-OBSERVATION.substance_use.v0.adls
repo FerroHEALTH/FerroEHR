@@ -1,0 +1,431 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=76247f4f-a44a-4b3f-b303-d86fae7a1a24; build_uid=b1a64fc7-5a23-470d-9cbf-52389d9b9f3e)
+    openEHR-EHR-OBSERVATION.substance_use.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Adriana Kitajima, Débora Farage, Fernanda Maia, Laíse Figueiredo, Marivan Abrahão">
+                ["organisation"] = <"Core Consulting">
+                ["email"] = <"contato@coreconsulting.com.br">
+            >
+            accreditation = <"Hospital Alemão Oswaldo Cruz (HAOC)">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2009-05-06">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Sam Heard, Ocean Informatics, Australia", "Vebjørn Arntzen, Oslo University Hospital, Norway">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"52609E1B6CB58FB9C74D4B7944A5EC77">
+    >
+    details = <
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"*To record the consumption of a specific substance or class of substances that may harm an individual's health or social well-being at a specific point or interval of time. (en)">
+            keywords = <"*drugs (en)", "*addiction (en)", "*abuse (en)", "*doping (en)", "*narcotics (en)", "*performance enhancing (en)", "*steroids (en)">
+            use = <"*Use to record the consumption of a specific substance or class of substances that may harm an individual's health or social well-being. This includes use at specific point or interval of time, and use of mathematical functions such as average or maximum consumption over a interval of time.
+
+This archetype has been designed as a framework for objectively documenting the use or administration of a single substance. While it supports recognition of abuse and dependence, it is not intended exclusively for this purpose.
+
+A typical use of this archetype will be related to a diary record of use or consumption of substances.
+
+Substances that fall within the scope of this archetype include harmful or potentially addictive substances, legal and illegal substances, as well as medications that are misused. Misuse may involve administration without clinical supervision, use for non-recommended purposes, or consumption in quantities or frequencies that exceed safe dosages. Examples of substances that may be recorded using this archetype include but are not limited to:
+- tobacco;
+- alcohol;
+- caffeine;
+- nicotine and other clinically significant components of vaping liquid;
+- psychostimulants;
+- barbiturates;
+- cannabis;
+- hallucinogens;
+- opioids;
+- GHB;
+- MDMA;
+- sniffing of hydrocarbons or other solvents;
+- \"bath salts\"; and
+- medication administration, such as a laxative for purposes other than relief of constipation, beta blockers to reduce the heart rate in elite athletes and anabolic steroids in weight lifters. (en)">
+            misuse = <"*Not to be used to record summary details about the use of the substance. Use EVALUATION.substance_use_summary for this purpose.
+
+Not to be used to record answers to pre-defined screening questions about substance use. Use OBSERVATION.substance_use_screening archetype for this purpose.
+  
+Not to be used to record use of consumption of tobacco or alcohol. Use a separate archetype for this purpose, or a specialisation of this archetype.
+
+Not to be used to record the summary or persistent information about, or monitor the cumulative dose of, a medication. Use EVALUATION.medication_summary for this purpose.
+
+Not to be used to record accidental administration of, or exposure to, a substance or medication, overdoses or poisonings, etc. Use an Adverse event archetype for this purpose.
+
+Not to be used to record information about appropriate medication use under clinical supervision, for recommended therapeutic intent and at appropriate dosages. Use an appropriate medication archetype for this purpose. (en)">
+            copyright = <"© copyright (c) 2009 openEHR Foundation, openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the consumption of a specific substance or class of substances that may harm an individual's health or social well-being at a specific point or interval of time.">
+            keywords = <"drugs", "addiction", "abuse", "doping", "narcotics", "performance enhancing", "steroids">
+            use = <"Use to record the consumption of a specific substance or class of substances that may harm an individual's health or social well-being. This includes use at specific point or interval of time, and use of mathematical functions such as average or maximum consumption over a interval of time.
+
+This archetype has been designed as a framework for objectively documenting the use or administration of a single substance. While it supports recognition of abuse and dependence, it is not intended exclusively for this purpose.
+
+A typical use of this archetype will be related to a diary record of use or consumption of substances.
+
+Substances that fall within the scope of this archetype include harmful or potentially addictive substances, legal and illegal substances, as well as medications that are misused. Misuse may involve administration without clinical supervision, use for non-recommended purposes, or consumption in quantities or frequencies that exceed safe dosages. Examples of substances that may be recorded using this archetype include but are not limited to:
+- tobacco;
+- alcohol;
+- caffeine;
+- nicotine and other clinically significant components of vaping liquid;
+- psychostimulants;
+- barbiturates;
+- cannabis;
+- hallucinogens;
+- opioids;
+- GHB;
+- MDMA;
+- sniffing of hydrocarbons or other solvents;
+- \"bath salts\"; and
+- medication administration, such as a laxative for purposes other than relief of constipation, beta blockers to reduce the heart rate in elite athletes and anabolic steroids in weight lifters.">
+            misuse = <"Not to be used to record summary details about the use of the substance. Use EVALUATION.substance_use_summary for this purpose.
+
+Not to be used to record answers to pre-defined screening questions about substance use. Use OBSERVATION.substance_use_screening archetype for this purpose.
+  
+Not to be used to record use of consumption of tobacco or alcohol. Use a separate archetype for this purpose, or a specialisation of this archetype.
+
+Not to be used to record the summary or persistent information about, or monitor the cumulative dose of, a medication. Use EVALUATION.medication_summary for this purpose.
+
+Not to be used to record accidental administration of, or exposure to, a substance or medication, overdoses or poisonings, etc. Use an Adverse event archetype for this purpose.
+
+Not to be used to record information about appropriate medication use under clinical supervision, for recommended therapeutic intent and at appropriate dosages. Use an appropriate medication archetype for this purpose.">
+            copyright = <"© copyright (c) 2009 openEHR Foundation, openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"*To record the consumption of a specific substance or class of substances that may harm an individual's health or social well-being at a specific point or interval of time. (en)">
+            keywords = <"*drugs (en)", "*addiction (en)", "*abuse (en)", "*doping (en)", "*narcotics (en)", "*performance enhancing (en)", "*steroids (en)">
+            use = <"*Use to record the consumption of a specific substance or class of substances that may harm an individual's health or social well-being. This includes use at specific point or interval of time, and use of mathematical functions such as average or maximum consumption over a interval of time.
+
+This archetype has been designed as a framework for objectively documenting the use or administration of a single substance. While it supports recognition of abuse and dependence, it is not intended exclusively for this purpose.
+
+A typical use of this archetype will be related to a diary record of use or consumption of substances.
+
+Substances that fall within the scope of this archetype include harmful or potentially addictive substances, legal and illegal substances, as well as medications that are misused. Misuse may involve administration without clinical supervision, use for non-recommended purposes, or consumption in quantities or frequencies that exceed safe dosages. Examples of substances that may be recorded using this archetype include but are not limited to:
+- tobacco;
+- alcohol;
+- caffeine;
+- nicotine and other clinically significant components of vaping liquid;
+- psychostimulants;
+- barbiturates;
+- cannabis;
+- hallucinogens;
+- opioids;
+- GHB;
+- MDMA;
+- sniffing of hydrocarbons or other solvents;
+- \"bath salts\"; and
+- medication administration, such as a laxative for purposes other than relief of constipation, beta blockers to reduce the heart rate in elite athletes and anabolic steroids in weight lifters. (en)">
+            misuse = <"*Not to be used to record summary details about the use of the substance. Use EVALUATION.substance_use_summary for this purpose.
+
+Not to be used to record answers to pre-defined screening questions about substance use. Use OBSERVATION.substance_use_screening archetype for this purpose.
+  
+Not to be used to record use of consumption of tobacco or alcohol. Use a separate archetype for this purpose, or a specialisation of this archetype.
+
+Not to be used to record the summary or persistent information about, or monitor the cumulative dose of, a medication. Use EVALUATION.medication_summary for this purpose.
+
+Not to be used to record accidental administration of, or exposure to, a substance or medication, overdoses or poisonings, etc. Use an Adverse event archetype for this purpose.
+
+Not to be used to record information about appropriate medication use under clinical supervision, for recommended therapeutic intent and at appropriate dosages. Use an appropriate medication archetype for this purpose. (en)">
+            copyright = <"© copyright (c) 2009 openEHR Foundation, openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Substance use
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Substance name
+                                        value matches {
+                                            DV_TEXT[at9004]
+                                        }
+                                    }
+                                    CLUSTER[at0010] occurrences matches {0..1} matches {    -- Consumption details
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Form
+                                                value matches {
+                                                    DV_TEXT[at9005]
+                                                }
+                                            }
+                                            ELEMENT[at0018] matches {    -- Route
+                                                value matches {
+                                                    DV_TEXT[at9006]
+                                                }
+                                            }
+                                            ELEMENT[at0005] matches {    -- Pattern
+                                                value matches {
+                                                    DV_CODED_TEXT[at9007] matches {
+                                                        defining_code matches {[ac9004]}    -- Pattern (synthesised)
+                                                    }
+                                                    DV_TEXT[at9008]
+                                                }
+                                            }
+                                            ELEMENT[at0012]    -- Amount
+                                        }
+                                    }
+                                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Triggers
+                                        value matches {
+                                            DV_TEXT[at9009]
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0014] matches {    -- Readiness for change
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.change\.v1\..*/}
+                                    }
+                                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Evidence of dependence
+                                        value matches {
+                                            DV_TEXT[at9010]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"*Substance use (en)">
+                description = <"*The consumption of a specific substance or class of substances that may harm an individual's health or social well-being at a specific point or interval of time. (en)">
+            >
+            ["at0002"] = <
+                text = <"Qualquer evento">
+                description = <"*Any event. (en)">
+            >
+            ["at0004"] = <
+                text = <"*Substance name (en)">
+                description = <"Identificação da substância">
+            >
+            ["at0005"] = <
+                text = <"*Pattern (en)">
+                description = <"*The pattern of frequency of use of the specific substance. (en)">
+                comment = <"*This element is repeatable to allow multiple ways of recording the pattern of use. The typical pattern of use can be made more granular by coding with a terminology or a local value set, or using the quantity data type, in a template. (en)">
+            >
+            ["at0006"] = <
+                text = <"Uso diário">
+                description = <"*Used every day. (en)">
+            >
+            ["at0007"] = <
+                text = <"Uso semanal">
+                description = <"*Used at least weekly. (en)">
+            >
+            ["at0008"] = <
+                text = <"Uso irregular">
+                description = <"*Used irregularly. (en)">
+            >
+            ["at0009"] = <
+                text = <"Sem uso">
+                description = <"*Not used at all. (en)">
+            >
+            ["at0010"] = <
+                text = <"Detalhes do consumo">
+                description = <"*Details about the consumption of the substance. (en)">
+            >
+            ["at0011"] = <
+                text = <"Forma">
+                description = <"*Form of the substance used. (en)">
+            >
+            ["at0012"] = <
+                text = <"Quantidade">
+                description = <"*Amount of substance consumed.  Data type can be further specified in specialised archetypes or in templates. (en)">
+            >
+            ["at0013"] = <
+                text = <"Gatilhos">
+                description = <"*Identified triggers which stimulate or cause use. (en)">
+            >
+            ["at0014"] = <
+                text = <"Disponibilidade para mudança">
+                description = <"*Details about the readiness to change use or consumption of substance. (en)">
+            >
+            ["at0016"] = <
+                text = <"Evidência de dependência">
+                description = <"*Description of any evidence of dependence on the substance. (en)">
+            >
+            ["at0018"] = <
+                text = <"*Route (en)">
+                description = <"Método de uso ou consumo da substância">
+                comment = <"*Coding with an external terminology is preferred, where possible. (en)">
+            >
+            ["ac9004"] = <
+                text = <"*Pattern (en) (synthesised)">
+                description = <"*The pattern of frequency of use of the specific substance. (en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Substance use">
+                description = <"The consumption of a specific substance or class of substances that may harm an individual's health or social well-being at a specific point or interval of time.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Substance name">
+                description = <"The name of the substance or class of substance.">
+                comment = <"Coding with an external terminology is preferred, where possible.">
+            >
+            ["at0005"] = <
+                text = <"Pattern">
+                description = <"The pattern of frequency of use of the specific substance.">
+                comment = <"This element is repeatable to allow multiple ways of recording the pattern of use. The typical pattern of use can be made more granular by coding with a terminology or a local value set, or using the quantity data type, in a template.">
+            >
+            ["at0006"] = <
+                text = <"Daily use">
+                description = <"Used every day.">
+            >
+            ["at0007"] = <
+                text = <"Weekly use">
+                description = <"Used at least weekly.">
+            >
+            ["at0008"] = <
+                text = <"Irregular use">
+                description = <"Used irregularly.">
+            >
+            ["at0009"] = <
+                text = <"No use">
+                description = <"Not used at all.">
+            >
+            ["at0010"] = <
+                text = <"Consumption details">
+                description = <"Details about the consumption of the substance.">
+            >
+            ["at0011"] = <
+                text = <"Form">
+                description = <"Form of the substance used.">
+            >
+            ["at0012"] = <
+                text = <"Amount">
+                description = <"Amount of substance consumed.  Data type can be further specified in specialised archetypes or in templates.">
+            >
+            ["at0013"] = <
+                text = <"Triggers">
+                description = <"Identified triggers which stimulate or cause use.">
+            >
+            ["at0014"] = <
+                text = <"Readiness for change">
+                description = <"Details about the readiness to change use or consumption of substance.">
+            >
+            ["at0016"] = <
+                text = <"Evidence of dependence">
+                description = <"Description of any evidence of dependence on the substance.">
+            >
+            ["at0018"] = <
+                text = <"Route">
+                description = <"The name of the route of administration of the specified substance.">
+                comment = <"Coding with an external terminology is preferred, where possible.">
+            >
+            ["ac9004"] = <
+                text = <"Pattern (synthesised)">
+                description = <"The pattern of frequency of use of the specific substance. (synthesised)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"*Substance use (en)">
+                description = <"*The consumption of a specific substance or class of substances that may harm an individual's health or social well-being at a specific point or interval of time. (en)">
+            >
+            ["at0002"] = <
+                text = <"إحدى الوقائع">
+                description = <"*Any event. (en)">
+            >
+            ["at0004"] = <
+                text = <"*Substance name (en)">
+                description = <"تعريف المادة">
+            >
+            ["at0005"] = <
+                text = <"*Pattern (en)">
+                description = <"*The pattern of frequency of use of the specific substance. (en)">
+                comment = <"*This element is repeatable to allow multiple ways of recording the pattern of use. The typical pattern of use can be made more granular by coding with a terminology or a local value set, or using the quantity data type, in a template. (en)">
+            >
+            ["at0006"] = <
+                text = <"استخدام يومي">
+                description = <"*Used every day. (en)">
+            >
+            ["at0007"] = <
+                text = <"استخدام أسبوعي">
+                description = <"*Used at least weekly. (en)">
+            >
+            ["at0008"] = <
+                text = <"استخدام غير منتظم">
+                description = <"*Used irregularly. (en)">
+            >
+            ["at0009"] = <
+                text = <"لا يتم الاستخدام">
+                description = <"*Not used at all. (en)">
+            >
+            ["at0010"] = <
+                text = <"تفاصيل الاستهلاك">
+                description = <"*Details about the consumption of the substance. (en)">
+            >
+            ["at0011"] = <
+                text = <"الشكل">
+                description = <"*Form of the substance used. (en)">
+            >
+            ["at0012"] = <
+                text = <"الكمية">
+                description = <"*Amount of substance consumed.  Data type can be further specified in specialised archetypes or in templates. (en)">
+            >
+            ["at0013"] = <
+                text = <"المثيرات - المحفزات">
+                description = <"*Identified triggers which stimulate or cause use. (en)">
+            >
+            ["at0014"] = <
+                text = <"عنقود - الاستعداد للتغيير">
+                description = <"*Details about the readiness to change use or consumption of substance. (en)">
+            >
+            ["at0016"] = <
+                text = <"البينة على الاعتماد">
+                description = <"*Description of any evidence of dependence on the substance. (en)">
+            >
+            ["at0018"] = <
+                text = <"*Route (en)">
+                description = <"طريقة استخدام أو استهلاك المادة">
+                comment = <"*Coding with an external terminology is preferred, where possible. (en)">
+            >
+            ["ac9004"] = <
+                text = <"*Pattern (en) (synthesised)">
+                description = <"*The pattern of frequency of use of the specific substance. (en) (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0006", "at0007", "at0008", "at0009">
+        >
+    >

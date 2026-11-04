@@ -1,0 +1,215 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=225be019-30cf-409d-96c3-bde15815cce4; build_uid=609fe218-3612-4e50-911b-ed7b8f1409e5)
+    openEHR-EHR-ADMIN_ENTRY.contact_for_tracing.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-07-29">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Nicola Ewen, SERHA/Ministry of Health and Wellness, Jamaica; Heather Leslie, Atomica Informatics, Australia (openEHR Editor); Yohann White, Ministry of Health and Wellness, Jamaica", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"1C0CE0EE17357377E54146EBD984CF4F">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about an individual who needs follow-up as part of an infectious disease investigation.">
+            use = <"Use to record details about an individual who needs follow-up as part of an infectious disease investigation.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation, Ministry of Health and Wellness Jamaica">
+        >
+    >
+
+definition
+    ADMIN_ENTRY[at0000] matches {    -- Exposure contact for tracing
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Identifier
+                        value matches {
+                            DV_TEXT[at9009]
+                            DV_IDENTIFIER[at9010]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0003] matches {    -- Contact demographics
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.organisation(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Contact type
+                        value matches {
+                            DV_TEXT[at9002]
+                        }
+                    }
+                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Contacted?
+                        value matches {
+                            DV_CODED_TEXT[at9011] matches {
+                                defining_code matches {[ac9007]}    -- Contacted? (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0024] occurrences matches {0..1} matches {    -- Symptomatic?
+                        value matches {
+                            DV_CODED_TEXT[at9013] matches {
+                                defining_code matches {[ac9012]}    -- Symptomatic? (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Vaccination status
+                        value matches {
+                            DV_CODED_TEXT[at9003] matches {
+                                defining_code matches {[ac9000]}    -- Vaccination status (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Treated?
+                        value matches {
+                            DV_CODED_TEXT[at9012] matches {
+                                defining_code matches {[ac9008]}    -- Treated? (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9007]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Exposure contact for tracing">
+                description = <"An individual who may be the source of infectious disease and at risk of spreading it to others or an individual who may be at risk after exposure to an infected individual.">
+            >
+            ["at0003"] = <
+                text = <"Contact demographics">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"Contact type">
+                description = <"The type of contact where potential transmission occurred.">
+                comment = <"For example: household, health facility,">
+            >
+            ["at0010"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the contact not captured in other fields.">
+            >
+            ["at0011"] = <
+                text = <"Vaccination status">
+                description = <"Assertion about whether the contact has received all recommended and relevant vaccines for the infectious disease or agent.">
+            >
+            ["at0012"] = <
+                text = <"Up-to-date">
+                description = <"The individual has been administered all relevant vaccinations.">
+            >
+            ["at0013"] = <
+                text = <"Up-to-date for age">
+                description = <"The individual has been administered all vaccinations appropriate for their age.">
+            >
+            ["at0014"] = <
+                text = <"Not up-to-date">
+                description = <"The individual has not received relevant vaccinations.">
+            >
+            ["at0015"] = <
+                text = <"Identifier">
+                description = <"Administrative identifier or label to anonymise the contact.">
+            >
+            ["at0016"] = <
+                text = <"Contacted?">
+                description = <"Has contact been made with the exposed individual?">
+            >
+            ["at0017"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Unsure">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Treated?">
+                description = <"Has the exposed individual been treated?">
+            >
+            ["at0021"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Unsure">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Symptomatic?">
+                description = <"Is the exposed individual reporting any relevant symptoms or signs?">
+            >
+            ["at0025"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Unsure">
+                description = <"">
+            >
+            ["ac9007"] = <
+                text = <"Contacted? (synthesised)">
+                description = <"Has contact been made with the exposed individual? (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"Symptomatic? (synthesised)">
+                description = <"Is the exposed individual reporting any relevant symptoms or signs? (synthesised)">
+            >
+            ["ac9000"] = <
+                text = <"Vaccination status (synthesised)">
+                description = <"Assertion about whether the contact has received all recommended and relevant vaccines for the infectious disease or agent. (synthesised)">
+            >
+            ["ac9008"] = <
+                text = <"Treated? (synthesised)">
+                description = <"Has the exposed individual been treated? (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9008"] = <
+            id = <"ac9008">
+            members = <"at0021", "at0022", "at0023">
+        >
+        ["ac9007"] = <
+            id = <"ac9007">
+            members = <"at0017", "at0018", "at0019">
+        >
+        ["ac9012"] = <
+            id = <"ac9012">
+            members = <"at0025", "at0026", "at0027">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0012", "at0013", "at0014">
+        >
+    >

@@ -1,0 +1,155 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=834b8faa-1161-3e42-974e-da7e4c5f32d2; build_uid=24cacbf7-0836-4903-9a34-96e588c0645b)
+    openEHR-EHR-EVALUATION.infectious_disease_summary.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Sistine Barretto-Daniels">
+        ["organisation"] = <"Ocean Informatics Pty Ltd">
+        ["email"] = <"Sistine.Barretto-Daniels@oceaninformatics.com">
+        ["date"] = <"2012-10-10">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Heather Leslie, Atomica Informatics, Australia", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, heather.leslie@atomicainformatics.com">
+        ["MD5-CAM-1.0.1"] = <"2101661D3025DCD4F2C7F9D60DD209A0">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record summary details about an infectious disease and factors related to assessment of immunity.">
+            use = <"Use to record summary details about an infectious disease and factors related to assessment of immunity.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Infectious disease summary
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {1} matches {    -- Infectious disease
+                        value matches {
+                            DV_TEXT[at9001]
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Immune status
+                        value matches {
+                            DV_TEXT[at9002]
+                        }
+                    }
+                    ELEMENT[at0042] occurrences matches {0..1} matches {    -- Description of immune status
+                        value matches {
+                            DV_TEXT[at9003]
+                        }
+                    }
+                    ELEMENT[at0047] occurrences matches {0..1} matches {    -- Previous infection?
+                        value matches {
+                            DV_CODED_TEXT[at9004] matches {
+                                defining_code matches {[ac9000]}    -- Previous infection? (synthesised)
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0046] matches {    -- Evidence
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9005]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0020] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Last Updated
+                        value matches {
+                            DV_DATE_TIME[at9006]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0051] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Infectious disease summary">
+                description = <"Summary details about an infectious disease and factors related to assessment of immunity.">
+            >
+            ["at0002"] = <
+                text = <"Infectious disease">
+                description = <"Name of the infectious disease.">
+            >
+            ["at0003"] = <
+                text = <"Immune status">
+                description = <"Assertion about the immune status of the subject.">
+                comment = <"For example: confirmed immune; assumed immune; acute infection; chronic infection; carrier; not immune; and non-responder. This assessment will need to take into account any evidence re previous infection, diagnostic evidence (CLUSTER.diagnostic_evidence_summary) and immunisation history (EVALUATION.immunisation_summary).">
+            >
+            ["at0014"] = <
+                text = <"Comment">
+                description = <"Narrative information about the infectious disease not captured in other fields.">
+            >
+            ["at0021"] = <
+                text = <"Last Updated">
+                description = <"The date at which the infectious disease summary was last clinically asserted, affirmed or confirmed.">
+            >
+            ["at0042"] = <
+                text = <"Description of immune status">
+                description = <"Narrative description about the assessment of immune status for the  infectious disease.">
+            >
+            ["at0046"] = <
+                text = <"Evidence">
+                description = <"Details about evidence that supports the assertion of an immune status.">
+            >
+            ["at0047"] = <
+                text = <"Previous infection?">
+                description = <"Has the subject been exposed through a previous infection to the same infectious disease?">
+            >
+            ["at0048"] = <
+                text = <"Confirmed">
+                description = <"Previous infection has been confirmed by history or findings.">
+            >
+            ["at0049"] = <
+                text = <"Suspected">
+                description = <"Previous infection is suspected from history or findings, but has not been confirmed.">
+            >
+            ["at0050"] = <
+                text = <"No Evidence">
+                description = <"There is no history or findings to suggest that the subject has had a previous infection.">
+            >
+            ["at0051"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"For example: Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["ac9000"] = <
+                text = <"Previous infection? (synthesised)">
+                description = <"Has the subject been exposed through a previous infection to the same infectious disease? (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0048", "at0049", "at0050">
+        >
+    >

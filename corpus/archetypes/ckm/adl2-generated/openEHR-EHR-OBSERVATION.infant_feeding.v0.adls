@@ -1,0 +1,660 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=bcd8987e-d9bd-4b84-9a33-16c9b4ee8878; build_uid=750d2692-0667-4529-85d7-991fb580e2e1)
+    openEHR-EHR-OBSERVATION.infant_feeding.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Adriana Kitajima, Marivan Abrahão, Gabriela Alves, Maria Ângela Scatena">
+                ["organisation"] = <"Core Consulting">
+                ["email"] = <"contato@coreconsulting.com.br">
+            >
+            accreditation = <"Hospital Alemão Oswaldo Cruz (HAOC)">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"unknown">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"12F361C3F01C8CA7448A31E555A46FDF">
+    >
+    details = <
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Registrar os detalhes sobre a alimentação de uma pessoa.">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Record details about feeding a person.">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتسجيل تفاصيل حول إطعام الشخص.">
+            use = <"">
+            misuse = <"">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Feeding
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0029] occurrences matches {0..1} matches {    -- Description
+                                        value matches {
+                                            DV_TEXT[at9006]
+                                        }
+                                    }
+                                    ELEMENT[at0030] occurrences matches {0..1} matches {    -- Infant feeding category
+                                        value matches {
+                                            DV_CODED_TEXT[at9007] matches {
+                                                defining_code matches {[ac9000]}    -- Infant feeding category (synthesised)
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0028] occurrences matches {0..1} matches {    -- Breast feeding
+                                        items cardinality matches {1..2; unordered} matches {
+                                            ELEMENT[at0022] occurrences matches {0..1} matches {    -- Proportion
+                                                value matches {
+                                                    DV_PROPORTION[at9008] matches {
+                                                        type matches {2}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0024] occurrences matches {0..1} matches {    -- Time taken
+                                                value matches {
+                                                    DV_QUANTITY[at9009] matches {
+                                                        property matches {[at9001]}    -- Time
+                                                        magnitude matches {|>=0.0|}
+                                                        units matches {"min"}
+                                                        precision matches {0}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0016] occurrences matches {0..1} matches {    -- Other method
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0017] occurrences matches {0..1} matches {    -- Type
+                                                value matches {
+                                                    DV_CODED_TEXT[at9010] matches {
+                                                        defining_code matches {[ac9002]}    -- Type (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0023] occurrences matches {0..1} matches {    -- Volume by this method
+                                                value matches {
+                                                    DV_QUANTITY[at9011] matches {
+                                                        property matches {[at9003]}    -- Volume
+                                                        magnitude matches {|>=0.0|}
+                                                        units matches {"ml"}
+                                                        precision matches {0}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0026] occurrences matches {0..1} matches {    -- Content
+                                                value matches {
+                                                    DV_TEXT[at9012]
+                                                }
+                                            }
+                                            use_node ELEMENT[at9018] occurrences matches {1} /data[at0001]/events[at0002]/data[at0003]/items[at0028]/items[at0022]    -- Other method (synthesised)
+                                            use_node ELEMENT[at9019] occurrences matches {1} /data[at0001]/events[at0002]/data[at0003]/items[at0028]/items[at0024]    -- Other method (synthesised)
+                                        }
+                                    }
+                                    CLUSTER[at0004] occurrences matches {0..1} matches {    -- Function
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Description
+                                                value matches {
+                                                    DV_TEXT[at9015]
+                                                }
+                                            }
+                                            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Sucking
+                                                value matches {
+                                                    DV_ORDINAL[at9016] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0006]}],    -- unable to suck
+                                                            [{1}, {[at0007]}],    -- some ability
+                                                            [{2}, {[at0008]}],    -- reduced sucking
+                                                            [{3}, {[at0009]}]    -- normal
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Swallowing
+                                                value matches {
+                                                    DV_ORDINAL[at9017] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0012]}],    -- Unable to swallow
+                                                            [{1}, {[at0013]}],    -- Some ability to swallow
+                                                            [{2}, {[at0014]}],    -- Reduced swallow
+                                                            [{3}, {[at0015]}]    -- Normal
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Alimentação">
+                description = <"Informação sobre a alimentação da pessoa.">
+            >
+            ["at0002"] = <
+                text = <"Qualquer evento">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"Função">
+                description = <"*">
+            >
+            ["at0005"] = <
+                text = <"Sucção">
+                description = <"A habilidade para sugar.">
+            >
+            ["at0006"] = <
+                text = <"incapaz de sugar">
+                description = <"Sem capacidade para sugar.">
+            >
+            ["at0007"] = <
+                text = <"alguma habilidade">
+                description = <"Pode sugar, mas sem efetividade.">
+            >
+            ["at0008"] = <
+                text = <"sucção reduzida">
+                description = <"Pode sugar de forma eficaz, mas não suficiente para as necessidades.">
+            >
+            ["at0009"] = <
+                text = <"normal">
+                description = <"Capaz de sugar normalmente.">
+            >
+            ["at0010"] = <
+                text = <"Descrição">
+                description = <"Descrição da alimentação.">
+            >
+            ["at0011"] = <
+                text = <"Deglutição">
+                description = <"Capacidade para engolir.">
+            >
+            ["at0012"] = <
+                text = <"Incapaz de deglutir">
+                description = <"Não é capaz de passar comida para a parte de trás da boca e engolir.">
+            >
+            ["at0013"] = <
+                text = <"Alguma habilidade de deglutição">
+                description = <"Alguma capacidade de engolir, mas muito limitada e / ou não protege das vias respiratórias.">
+            >
+            ["at0014"] = <
+                text = <"Deglutição reduzida">
+                description = <"Capaz de engolir, mas não suficiente para as necessidades ou maior risco de aspiração.">
+            >
+            ["at0015"] = <
+                text = <"Normal">
+                description = <"Pode engolir normalmente.">
+            >
+            ["at0016"] = <
+                text = <"Outro método">
+                description = <"O método de alimentação.">
+            >
+            ["at0017"] = <
+                text = <"Tipo">
+                description = <"Tipo de alimentação.">
+            >
+            ["at0019"] = <
+                text = <"Mamadeira">
+                description = <"Alimentando a partir da mamadeira.">
+            >
+            ["at0020"] = <
+                text = <"Sonda nasogástrica">
+                description = <"Alimentação por sonda nasogástrica.">
+            >
+            ["at0021"] = <
+                text = <"Sonda de gastrostomia">
+                description = <"Alimentação por sonda de gastrostomia.">
+            >
+            ["at0022"] = <
+                text = <"Proporção">
+                description = <"A proporção através deste método.">
+            >
+            ["at0023"] = <
+                text = <"Volume por este método">
+                description = <"Volume fornecido por este método.">
+            >
+            ["at0024"] = <
+                text = <"Tempo levado">
+                description = <"Tempo de alimentação por este método.">
+            >
+            ["at0026"] = <
+                text = <"Conteúdo">
+                description = <"O leite ou outro alimento fornecido.">
+            >
+            ["at0027"] = <
+                text = <"Colher">
+                description = <"Alimentação por colher ou similar.">
+            >
+            ["at0028"] = <
+                text = <"Aleitamento materno">
+                description = <"Registro sobre a amamentação.">
+            >
+            ["at0029"] = <
+                text = <"Descrição">
+                description = <"*">
+            >
+            ["at0030"] = <
+                text = <"Categoria da alimentação infantil">
+                description = <"O conteúdo da alimentação.">
+            >
+            ["at0031"] = <
+                text = <"Aleitamento">
+                description = <"Só o leite do peito (materno).">
+            >
+            ["at0032"] = <
+                text = <"Fórmula">
+                description = <"Somente fórmula de bebê.">
+            >
+            ["at0033"] = <
+                text = <"Misto">
+                description = <"Mistura de leite materno e fórmula.">
+            >
+            ["at9001"] = <
+                text = <"* Time (en)">
+                description = <"* Time (en)">
+            >
+            ["at9003"] = <
+                text = <"* Volume (en)">
+                description = <"* Volume (en)">
+            >
+            ["ac9000"] = <
+                text = <"Categoria da alimentação infantil (synthesised)">
+                description = <"O conteúdo da alimentação. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Tipo (synthesised)">
+                description = <"Tipo de alimentação. (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Sucção (synthesised)">
+                description = <"A habilidade para sugar. (synthesised)">
+            >
+            ["ac9018"] = <
+                text = <"Deglutição (synthesised)">
+                description = <"Capacidade para engolir. (synthesised)">
+            >
+            ["at9018"] = <
+                text = <"Outro método (synthesised)">
+                description = <"O método de alimentação. (synthesised)">
+            >
+            ["at9019"] = <
+                text = <"Outro método (synthesised)">
+                description = <"O método de alimentação. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Feeding">
+                description = <"Information about the feeding of the person.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"Function">
+                description = <"*">
+            >
+            ["at0005"] = <
+                text = <"Sucking">
+                description = <"The ability to suck.">
+            >
+            ["at0006"] = <
+                text = <"unable to suck">
+                description = <"No ability to suck.">
+            >
+            ["at0007"] = <
+                text = <"some ability">
+                description = <"Can make sucking action but not effective.">
+            >
+            ["at0008"] = <
+                text = <"reduced sucking">
+                description = <"Can suck effectively but not sufficient for needs.">
+            >
+            ["at0009"] = <
+                text = <"normal">
+                description = <"Able to suck normally.">
+            >
+            ["at0010"] = <
+                text = <"Description">
+                description = <"Description of feeding.">
+            >
+            ["at0011"] = <
+                text = <"Swallowing">
+                description = <"Ability to swallow.">
+            >
+            ["at0012"] = <
+                text = <"Unable to swallow">
+                description = <"Not able to pass food to the back of mouth and swallow.">
+            >
+            ["at0013"] = <
+                text = <"Some ability to swallow">
+                description = <"Some ability to swallow but very limited and/or does not protect airway.">
+            >
+            ["at0014"] = <
+                text = <"Reduced swallow">
+                description = <"Able to swallow but not sufficient for needs or major risk of aspiration.">
+            >
+            ["at0015"] = <
+                text = <"Normal">
+                description = <"Can swallow normally.">
+            >
+            ["at0016"] = <
+                text = <"Other method">
+                description = <"The method of feeding.">
+            >
+            ["at0017"] = <
+                text = <"Type">
+                description = <"Type of feeding.">
+            >
+            ["at0019"] = <
+                text = <"Bottle">
+                description = <"Feeding from the bottle.">
+            >
+            ["at0020"] = <
+                text = <"Nasogastric tube">
+                description = <"Feeding by naso-gastric tube.">
+            >
+            ["at0021"] = <
+                text = <"Gastrostomy tube">
+                description = <"Feeding by gastrostomy tube.">
+            >
+            ["at0022"] = <
+                text = <"Proportion">
+                description = <"The proportion by this method.">
+            >
+            ["at0023"] = <
+                text = <"Volume by this method">
+                description = <"Volume delivered by this method.">
+            >
+            ["at0024"] = <
+                text = <"Time taken">
+                description = <"Time feeding by this method.">
+            >
+            ["at0026"] = <
+                text = <"Content">
+                description = <"The milk or other food delivered.">
+            >
+            ["at0027"] = <
+                text = <"Spoon">
+                description = <"Feeding by spoon or similar.">
+            >
+            ["at0028"] = <
+                text = <"Breast feeding">
+                description = <"Record about breast feeding.">
+            >
+            ["at0029"] = <
+                text = <"Description">
+                description = <"*">
+            >
+            ["at0030"] = <
+                text = <"Infant feeding category">
+                description = <"The content of the feeding.">
+            >
+            ["at0031"] = <
+                text = <"Breast">
+                description = <"Only breast milk.">
+            >
+            ["at0032"] = <
+                text = <"Formula">
+                description = <"Only baby formula.">
+            >
+            ["at0033"] = <
+                text = <"Mixed">
+                description = <"Breast and formular mixed.">
+            >
+            ["at9001"] = <
+                text = <"Time">
+                description = <"Time">
+            >
+            ["at9003"] = <
+                text = <"Volume">
+                description = <"Volume">
+            >
+            ["ac9000"] = <
+                text = <"Infant feeding category (synthesised)">
+                description = <"The content of the feeding. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Type (synthesised)">
+                description = <"Type of feeding. (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Sucking (synthesised)">
+                description = <"The ability to suck. (synthesised)">
+            >
+            ["ac9018"] = <
+                text = <"Swallowing (synthesised)">
+                description = <"Ability to swallow. (synthesised)">
+            >
+            ["at9018"] = <
+                text = <"Other method (synthesised)">
+                description = <"The method of feeding. (synthesised)">
+            >
+            ["at9019"] = <
+                text = <"Other method (synthesised)">
+                description = <"The method of feeding. (synthesised)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"الإطعام">
+                description = <"معلومات حول إطعام الشخص.">
+            >
+            ["at0002"] = <
+                text = <"إحدى الوقائع">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"الوظيفة">
+                description = <"*">
+            >
+            ["at0005"] = <
+                text = <"المَصّ">
+                description = <"القدرة على المَصّ">
+            >
+            ["at0006"] = <
+                text = <"غير قادر على المص">
+                description = <"لا توجد قدرة على المص">
+            >
+            ["at0007"] = <
+                text = <"بعض القدرة">
+                description = <"الشخص قادر على القيام بعمل المص و لكنه غير فعال">
+            >
+            ["at0008"] = <
+                text = <"امتصاص قليل">
+                description = <"يستطيع المص بطريقة فعالة و لكنه غير كاف لاحتياج الشخص">
+            >
+            ["at0009"] = <
+                text = <"طبيعي">
+                description = <"قادر على المص بشكل طبيعي">
+            >
+            ["at0010"] = <
+                text = <"الوصف">
+                description = <"وصف الإطعام">
+            >
+            ["at0011"] = <
+                text = <"البلع">
+                description = <"القدرة على البلع">
+            >
+            ["at0012"] = <
+                text = <"غير قادر على البلع">
+                description = <"غير قادر على إمرار الطعام إلى مؤخرة الفم أو على الابتلاع">
+            >
+            ["at0013"] = <
+                text = <"بعد القدرة على الابتلاع">
+                description = <"توجد بعض القدرة على الابتلاع و لكنها محدودة جدا و / أو لا تحمي الممر الهوائي">
+            >
+            ["at0014"] = <
+                text = <"ابتلاع قليل">
+                description = <"قادر على الابتلاع و لكنه غير كاف لاحتياجات الشخص أو للمخاطرة الكبرى بالشفط/ الرشف">
+            >
+            ["at0015"] = <
+                text = <"طبيعي">
+                description = <"يستطيع الابتلاع بشكل طبيعي">
+            >
+            ["at0016"] = <
+                text = <"الطريقة الأخرى">
+                description = <"طريقة الإطعام">
+            >
+            ["at0017"] = <
+                text = <"النوع">
+                description = <"نوع الإطعام">
+            >
+            ["at0019"] = <
+                text = <"القارورة">
+                description = <"إطعام من القارورة">
+            >
+            ["at0020"] = <
+                text = <"الأنبوب الفمي المعدي">
+                description = <"الإطعام بالأنبوب الفمي المعدي">
+            >
+            ["at0021"] = <
+                text = <"أنبوبة فغر المعدة">
+                description = <"الإطعام عن طريق فغر المعدة">
+            >
+            ["at0022"] = <
+                text = <"النسبة">
+                description = <"النسبة المستخدمة بهذه الطريقة">
+            >
+            ["at0023"] = <
+                text = <"الحجم المستخدم بهذه الطريقة">
+                description = <"الحجم الذي تم استخدامه بهذه الطريقة">
+            >
+            ["at0024"] = <
+                text = <"الوقت المستغرق">
+                description = <"الوقت المستغرق في الإطعام بهذه الطريقة">
+            >
+            ["at0026"] = <
+                text = <"المحتوى">
+                description = <"الحليب أو الغذاء الآخر الذي تم إطعامه">
+            >
+            ["at0027"] = <
+                text = <"الملعقة">
+                description = <"الإطعام بالملعقة أو ما يشبهها">
+            >
+            ["at0028"] = <
+                text = <"الإطعام بحليب الثدي">
+                description = <"تسجيل الإطعام بحليب الثدي">
+            >
+            ["at0029"] = <
+                text = <"الوصف">
+                description = <"*">
+            >
+            ["at0030"] = <
+                text = <"فئة إطعام الرُّضَّع">
+                description = <"محتوى الإطعام">
+            >
+            ["at0031"] = <
+                text = <"الثدي - الصدر">
+                description = <"حليب الثدي فقط">
+            >
+            ["at0032"] = <
+                text = <"الصيغة الغذائية">
+                description = <"الصيغ الغذائية لحديثي الولادة فقط">
+            >
+            ["at0033"] = <
+                text = <"مختلط">
+                description = <"خليط من لبن الثدي و لبن الصيغة الغذائية">
+            >
+            ["at9001"] = <
+                text = <"* Time (en)">
+                description = <"* Time (en)">
+            >
+            ["at9003"] = <
+                text = <"* Volume (en)">
+                description = <"* Volume (en)">
+            >
+            ["ac9000"] = <
+                text = <"فئة إطعام الرُّضَّع (synthesised)">
+                description = <"محتوى الإطعام (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"النوع (synthesised)">
+                description = <"نوع الإطعام (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"المَصّ (synthesised)">
+                description = <"القدرة على المَصّ (synthesised)">
+            >
+            ["ac9018"] = <
+                text = <"البلع (synthesised)">
+                description = <"القدرة على البلع (synthesised)">
+            >
+            ["at9018"] = <
+                text = <"الطريقة الأخرى (synthesised)">
+                description = <"طريقة الإطعام (synthesised)">
+            >
+            ["at9019"] = <
+                text = <"الطريقة الأخرى (synthesised)">
+                description = <"طريقة الإطعام (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9001"] = <http://openehr.org/id/128>
+            ["at9003"] = <http://openehr.org/id/129>
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0019", "at0020", "at0021", "at0027">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0031", "at0032", "at0033">
+        >
+        ["ac9017"] = <
+            id = <"ac9017">
+            members = <"at0006", "at0007", "at0008", "at0009">
+        >
+        ["ac9018"] = <
+            id = <"ac9018">
+            members = <"at0012", "at0013", "at0014", "at0015">
+        >
+    >

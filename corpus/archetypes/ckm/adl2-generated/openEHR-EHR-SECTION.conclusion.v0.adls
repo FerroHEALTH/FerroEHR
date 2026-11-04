@@ -1,0 +1,117 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=f88b94eb-8afe-404b-9ccc-adf79b44b723; build_uid=c2f502cd-6b9f-4477-9938-044d3ca0e4a0)
+    openEHR-EHR-SECTION.conclusion.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["ru"] = <
+            language = <[ISO_639-1::ru]>
+            author = <
+                ["name"] = <"Art Latyp; Латыпов Артур Шамилевич">
+                ["organisation"] = <"RusBITech РусБИТех, Москва">
+            >
+            accreditation = <"hmm">
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            author = <
+                ["name"] = <"Alan March">
+                ["organisation"] = <"Hospital Universitario Austral, Pilar, Buenos Aires, Argentina.">
+                ["email"] = <"alandmarch@gmail.com">
+            >
+            accreditation = <"MD">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2007-04-11">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"B56CBA0918CF02D45FDF310C8876C63D">
+    >
+    details = <
+        ["ru"] = <
+            language = <[ISO_639-1::ru]>
+            purpose = <"*To provide an example framework for modelling conclusions as a component of a complex clinical template. (en)">
+            keywords = <"диагностика", "диагноз", "дифдиагноз", "дифференциальный", "заключение", "вывод">
+            use = <"*Use to provide an example framework for modelling conclusions as a single component within a multicomponent clinical template. For example: a clinical encounter or a discharge summary.
+
+This archetype is intended to be nested within any relevant COMPOSITION archetype. (en)">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            purpose = <"*To provide an example framework for modelling conclusions as a component of a complex clinical template. (en)">
+            keywords = <"diagnóstico", "diagnóstico diferencial">
+            use = <"*Use to provide an example framework for modelling conclusions as a single component within a multicomponent clinical template. For example: a clinical encounter or a discharge summary.
+
+This archetype is intended to be nested within any relevant COMPOSITION archetype. (en)">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To provide an example framework for modelling conclusions as a component of a complex clinical template.">
+            keywords = <"diagnosis", "differential diagnosis">
+            use = <"Use to provide an example framework for modelling conclusions as a single component within a multicomponent clinical template. For example: a clinical encounter or a discharge summary.
+
+This archetype is intended to be nested within any relevant COMPOSITION archetype.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    SECTION[at0000] matches {    -- Conclusion
+        items cardinality matches {0..*; unordered} matches {
+            allow_archetype EVALUATION[at0001] matches {    -- Opinion
+                include
+                    archetype_id/value matches {/openEHR-EHR-EVALUATION\.differential_diagnoses(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-EVALUATION\.problem_diagnosis(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-EVALUATION\.clinical_synopsis(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["ru"] = <
+            ["at0000"] = <
+                text = <"Заключение">
+                description = <"*Example framework for modelling opinions, conclusions or diagnoses drawn at the end of an investigative clinical process. (en)">
+            >
+            ["at0001"] = <
+                text = <"*Opinion (en)">
+                description = <"*Opinions, conclusions or diagnoses drawn at the end of an investigative clinical process. (en)">
+            >
+        >
+        ["es-ar"] = <
+            ["at0000"] = <
+                text = <"Conclusión">
+                description = <"*Example framework for modelling opinions, conclusions or diagnoses drawn at the end of an investigative clinical process. (en)">
+            >
+            ["at0001"] = <
+                text = <"*Opinion (en)">
+                description = <"*Opinions, conclusions or diagnoses drawn at the end of an investigative clinical process. (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Conclusion">
+                description = <"Example framework for modelling opinions, conclusions or diagnoses drawn at the end of an investigative clinical process.">
+            >
+            ["at0001"] = <
+                text = <"Opinion">
+                description = <"Opinions, conclusions or diagnoses drawn at the end of an investigative clinical process.">
+            >
+        >
+    >

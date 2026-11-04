@@ -1,0 +1,306 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=5f14f398-4ce2-4000-a8b6-717b9548e90b; build_uid=7d8edfd5-9bf8-443c-b5d6-817d887982cb)
+    openEHR-EHR-CLUSTER.exam_oral_membrane.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::ja]>
+
+description
+    original_author = <
+        ["name"] = <"">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"0658D74FC4B137CE2ED4D8F8FF191FB8">
+    >
+    details = <
+        ["ja"] = <
+            language = <[ISO_639-1::ja]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© Shinji Kobayashi
+Takahiro Nakahara
+© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Examination of oral membrane
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Oral membrane examined
+                value matches {
+                    DV_TEXT[at9005]
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- No abnormality detected
+                value matches {
+                    DV_BOOLEAN[at9006] matches {
+                        value matches {True, False}
+                    }
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Clinical description
+                value matches {
+                    DV_TEXT[at9007]
+                }
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- View
+                value matches {
+                    DV_TEXT[at9008]
+                }
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Membrane intact?
+                value matches {
+                    DV_CODED_TEXT[at9009] matches {
+                        defining_code matches {[ac9000]}    -- Membrane intact? (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Appearance
+                value matches {
+                    DV_CODED_TEXT[at9010] matches {
+                        defining_code matches {[ac9001]}    -- Appearance (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Colour
+                value matches {
+                    DV_TEXT[at9011]
+                }
+            }
+            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Light reflex
+                value matches {
+                    DV_CODED_TEXT[at9012] matches {
+                        defining_code matches {[ac9002]}    -- Light reflex (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0009] occurrences matches {0..1} matches {    -- Surface features
+                value matches {
+                    DV_TEXT[at9013]
+                }
+            }
+            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Fluid level presence
+                value matches {
+                    DV_CODED_TEXT[at9014] matches {
+                        defining_code matches {[ac9003]}    -- Fluid level presence (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Fluid level description
+                value matches {
+                    DV_TEXT[at9015]
+                }
+            }
+            ELEMENT[at0012] occurrences matches {0..1} matches {    -- Mobility
+                value matches {
+                    DV_CODED_TEXT[at9016] matches {
+                        defining_code matches {[ac9004]}    -- Mobility (synthesised)
+                    }
+                }
+            }
+            allow_archetype ELEMENT[at0013] matches {    -- Examination findings
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            allow_archetype ELEMENT[at0014] matches {    -- Multimedia representation
+                include
+                    archetype_id/value matches {/openEHR-EHR-ELEMENT\.multimedia(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0015] occurrences matches {0..1} matches {    -- Clinical interpretation
+                value matches {
+                    DV_TEXT[at9017]
+                }
+            }
+            ELEMENT[at0016] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9018]
+                }
+            }
+            allow_archetype ELEMENT[at0017] matches {    -- Examination not done
+                include
+                    archetype_id/value matches {/openEHR-EHR-ELEMENT\.exclusion_exam(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["ja"] = <
+            ["at0000"] = <
+                text = <"Examination of oral membrane">
+                description = <"unknown">
+            >
+            ["at0001"] = <
+                text = <"Oral membrane examined">
+                description = <"*">
+            >
+            ["at0002"] = <
+                text = <"No abnormality detected">
+                description = <"*">
+            >
+            ["at0003"] = <
+                text = <"Clinical description">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"View">
+                description = <"*">
+            >
+            ["at0005"] = <
+                text = <"Membrane intact?">
+                description = <"*">
+            >
+            ["at0006"] = <
+                text = <"Appearance">
+                description = <"*">
+            >
+            ["at0007"] = <
+                text = <"Colour">
+                description = <"*">
+            >
+            ["at0008"] = <
+                text = <"Light reflex">
+                description = <"*">
+            >
+            ["at0009"] = <
+                text = <"Surface features">
+                description = <"*">
+            >
+            ["at0010"] = <
+                text = <"Fluid level presence">
+                description = <"*">
+            >
+            ["at0011"] = <
+                text = <"Fluid level description">
+                description = <"*">
+            >
+            ["at0012"] = <
+                text = <"Mobility">
+                description = <"*">
+            >
+            ["at0013"] = <
+                text = <"Examination findings">
+                description = <"*">
+            >
+            ["at0014"] = <
+                text = <"Multimedia representation">
+                description = <"*">
+            >
+            ["at0015"] = <
+                text = <"Clinical interpretation">
+                description = <"*">
+            >
+            ["at0016"] = <
+                text = <"Comment">
+                description = <"*">
+            >
+            ["at0017"] = <
+                text = <"Examination not done">
+                description = <"*">
+            >
+            ["at0018"] = <
+                text = <"Intact">
+                description = <"*">
+            >
+            ["at0019"] = <
+                text = <"Indeterminate">
+                description = <"*">
+            >
+            ["at0020"] = <
+                text = <"Perforated">
+                description = <"*">
+            >
+            ["at0021"] = <
+                text = <"Translucent">
+                description = <"*">
+            >
+            ["at0022"] = <
+                text = <"Opaque">
+                description = <"*">
+            >
+            ["at0023"] = <
+                text = <"Normal">
+                description = <"*">
+            >
+            ["at0024"] = <
+                text = <"Abnormal">
+                description = <"*">
+            >
+            ["at0025"] = <
+                text = <"Present">
+                description = <"*">
+            >
+            ["at0026"] = <
+                text = <"Absent">
+                description = <"*">
+            >
+            ["at0027"] = <
+                text = <"Immobile">
+                description = <"*">
+            >
+            ["at0028"] = <
+                text = <"Hypomobile">
+                description = <"*">
+            >
+            ["at0029"] = <
+                text = <"Mobile">
+                description = <"*">
+            >
+            ["at0030"] = <
+                text = <"Hypermobile">
+                description = <"*">
+            >
+            ["at0031"] = <
+                text = <"Indeterminate">
+                description = <"*">
+            >
+            ["ac9000"] = <
+                text = <"Membrane intact? (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Appearance (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Light reflex (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Fluid level presence (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Mobility (synthesised)">
+                description = <"* (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0023", "at0024">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0021", "at0022">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0018", "at0019", "at0020">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0027", "at0028", "at0029", "at0030", "at0031">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0025", "at0026">
+        >
+    >

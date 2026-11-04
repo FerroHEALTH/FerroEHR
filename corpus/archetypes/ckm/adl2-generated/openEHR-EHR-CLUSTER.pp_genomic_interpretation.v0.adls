@@ -1,0 +1,97 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=b31b4f6b-2836-43db-9e3d-52aebe3a35da; build_uid=813acc59-cd47-4ced-aa12-639f152448f2)
+    openEHR-EHR-CLUSTER.pp_genomic_interpretation.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2019-09-25">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"5ff10a1aeed4a279afd547cbe597890f">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Phenopacket genomic interpretation
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {1} matches {    -- GenomicInterpretation Status
+                value matches {
+                    DV_ORDINAL[at9001] matches {
+                        [value, symbol] matches {
+                            [{0}, {[at0002]}],    -- UNKNOWN
+                            [{1}, {[at0003]}],    -- REJECTED
+                            [{2}, {[at0004]}],    -- CANDIDATE
+                            [{2}, {[at0005]}]    -- CAUSATIVE
+                        }
+                    }
+                }
+            }
+            allow_archetype CLUSTER[at0006] matches {    -- call
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.pp_variant\.v0\..*|openEHR-EHR-CLUSTER\.pp_gene\.v0\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Phenopacket genomic interpretation">
+                description = <"Phenopacket genomic interpretations">
+            >
+            ["at0001"] = <
+                text = <"GenomicInterpretation Status">
+                description = <"*">
+            >
+            ["at0002"] = <
+                text = <"UNKNOWN">
+                description = <"It is not known how this genomic element contributes to the diagnosis.">
+            >
+            ["at0003"] = <
+                text = <"REJECTED">
+                description = <"The genomic element has been investigated and ruled-out.">
+            >
+            ["at0004"] = <
+                text = <"CANDIDATE">
+                description = <"The genomic element is under investigation.">
+            >
+            ["at0005"] = <
+                text = <"CAUSATIVE">
+                description = <"The genomic element has been judged to be contributing to the diagnosis.">
+            >
+            ["at0006"] = <
+                text = <"call">
+                description = <"*">
+            >
+            ["ac9001"] = <
+                text = <"GenomicInterpretation Status (synthesised)">
+                description = <"* (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0002", "at0003", "at0004", "at0005">
+        >
+    >

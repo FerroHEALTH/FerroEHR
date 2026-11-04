@@ -1,0 +1,198 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=ee5651f0-c1bc-45f7-8a67-15b74b6c24cd; build_uid=d16b9939-4ab8-4afd-8a7e-934707ad7480)
+    openEHR-EHR-CLUSTER.genomic_substitution_variant.v1.0.4
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Aurelie Tomczak, Natalia Strauch">
+                ["organisation"] = <"Institute of Pathology, University Hospital Heidelberg, Germany, Medizinische Hochschule Hannover">
+                ["email"] = <"au.tomczak@yahoo.com, Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Liv Laugen">
+                ["organisation"] = <"Oslo University Hospital, Norway, ​Oslo University Hospital, Norway">
+                ["email"] = <"liv.laugen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Cecilia Mascia">
+        ["organisation"] = <"CRS4, Italy">
+        ["email"] = <"cecilia.mascia@crs4.it">
+        ["date"] = <"2017-02-23">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Christina Jaeger-Schmidt, Heidelberg University Hospital, Germany", "Florian Kaercher, Charité Berlin, Germany", "Francesca Frexia, CRS4, Italy", "Gianluigi Zanetti, CRS4, Italy", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Gideon Giacomelli, Charité Berlin, Germany", "Paolo Uva, CRS4, Italy", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Simon Schumacher, HiGHmed, Germany", "Gunnar Houge, Haukeland University Hospital, Norway", "Gyri Aasland Gradek, Haukeland University Hospital, Norway", "Asbjørg Stray-Pedersen, Oslo University Hospital, Norway", "Toril Fagerheim, University Hospital of North Norway, Norway", "Camilla F. Skjelbred, Telemark HF Hospital, Norway", "Dag Erik Undlien, Oslo University Hospital, Norway", "Rune Østern, St Olavs Hospital, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"den Dunnen JT, Dalgleish R, Maglott DR, Hart RK, Greenblatt MS, McGowan-Jordan J, Roux AF, Smith T, Antonarakis SE, Taschner PE. HGVS Recommendations for the Description of Sequence Variants: 2016 Update. Hum Mutat. 2016 Jun;37(6):564-9. doi: 10.1002/humu.22981. Epub 2016 Mar 25. PubMed PMID: 26931183.">
+        ["2"] = <"Sequence Variant Nomenclature - DNA Recommendations - Substitution Variant [Internet]. Human Genome Variation Society. [2019] - [cited 2020-02-26]. Available from: https://varnomen.hgvs.org/recommendations/DNA/variant/substitution/">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"7940C38BF01B8F27E1AA7BD298C0EDAD">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Beschreibung der in einer Sequenz beobachteten \"Substitution Variante\" menschlicher DNA.">
+            keywords = <"Substitution", "Variation", "genetisch", "genomisch", "Variante", "DNA", "Chromosom", "Mutation", "Nukleotid">
+            use = <"Verwenden Sie diesen Archetyp, um die Details einer \"Substitution Variante\" menschlicher DNA darzustellen, die in einer genomischen Sequenz beobachtet wurde.
+
+Dieser Archetyp wurde speziell für die Verwendung im SLOT \"Structured variant\" innerhalb des Archetyps CLUSTER.genomic_variant_result entwickelt, kann jedoch auch in anderen ENTRY- oder CLUSTER-Archetypen verwendet werden, sofern dies klinisch angemessen ist.
+
+In den Beispielen in diesem Archetyp sollen Nukleotide in Kleinbuchstaben nur die veränderten Positionen der DNA-Sequenz hervorheben.
+
+Alle Definitionen und Beispiele in diesem Archetyp folgen den HGVS-Standard.">
+            misuse = <"Nicht zur Darstellung von Informationen über Varianten nicht-menschlicher DNA oder jeglicher Art von RNA oder Protein verwenden.
+
+Nicht zur Darstellung einer Änderung mit zwei oder mehr aufeinanderfolgenden Nukleotiden verwenden. Verwenden Sie dazu den Archetyp CLUSTER.genomic_deletion_insertion_variant.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere detaljene om en substitusjonvariant i humant DNA, funnet i en genomisk sekvens.">
+            keywords = <"substitusjon", "gen", "variasjon", "genetikk", "genom", "variant", "DNA", "kromosom", "mutasjon", "nukleotide", "sekvens", "utbytting">
+            use = <"Brukes for å registrere detaljene om en substitusjonvariant i humant DNA, funnet i en genomisk sekvens.
+
+Denne arketypen har blitt laget for å brukes i SLOT'et \"Strukturert variantbeskrivelse\" i arketypen CLUSTER.genomic_variant_result (Genetisk variant resultat). Den kan også brukes i andre ENTRY- eller CLUSTER-arketyper der det er klinisk hensiktsmessig.
+
+I eksemplene i denne arketypen er det brukt små bokstaver på nukleotidene for å markere endringen/-e i DNA-sekvensen.
+Alle definisjoner og eksempler i denne arketypen følger HGVS-nomenklaturen.">
+            misuse = <"Skal ikke brukes til å registrere informasjon om varianter av ikke-humant DNA, eller noen form for RNA eller protein.
+
+Skal ikke brukes for å registrere endringer som involverer to eller flere sammenhengende/påfølgende nukleotider, bruk da arketypen CLUSTER.genomic_deletion_insertion_variant (Genetisk variant - delesjon-insersjon) til dette. ">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the details about a substitution variant of human DNA, observed in a genomic sequence.">
+            keywords = <"substitution", "variation", "genetic", "genomic", "variant", "DNA", "chromosome", "mutation", "nucleotide">
+            use = <"Use to record the details about a substitution variant of human DNA, observed in a genomic sequence.
+
+This archetype has been specifically designed to be used in the 'Structured variant' SLOT within the CLUSTER.genomic_variant_result archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.
+
+In the examples in this archetype, lower case nucleotides are only intended to highlight the changed positions of the DNA sequence. 
+All definitions and examples in this archetype follow the HGVS nomenclature.">
+            misuse = <"Not to be used to record information about variants of non-human DNA, or any kind of RNA or protein.
+
+Not to be used to record a change involving two or more consecutive nucleotides. Use the CLUSTER.genomic_deletion_insertion_variant archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Genomic substitution variant
+        items cardinality matches {3..*} matches {
+            ELEMENT[at0001] occurrences matches {1} matches {    -- Position substituted
+                value matches {
+                    DV_COUNT[at9000]
+                }
+            }
+            ELEMENT[at0003] occurrences matches {1} matches {    -- Reference nucleotide
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            ELEMENT[at0005] occurrences matches {1} matches {    -- New nucleotide
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            allow_archetype CLUSTER[at0006] matches {    -- Reference sequence
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.reference_sequence(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Genomic substitution variant">
+                description = <"Eine humangenetische Sequenzänderung, bei der im Vergleich zu einer genomischen Referenzsequenz ein Nukleotid durch ein anderes Nukleotid ersetzt wird.">
+                comment = <"For example: changing \"AGTAgAGG\" to \"AGTAtAGG\".">
+            >
+            ["at0001"] = <
+                text = <"Position substituted">
+                description = <"The position of the sustituted nucleotide.">
+                comment = <"For example: for a variant where the reference sequence \"AGTAgAGG\" is changed to \"AGTAtAGG\", the position substituted is 5.">
+            >
+            ["at0003"] = <
+                text = <"Reference nucleotide">
+                description = <"The nucleotide at reference position.">
+                comment = <"For example: for a variant where the reference sequence \"AGTAgAGG\" is changed to \"AGTAtAGG\", the reference nucleotide is \"G\".">
+            >
+            ["at0005"] = <
+                text = <"New nucleotide">
+                description = <"Substituted nucleotide.">
+                comment = <"For example: for a variant where the reference sequence \"AGTAgAGG\" is changed to \"AGTAtAGG\", the new nucleotide is \"T\".">
+            >
+            ["at0006"] = <
+                text = <"Reference sequence">
+                description = <"The sequence file used as a reference to describe this variant.">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Genetisk variant - substitusjon">
+                description = <"En endring i human gensekvensen hvor et nukleotid er erstattet av et annen nukleotid, sammenliknet med referansesekvensen. Engelsk: substitution.">
+                comment = <"for eksempel: endring fra 'AGTAgAGG' til 'AGTAtAGG'.">
+            >
+            ["at0001"] = <
+                text = <"Substitusjonposisjon">
+                description = <"Posisjonen/plasseringen til det substituerte/erstattede nukleotidet.">
+                comment = <"For eksempel: for en variant, hvor referansesekvensen 'AGTAgAGG' er blitt endret til 'AGTAtAGG', vil substitusjonposisjonen være 5.">
+            >
+            ["at0003"] = <
+                text = <"Referansenukleotid">
+                description = <"Nukleotidet i referansesekvensen som det sammenliknes mot.">
+                comment = <"For eksempel: for en variant, hvor referansesekvensen 'AGTAgAGG' er blitt endret til 'AGTAtAGG', vil referansenukleotiden være 'G'.">
+            >
+            ["at0005"] = <
+                text = <"Nytt nukleotide">
+                description = <"Nukleotidet som har erstattet det opprinnelige nukleotidet.">
+                comment = <"For eksempel: for en variant, hvor referansesekvensen 'AGTAgAGG' er blitt endret til 'AGTAtAGG', vil den nye nukleotiden være 'T'.">
+            >
+            ["at0006"] = <
+                text = <"Referansesekvens.">
+                description = <"Sekvensfilen som har blitt brukt som en referanse for å beskrive varianten.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Genomic substitution variant">
+                description = <"A human genetic sequence change where, compared to a genomic reference sequence, one nucleotide is replaced by one other nucleotide.">
+                comment = <"For example: changing 'AGTAgAGG' to 'AGTAtAGG'.">
+            >
+            ["at0001"] = <
+                text = <"Position substituted">
+                description = <"The position of the substituted nucleotide.">
+                comment = <"For example: for a variant where the reference sequence 'AGTAgAGG' is changed to 'AGTAtAGG', the position substituted is 5.">
+            >
+            ["at0003"] = <
+                text = <"Reference nucleotide">
+                description = <"The nucleotide at reference position.">
+                comment = <"For example: for a variant where the reference sequence 'AGTAgAGG' is changed to 'AGTAtAGG', the reference nucleotide is 'G'.">
+            >
+            ["at0005"] = <
+                text = <"New nucleotide">
+                description = <"Substituted nucleotide.">
+                comment = <"For example: for a variant where the reference sequence 'AGTAgAGG' is changed to 'AGTAtAGG', the new nucleotide is 'T'.">
+            >
+            ["at0006"] = <
+                text = <"Reference sequence">
+                description = <"The sequence file used as a reference to describe this variant.">
+            >
+        >
+    >

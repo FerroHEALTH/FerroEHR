@@ -1,0 +1,163 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=f2c01b02-9c94-4533-9e3f-5311fe777495; build_uid=8ea82615-9a35-4f46-9f4f-b639a7bc7a12)
+    openEHR-EHR-CLUSTER.lab_antibody.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2024-08-09">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Nicola Ewen, SERHA/Ministry of Health and Wellness, Jamaica", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Yohann White, Ministry of Health and Wellness, Jamaica">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"426DB2C5029F1EABFF77E3E9DFFDE251">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the qualitative and quantitative findings for a specific antibody test.">
+            use = <"Use to record the qualitative and quantitative findings for a specific antigen test for microbial and non-microbial antibodies.">
+            misuse = <"Not to be used to record findings observed from microbial culture of a specimen - use the CLUSTER.laboratory_test_culture archetype for this purpose.
+
+Not to be used to record findings from antigen testing of a specimen - use the CLUSTER.laboratory_test_antigen archetype for this purpose.
+
+Not to be used to record findings from molecular testing of a specimen - use the CLUSTER.laboratory_test_molecular archetype for this purpose.">
+            copyright = <"© openEHR Foundation, Ministry of Health and Wellness Jamaica">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Antibody test finding
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0049] occurrences matches {0..1} matches {    -- Test name
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            ELEMENT[at0057] occurrences matches {0..1} matches {    -- Antibody target
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0059] occurrences matches {0..1} matches {    -- Microbial target
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            ELEMENT[at0055] occurrences matches {0..1} matches {    -- Test method
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+            allow_archetype CLUSTER[at0033] matches {    -- Specimen
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            ELEMENT[at0050] occurrences matches {0..1} matches {    -- Presence
+                value matches {
+                    DV_CODED_TEXT[at9005] matches {
+                        defining_code matches {[ac9000]}    -- Presence (synthesised)
+                    }
+                    DV_TEXT[at9006]
+                }
+            }
+            ELEMENT[at0054] occurrences matches {0..1} matches {    -- Quantitative result
+                value matches {
+                    DV_QUANTITY[at9007] matches {
+                        [units] matches {
+                            [{"k[iU]/L"}],
+                            [{"[iU]/mL"}]
+                        }
+                    }
+                    DV_PROPORTION[at9008] matches {
+                        numerator matches {1.0}
+                        denominator matches {|>=1.0|}
+                        type matches {0}
+                    }
+                }
+            }
+            ELEMENT[at0022] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9009]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Antibody test finding">
+                description = <"The result of a laboratory test designed to detect and quantify the presence of specific antibodies produced by the immune system in response to a microorganism, tissue, allergen, or physiological process, within a clinical specimen.">
+            >
+            ["at0022"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the test finding not captured in other fields.">
+            >
+            ["at0033"] = <
+                text = <"Specimen">
+                description = <"Identification of the specimen examined.">
+                comment = <"If the tissue specimen has previously been identified in a a higher level archetype level archetype, such as the OBSERVATION.laboratory_test_result, this SLOT may be redundant.">
+            >
+            ["at0049"] = <
+                text = <"Test name">
+                description = <"Name of the antibody test.">
+                comment = <"Coding with an external terminology is recommended, if available. For example: SARS-CoV-2 IgG antibody test.">
+            >
+            ["at0050"] = <
+                text = <"Presence">
+                description = <"Statement about detection of the identified antibody in the specimen.">
+            >
+            ["at0051"] = <
+                text = <"Detected">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Not detected">
+                description = <"">
+            >
+            ["at0054"] = <
+                text = <"Quantitative result">
+                description = <"Quantitative assessment of the amount of the identified antibody in the specimen.">
+            >
+            ["at0055"] = <
+                text = <"Test method">
+                description = <"Method used for the antibody test.">
+                comment = <"Coding with an external terminology is recommended, if available. For example: lateral flow immunoassay, ELISA, chemiluminescent immunoassay.">
+            >
+            ["at0056"] = <
+                text = <"Indeterminate">
+                description = <"">
+            >
+            ["at0057"] = <
+                text = <"Antibody target">
+                description = <"The specific antigenic structure or component that the test is designed to detect.">
+                comment = <"Coding with an external terminology is recommended, if available. For example: infection-related IgG/IgM, IgG1 or IgG2, allergen-specific IgE; anti-dsDNA.">
+            >
+            ["at0059"] = <
+                text = <"Microbial target">
+                description = <"The name of the microorganism associated with the antibody target, if relevant.">
+                comment = <"Coding with an external terminology is recommended, if available. For example: SARS-CoV-2.">
+            >
+            ["ac9000"] = <
+                text = <"Presence (synthesised)">
+                description = <"Statement about detection of the identified antibody in the specimen. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0051", "at0052", "at0056">
+        >
+    >

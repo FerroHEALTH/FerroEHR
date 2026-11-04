@@ -1,0 +1,109 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=97afbc49-3436-4ede-a724-12b748f0c9ba; build_uid=9366f86f-1c6b-4d2e-bee6-f39c6ea3c475)
+    openEHR-EHR-CLUSTER.physiological_monitoring.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2017-07-21">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"5003C1DAAC67043D8331F2C8758F81F2">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details of the monitoring applied in the provision of healthcare.">
+            keywords = <"telemetry", "facial nerve", "electrocardiography", "haemodynamic", "intercranial pressure", "electroencephalography">
+            use = <"Use to record details of monitoring applied during the provision of healthcare. 
+
+This archetype is intended for use as a component of an INSTRUCTION or ACTION, for example procedure archetype.">
+            misuse = <"Do not use to record the results of the monitoring, use OBSERVATION.monitoring for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Physiological monitoring
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Monitoring type
+                value matches {
+                    DV_TEXT[at9000]
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Body site
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            allow_archetype CLUSTER[at0003] matches {    -- Structured body site
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location\.v1\..*/}
+            }
+            allow_archetype CLUSTER[at0004] matches {    -- Additional details
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            allow_archetype CLUSTER[at0005] matches {    -- Medical device
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            allow_archetype CLUSTER[at0007] matches {    -- Monitoring not done
+                include
+                    archetype_id/value matches {/.*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Physiological monitoring">
+                description = <"Details of the monitoring applied in the provision of healthcare.">
+            >
+            ["at0001"] = <
+                text = <"Monitoring type">
+                description = <"Narrative description of the category or kind of monitoring.">
+            >
+            ["at0002"] = <
+                text = <"Body site">
+                description = <"Identification of a single physical site either on, or within the human body.">
+            >
+            ["at0003"] = <
+                text = <"Structured body site">
+                description = <"Additional detail using specific region or a point on , or within the identified body site.">
+            >
+            ["at0004"] = <
+                text = <"Additional details">
+                description = <"Structured additional information about the monitoring.">
+            >
+            ["at0005"] = <
+                text = <"Medical device">
+                description = <"To record the details of a medical device to capture physiological monitoring.">
+            >
+            ["at0006"] = <
+                text = <"Comment">
+                description = <"Additional narrative about physiological monitoring not captured in other fields.">
+            >
+            ["at0007"] = <
+                text = <"Monitoring not done">
+                description = <"Details to record that the physiological monitoring was not performed.">
+            >
+        >
+    >

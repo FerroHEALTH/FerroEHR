@@ -1,0 +1,279 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=c7c38ea3-1373-42ce-9348-fd83e83ee5c4; build_uid=41e2b9a8-5688-4809-822d-70e1d6c6af85)
+    openEHR-EHR-EVALUATION.management_summary.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2022-10-28">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"B6C6CAC5C83B59A9D5E0627023453C58">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record summary or persistent details about the outcome of a treatment course or protocol for an identified condition, such as an infectious disease or cancer, or injury.">
+            use = <"Use to record summary or persistent details about the outcome of a treatment course or protocol for an identified condition, such as an infectious disease or cancer, or injury.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Management summary
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Management name
+                        value matches {
+                            DV_TEXT[at9002]
+                        }
+                    }
+                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Index problem
+                        value matches {
+                            DV_TEXT[at9003]
+                        }
+                    }
+                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9004]
+                        }
+                    }
+                    ELEMENT[at0031] matches {    -- Reason for management
+                        value matches {
+                            DV_TEXT[at9005]
+                        }
+                    }
+                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Management status
+                        value matches {
+                            DV_CODED_TEXT[at9006] matches {
+                                defining_code matches {[ac9000]}    -- Management status (synthesised)
+                            }
+                            DV_TEXT[at9007]
+                        }
+                    }
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Date management completed
+                        value matches {
+                            DV_DATE_TIME[at9008]
+                        }
+                    }
+                    ELEMENT[at0007] matches {    -- Reason for non-completion
+                        value matches {
+                            DV_TEXT[at9009]
+                        }
+                    }
+                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Management outcome
+                        value matches {
+                            DV_TEXT[at9010]
+                            DV_CODED_TEXT[at9011] matches {
+                                defining_code matches {[ac9001]}    -- Management outcome (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0027] occurrences matches {0..1} matches {    -- Reason for outcome
+                        value matches {
+                            DV_CODED_TEXT[at9012]
+                        }
+                    }
+                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Date last seen
+                        value matches {
+                            DV_DATE_TIME[at9013]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0019] matches {    -- Additional details
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.clinical_evidence(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.drug_resistance_profile(-[a-zA-Z0-9_]+)*\.v0\..*/}
+                    }
+                    CLUSTER[at0013] matches {    -- Issue
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0012] occurrences matches {0..1} matches {    -- Issue name
+                                value matches {
+                                    DV_TEXT[at9014]
+                                }
+                            }
+                            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Date identified
+                                value matches {
+                                    DV_DATE_TIME[at9015]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0030] matches {    -- Issue details
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.drug_resistance_profile(-[a-zA-Z0-9_]+)*\.v0\..*/}
+                            }
+                            ELEMENT[at0015] occurrences matches {0..1} matches {    -- Comment
+                                value matches {
+                                    DV_TEXT[at9016]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9017]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0002] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0017] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9018]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Management summary">
+                description = <"Summary or persistent details about the outcome of a treatment course or protocol for an identified condition.">
+            >
+            ["at0003"] = <
+                text = <"Management name">
+                description = <"The name of the treatment or course of treatment.">
+            >
+            ["at0004"] = <
+                text = <"Date management completed">
+                description = <"The date when the treatment or course of treatment was completed.">
+            >
+            ["at0005"] = <
+                text = <"Management status">
+                description = <"Description about the status of the treatment course.">
+                comment = <"For example: completed or not completed.">
+            >
+            ["at0006"] = <
+                text = <"Index problem">
+                description = <"The name of the index disease, condition, injury or event.">
+            >
+            ["at0007"] = <
+                text = <"Reason for non-completion">
+                description = <"Description of the reason why the course of treatment was not completed.">
+            >
+            ["at0008"] = <
+                text = <"Management outcome">
+                description = <"Category of the treatment outcome for the individual.">
+            >
+            ["at0010"] = <
+                text = <"Date last seen">
+                description = <"The date when the individual last attended for treatment.">
+                comment = <"May be useful, for example, when the individual is lost to follow-up.">
+            >
+            ["at0012"] = <
+                text = <"Issue name">
+                description = <"Name of the issue.">
+            >
+            ["at0013"] = <
+                text = <"Issue">
+                description = <"Details about an issue that impacted the treatment outcome.">
+                comment = <"For example: drug resistance">
+            >
+            ["at0014"] = <
+                text = <"Date identified">
+                description = <"Date when the issue was identified.">
+            >
+            ["at0015"] = <
+                text = <"Comment">
+                description = <"Narrative description about the issue, not captured in other data elements.">
+            >
+            ["at0016"] = <
+                text = <"Comment">
+                description = <"Narrative description about the overall treatment, not captured in other data elements.">
+            >
+            ["at0017"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0018"] = <
+                text = <"Last updated">
+                description = <"The date and/or time when the Treatment outcome summary was last updated.">
+            >
+            ["at0019"] = <
+                text = <"Additional details">
+                description = <"Additional structured details about the treatment outcome.">
+                comment = <"For example: drug resistance profile; clinical evidence.">
+            >
+            ["at0021"] = <
+                text = <"Completed">
+                description = <"The treatment course was completed.">
+            >
+            ["at0022"] = <
+                text = <"Not completed">
+                description = <"The treatment course was not completed.">
+            >
+            ["at0023"] = <
+                text = <"Treatment successful">
+                description = <"Individual is considered cured; there is no ongoing evidence of the index problem.">
+            >
+            ["at0024"] = <
+                text = <"Treatment failed">
+                description = <"Treatment was not successful; there is ongoing evidence of the index problem.">
+            >
+            ["at0025"] = <
+                text = <"Indeterminate">
+                description = <"It is not known if the treatment was successful or unsuccessful.">
+            >
+            ["at0027"] = <
+                text = <"Reason for outcome">
+                description = <"Reason for a failed treatment outcome.">
+                comment = <"For example: drug resistance.">
+            >
+            ["at0028"] = <
+                text = <"Description">
+                description = <"Narrative description about the treatment outcome.">
+            >
+            ["at0029"] = <
+                text = <"Indeterminate">
+                description = <"It is not known if the treatment was completed or not.">
+            >
+            ["at0030"] = <
+                text = <"Issue details">
+                description = <"Structured details about the issue.">
+            >
+            ["at0031"] = <
+                text = <"Reason for management">
+                description = <"The reason for treatment.">
+                comment = <"For example: palliation; relapse; second line treatment after initial failure.">
+            >
+            ["ac9000"] = <
+                text = <"Management status (synthesised)">
+                description = <"Description about the status of the treatment course. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Management outcome (synthesised)">
+                description = <"Category of the treatment outcome for the individual. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0023", "at0024", "at0025">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0021", "at0022", "at0029">
+        >
+    >

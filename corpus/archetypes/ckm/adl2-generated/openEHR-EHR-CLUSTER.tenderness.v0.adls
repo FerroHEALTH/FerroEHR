@@ -1,0 +1,153 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=fcd58edb-bc05-4142-a59d-8343013cc78a; build_uid=29773013-bc32-4018-97ef-f05b3428a3e4)
+    openEHR-EHR-CLUSTER.tenderness.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Keisha Barwise">
+        ["organisation"] = <"openEHR Foundation">
+        ["email"] = <"keisha.barwise@openehr.org">
+        ["date"] = <"2025-07-21">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Nicola Ewen Hall, openEHR Fellow 2025, Jamaica", "Khin Aung, Thrive Consultancy, Jamaica", "Heather Leslie, openEHR Foundation, Chief Clinical Information Officer">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, Australia<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"73CF19D902977B72DBB1E071ECAA4F44">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To document tenderness elicited by palpation during physical examination.">
+            keywords = <"Tenderness, elicited pain, palpation, physical exam.", ...>
+            use = <"To record the presence and summary characteristics of tenderness elicited on palpation.
+
+This archetype has been specifically designed to be used within CLUSTER archetypes, where clinically appropriate. 
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element.">
+            misuse = <"Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom_sign.
+
+Not to be used for recording the results of an imaging examination - use the CLUSTER.imaging_exam family of archetypes for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Tenderness findings
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Body site
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            allow_archetype CLUSTER[at0002] matches {    -- Structured body site
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.anatomical_location_relative(-[a-zA-Z0-9_]+)*\.v2\..*|openEHR-EHR-CLUSTER\.anatomical_location_circle(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Presence
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Severity
+                value matches {
+                    DV_TEXT[at9004]
+                    DV_CODED_TEXT[at9005] matches {
+                        defining_code matches {[ac9000]}    -- Severity (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Depth
+                value matches {
+                    DV_TEXT[at9006]
+                    DV_CODED_TEXT[at9007] matches {
+                        defining_code matches {[ac9001]}    -- Depth (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9008]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Tenderness findings">
+                description = <"Structured recording of tenderness elicited during palpation.">
+            >
+            ["at0001"] = <
+                text = <"Body site">
+                description = <"Identification of the area of the body under examination.">
+            >
+            ["at0002"] = <
+                text = <"Structured body site">
+                description = <"A structured description of the area of the body under examination.">
+            >
+            ["at0003"] = <
+                text = <"Presence">
+                description = <"Assertion about the observed presence or absence of tenderness during the examination.">
+            >
+            ["at0004"] = <
+                text = <"Severity">
+                description = <"The intensity of pain or discomfort elicited during palpation.">
+            >
+            ["at0005"] = <
+                text = <"Depth">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the findings on examination of the lesion, not captured in other fields.">
+            >
+            ["at0007"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Superficial">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Deep">
+                description = <"">
+            >
+            ["ac9000"] = <
+                text = <"Severity (synthesised)">
+                description = <"The intensity of pain or discomfort elicited during palpation. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Depth (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0010", "at0011">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0007", "at0008", "at0009">
+        >
+    >

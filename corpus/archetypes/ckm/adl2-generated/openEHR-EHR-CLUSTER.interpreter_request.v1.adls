@@ -1,0 +1,295 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=aa4095ef-76a4-48eb-9033-56b8d0b485a5; build_uid=985c6a90-c4cd-4c4c-9bd0-19184b0b808f)
+    openEHR-EHR-CLUSTER.interpreter_request.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand">
+                ["organisation"] = <"Helse Bergen HF, Norway">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2015-05-04">
+    >
+    original_namespace = <"no.nasjonalikt">
+    original_publisher = <"Nasjonal IKT">
+    other_contributors = <"Paula Anderson, UCLH, United Kingdom", "Erling Are Hole, Helse Bergen, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Heidi Aursand, Oslo universitetssykehus, Norway", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Birgitte Bjerkely, Senter for sjeldne diagnoser, OUS, Norway", "Anita Bjørnnes, Helse Bergen, Norway", "Randi Brendberg, Helse Nord RHF, Norway", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Valborg Ellingsen, Haraldsplass Diakonale sykehus, Norway", "Heather Grain, Llewelyn Grain Informatics, Australia", "Jessica Hansen, Universitetet i Oslo, Norway", "Ingrid Heitmann, Oslo universitetssykehus HF, Norway", "Sanjeev Hiremath, IDEAMED International, Australia", "Annette Hole Sjøborg, DIPS ASA, Norway", "Hilde Hollås, DIPS AS, Norway", "Roar Holm, Helse Vest IKT A/S, Norway", "Liv Ingrid Svela, Helse Bergen HF, Norway", "Lars Ivar Mehlum, Helse Bergen HF, Norway", "Tom Jarl Jakobsen, Helse Bergen, Norway", "Nils Kolstrup, Skansen Legekontor og Nasjonalt Senter for samhandling og telemedisin, Norway", "Siren Kraakenes, Helse Vest IKT, Norway", "Panita Laksuktom, Haukeland universitetssjukehus, Norway", "Øygunn Leite Kallevik, Helse Bergen, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Rose Mari Eikås, Helse Bergen, Norway", "Siv Marie Lien, DIPS ASA, Norway", "Hildegard McNicoll, freshEHR Clinical Informatics Ltd., United Kingdom", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Jagan Mohan, Mahatma Gandhi Medical College and Research Institute, India", "Lars Morgan Karlsen, Nordlandssykehuset Bodø, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Anine Ramberg, DIPS ASA, Norway", "Jussara Rotzsch, Hospital Alemão Oswaldo Cruz, Brazil", "Gro-Hilde Severinsen, Norwegian center for ehealthresearch, Norway", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Laila Storesund, Haraldsplass diakonale sykehus, Norway", "Eivind Stormo, DIPS AS, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Nyree Taylor, Ocean Informatics, Australia", "Susanne Trønnes, Norway", "Gro-Hilde Ulriksen, Norwegian center for ehealthresearch, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"no.nasjonalikt">
+    custodian_organisation = <"Nasjonal IKT">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Avgrenet fra: Interpreter Details, Draft Archetype [Internet]. openEHR Foundation, openEHR Clinical Knowledge Manager [cited: 2017-02-10]. Available from: http://openehr.org/ckm/#showArchetype_1013.1.1972">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics<heather.leslie@oceaninformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"AB43D3BD1278B53DC41E6FA396191893">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere krav og preferanser for riktig tolking for å støtte kommunikasjonen.">
+            keywords = <"tolk", "språk", "tegn", "tale", "tolking", "oversetter", "skrivetolking">
+            use = <"Brukes for å registrere krav og preferanser for riktig tolking for å støtte kommunikasjonen, vanligvis i forbindelse med en spesifikk aktivitet eller ved utførelsen av en klinisk tjeneste.
+
+Denne arketypen er utviklet for å benyttes i SLOT'et \"Pasientens behov\" i arketypen INSTRUCTION.service_request (Helsetjenesterekvirering). Arketypen kan også benyttes i andre INSTRUCTION-arketyper for å dokumentere tolkebehov.">
+            misuse = <"Brukes ikke for å registrere detaljer om et språk. Bruk arketypen CLUSTER.language (Språk) for dette formålet.
+
+Brukes ikke for å registrere evne og måter for utveksling av informasjon med et individ. Bruk arketypen EVALUATION.communication_capability (Evne til kommunikasjon) for dette formålet.
+
+Brukes ikke for å registrere detaljer om en tolking som er gjennomført. Bruk arketypen ACTION.interpretation for dette formålet.
+
+Brukes ikke for å registrere administrativt språk og behov for tolking for å kunne levere helsetjenester eller helserelaterte tjenester. Bruk arketypen ADMIN_ENTRY.translation_requirements (Tolkebehov) for dette formålet.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record requirements and preferences for appropriate interpretation to assist with communication.">
+            keywords = <"interpreter", "language", "translator", "sign", "signing">
+            use = <"Use to record requirements and preferences for appropriate interpretation to assist with communication, commonly with a specific activity or provision of a clinical service.
+
+This archetype is specifically designed to be nested within the 'Patient requirements' SLOT in the INSTRUCTION.service_request archetype but could be used within other INSTRUCTION archetypes which require participation of an interpreter.">
+            misuse = <"Not to be used to record details about a language - use CLUSTER.language for this purpose.
+
+Not to be used to record capability and means for exchanging information with an individual - use EVALUATION.communication_capability for this purpose.
+
+Not to be used to record details about an interpretation that was performed - use the proposed ACTION.interpretation.
+
+Not to be used to record administrative information about the ability of the healthcare provider or clinical system to communicate with an indivdual - for this purpose use ADMIN_ENTRY.translation_requirements.">
+            copyright = <"© openEHR Foundation, Nasjonal IKT HF">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Interpreter request
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0009] occurrences matches {0..1} matches {    -- Communication channel
+                value matches {
+                    DV_CODED_TEXT[at9003] matches {
+                        defining_code matches {[ac9000]}    -- Communication channel (synthesised)
+                    }
+                    DV_TEXT[at9004]
+                }
+            }
+            CLUSTER[at0039] occurrences matches {1..*} matches {    -- Per language
+                name matches {
+                    DV_CODED_TEXT[at9009] matches {
+                        defining_code matches {[ac9008]}    -- Per language (synthesised)
+                    }
+                }
+                items cardinality matches {1..*; unordered} matches {
+                    allow_archetype CLUSTER[at0031] occurrences matches {1} matches {    -- Language
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.language(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-CLUSTER\.language(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    ELEMENT[at0035] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9010]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0027] occurrences matches {0..1} matches {    -- Preferred gender
+                value matches {
+                    DV_CODED_TEXT[at9007] matches {
+                        defining_code matches {[ac9002]}    -- Preferred gender (synthesised)
+                    }
+                }
+            }
+            allow_archetype CLUSTER[at0004] matches {    -- Preferred interpreter
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.organisation(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-CLUSTER\.person_name(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-CLUSTER\.individual_professional(-[a-zA-Z0-9_]+)*\.v0\..*/}
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9008]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Forespørsel om tolk">
+                description = <"Krav og preferanser for riktig tolking for å støtte kommunikasjonen.">
+            >
+            ["at0003"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekstbeskrivelse om tolkebehovet som ikke er dekket av andre felt.">
+                comment = <"For eksempel: Årsak til at et bestemt kjønn er foretrukket, eller at man etterspør en tolk med spesifikke kvalifikasjoner, kunnskaper eller evner.">
+            >
+            ["at0004"] = <
+                text = <"Foretrukket tolk">
+                description = <"Detaljer om tolken som er foretrukket til tolkingen.">
+            >
+            ["at0009"] = <
+                text = <"Kommunikasjonskanal">
+                description = <"Den foretrukne måten å levere tolkingen på.">
+            >
+            ["at0010"] = <
+                text = <"Fremmøte">
+                description = <"Tolking der tolken er fysisk tilstede.">
+            >
+            ["at0011"] = <
+                text = <"Skjerm">
+                description = <"Tolking via video og lyd, tolken er ikke fysisk tilstede.">
+            >
+            ["at0012"] = <
+                text = <"Telefon">
+                description = <"Tolking med lyd, tolken er ikke fysisk tilstede.">
+            >
+            ["at0027"] = <
+                text = <"Foretrukket kjønn">
+                description = <"Ønsket kjønn på tolken.">
+            >
+            ["at0028"] = <
+                text = <"Mann">
+                description = <"En mannlig tolk er foretrukket.">
+            >
+            ["at0029"] = <
+                text = <"Kvinne">
+                description = <"En kvinnelig tolk er foretrukket.">
+            >
+            ["at0031"] = <
+                text = <"Språk">
+                description = <"Språk og modalitet for tolkingen.">
+            >
+            ["at0034"] = <
+                text = <"Ingen preferanser">
+                description = <"Det er ingen kjønnspreferanser for tolken.">
+            >
+            ["at0035"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekstbeskrivelse om det forespurte språket som ikke er registrert i andre felt.">
+            >
+            ["at0039"] = <
+                text = <"Per språk">
+                description = <"Detaljer om forespurt språk for tolkingen.">
+                comment = <"\"Run-time name constraint\" (navnebegrensning) lagt på clusteret \"Per språk\" kan brukes for å spesifisere om språket er foretrukket i kommunikasjonen med individet eller om det er et alternativt språk som kan benyttes.">
+            >
+            ["at0040"] = <
+                text = <"Foretrukket språk">
+                description = <"Individets foretrukne språk og kommunikasjonsmetode.">
+            >
+            ["at0041"] = <
+                text = <"Alternativt språk">
+                description = <"Andre språk og kommunikasjonsmetoder som kan benyttes av individet.">
+            >
+            ["ac9000"] = <
+                text = <"Kommunikasjonskanal (synthesised)">
+                description = <"Den foretrukne måten å levere tolkingen på. (synthesised)">
+            >
+            ["ac9008"] = <
+                text = <"Per språk (synthesised)">
+                description = <"Detaljer om forespurt språk for tolkingen. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Foretrukket kjønn (synthesised)">
+                description = <"Ønsket kjønn på tolken. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Interpreter request">
+                description = <"Requirements and preferences for appropriate interpretation to assist with communication.">
+            >
+            ["at0003"] = <
+                text = <"Comment">
+                description = <"Additional narrative description about the requirements for the interpretation not captured in other fields.">
+                comment = <"For example: reason for gender preference; or requesting an interpreter with specific qualifications, knowledge or skills.">
+            >
+            ["at0004"] = <
+                text = <"Preferred interpreter">
+                description = <"Identification of the individual interpreter that is preferred for the interpretation.">
+            >
+            ["at0009"] = <
+                text = <"Communication channel">
+                description = <"The preferred way of delivery for the interpretation.">
+            >
+            ["at0010"] = <
+                text = <"Face-to-face meeting">
+                description = <"Physical attendence of the interpreter.">
+            >
+            ["at0011"] = <
+                text = <"Videoconference">
+                description = <"Remote video and audio interpretation.">
+            >
+            ["at0012"] = <
+                text = <"Audioconference">
+                description = <"Audio interpretation only.">
+            >
+            ["at0027"] = <
+                text = <"Preferred gender">
+                description = <"The preferred gender of the interpreter.">
+            >
+            ["at0028"] = <
+                text = <"Male">
+                description = <"A male interpreter is preferred.">
+            >
+            ["at0029"] = <
+                text = <"Female">
+                description = <"A female interpreter is preferred.">
+            >
+            ["at0031"] = <
+                text = <"Language">
+                description = <"Language and method of communication for the interpretation.">
+            >
+            ["at0034"] = <
+                text = <"No preference">
+                description = <"There is no gender preference for the interpreter.">
+            >
+            ["at0035"] = <
+                text = <"Comment">
+                description = <"Additional narrative description about the requested language not captured in other fields.">
+            >
+            ["at0039"] = <
+                text = <"Per language">
+                description = <"Details about the requested language.">
+                comment = <"The run-time name constraint can be used to specify whether the language is preferred for communication by the individual, or an alternative.">
+            >
+            ["at0040"] = <
+                text = <"Preferred language">
+                description = <"Preferred language and/or method of communication for an individual.">
+            >
+            ["at0041"] = <
+                text = <"Alternative language">
+                description = <"Other language, and/or method of communication that could be used for an individual.">
+            >
+            ["ac9000"] = <
+                text = <"Communication channel (synthesised)">
+                description = <"The preferred way of delivery for the interpretation. (synthesised)">
+            >
+            ["ac9008"] = <
+                text = <"Per language (synthesised)">
+                description = <"Details about the requested language. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Preferred gender (synthesised)">
+                description = <"The preferred gender of the interpreter. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9008"] = <
+            id = <"ac9008">
+            members = <"at0040", "at0041">
+        >
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0028", "at0029", "at0034">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0010", "at0011", "at0012">
+        >
+    >

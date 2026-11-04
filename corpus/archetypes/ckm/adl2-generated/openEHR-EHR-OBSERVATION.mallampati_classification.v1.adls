@@ -1,0 +1,198 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=8a51292a-5297-4430-bb13-36c67a324a8b; build_uid=57f76b76-1c15-4b1b-ac07-68a2ff9e5ba7)
+    openEHR-EHR-OBSERVATION.mallampati_classification.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand">
+                ["organisation"] = <"Helse Bergen HF, Norway">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Anca Heyd">
+        ["organisation"] = <"Dips ASA">
+        ["email"] = <"ahe@dips.no">
+        ["date"] = <"2015-04-29">
+    >
+    original_namespace = <"no.nasjonalikt">
+    original_publisher = <"Nasjonal IKT">
+    other_contributors = <"Silje Ljosland Bakke, Nasjonal IKT HF, Norway (Nasjonal IKT redaktør)", "Gunn Elin Blakkisrud, DIPS ASA, Norway", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Einar Fosse, UNN HF, Norwegian Centre for Integrated Care and Telemedicine, Norway", "Kristian Heldal, Telemark Hospital Trust, Norway", "Anca Heyd, DIPS ASA, Norway", "Lars Morgan Karlsen, DIPS ASA, Norway", "Lars Ivar Mehlum, Helse Bergen HF, Norway", "Micaela Thierley, Helse Bergen, Norway", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)", "Thomas Wilson, Finnmarkssykehuset HF Klinikk Hammerfest, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"no.nasjonalikt">
+    custodian_organisation = <"Nasjonal IKT">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Avgrenet fra: Modifisert Mallampati-klassifikasjon, Publisert arketype [Internet]. Nasjonal IKT, Nasjonal IKT Clinical Knowledge Manager [sitert: 2017-12-08]. Hentet fra: http://arketyper.no/ckm/#showArchetype_1078.36.896">
+        ["2"] = <"Lauren C Berkow, Strategies for airway management, Best Practice & Research Clinical Anaesthesiology, Volume 18, Issue 4, December 2004, Pages 531-548, ISSN 1521-6896, http://dx.doi.org/10.1016/j.bpa.2004.05.006.">
+        ["3"] = <"(http://www.sciencedirect.com/science/article/pii/S1521689604000400)">
+        ["4"] = <"Berkow L, Hagberg C, Crowley M. Airway management for induction of general anesthesia. UpToDate.com (Mallampati) 19.05.2015.">
+        ["5"] = <"http://www.uptodate.com/contents/91218?search=mallampati+score&source=graphics_search&imageKey=EM/75229#graphicRef75229">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"ED43DFEDD3AC0680B6AFCA141817D36D">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To be used as a part of the assesment level of intubation difficulty before a planned anesthesia.">
+            keywords = <"mallampati", "anaesthetic", "intubation", "airway">
+            use = <"To be used as a part of the assesment level of intubation difficulty before a planned anesthesia. The examination is done while the patient is sitting, upright with the head in a neutral position, with an open mouth, tongue protuded and without phonation.">
+            misuse = <"">
+            copyright = <"© Nasjonal IKT HF">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"En del av vurderingen av vanskelighetsgrad for intubasjon i forkant av en planlagt anestesi.">
+            keywords = <"mallampati", "anestesi", "intubasjon", "luftvei">
+            use = <"Brukes i forbindelse med evaluering av intubasjonens forventede vanskelighetsgrad hos et individ i forkant av en planlagt anestesi. Undersøkelsen gjøres med pasienten i sittende posisjon, oppreist med hodet i nøytral stilling, med åpen munn og tunga maksimalt utstrakt uten phonasjon.">
+            misuse = <"">
+            copyright = <"© Nasjonal IKT HF">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Modified Mallampati classification
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] matches {    -- Any point in time event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Mallampati classification
+                                        value matches {
+                                            DV_ORDINAL[at9001] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0006]}],    -- Class 1
+                                                    [{2}, {[at0007]}],    -- Class 2
+                                                    [{3}, {[at0008]}],    -- Class 3
+                                                    [{4}, {[at0009]}]    -- Class 4
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9002]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0010] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0011] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Modifisert Mallampati-klassifikasjon">
+                description = <"Klassifisering av grad av innsyn i munnhulen og svelget for å vurdere vanskelighetsgrad av intubasjon ved direkte laryngoskopi.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert tidspunkthendelse">
+                description = <"Uspesifisert tidspunkt som kan defineres mer eksplisitt i en templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Mallampati-klassifikasjon">
+                description = <"Mallampati-klassifikasjon.">
+            >
+            ["at0005"] = <
+                text = <"Kommentar">
+                description = <"Kommentar til mallampati klassifiseringen.">
+            >
+            ["at0006"] = <
+                text = <"Klasse 1">
+                description = <"Tonsillesøylene, uvula, hard og bløt gane er fullstendig synlige.">
+            >
+            ["at0007"] = <
+                text = <"Klasse 2">
+                description = <"Uvula og bløt gane er delvis synlige.">
+            >
+            ["at0008"] = <
+                text = <"Klasse 3">
+                description = <"Kun bløt gane er synlig.">
+            >
+            ["at0009"] = <
+                text = <"Klasse 4">
+                description = <"Ingen visualisering av strukturer bak tungen, kun hard gane er synlig.">
+            >
+            ["at0011"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+            ["ac9002"] = <
+                text = <"Mallampati-klassifikasjon (synthesised)">
+                description = <"Mallampati-klassifikasjon. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Modified Mallampati classification">
+                description = <"A classification that relates to the degree of visibility in the oral cavity and pharynx to assess the difficulty of oral intubation by direct laryngoscopy.">
+            >
+            ["at0002"] = <
+                text = <"Any point in time event">
+                description = <"Unspecified point in time event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Mallampati classification">
+                description = <"Mallampati classification.">
+            >
+            ["at0005"] = <
+                text = <"Comment">
+                description = <"Narrative comment about the Mallampati Classification.">
+            >
+            ["at0006"] = <
+                text = <"Class 1">
+                description = <"The entire tonsillar pillars, uvula, hard and soft palates are visualised.">
+            >
+            ["at0007"] = <
+                text = <"Class 2">
+                description = <"Partial uvula and soft palate are visualised.">
+            >
+            ["at0008"] = <
+                text = <"Class 3">
+                description = <"Only the soft palate is visualised.">
+            >
+            ["at0009"] = <
+                text = <"Class 4">
+                description = <"No visualisation of any structures beyond the tongue, only the hard palate is visible.">
+            >
+            ["at0011"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"For example: Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["ac9002"] = <
+                text = <"Mallampati classification (synthesised)">
+                description = <"Mallampati classification. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0006", "at0007", "at0008", "at0009">
+        >
+    >

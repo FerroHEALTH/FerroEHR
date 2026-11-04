@@ -1,0 +1,288 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=32272e1d-0486-4780-89cf-17f3ea8a9d87; build_uid=72deb5f5-5dbe-46fb-9a8d-9a4e00587bea)
+    openEHR-EHR-OBSERVATION.functional_ability.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2025-12-09">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor); Sparked AU, CSIRO, Australia; Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor); Tor Bendle, CSIRO, Australia; SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India; Hugo Claudio Briceño García, Catsalut, Spain; Hanne Marte Bårholm, Helse Vest IKT, Norway (openEHR Editor); Grete Hovde Bøe, Sykehuspartner HF, Norway (openEHR Editor); Aleksander Furnes, Helse Nord IKT, Norway (openEHR Editor); Ciprian Gerstenberger, Helse Nord IKT, Norway (openEHR Editor); Tore Gravdal, Tieto Caretech, Norway; Joost Holslag, Joost Holslag Geneeskunde & Advies, Netherlands; Patricia Homem-Silva, University of Porto, Portugal; Evelyn Hovenga, EJSH Consulting, Australia; June Marie Nepstad Knappskog, Helse Nord IKT AS, Norway (openEHR Editor), Norway (openEHR Editor); Heidi Koikkalainen, United Kingdom; Ronald Krawec, Alberta Health Services, Canada; Elin Kristiansen, Sykehuspartner HF, Norway (openEHR Editor); Kanika Kuwelker, Helse Vest IKT, Norway (openEHR Editor); Jörgen Kuylenstierna, eWeave AB, Sweden; Eli Larsen, UNN, Norway (openEHR Editor); Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor); Heather Leslie, Atomica Informatics, Australia (openEHR Editor); Michael Lutz, BITsoft, Germany; Patrick Fergal McSharry, MSMS(I) and SESLHD, Australia; Martin Milde, Helse Vest IKT, Norway (openEHR Editor); Olha Nikolaieva, University Hospital Basel, Switzerland; Mikael Nyström, Cambio Healthcare Systems AB, Sweden; Bipinkumar Rathod, NHS, United Kingdom; Terje Sagmyr, Helse Vest IKT, Norway (openEHR Editor); Norwegian Review Summary, Norwegian Public Hospitals, Norway; Averil Tam, CSIRO, Australia; Nyree Taylor, CSIRO, Australia; Kanthan Theivendran, NHS, United Kingdom; John Tore Valand, Helse Vest IKT, Norway (openEHR Editor); Karsten Øvretveit, Helse Vest IKT, Norway (openEHR Editor); Ines Žabkar, Better, Slovenia", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Functional ability, Draft data group. Sparked AU FHIR accelerator, Australian Clinical Data for Interoperability Release 3.">
+        ["2"] = <"World Health Organization. International classification of functioning, disability and health (ICF) [Internet]. Geneva: World Health Organization; 2001 [cited 2026 Jan 19]. Available from: https://www.who.int/standards/classifications/international-classification-of-functioning-disability-and-health">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"BE32A9BB81492DD2B502234EEDA45E69">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record an assessment of an individual’s ability to independently perform a single identified activity at a point in time.">
+            keywords = <"ADL", "iADL", "pADL", "capacity", "ability", "activity", "daily", "living", "independent">
+            use = <"Use to record an assessment of an individual’s ability to independently perform a single identified activity at a point in time, reflecting the combined impact of physical, sensory, cognitive, emotional, psychological, social, and environmental factors present at that time. 
+
+Throughout this archetype:
+- the terms 'independently perform', 'performed independently', or similar, refer to an individual performing an activity safely and consistently under the same assessment circumstances, without any form of human assistance, whether or not assistive devices are used. Consistent performance refers to the ability to perform the activity repeatedly under the same assessment circumstances, rather than being demonstrated on a one-off, occasional or intermittent basis; and
+- the term 'assistive device' refers to any tool, aid, or technology used by an individual to support, maintain, or optimise independent performance of an activity.
+
+An activity may be:
+- A simple or foundational action that can be observed as a discrete activity, such as standing, brushing hair, or gripping a cup.
+- A complex or composite action that requires a sequence of simple actions, such as transferring from bed to chair, preparing a meal, managing medications, or driving a car.
+
+Assessment of ability is often context-dependent and may vary due to factors such as environment, fatigue, pain, and availability of assistive devices. If the same activity is assessed at the same time under different conditions, such as with and without an assistive device, record each set of conditions together with its corresponding level of ability within the same assessment. This approach supports documentation of how functional ability may vary under different circumstances during a single assessment.
+
+The scope of functional ability includes, but is not limited to:
+- Everyday functioning - assessment of an individual’s ability to perform common activities that underpin independent living, participation, and social interaction. This may guide decisions about the need for supportive interventions.
+- Regulated or role-specific functioning - assessment of an individual’s ability to perform activities defined by occupational, regulatory, licensing, or safety frameworks. These assessments may inform certification, licensing, clearance, or risk management decisions.
+
+Functional ability may be assessed across a range of areas of activity and participation including, but not limited to:
+- Mobility, 
+- Self-care, 
+- Communication, 
+- Domestic life, 
+- Attending work or school, 
+- Community participation,
+- Recognised groupings of activities, such as personal activities of daily living (pADLs) or instrumental activities of daily living (iADLs), and
+- Activities performed in regulated, occupational, or safety-critical contexts. 
+
+Record one instance of this archetype for each named activity during a single assessment, including where the same named activity is performed under varying conditions.
+
+This archetype is one of a set of three related archetypes designed to represent different aspects of how an individual functions in everyday life. Together, these archetypes support structured representation of functional ability, impairments contributing to functional limitations, and the supports required to enable or assist an individual to perform an activity. The other archetypes are: 
+- EVALUATION.functional_impairment_summary and 
+- EVALUATION.functional_support_requirements.">
+            misuse = <"Not to be used to record an underlying impairment of body function or structure. Use the EVALUATION.impairment_summary archetype for this purpose.
+
+Not to be used to record an assessment of the range of supports required to optimise an individual's ability to perform an activity or participate in a life situation as a result of an impairment. Use the EVALUATION.functional_support_requirements archetype for this purpose.
+
+Not to be used to record the outcome of a regulatory, occupational, or legal assessment for certification, licensing, or clearance to perform a safety-critical activity or duty, such as fitness to drive or return-to-work clearance. Assessments recorded using this archetype may provide supporting evidence for such determinations but do not represent the outcome of those decisions.
+
+Not to be used to record a generalised statement about independence or functional ability across multiple activities or life situations. The need for a specific archetype for this purpose is acknowledged but has not yet been developed.
+
+Not to be used to represent a summary of patterns or trends in ability over time.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Functional ability
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {1} matches {    -- Activity name
+                                        value matches {
+                                            DV_TEXT[at9002]
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Ability
+                                        value matches {
+                                            DV_CODED_TEXT[at9003] matches {
+                                                defining_code matches {[ac9010]}    -- Ability (synthesised)
+                                            }
+                                            DV_TEXT[at9004]
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Clinical description
+                                        value matches {
+                                            DV_TEXT[at9005]
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Difficulty
+                                        value matches {
+                                            DV_TEXT[at9006]
+                                            DV_CODED_TEXT[at9007] matches {
+                                                defining_code matches {[ac9011]}    -- Difficulty (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Reason for difficulty
+                                        value matches {
+                                            DV_TEXT[at9008]
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9009]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0013] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Assessment conditions description
+                                        value matches {
+                                            DV_TEXT[at9010]
+                                        }
+                                    }
+                                    ELEMENT[at0029] occurrences matches {0..1} matches {    -- Assistive devices description
+                                        value matches {
+                                            DV_TEXT[at9011]
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0015] matches {    -- Assistive device
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                    ELEMENT[at0030] matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9012]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0012] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0016] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Functional ability">
+                description = <"An assessment of an individual’s ability to perform an activity safely and consistently without human assistance.">
+                comment = <"Throughout this archetype, the phrase ‘perform an activity’, or similar, refers to carrying out a single activity or a grouping of related activities, or participating in an everyday life situation.
+">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point-in-time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Activity name">
+                description = <"The name of the activity being assessed.">
+                comment = <"Coding with an external terminology is recommended. Free text entry should only be permitted where no appropriate coded value is available. For example: rolling over in bed, transferring from bed to chair, walking; climbing stairs; brushing teeth, putting on shoes, menstrual care; reading, speaking, writing; preparing meals, doing housework; using public transport, seeking a job withdraw money from an ATM; attending school, play sport, join a club, attend the theatre.">
+            >
+            ["at0005"] = <
+                text = <"Ability">
+                description = <"The assessed ability to perform the identified activity independently.">
+                comment = <"Coding with a terminology is recommended.  Free text entry should only be permitted if no appropriate coded value is available.
+An individual may be able to independently perform the activity and still experience difficulty. The degree of difficulty is recorded separately using the ‘Difficulty’ data element. 
+‘Ability’ and ‘Difficulty’ represent complementary components of the functional ability assessment. Recording a value for ‘Difficulty’ is not applicable where ‘Ability’ has been recorded as ‘Unable’.">
+            >
+            ["at0006"] = <
+                text = <"Clinical description">
+                description = <"Narrative description of the individual's assessed ability to independently perform the identified activity.">
+                comment = <"For example: problems completing the activity, safety concerns, or consistency issues.">
+            >
+            ["at0007"] = <
+                text = <"Difficulty">
+                description = <"The degree of difficulty experienced by the individual when performing the activity independently.">
+                comment = <"Coding with a terminology is recommended.  Free text entry should only be permitted if no appropriate coded value is available.
+Difficulty may be self-reported and/or clinically observed during the assessment.
+Increased time or effort beyond that typically required to independently perform the activity may indicate difficulty, even where assistive devices are used.
+Any degree of difficulty may affect the completeness, safety, or consistency of performance of the activity.
+Recording the degree of difficulty may support assessment of functional support or adaptation requirements.
+‘Ability’ and ‘Difficulty’ represent complementary components of the functional ability assessment. Recording a value for ‘Difficulty’ is not applicable where ‘Ability’ has previously been recorded as ‘Unable’.
+">
+            >
+            ["at0008"] = <
+                text = <"Reason for difficulty">
+                description = <"Narrative description of the factors contributing to difficulty performing the activity.">
+                comment = <"For example: impairment, symptoms, environmental or contextual barriers, equipment availability, communication issues, training, or other relevant circumstances.">
+            >
+            ["at0010"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the performance of the activity, not captured in other fields.">
+            >
+            ["at0014"] = <
+                text = <"Assessment conditions description">
+                description = <"Narrative description of the circumstances under which an assessment is performed, to support interpretation of the observed assessment results.">
+                comment = <"For example: describing the environment, method, or situation in which the assessment was carried out. This may include whether the assessment occurred in a clinic, hospital, or home setting; whether the individual was in their usual or an unfamiliar environment; any specific conditions that may influence performance, such as noise, lighting, and time of day; use of an unfamiliar assistive device for the assessment; and adherence to or deviation from a defined assessment protocol.">
+            >
+            ["at0015"] = <
+                text = <"Assistive device">
+                description = <"Structured detail about one or more tools, aids, or technologies used by an individual while performing the activity.">
+                comment = <"For example: smartphone reminders, modified cutlery, reading glasses, hearing aids, mobility aids, prostheses, self-care aids, communication aids, or an assistance animal.">
+            >
+            ["at0016"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0017"] = <
+                text = <"Able">
+                description = <"The individual can independently perform the entire activity at the time of assessment.">
+            >
+            ["at0018"] = <
+                text = <"Partially able">
+                description = <"The individual can independently perform part, but not all, of the activity at the time of assessment.">
+            >
+            ["at0019"] = <
+                text = <"Unable">
+                description = <"The individual cannot independently perform any part of the activity at the time of assessment.">
+            >
+            ["at0022"] = <
+                text = <"No difficulty">
+                description = <"The individual experiences no difficulty when performing the activity.">
+            >
+            ["at0023"] = <
+                text = <"Mild difficulty">
+                description = <"The individual experiences a low degree of difficulty when performing the activity.">
+            >
+            ["at0024"] = <
+                text = <"Moderate difficulty">
+                description = <"The individual experiences a significant degree of difficulty when performing the activity.">
+            >
+            ["at0025"] = <
+                text = <"Severe difficulty">
+                description = <"The individual experiences a high degree of difficulty when performing the activity.">
+            >
+            ["at0029"] = <
+                text = <"Assistive devices description">
+                description = <"Narrative description about any tools, aids, or technologies used by the individual while performing the activity.">
+                comment = <"For example: smartphone reminders, modified cutlery, reading glasses, hearing aids, mobility aids, prostheses, self-care aids, communication aids, or an assistance animal.">
+            >
+            ["at0030"] = <
+                text = <"Confounding factors">
+                description = <"Issues or contextual factors that may impact on functional ability, not captured in other fields.">
+                comment = <"For example: fatigue, diurnal variation, recent exertion, medication effect, sleep status, mood, situational anxiety.">
+            >
+            ["ac9010"] = <
+                text = <"Ability (synthesised)">
+                description = <"The assessed ability to perform the identified activity independently. (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Difficulty (synthesised)">
+                description = <"The degree of difficulty experienced by the individual when performing the activity independently. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9011"] = <
+            id = <"ac9011">
+            members = <"at0022", "at0023", "at0024", "at0025">
+        >
+        ["ac9010"] = <
+            id = <"ac9010">
+            members = <"at0017", "at0018", "at0019">
+        >
+    >

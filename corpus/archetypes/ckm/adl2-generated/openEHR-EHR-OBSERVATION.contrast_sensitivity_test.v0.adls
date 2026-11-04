@@ -1,0 +1,484 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=b6e5c89a-d222-4412-9945-8a25b96818ae; build_uid=47beee85-96f2-46c5-9dd6-8d6583cc5052)
+    openEHR-EHR-OBSERVATION.contrast_sensitivity_test.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Olha Nikolaieva">
+        ["organisation"] = <"University Hospital Basel">
+        ["email"] = <"olha.nikolaieva@usb.ch">
+        ["date"] = <"2024-05-24">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Amanda Herbrand, University Hospital Basel, Switzerland", "Jannis Pesch, University Hospital Basel, Switzerland", "Vanessa Pereira, Luxembourg Institute of Health, Luxembourg">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"Kalloniatis M, Luu C. Contrast Sensitivity. In: Kolb H, Fernandez E, Nelson R, editors. Webvision: The Organization of the Retina and Visual System [Internet]. Salt Lake City (UT): University of Utah Health Sciences Center; 2007. Available from: https://www.ncbi.nlm.nih.gov/books/NBK11532/">
+        ["2"] = <"Elliott DB. Contrast sensitivity and glare testing in the assessment of visual impairment. Optometry and Vision Science. 2006;83(8):349-358.">
+        ["3"] = <"American Academy of Ophthalmology. Clinical Guidelines and Resources on Visual Acuity and Contrast Sensitivity Testing. San Francisco (CA): American Academy of Ophthalmology; c2021. Available from: https://www.aao.org/clinical-guidelines">
+        ["4"] = <"National Eye Institute. Vision Testing and Eye Health Resources. Bethesda (MD): National Eye Institute; c2021. Available from: https://www.nei.nih.gov/learn-about-eye-health/eye-conditions-and-diseases">
+        ["5"] = <"MedlinePlus. Eye Health and Vision Tests. Bethesda (MD): National Library of Medicine (US); c2021. Available from: https://medlineplus.gov/eyetests.html">
+        ["6"] = <"AllAboutVision.com. Vision Tests: Contrast Sensitivity. c2021. Available from: https://www.allaboutvision.com/eye-exam/contrast-sensitivity.htm">
+        ["7"] = <"Pelli-Robson Contrast Sensitivity Chart Manual. Mars Letter Contrast Sensitivity Test User Guide. CSV-1000 Contrast Sensitivity Test Documentation. Available from the respective manufacturers.">
+        ["8"] = <"Investigative Ophthalmology & Visual Science (IOVS). Research Studies on Contrast Sensitivity Function. Rockville (MD): Association for Research in Vision and Ophthalmology (ARVO); c2021. Available from: https://iovs.arvojournals.org/">
+        ["9"] = <"Journal of Vision. Research Papers on Contrast Sensitivity. Washington (DC): The Association for Research in Vision and Ophthalmology (ARVO); c2021. Available from: https://jov.arvojournals.org/">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"A7D68E800B6E788E51221C5FEA8139D9">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For recording the results of contrast sensitivity testing, normally measured by testing the subject's ability to recognize a standard test pattern.">
+            keywords = <"Contrast sensitivity, contrast vision, low-contrast vision, Pelli-Robson chart, functional acuity contrast test (FACT), spatial frequency, sine wave gratings, log contrast sensitivity (LogCS), contrast sensitivity function (CSF), visual impairment, night driving, depth perception.", ...>
+            use = <"Use to record the results of measurement of contrast sensitivity testing.
+
+The 'Description' data element can be used to record simple narrative summary or as a means to integrate legacy data. 
+
+Detailed, structured contrast sensitivity test results are preferred and are generally recorded for each eye in turn. Contrast sensitivity may be recorded using a number of different notation formats. In some settings, the contrast sensitivity result, originally captured using one of the standard notations, is converted to a 'Derived Score', with details of the original notation and algorithm employed recorded as part of the protocol.
+
+Where contrast sensitivity is recorded using coded terms, the 'Clinical Interpretation' element should be used, allowing the result to be captured for each eye. 
+
+The 'Absent Test Result' element may be used to record circumstances where a test could not be performed or completed. Further details may be recorded under 'Comment' or 'Confounding Factors'.
+
+When performing contrast sensitivity testing it is customary to record a series of tests sharing a common charting methodology but with different phases of corrective refraction. Each of these phases should be recorded using a separate Entry record, with the name of the test phase carried in 'Test Name'. Further specific details of the exact correction applied (which may involve applying multiple refractions) may be captured in 'Refractive Correction' and 'Refraction Details'  the latter making use of separate Cluster archetypes, one for each eye.">
+            misuse = <"">
+            copyright = <"© While openEHR archetypes are all freely available under an open license, the specific content of this archetype may be copyright protected. Any use of this archetype within implementations must be in compliance with the terms established by the copyright owners where a copyright exists., openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Contrast sensitivity test
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Test name
+                                        value matches {
+                                            DV_TEXT[at9006]
+                                        }
+                                    }
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Description
+                                        value matches {
+                                            DV_TEXT[at9007]
+                                        }
+                                    }
+                                    CLUSTER[at0020] matches {    -- Result details
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0021] occurrences matches {1} matches {    -- Eye examined
+                                                value matches {
+                                                    DV_CODED_TEXT[at9008] matches {
+                                                        defining_code matches {[ac9000]}    -- Eye examined (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0037] occurrences matches {0..1} matches {    -- Score
+                                                value matches {
+                                                    DV_COUNT[at9009] matches {
+                                                        magnitude matches {|>=0|}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0038] matches {    -- Clinical interpretation
+                                                value matches {
+                                                    DV_TEXT[at9010]
+                                                }
+                                            }
+                                            ELEMENT[at0039] occurrences matches {0..1} matches {    -- No test result
+                                                value matches {
+                                                    DV_BOOLEAN[at9011] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0040] occurrences matches {0..1} matches {    -- Reason for no test result
+                                                value matches {
+                                                    DV_TEXT[at9012]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0041] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9013]
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0042] occurrences matches {0..1} matches {    -- Test not done
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.exclusion_exam(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0044] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0045] occurrences matches {0..1} matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9014]
+                                        }
+                                    }
+                                    ELEMENT[at0046] matches {    -- Refractive correction
+                                        value matches {
+                                            DV_CODED_TEXT[at9015] matches {
+                                                defining_code matches {[ac9001]}    -- Refractive correction (synthesised)
+                                            }
+                                            DV_TEXT[at9016]
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0052] occurrences matches {0..2} matches {    -- Refraction details
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.refraction_details(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                    allow_archetype CLUSTER[at0053] occurrences matches {0..1} matches {    -- Pupillary state
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.exam_pupils(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0055] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0056] occurrences matches {0..1} matches {    -- Testing distance
+                        value matches {
+                            DV_QUANTITY[at9017] matches {
+                                property matches {[at9002]}    -- Length
+                                [magnitude, units, precision] matches {
+                                    [{|>=0.0|}, {"[ft_i]"}, {1}],
+                                    [{|>=0.0|}, {"m"}, {1}],
+                                    [{|>=0.0|}, {"cm"}, {1}],
+                                    [{|>=0.0|}, {"[in_i]"}, {1}]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0057] occurrences matches {0..1} matches {    -- Chart method
+                        value matches {
+                            DV_CODED_TEXT[at9018] matches {
+                                defining_code matches {[ac9003]}    -- Chart method (synthesised)
+                            }
+                            DV_TEXT[at9019]
+                        }
+                    }
+                    ELEMENT[at0070] occurrences matches {0..1} matches {    -- Chart scoring algorithm
+                        value matches {
+                            DV_CODED_TEXT[at9020] matches {
+                                defining_code matches {[ac9004]}    -- Chart scoring algorithm (synthesised)
+                            }
+                            DV_TEXT[at9021]
+                        }
+                    }
+                    ELEMENT[at0075] occurrences matches {0..1} matches {    -- Derived score original notation
+                        value matches {
+                            DV_CODED_TEXT[at9022] matches {
+                                defining_code matches {[ac9005]}    -- Derived score original notation (synthesised)
+                            }
+                            DV_TEXT[at9023]
+                        }
+                    }
+                    ELEMENT[at0082] occurrences matches {0..1} matches {    -- Derived score algorithm
+                        value matches {
+                            DV_TEXT[at9024]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0074] occurrences matches {0..1} matches {    -- Measurement device details
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    allow_archetype CLUSTER[at0083] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Contrast sensitivity test">
+                description = <"Contrast sensitivity is a measure of the ability to detect objects against varying levels of background contrast. ">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0006"] = <
+                text = <"Test name">
+                description = <"The name of the exact contrast sensitivity test performed. ">
+                comment = <"Details of the exact correction applied, or where multiple corrections should be captured via 'Refractive Correction'.">
+            >
+            ["at0019"] = <
+                text = <"Description">
+                description = <"An overall narrative description of the contrast sensitivity test result.">
+            >
+            ["at0020"] = <
+                text = <"Result details">
+                description = <"Details of the contrast sensitivity test result for each eye or for both eyes (binocular assessment).">
+            >
+            ["at0021"] = <
+                text = <"Eye examined">
+                description = <"The eye under examination or a binocular assessment.">
+            >
+            ["at0022"] = <
+                text = <"Left eye">
+                description = <"The test result refers to the contrast sensitivity of the left eye only.">
+            >
+            ["at0023"] = <
+                text = <"Right eye">
+                description = <"The test result refers to the contrast sensitivity of the right eye only.">
+            >
+            ["at0024"] = <
+                text = <"Both eyes simultaneously">
+                description = <"Both eyes were examined simultaneously (binocular assessment).">
+            >
+            ["at0037"] = <
+                text = <"Score">
+                description = <"Contrast sensitivity expressed as an integer score, which is calculated from one or more of the other result notation formats.">
+                comment = <"The original notation should be captured using 'Derived score original notation'. Details of the algorithm used and original result format may be recorded under 'Derived score algorithm'.">
+            >
+            ["at0038"] = <
+                text = <"Clinical interpretation">
+                description = <"Clinical interpretation of all results for the each test eye or for both eyes.">
+                comment = <"Example: 'Contrast sensitivity high (≥ 2.0) LogCS score' or 'CFS reduced at high frequencies'.">
+            >
+            ["at0039"] = <
+                text = <"No test result">
+                description = <"No contrast sensitivity test result is available for the each test eye or for both eyes.">
+            >
+            ["at0040"] = <
+                text = <"Reason for no test result">
+                description = <"Reason why no contrast sensitivity test result is available for the each test eye or for both eyes.">
+            >
+            ["at0041"] = <
+                text = <"Comment">
+                description = <"Any additional narrative comment about the contrast sensitivity test.">
+            >
+            ["at0042"] = <
+                text = <"Test not done">
+                description = <"Details to explicitly record that this test was not performed.">
+            >
+            ["at0045"] = <
+                text = <"Confounding factors">
+                description = <"Patient circumstances which affect interpretation of the result. Often termed 'reliability' in opthalmological documentation.">
+                comment = <"Examples: 'Patient was confused', 'Low light conditions'.">
+            >
+            ["at0046"] = <
+                text = <"Refractive correction">
+                description = <"The specific type(s) of refractive correction applied when measuring contrast sensitivity.">
+            >
+            ["at0047"] = <
+                text = <"Spectacles">
+                description = <"The subject's vision was corrected by spectacles.">
+            >
+            ["at0048"] = <
+                text = <"Contact lenses">
+                description = <"The subject's vision was corrected by contact lenses.">
+            >
+            ["at0049"] = <
+                text = <"Pinhole">
+                description = <"The subject's vision was corrected by use of a pinhole.">
+            >
+            ["at0050"] = <
+                text = <"Autorefraction">
+                description = <"The subject's vision was corrected by autorefraction.">
+            >
+            ["at0051"] = <
+                text = <"Retinoscopy">
+                description = <"The subject's vision was corrected by retinoscopy.">
+            >
+            ["at0052"] = <
+                text = <"Refraction details">
+                description = <"Details of the refraction applied to each eye.">
+            >
+            ["at0053"] = <
+                text = <"Pupillary state">
+                description = <"Details of the state of the pupil on examination.">
+            >
+            ["at0056"] = <
+                text = <"Testing distance">
+                description = <"The distance at which the subject's contrast sensitivity was measured.">
+            >
+            ["at0057"] = <
+                text = <"Chart method">
+                description = <"The charting method used to measure contrast sensitivity.">
+            >
+            ["at0058"] = <
+                text = <"Pelli-Robson chart">
+                description = <"Pelli-Robson chart was used to measure contrast sensitivity.">
+            >
+            ["at0059"] = <
+                text = <"Functional grating">
+                description = <"Functional grating chart was used to measure contrast sensitivity.">
+            >
+            ["at0060"] = <
+                text = <"CSV-1000 test gratings">
+                description = <"CSV-1000 test grating charts were used to measure contrast sensitivity.">
+            >
+            ["at0061"] = <
+                text = <"Mars chart">
+                description = <"Mars chart was used to measure contrast sensitivity.">
+            >
+            ["at0062"] = <
+                text = <"Cambridge grating">
+                description = <"Cambridge grating chart was used to measure contrast sensitivity.">
+            >
+            ["at0063"] = <
+                text = <"Bailey-Lovie chart">
+                description = <"Bailey-Lovie chart was used to measure contrast sensitivity.">
+            >
+            ["at0064"] = <
+                text = <"Regan chart">
+                description = <"Regan chart was used to measure contrast sensitivity.">
+            >
+            ["at0065"] = <
+                text = <"Melborne chart">
+                description = <"Melborne chart was used to measure contrast sensitivity.">
+            >
+            ["at0070"] = <
+                text = <"Chart scoring algorithm">
+                description = <"The alogrithm used to determine the score.">
+            >
+            ["at0071"] = <
+                text = <"Single letter">
+                description = <"A single letter algorithm was used to derive the contrast sensitivity score.">
+            >
+            ["at0072"] = <
+                text = <"Whole line">
+                description = <"A whole line algorithm was used to derive the contrast sensitivity score.">
+            >
+            ["at0073"] = <
+                text = <"Last line single letter">
+                description = <"A last line single letter algorithm was used to derive the contrast sensitivity score.">
+            >
+            ["at0074"] = <
+                text = <"Measurement device details">
+                description = <"Details of the device used to measure contrast sensitivity.">
+            >
+            ["at0075"] = <
+                text = <"Derived score original notation">
+                description = <"The original contrast sensitivity result notation from which the Derived Score was calculated.">
+                comment = <"Comment: When the contrast sensitivity result is recorded using a Derived Score, this element can be used to record the original notation format, so that it can be displayed using the original notation.">
+            >
+            ["at0076"] = <
+                text = <"Log contrast sensitivity score (LogCS)">
+                description = <"Represents the logarithm of the inverse of the contrast threshold, linearizing the range of contrast sensitivities.">
+                comment = <"Examples: '20/20' , '20/40', '20/18'">
+            >
+            ["at0077"] = <
+                text = <"Contrast sensitivity function (CSF)">
+                description = <"Represents the patient's sensitivity across different spatial frequencies, often plotted as a graph.">
+                comment = <"Examples: '6/6, '6/12', '6/5'">
+            >
+            ["at0078"] = <
+                text = <"Sine wave gratings score">
+                description = <"The contrast sensitivity for each spatial frequency is calculated as the inverse of the contrast threshold at that frequency. These values can be averaged or used to derive an overall score.">
+            >
+            ["at0079"] = <
+                text = <"Pelli-Robson score">
+                description = <"Derived by summing the number of correctly identified letters, each corresponding to a specific contrast level.">
+            >
+            ["at0082"] = <
+                text = <"Derived score algorithm">
+                description = <"Details of the algorithm used to calculate a derived score.">
+            >
+            ["at0083"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0084"] = <
+                text = <"Lea chart">
+                description = <"Lea chart was used to measure contrast sensitivity.">
+            >
+            ["at0085"] = <
+                text = <"Hiding Heidi chart">
+                description = <"Hiding Heidi chart was used to measure contrast sensitivity.">
+            >
+            ["at0086"] = <
+                text = <"qCSF test chart">
+                description = <"qCSF test chart were used to measure contrast sensitivity.">
+            >
+            ["at0087"] = <
+                text = <"No vision correction">
+                description = <"The subject's vision was not corrected by any method.">
+            >
+            ["at0088"] = <
+                text = <"No need for vision correction">
+                description = <"The subject doesn't need any vision correction.">
+            >
+            ["at9002"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["ac9000"] = <
+                text = <"Eye examined (synthesised)">
+                description = <"The eye under examination or a binocular assessment. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Refractive correction (synthesised)">
+                description = <"The specific type(s) of refractive correction applied when measuring contrast sensitivity. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Chart method (synthesised)">
+                description = <"The charting method used to measure contrast sensitivity. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Chart scoring algorithm (synthesised)">
+                description = <"The alogrithm used to determine the score. (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Derived score original notation (synthesised)">
+                description = <"The original contrast sensitivity result notation from which the Derived Score was calculated. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9002"] = <http://openehr.org/id/122>
+        >
+        ["SNOMED-CT"] = <
+            ["at0000"] = <http://snomed.info/id/251686008>
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0047", "at0048", "at0049", "at0050", "at0051", "at0087", "at0088">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0022", "at0023", "at0024">
+        >
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0076", "at0077", "at0078", "at0079">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0071", "at0072", "at0073">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0058", "at0059", "at0060", "at0061", "at0062", "at0063", "at0064", "at0065", "at0084", "at0085", "at0086">
+        >
+    >

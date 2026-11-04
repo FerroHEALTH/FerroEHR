@@ -1,0 +1,837 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=47490335-07f8-4e1e-b8b8-3cdf53e79857; build_uid=f0b0bbdf-be2f-4273-ab25-2d8a9ff5475b)
+    openEHR-EHR-CLUSTER.exam-eye.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-CLUSTER.exam.v2
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Nina Schewe">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"schewe.nina@mh-hannover.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Erik Sundvall">
+                ["organisation"] = <"Region Östergötland + Linköping University">
+                ["email"] = <"erik.sundvall@regionostergotland.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke / Vebjørn Arntzen, Arne Løberg Sæter">
+                ["organisation"] = <"Helse Vest IKT / Oslo university hospital">
+                ["email"] = <"arnelsa@gmail.com">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Adriana Kitajima">
+                ["organisation"] = <"Hospital Alemão Oswaldo Cruz - HAOC">
+                ["email"] = <"adrianakitajima@gmail.com">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2015-06-23">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Shahla Foozonkhah, Iran ministry of health and education, Iran", "Hildegard Franke, freshEHR Clinical Informatics Ltd., United Kingdom (openEHR Editor)", "Mikkel Gaup Grønmo, FSE, Helse Nord, Norway (Nasjonal IKT redaktør)", "Ingrid Heitmann, Oslo universitetssykehus HF, Norway", "Hilde Hollås, DIPS ASA, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Lars Ivar Mehlum, Helse Bergen HF, Norway", "Sabine Leh, Haukeland University Hospital, Department of Pathology, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Lars Morgan Karlsen, DIPS ASA, Norway", "Bjørn Næss, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Vladimir Pizzo, Hospital Sírio Libanês, Brazil", "Jussara Rotzsch, UNB, Brazil", "Anoop Shah, University College London, United Kingdom", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Nyree Taylor, Ocean Informatics, Australia (openEHR Editor)", "Rowan Thomas, St. Vincent's Hospital Melbourne, Australia", "Jon Tysdahl, Furst medlab AS, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, Australia<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"71E73E16EC822E800BD17D17C59DD3AA">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"*To record the findings observed during the physical examination of a body system or anatomical structure. (en)">
+            use = <"*Use to record the observed findings during the physical examination of a body system or anatomical structure.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam or the \"Procedure detail\" SLOT within the ACTION.procedure archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. Specialisations of this archetype can be used to record examination findings for identified body systems or anatomical structures. If there is no appropriate specialisation available, use this archetype and identify the system or structure being examined using the 'System or structure examined' data element and the location on the body using the 'Body site' data element or the 'Structured body site' SLOT.
+
+Interpretation of the findings, for example 'No abnormality detected' or 'Moderate inflammation present', can be recorded using the 'Clinical interpretation' data element.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element. (en)">
+            misuse = <"*Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom_sign.
+
+Not to be used for recording the results of an imaging examination - use the CLUSTER.imaging_exam family of archetypes for this purpose. (en)">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"*To record the findings observed during the physical examination of a body system or anatomical structure. (en)">
+            keywords = <"fynd, undersökningsfynd, fysisk undersökning, u.a., utan anmärkning", ...>
+            use = <"*Use to record the observed findings during the physical examination of a body system or anatomical structure.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam or the \"Procedure detail\" SLOT within the ACTION.procedure archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. Specialisations of this archetype can be used to record examination findings for identified body systems or anatomical structures. If there is no appropriate specialisation available, use this archetype and identify the system or structure being examined using the 'System or structure examined' data element and the location on the body using the 'Body site' data element or the 'Structured body site' SLOT.
+
+Interpretation of the findings, for example 'No abnormality detected' or 'Moderate inflammation present', can be recorded using the 'Clinical interpretation' data element.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element. (en)">
+            misuse = <"*Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom_sign.
+
+Not to be used for recording the results of an imaging examination - use the CLUSTER.imaging_exam family of archetypes for this purpose. (en)">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere en fritekstbeskrivelse og klinisk tolkning av observerte funn ved fysisk undersøkelse av et organsystem eller anatomisk struktur.">
+            use = <"Brukes til å registrere en fritekstbeskrivelse og klinisk tolkning av observerte funn ved fysisk undersøkelse av et spesifisert organsystem eller anatomisk struktur. Denne arketypen består kun av kjerneelementene av mønsteret for undersøkelser, og kan utvides ved hjelp av andre CLUSTER-arketyper eller brukes som grunnlag for undersøkelsesarketyper for spesifikke kroppssystemer eller anatomiske strukturer. 
+
+Eksempler på detaljer som kan beskrives ved hjelp av dette CLUSTER er inspeksjon, palpasjon, auskultasjon, perkusjon og bevegelser i kroppssystemer eller anatomiske strukturer. Undersøkelsen kan støttes av enkle hjelpemidler som stetoskop, otoskop eller reflekshammer. Også funn ved mer avanserte undersøkelser kan registreres her, som ved endoskopi. I de tilfellene vil informasjon om hvilket hjelpemiddel eller utstyr brukt bli registrert i OBSERVATION.exam, elementet \"Detaljer om medisinsk utstyr\", i ACTION.procedure \"Prosedyredetaljer\" eller tilsvarende i egnet ENTRY- eller ACTION-arketype.
+
+Arketypen er laget spesifikt for å brukes i \"Undersøkelsesdetaljer\"-SLOTet i arketypen OBSERVATION.exam, men kan også brukes innen andre ENTRY- og CLUSTER-arketyper der det er klinisk passende.
+
+Denne arketypen kan benyttes for alle typer undersøkelser, alt fra enkle undersøkelser som undersøkelse av et hudområde, inspeksjon av ører og til artroskopi av et kne.
+
+Kan for eksempel nøstes i SLOTet \"Undersøkelsesdetaljer\" i arketypen OBSERVATION.exam (Norsk Funn ved fysisk undersøkelse) for å registrere ytterligere strukturerte funn ved fysiske undersøkelser.
+
+Arketypen CLUSTER.exclusion_exam kan nøstes i SLOTet \"Undersøkelse ikke utført\" der en har behov for å registrere informasjon om at en undersøkelse ikke ble utført.
+
+Brukes for å videreføre fritekstbeskrivelser av kliniske funn fra tidligere systemer inn i et arketypeformat, ved å bruke elementet \"Klinisk beskrivelse\".">
+            misuse = <"Skal ikke brukes til å ta opp frittstående klinisk observasjoner eller testresultater - bruk spesifikke OBSERVATION arketyper, for eksempel OBSERVATION.head_circumference eller OBSERVATION.glasgow_coma_scale.
+
+Skal ikke brukes til å ta opp anamnese - bruk da spesifikke OBSERVATION og CLUSTER arketyper. For eksempel OBSERVATION.story og CLUSTER.symptom_sign.">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Registrar uma descrição narrativa e interpretação clínica dos achados observados durante o exame físico de um sistema corporal ou estrutura anatômica.">
+            use = <"Use para registrar uma descrição narrativa e interpretação clínica dos achados observados durante o exame físico de um sistema corporal ou estrutura anatômica.
+
+Esse arquétipo foi projetado especificamente para ser usado no SLOT 'Detalhes do exame' no arquétipo OBSERVATION.exam ou ACTION.procedure, mas também pode ser usado em outros arquétipos ENTRY ou CLUSTER, quando clinicamente apropriado.
+
+Use para fornecer uma estrutura na qual os arquétipos CLUSTER podem ser aninhados no SLOT 'Descobertas do exame' para registrar descobertas adicionais estruturadas do exame físico.
+
+O arquétipo CLUSTER.exclusion_exam pode ser aninhado no SLOT 'Exame não realizado' para registrar opcionalmente detalhes explícitos sobre o exame que não está sendo executado.
+
+Use para incorporar as descrições narrativas das descobertas clínicas nos sistemas clínicos existentes ou legados em um formato arquetipado, usando o elemento de dados 'Descrição Clínica'.">
+            misuse = <"Não deve ser usado para registrar a história clínica - use arquétipos específicos de OBSERVAÇÃO e CLUSTER. Por exemplo, OBSERVATION.story e CLUSTER.symptom_sign.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a narrative description and clinical interpretation of the findings observed during the physical examination of a single eye.">
+            use = <"Use to record a narrative description and clinical interpretation of the findings observed during the physical examination of a single eye.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the CLUSTER.exam-eyes or OBSERVATION.exam archetypes, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings - for example, CLUSTER.exam-retina or CLUSTER.exam-lens.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element.">
+            misuse = <"Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom_sign.
+
+Not to be used to record the results of visual field testing - use OBSERVATION.visual_field_test_result.
+
+Not to be used to record the results of visual acuity testing - use OBSERVATION.visual_acuity-test-result.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Examination of an eye
+        items matches {
+            ELEMENT[at0001.1] matches {    -- System or structure examined
+                value matches {
+                    DV_CODED_TEXT[at0.9001] matches {
+                        defining_code matches {[ac0.9000]}    -- System or structure examined (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0.17] occurrences matches {0..1} matches {    -- Red reflex
+                value matches {
+                    DV_CODED_TEXT[at0.9009] matches {
+                        defining_code matches {[ac0.9007]}    -- Red reflex (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0.20] occurrences matches {0..1} matches {    -- Squint
+                value matches {
+                    DV_CODED_TEXT[at0.9010] matches {
+                        defining_code matches {[ac0.9008]}    -- Squint (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0.3] occurrences matches {0..1} matches {    -- Eye movement description
+                value matches {
+                    DV_TEXT[at0.9007]
+                }
+            }
+            CLUSTER[at0.4] matches {    -- Movement detail
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0.5] occurrences matches {0..1} matches {    -- Direction of gaze
+                        value matches {
+                            DV_CODED_TEXT[at0.9003] matches {
+                                defining_code matches {[ac0.9001]}    -- Direction of gaze (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0.14] occurrences matches {0..1} matches {    -- Range
+                        value matches {
+                            DV_TEXT[at0.9004]
+                        }
+                    }
+                    ELEMENT[at0.15] occurrences matches {0..1} matches {    -- Speed
+                        value matches {
+                            DV_TEXT[at0.9005]
+                        }
+                    }
+                    ELEMENT[at0.16] occurrences matches {0..1} matches {    -- Smoothness
+                        value matches {
+                            DV_TEXT[at0.9006]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000.1"] = <
+                text = <"Untersuchungsergebnisse">
+                description = <"Während der körperlichen Untersuchung eines Körpersystems oder einer anatomischen Struktur beobachtete Befunde.">
+            >
+            ["at0001.1"] = <
+                text = <"Untersuchtes System oder untersuchte Struktur">
+                description = <"Identifizierung des untersuchten Körpersystems oder der anatomischen Struktur.">
+                comment = <"Wenn möglich wird die Kodierung des untersuchten Systems oder der untersuchten Struktur mit einer Terminologie bevorzugt.">
+            >
+            ["at0.1"] = <
+                text = <"Left eye">
+                description = <"The left eye was examined.">
+            >
+            ["at0.2"] = <
+                text = <"Right eye">
+                description = <"The right eye was examined.">
+            >
+            ["at0004.1"] = <
+                text = <"Untersuchungsergebnisse">
+                description = <"Strukturierte Angaben zu den Ergebnissen der körperlichen Untersuchung.">
+            >
+            ["at0.3"] = <
+                text = <"Eye movement description">
+                description = <"Narrative description about the extraocular muscle function.">
+            >
+            ["at0.4"] = <
+                text = <"Movement detail">
+                description = <"Detailed information about eye movement.">
+            >
+            ["at0.5"] = <
+                text = <"Direction of gaze">
+                description = <"The direction of single eye movement.">
+            >
+            ["at0.6"] = <
+                text = <"Elevation">
+                description = <"Upward movement of the eye.">
+            >
+            ["at0.7"] = <
+                text = <"Depression">
+                description = <"Downward movement of the eye.">
+            >
+            ["at0.8"] = <
+                text = <"Abduction">
+                description = <"Movement of the eye laterally, towards the same side.">
+            >
+            ["at0.9"] = <
+                text = <"Abduction and elevation">
+                description = <"Movement of the eye upward and laterally, towards the same side.">
+            >
+            ["at0.10"] = <
+                text = <"Abduction and depression">
+                description = <"Movement of the eye downward and laterally, towards the same side.">
+            >
+            ["at0.11"] = <
+                text = <"Adduction">
+                description = <"Movement of the eye medially, towards the opposite side.">
+            >
+            ["at0.12"] = <
+                text = <"Adduction and elevation">
+                description = <"Movement of the eye upward and medially, towards the opposite side.">
+            >
+            ["at0.13"] = <
+                text = <"Adduction and depression">
+                description = <"Movement of the eye downward and medially, towards the opposite side.">
+            >
+            ["at0.14"] = <
+                text = <"Range">
+                description = <"Description of the range of movement in the identified direction of gaze.">
+            >
+            ["at0.15"] = <
+                text = <"Speed">
+                description = <"Description of the speed of movement in the identified direction of gaze.">
+            >
+            ["at0.16"] = <
+                text = <"Smoothness">
+                description = <"Description of the smoothness of movement in the identified direction of gaze.">
+            >
+            ["at0.17"] = <
+                text = <"Red reflex">
+                description = <"Presence of the red reflex.">
+            >
+            ["at0.18"] = <
+                text = <"Present">
+                description = <"The red reflex is observed.">
+            >
+            ["at0.19"] = <
+                text = <"Absent">
+                description = <"The red reflex is not present.">
+            >
+            ["at0.20"] = <
+                text = <"Squint">
+                description = <"Presence of a squint.">
+            >
+            ["at0.21"] = <
+                text = <"Present">
+                description = <"A squint is observed.">
+            >
+            ["at0.22"] = <
+                text = <"Absent">
+                description = <"A squint is not present.">
+            >
+            ["ac0.9000"] = <
+                text = <"Untersuchtes System oder untersuchte Struktur (synthesised)">
+                description = <"Identifizierung des untersuchten Körpersystems oder der anatomischen Struktur. (synthesised)">
+            >
+            ["ac0.9007"] = <
+                text = <"Red reflex (synthesised)">
+                description = <"Presence of the red reflex. (synthesised)">
+            >
+            ["ac0.9008"] = <
+                text = <"Squint (synthesised)">
+                description = <"Presence of a squint. (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"Direction of gaze (synthesised)">
+                description = <"The direction of single eye movement. (synthesised)">
+            >
+        >
+        ["sv"] = <
+            ["at0000.1"] = <
+                text = <"Fynd vid undersökning">
+                description = <"Observerade fynd vid fysisk undersökning av system i kroppen, eller av anatomisk struktur">
+            >
+            ["at0001.1"] = <
+                text = <"System eller struktur som undersökts">
+                description = <"Identifiering av systemet eller strukturen som undersökts.">
+                comment = <"Om möjligt, koda systemet eller strukturen med hjälp av ett terminologisystem.">
+            >
+            ["at0.1"] = <
+                text = <"Left eye">
+                description = <"The left eye was examined.">
+            >
+            ["at0.2"] = <
+                text = <"Right eye">
+                description = <"The right eye was examined.">
+            >
+            ["at0004.1"] = <
+                text = <"Fynd vid undersökning">
+                description = <"Strukturerade detaljer om fynd vid den fysiska undersökningen.">
+            >
+            ["at0.3"] = <
+                text = <"Eye movement description">
+                description = <"Narrative description about the extraocular muscle function.">
+            >
+            ["at0.4"] = <
+                text = <"Movement detail">
+                description = <"Detailed information about eye movement.">
+            >
+            ["at0.5"] = <
+                text = <"Direction of gaze">
+                description = <"The direction of single eye movement.">
+            >
+            ["at0.6"] = <
+                text = <"Elevation">
+                description = <"Upward movement of the eye.">
+            >
+            ["at0.7"] = <
+                text = <"Depression">
+                description = <"Downward movement of the eye.">
+            >
+            ["at0.8"] = <
+                text = <"Abduction">
+                description = <"Movement of the eye laterally, towards the same side.">
+            >
+            ["at0.9"] = <
+                text = <"Abduction and elevation">
+                description = <"Movement of the eye upward and laterally, towards the same side.">
+            >
+            ["at0.10"] = <
+                text = <"Abduction and depression">
+                description = <"Movement of the eye downward and laterally, towards the same side.">
+            >
+            ["at0.11"] = <
+                text = <"Adduction">
+                description = <"Movement of the eye medially, towards the opposite side.">
+            >
+            ["at0.12"] = <
+                text = <"Adduction and elevation">
+                description = <"Movement of the eye upward and medially, towards the opposite side.">
+            >
+            ["at0.13"] = <
+                text = <"Adduction and depression">
+                description = <"Movement of the eye downward and medially, towards the opposite side.">
+            >
+            ["at0.14"] = <
+                text = <"Range">
+                description = <"Description of the range of movement in the identified direction of gaze.">
+            >
+            ["at0.15"] = <
+                text = <"Speed">
+                description = <"Description of the speed of movement in the identified direction of gaze.">
+            >
+            ["at0.16"] = <
+                text = <"Smoothness">
+                description = <"Description of the smoothness of movement in the identified direction of gaze.">
+            >
+            ["at0.17"] = <
+                text = <"Red reflex">
+                description = <"Presence of the red reflex.">
+            >
+            ["at0.18"] = <
+                text = <"Present">
+                description = <"The red reflex is observed.">
+            >
+            ["at0.19"] = <
+                text = <"Absent">
+                description = <"The red reflex is not present.">
+            >
+            ["at0.20"] = <
+                text = <"Squint">
+                description = <"Presence of a squint.">
+            >
+            ["at0.21"] = <
+                text = <"Present">
+                description = <"A squint is observed.">
+            >
+            ["at0.22"] = <
+                text = <"Absent">
+                description = <"A squint is not present.">
+            >
+            ["ac0.9000"] = <
+                text = <"System eller struktur som undersökts (synthesised)">
+                description = <"Identifiering av systemet eller strukturen som undersökts. (synthesised)">
+            >
+            ["ac0.9007"] = <
+                text = <"Red reflex (synthesised)">
+                description = <"Presence of the red reflex. (synthesised)">
+            >
+            ["ac0.9008"] = <
+                text = <"Squint (synthesised)">
+                description = <"Presence of a squint. (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"Direction of gaze (synthesised)">
+                description = <"The direction of single eye movement. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0.1"] = <
+                text = <"Venstre øye">
+                description = <"Det venstre øyet ble undersøkt.">
+            >
+            ["at0.10"] = <
+                text = <"Abduksjon og depresjon">
+                description = <"Øyebevegelse utover og nedad, mot samme side øye er på.">
+            >
+            ["at0.11"] = <
+                text = <"Adduksjon">
+                description = <"Øyebevegelse innover, mot den motsatte siden av det aktuelle øyet.">
+            >
+            ["at0.12"] = <
+                text = <"Adduksjon og elevasjon">
+                description = <"Øyebevegelse innover og oppover, mot den motsatte siden av det aktuelle øyet.">
+            >
+            ["at0.13"] = <
+                text = <"Adduksjon og depresjon">
+                description = <"Øyebevegelse innover og nedad, mot den motsatte siden av det aktuelle øyet.">
+            >
+            ["at0.14"] = <
+                text = <"Funksjonsgrad">
+                description = <"Beskrivelse av funksjonsgraden av øyebevegelse i den identifiserte synsretningen.">
+            >
+            ["at0.15"] = <
+                text = <"Hastighet">
+                description = <"Beskrivelse av hastigheten av øyebevegelse i den identifiserte synsretningen.">
+            >
+            ["at0.16"] = <
+                text = <"Jevnhet">
+                description = <"Beskrivelse av hvor jevn øyebevegelsen er i den identifiserte synsretningen.">
+            >
+            ["at0.17"] = <
+                text = <"Rød refleks">
+                description = <"Tilstedeværelse av rød refleks.">
+            >
+            ["at0.18"] = <
+                text = <"Tilstede">
+                description = <"Rød refleks er tilstede.">
+            >
+            ["at0.19"] = <
+                text = <"Fraværende">
+                description = <"Rød refleks er fraværende.">
+            >
+            ["at0.2"] = <
+                text = <"Høyre øye">
+                description = <"Det høyre øyet ble undersøkt.">
+            >
+            ["at0.20"] = <
+                text = <"Skjeling">
+                description = <"Tilstedeværelse av skjeling.">
+            >
+            ["at0.21"] = <
+                text = <"Tilstede">
+                description = <"Skjeling er tilstede">
+            >
+            ["at0.22"] = <
+                text = <"Fraværende">
+                description = <"Skjeling er ikke tilstede.">
+            >
+            ["at0.3"] = <
+                text = <"Beskrivelse av øyebevegelse">
+                description = <"Fritekstbeskrivelse om funksjonen i av de ekstraokulære musklene.">
+            >
+            ["at0.4"] = <
+                text = <"Bevegelsesdetaljer">
+                description = <"Detaljert informasjon om øyebevegelser.">
+            >
+            ["at0.5"] = <
+                text = <"Synsretning">
+                description = <"Retningen av en enkelt øyebevegelse.">
+            >
+            ["at0.6"] = <
+                text = <"Elevasjon">
+                description = <"Øyebevegelse oppover.">
+            >
+            ["at0.7"] = <
+                text = <"Depresjon">
+                description = <"Øyebevegelse nedover.">
+            >
+            ["at0.8"] = <
+                text = <"Abduksjon">
+                description = <"Øyebevegelse utover, mot den samme siden øyet er på.">
+            >
+            ["at0.9"] = <
+                text = <"Abduksjon og elevasjon">
+                description = <"Øyebevegelse oppad og utover, mot den samme siden øyet er på.">
+            >
+            ["at0000.1"] = <
+                text = <"Undersøkelse av ett øye">
+                description = <"Funn ved fysisk undersøkelse av et organsystem eller anatomisk struktur.">
+            >
+            ["at0001.1"] = <
+                text = <"Undersøkt organsystem eller struktur">
+                description = <"Identifisering av det undersøkte organsystemet eller anatomiske strukturen.">
+                comment = <"Koding av organsystem eller struktur med en terminologi er anbefalt, dersom det er mulig.">
+            >
+            ["at0004.1"] = <
+                text = <"Spesifikke funn">
+                description = <"Ytterligere strukturerte detaljer om undersøkelsesfunnene.">
+            >
+            ["ac0.9000"] = <
+                text = <"Undersøkt organsystem eller struktur (synthesised)">
+                description = <"Identifisering av det undersøkte organsystemet eller anatomiske strukturen. (synthesised)">
+            >
+            ["ac0.9007"] = <
+                text = <"Rød refleks (synthesised)">
+                description = <"Tilstedeværelse av rød refleks. (synthesised)">
+            >
+            ["ac0.9008"] = <
+                text = <"Skjeling (synthesised)">
+                description = <"Tilstedeværelse av skjeling. (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"Synsretning (synthesised)">
+                description = <"Retningen av en enkelt øyebevegelse. (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000.1"] = <
+                text = <"Resultados do exame">
+                description = <"Constatações observadas durante o exame físico de um sistema corporal ou estrutura anatômica.">
+            >
+            ["at0001.1"] = <
+                text = <"Sistema ou estrutura examinada">
+                description = <"Identificação do sistema do corpo examinado ou da estrutura anatômica.">
+                comment = <"A codificação do sistema ou estrutura examinada com uma terminologia é preferível, sempre que possível.">
+            >
+            ["at0.1"] = <
+                text = <"Left eye">
+                description = <"The left eye was examined.">
+            >
+            ["at0.2"] = <
+                text = <"Right eye">
+                description = <"The right eye was examined.">
+            >
+            ["at0004.1"] = <
+                text = <"Resultados do exame">
+                description = <"Detalhes estruturados sobre os resultados do exame físico.">
+            >
+            ["at0.3"] = <
+                text = <"Eye movement description">
+                description = <"Narrative description about the extraocular muscle function.">
+            >
+            ["at0.4"] = <
+                text = <"Movement detail">
+                description = <"Detailed information about eye movement.">
+            >
+            ["at0.5"] = <
+                text = <"Direction of gaze">
+                description = <"The direction of single eye movement.">
+            >
+            ["at0.6"] = <
+                text = <"Elevation">
+                description = <"Upward movement of the eye.">
+            >
+            ["at0.7"] = <
+                text = <"Depression">
+                description = <"Downward movement of the eye.">
+            >
+            ["at0.8"] = <
+                text = <"Abduction">
+                description = <"Movement of the eye laterally, towards the same side.">
+            >
+            ["at0.9"] = <
+                text = <"Abduction and elevation">
+                description = <"Movement of the eye upward and laterally, towards the same side.">
+            >
+            ["at0.10"] = <
+                text = <"Abduction and depression">
+                description = <"Movement of the eye downward and laterally, towards the same side.">
+            >
+            ["at0.11"] = <
+                text = <"Adduction">
+                description = <"Movement of the eye medially, towards the opposite side.">
+            >
+            ["at0.12"] = <
+                text = <"Adduction and elevation">
+                description = <"Movement of the eye upward and medially, towards the opposite side.">
+            >
+            ["at0.13"] = <
+                text = <"Adduction and depression">
+                description = <"Movement of the eye downward and medially, towards the opposite side.">
+            >
+            ["at0.14"] = <
+                text = <"Range">
+                description = <"Description of the range of movement in the identified direction of gaze.">
+            >
+            ["at0.15"] = <
+                text = <"Speed">
+                description = <"Description of the speed of movement in the identified direction of gaze.">
+            >
+            ["at0.16"] = <
+                text = <"Smoothness">
+                description = <"Description of the smoothness of movement in the identified direction of gaze.">
+            >
+            ["at0.17"] = <
+                text = <"*Red reflex (en)">
+                description = <"*Presence of the red reflex. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Present (en)">
+                description = <"*The red reflex is observed. (en)">
+            >
+            ["at0.19"] = <
+                text = <"*Absent (en)">
+                description = <"*The red reflex is not observed. (en)">
+            >
+            ["at0.20"] = <
+                text = <"*Squint (en)">
+                description = <"*Presence of a squint. (en)">
+            >
+            ["at0.21"] = <
+                text = <"*Present (en)">
+                description = <"*A squint is observed. (en)">
+            >
+            ["at0.22"] = <
+                text = <"*Absent (en)">
+                description = <"*A squint is not present. (en)">
+            >
+            ["ac0.9000"] = <
+                text = <"Sistema ou estrutura examinada (synthesised)">
+                description = <"Identificação do sistema do corpo examinado ou da estrutura anatômica. (synthesised)">
+            >
+            ["ac0.9007"] = <
+                text = <"*Red reflex (en) (synthesised)">
+                description = <"*Presence of the red reflex. (en) (synthesised)">
+            >
+            ["ac0.9008"] = <
+                text = <"*Squint (en) (synthesised)">
+                description = <"*Presence of a squint. (en) (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"Direction of gaze (synthesised)">
+                description = <"The direction of single eye movement. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Examination of an eye">
+                description = <"Findings observed during the physical examination of a single eye.">
+            >
+            ["at0001.1"] = <
+                text = <"System or structure examined">
+                description = <"Identification of the examined body system or anatomical structure.">
+                comment = <"Coding of the system or structure examined with a terminology is preferred, where possible.">
+            >
+            ["at0.1"] = <
+                text = <"Left eye">
+                description = <"The left eye was examined.">
+            >
+            ["at0.2"] = <
+                text = <"Right eye">
+                description = <"The right eye was examined.">
+            >
+            ["at0004.1"] = <
+                text = <"Examination findings">
+                description = <"Structured details about the physical examination findings.">
+            >
+            ["at0.3"] = <
+                text = <"Eye movement description">
+                description = <"Narrative description about the extraocular muscle function.">
+            >
+            ["at0.4"] = <
+                text = <"Movement detail">
+                description = <"Detailed information about eye movement.">
+            >
+            ["at0.5"] = <
+                text = <"Direction of gaze">
+                description = <"The direction of single eye movement.">
+            >
+            ["at0.6"] = <
+                text = <"Elevation">
+                description = <"Upward movement of the eye.">
+            >
+            ["at0.7"] = <
+                text = <"Depression">
+                description = <"Downward movement of the eye.">
+            >
+            ["at0.8"] = <
+                text = <"Abduction">
+                description = <"Movement of the eye laterally, towards the same side.">
+            >
+            ["at0.9"] = <
+                text = <"Abduction and elevation">
+                description = <"Movement of the eye upward and laterally, towards the same side.">
+            >
+            ["at0.10"] = <
+                text = <"Abduction and depression">
+                description = <"Movement of the eye downward and laterally, towards the same side.">
+            >
+            ["at0.11"] = <
+                text = <"Adduction">
+                description = <"Movement of the eye medially, towards the opposite side.">
+            >
+            ["at0.12"] = <
+                text = <"Adduction and elevation">
+                description = <"Movement of the eye upward and medially, towards the opposite side.">
+            >
+            ["at0.13"] = <
+                text = <"Adduction and depression">
+                description = <"Movement of the eye downward and medially, towards the opposite side.">
+            >
+            ["at0.14"] = <
+                text = <"Range">
+                description = <"Description of the range of movement in the identified direction of gaze.">
+            >
+            ["at0.15"] = <
+                text = <"Speed">
+                description = <"Description of the speed of movement in the identified direction of gaze.">
+            >
+            ["at0.16"] = <
+                text = <"Smoothness">
+                description = <"Description of the smoothness of movement in the identified direction of gaze.">
+            >
+            ["at0.17"] = <
+                text = <"Red reflex">
+                description = <"Presence of the red reflex.">
+            >
+            ["at0.18"] = <
+                text = <"Present">
+                description = <"The red reflex is observed.">
+            >
+            ["at0.19"] = <
+                text = <"Absent">
+                description = <"The red reflex is not present.">
+            >
+            ["at0.20"] = <
+                text = <"Squint">
+                description = <"Presence of a squint.">
+            >
+            ["at0.21"] = <
+                text = <"Present">
+                description = <"A squint is observed.">
+            >
+            ["at0.22"] = <
+                text = <"Absent">
+                description = <"A squint is not present.">
+            >
+            ["ac0.9000"] = <
+                text = <"System or structure examined (synthesised)">
+                description = <"Identification of the examined body system or anatomical structure. (synthesised)">
+            >
+            ["ac0.9007"] = <
+                text = <"Red reflex (synthesised)">
+                description = <"Presence of the red reflex. (synthesised)">
+            >
+            ["ac0.9008"] = <
+                text = <"Squint (synthesised)">
+                description = <"Presence of a squint. (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"Direction of gaze (synthesised)">
+                description = <"The direction of single eye movement. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0.1"] = <http://snomed.info/id/8966001>
+            ["at0.2"] = <http://snomed.info/id/18944008>
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.1", "at0.2">
+        >
+        ["ac0.9007"] = <
+            id = <"ac0.9007">
+            members = <"at0.18", "at0.19">
+        >
+        ["ac0.9008"] = <
+            id = <"ac0.9008">
+            members = <"at0.21", "at0.22">
+        >
+        ["ac0.9001"] = <
+            id = <"ac0.9001">
+            members = <"at0.6", "at0.7", "at0.8", "at0.9", "at0.10", "at0.11", "at0.12", "at0.13">
+        >
+    >

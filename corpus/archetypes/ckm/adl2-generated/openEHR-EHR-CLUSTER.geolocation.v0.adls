@@ -1,0 +1,108 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=d0170a0e-e0a3-4742-b44f-d6c90a3b2c98; build_uid=02786d9c-a9ab-4328-a51a-3d93ee1686df)
+    openEHR-EHR-CLUSTER.geolocation.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-09-13">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"488B52068A3CC720704D9D7A8BFBE5E1">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the position of a place on the surface of the earth.">
+            keywords = <"location,", ...>
+            use = <"Use to record the position of a place on the surface of the earth.
+
+This archetype is intended to be used within CLUSTER.address or similar archetypes.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Geolocation
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Latitude
+                value matches {
+                    DV_QUANTITY[at9002] matches {
+                        property matches {[at9000]}    -- Angle, plane
+                        magnitude matches {|-90.0..90.0|}
+                        units matches {"deg"}
+                        precision matches {6}
+                    }
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Longitude
+                value matches {
+                    DV_QUANTITY[at9003] matches {
+                        property matches {[at9000]}    -- Angle, plane
+                        magnitude matches {|-180.0..180.0|}
+                        units matches {"deg"}
+                        precision matches {6}
+                    }
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Altitude
+                value matches {
+                    DV_QUANTITY[at9004] matches {
+                        property matches {[at9001]}    -- Length
+                        units matches {"m"}
+                        precision matches {2}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Geolocation">
+                description = <"A geographical place on the surface of the earth, specified by latitude, longitude and height or depth.">
+            >
+            ["at0001"] = <
+                text = <"Latitude">
+                description = <"Horizontal (y) coordinate.">
+                comment = <"Latitude is represented by positive values north of the equator and negative values south of the equator. For example the latitude of the Eiffel Tower is 48.858093.">
+            >
+            ["at0002"] = <
+                text = <"Longitude">
+                description = <"Horizontal (x) coordinate.">
+                comment = <"Longitude is represented by negative values west of Prime Meridian and positive values east of Prime Meridian. For example the longitude of the Eiffel Tower is 2.294694">
+            >
+            ["at0003"] = <
+                text = <"Altitude">
+                description = <"The vertical coordinate representing height or depth.">
+                comment = <"For example, the height of the Eiffel Tower is 324m to the tip.">
+            >
+            ["at9000"] = <
+                text = <"Angle, plane">
+                description = <"Angle, plane">
+            >
+            ["at9001"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/497>
+            ["at9001"] = <http://openehr.org/id/122>
+        >
+    >

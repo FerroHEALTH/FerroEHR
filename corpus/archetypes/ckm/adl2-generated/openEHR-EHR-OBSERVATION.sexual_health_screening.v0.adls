@@ -1,0 +1,165 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=aaf7ffba-759f-4f97-b320-4bca55756f6a; build_uid=164b1a5f-a0df-423f-b166-feb240615923)
+    openEHR-EHR-OBSERVATION.sexual_health_screening.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-08-18">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"9A9837CEAA22AB650EE94D1F7486BD53">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the responses to a questionnaire about sexual health behaviour, especially screening for potentially at-risk behaviours.">
+            keywords = <"sex", "sexual", "risk", "STD", "STI">
+            use = <"Use to record the responses to a questionnaire about sexual health behaviour, especially screening for potentially at-risk behaviours.
+
+Common use cases include, but are not limited to:
+- Systematic questioning in any consultation; or
+- Specific questioning related to infectious disease surveillance.
+
+In order to record the response at a specific point in time or within an interval of time, use the EVENT RM attribute.
+
+This archetype has been designed to be used as a screening tool or to record simple questionnaire-format data for use in situations such as a disease registry. If the screening process identifies a health risk or condition and it is intended that the details are to be recorded and persisted as part of an ongoing health record, any further specific details about the exposure should be recorded using appropriate EVALUATION archetypes.">
+            misuse = <"Not to be used to record details about a specific problem condition identified as part of the questionnaire screening. Use EVALUATION.problem_diagnosis for this purpose.
+
+Not to be used to record persistent details about a risk assessment for a specific health condition, such as HIV. Use EVALUATION.health_risk for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Sexual health screening questionnaire
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Sexually active?
+                                        value matches {
+                                            DV_CODED_TEXT[at9002] matches {
+                                                defining_code matches {[ac9000]}    -- Sexually active? (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Sexual contacts
+                                        value matches {
+                                            DV_CODED_TEXT[at9003] matches {
+                                                defining_code matches {[ac9004]}    -- Sexual contacts (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Lifetime sex partners
+                                        value matches {
+                                            DV_COUNT[at9004]
+                                            DV_INTERVAL<DV_COUNT>[at9005] matches {
+                                                lower matches {
+                                                    DV_COUNT[at9006] matches {
+                                                        magnitude matches {|>=0|}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0011] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0012] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Sexual health screening questionnaire">
+                description = <"An individual- or self-reported questionnaire screening about sexual health behaviour, especially screening for potentially at-risk behaviours.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"Sexually active?">
+                description = <"Is the individual sexually active?">
+            >
+            ["at0005"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Sexual contacts">
+                description = <"The gender of sexual partners or contacts.">
+            >
+            ["at0008"] = <
+                text = <"Male only">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Female only">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Extension">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Both men and women">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Lifetime sex partners">
+                description = <"The total number of sexual partners.">
+                comment = <"Includes both past and current partners.">
+            >
+            ["ac9000"] = <
+                text = <"Sexually active? (synthesised)">
+                description = <"Is the individual sexually active? (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Sexual contacts (synthesised)">
+                description = <"The gender of sexual partners or contacts. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0005", "at0006">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0008", "at0009", "at0010">
+        >
+    >

@@ -1,0 +1,295 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=ebc0fe7d-c4c0-303c-81f0-97f87d4416e2; build_uid=98bfa438-fbeb-4ce0-9492-56e67832366c)
+    openEHR-EHR-OBSERVATION.conference.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"sam.heard@oceaninformatics.com">
+        ["date"] = <"2013-01-25">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Heather Leslie, Atomica Informatics, Australia", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, heather.leslie@atomicainformatics.com">
+        ["MD5-CAM-1.0.1"] = <"24182E5F660C9B8B5BDC89834E2F85F5">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the text conversation, or video- or audio-conference recording, between two or more clinicians, captured as part of the record of health care.">
+            keywords = <"chat", "videoconference", "audioconference", "conversation", "discussion">
+            use = <"Use to document evidence of interactions between healthcare providers that support the record of health care. For example, use to record phone or online chat conversations between remote healthcare providers; or audio- and video-conference recordings that record aspects of telemedicine consultations or case conferences.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Conference
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] matches {    -- Time
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Text record
+                                        value matches {
+                                            DV_TEXT[at9032]
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Audio or video record
+                                        value matches {
+                                            DV_MULTIMEDIA[at9033] matches {
+                                                media_type matches {[ac9030]}    -- Audio or video record (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Author
+                                        value matches {
+                                            DV_TEXT[at9034]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    INTERVAL_EVENT[at0006] matches {    -- Recording interval
+                        data matches {
+                            use_node ITEM_TREE[at9036] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                        math_function matches {
+                            DV_CODED_TEXT[at9035] matches {
+                                defining_code matches {[at9031]}    -- actual
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0008] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0009] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Conference">
+                description = <"Text conversation, or video- or audio-conference recording, between two or more clinicians, captured as part of the record of health care.">
+            >
+            ["at0002"] = <
+                text = <"Time">
+                description = <"Default, unspecified point in time recording which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Text record">
+                description = <"The text conversation between two or more healthcare providers.">
+            >
+            ["at0005"] = <
+                text = <"Audio or video record">
+                description = <"The audio or video conversation between two or more healthcare providers.">
+            >
+            ["at0006"] = <
+                text = <"Recording interval">
+                description = <"Default, unspecified interval recording event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0007"] = <
+                text = <"Author">
+                description = <"The author of the chat or instigator of the recording.">
+            >
+            ["at0009"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"For example: Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at9011"] = <
+                text = <"audio/DVI4">
+                description = <"audio/DVI4">
+            >
+            ["at9012"] = <
+                text = <"audio/G722">
+                description = <"audio/G722">
+            >
+            ["at9013"] = <
+                text = <"audio/G723">
+                description = <"audio/G723">
+            >
+            ["at9014"] = <
+                text = <"audio/G726-16">
+                description = <"audio/G726-16">
+            >
+            ["at9015"] = <
+                text = <"audio/G726-24">
+                description = <"audio/G726-24">
+            >
+            ["at9016"] = <
+                text = <"audio/G726-32">
+                description = <"audio/G726-32">
+            >
+            ["at9017"] = <
+                text = <"audio/G726-40">
+                description = <"audio/G726-40">
+            >
+            ["at9018"] = <
+                text = <"audio/G728">
+                description = <"audio/G728">
+            >
+            ["at9019"] = <
+                text = <"audio/L8">
+                description = <"audio/L8">
+            >
+            ["at9020"] = <
+                text = <"audio/L16">
+                description = <"audio/L16">
+            >
+            ["at9021"] = <
+                text = <"audio/LPC">
+                description = <"audio/LPC">
+            >
+            ["at9022"] = <
+                text = <"audio/G729">
+                description = <"audio/G729">
+            >
+            ["at9023"] = <
+                text = <"audio/G729D">
+                description = <"audio/G729D">
+            >
+            ["at9024"] = <
+                text = <"audio/G729E">
+                description = <"audio/G729E">
+            >
+            ["at9004"] = <
+                text = <"video/BT656">
+                description = <"video/BT656">
+            >
+            ["at9005"] = <
+                text = <"video/CelB">
+                description = <"video/CelB">
+            >
+            ["at9006"] = <
+                text = <"video/H261">
+                description = <"video/H261">
+            >
+            ["at9007"] = <
+                text = <"video/H263">
+                description = <"video/H263">
+            >
+            ["at9008"] = <
+                text = <"video/H263-1998">
+                description = <"video/H263-1998">
+            >
+            ["at9009"] = <
+                text = <"video/H263-2000">
+                description = <"video/H263-2000">
+            >
+            ["at9025"] = <
+                text = <"audio/mpeg">
+                description = <"audio/mpeg">
+            >
+            ["at9026"] = <
+                text = <"audio/mpeg4-generic">
+                description = <"audio/mpeg4-generic">
+            >
+            ["at9027"] = <
+                text = <"audio/L20">
+                description = <"audio/L20">
+            >
+            ["at9028"] = <
+                text = <"audio/L24">
+                description = <"audio/L24">
+            >
+            ["at9029"] = <
+                text = <"audio/telephone-event">
+                description = <"audio/telephone-event">
+            >
+            ["at9010"] = <
+                text = <"video/quicktime">
+                description = <"video/quicktime">
+            >
+            ["at9000"] = <
+                text = <"text/html">
+                description = <"text/html">
+            >
+            ["at9001"] = <
+                text = <"text/plain">
+                description = <"text/plain">
+            >
+            ["at9002"] = <
+                text = <"text/rtf">
+                description = <"text/rtf">
+            >
+            ["at9003"] = <
+                text = <"text/xml">
+                description = <"text/xml">
+            >
+            ["at9031"] = <
+                text = <"actual">
+                description = <"actual">
+            >
+            ["ac9030"] = <
+                text = <"Audio or video record (synthesised)">
+                description = <"The audio or video conversation between two or more healthcare providers. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9031"] = <http://openehr.org/id/640>
+        >
+        ["openEHR"] = <
+            ["at9011"] = <http://openehr.org/id/387>
+            ["at9012"] = <http://openehr.org/id/388>
+            ["at9013"] = <http://openehr.org/id/389>
+            ["at9014"] = <http://openehr.org/id/390>
+            ["at9015"] = <http://openehr.org/id/391>
+            ["at9016"] = <http://openehr.org/id/392>
+            ["at9017"] = <http://openehr.org/id/393>
+            ["at9018"] = <http://openehr.org/id/394>
+            ["at9019"] = <http://openehr.org/id/395>
+            ["at9020"] = <http://openehr.org/id/396>
+            ["at9021"] = <http://openehr.org/id/397>
+            ["at9022"] = <http://openehr.org/id/398>
+            ["at9023"] = <http://openehr.org/id/399>
+            ["at9024"] = <http://openehr.org/id/400>
+            ["at9004"] = <http://openehr.org/id/401>
+            ["at9005"] = <http://openehr.org/id/402>
+            ["at9006"] = <http://openehr.org/id/404>
+            ["at9007"] = <http://openehr.org/id/405>
+            ["at9008"] = <http://openehr.org/id/406>
+            ["at9009"] = <http://openehr.org/id/407>
+            ["at9025"] = <http://openehr.org/id/409>
+            ["at9026"] = <http://openehr.org/id/410>
+            ["at9027"] = <http://openehr.org/id/411>
+            ["at9028"] = <http://openehr.org/id/412>
+            ["at9029"] = <http://openehr.org/id/413>
+            ["at9010"] = <http://openehr.org/id/414>
+            ["at9000"] = <http://openehr.org/id/417>
+            ["at9001"] = <http://openehr.org/id/418>
+            ["at9002"] = <http://openehr.org/id/419>
+            ["at9003"] = <http://openehr.org/id/423>
+        >
+    >
+    value_sets = <
+        ["ac9030"] = <
+            id = <"ac9030">
+            members = <"at9000", "at9001", "at9002", "at9003", "at9004", "at9005", "at9006", "at9007", "at9008", "at9009", "at9010", "at9011", "at9012", "at9013", "at9014", "at9015", "at9016", "at9017", "at9018", "at9019", "at9020", "at9021", "at9022", "at9023", "at9024", "at9025", "at9026", "at9027", "at9028", "at9029">
+        >
+    >

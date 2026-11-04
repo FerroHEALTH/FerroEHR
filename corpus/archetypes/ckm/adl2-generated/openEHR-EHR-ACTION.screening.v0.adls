@@ -1,0 +1,385 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=5f3ceb95-acb4-4b57-bc94-9db3abd2962a; build_uid=fed9265c-b3ad-4d61-b33e-3b1edf6ac4f3)
+    openEHR-EHR-ACTION.screening.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2015-02-19">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Kathy Curry, HHIMS program, Northern Territory, Australia", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"4F1AFA5F6E053D63E1A7A2355B70BA47">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record information about a health-related activity or test carried out to screen a patient for a health condition or assessment of health risk.">
+            use = <"Use to record information about a health-related activity or test carried out to screen a patient for a health condition or assessment of health risk.">
+            misuse = <"">
+            copyright = <"© Northern Territory Department of Health (Australia), openEHR Foundation">
+        >
+    >
+
+definition
+    ACTION[at0000] matches {    -- Screening Activity
+        ism_transition matches {
+            ISM_TRANSITION[at0002] matches {    -- Screening planned
+                current_state matches {
+                    DV_CODED_TEXT[at9008] matches {
+                        defining_code matches {[at9000]}    -- planned
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9009] matches {
+                        defining_code matches {[at0002]}    -- Screening planned
+                    }
+                }
+            }
+            ISM_TRANSITION[at0008] matches {    -- Screening postponed
+                current_state matches {
+                    DV_CODED_TEXT[at9010] matches {
+                        defining_code matches {[at9001]}    -- postponed
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9011] matches {
+                        defining_code matches {[at0008]}    -- Screening postponed
+                    }
+                }
+            }
+            ISM_TRANSITION[at0009] matches {    -- Screening cancelled
+                current_state matches {
+                    DV_CODED_TEXT[at9012] matches {
+                        defining_code matches {[at9002]}    -- cancelled
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9013] matches {
+                        defining_code matches {[at0009]}    -- Screening cancelled
+                    }
+                }
+            }
+            ISM_TRANSITION[at0030] matches {    -- Screening declined
+                current_state matches {
+                    DV_CODED_TEXT[at9014] matches {
+                        defining_code matches {[at9002]}    -- cancelled
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9015] matches {
+                        defining_code matches {[at0030]}    -- Screening declined
+                    }
+                }
+            }
+            ISM_TRANSITION[at0023] matches {    -- Screening expired
+                current_state matches {
+                    DV_CODED_TEXT[at9016] matches {
+                        defining_code matches {[at9002]}    -- cancelled
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9017] matches {
+                        defining_code matches {[at0023]}    -- Screening expired
+                    }
+                }
+            }
+            ISM_TRANSITION[at0003] matches {    -- Screening scheduled
+                current_state matches {
+                    DV_CODED_TEXT[at9018] matches {
+                        defining_code matches {[at9003]}    -- scheduled
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9019] matches {
+                        defining_code matches {[at0003]}    -- Screening scheduled
+                    }
+                }
+            }
+            ISM_TRANSITION[at0029] matches {    -- Screening rescheduled
+                current_state matches {
+                    DV_CODED_TEXT[at9020] matches {
+                        defining_code matches {[at9003]}    -- scheduled
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9021] matches {
+                        defining_code matches {[at0029]}    -- Screening rescheduled
+                    }
+                }
+            }
+            ISM_TRANSITION[at0004] matches {    -- Screening performed
+                current_state matches {
+                    DV_CODED_TEXT[at9022] matches {
+                        defining_code matches {[at9004]}    -- active
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9023] matches {
+                        defining_code matches {[at0004]}    -- Screening performed
+                    }
+                }
+            }
+            ISM_TRANSITION[at0024] matches {    -- Screening incomplete
+                current_state matches {
+                    DV_CODED_TEXT[at9024] matches {
+                        defining_code matches {[at9004]}    -- active
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9025] matches {
+                        defining_code matches {[at0024]}    -- Screening incomplete
+                    }
+                }
+            }
+            ISM_TRANSITION[at0010] matches {    -- Screening suspended
+                current_state matches {
+                    DV_CODED_TEXT[at9026] matches {
+                        defining_code matches {[at9005]}    -- suspended
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9027] matches {
+                        defining_code matches {[at0010]}    -- Screening suspended
+                    }
+                }
+            }
+            ISM_TRANSITION[at0006] matches {    -- Screening abandoned
+                current_state matches {
+                    DV_CODED_TEXT[at9028] matches {
+                        defining_code matches {[at9006]}    -- aborted
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9029] matches {
+                        defining_code matches {[at0006]}    -- Screening abandoned
+                    }
+                }
+            }
+            ISM_TRANSITION[at0005] matches {    -- Screening activities complete
+                current_state matches {
+                    DV_CODED_TEXT[at9030] matches {
+                        defining_code matches {[at9007]}    -- complete
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9031] matches {
+                        defining_code matches {[at0005]}    -- Screening activities complete
+                    }
+                }
+            }
+        }
+        description matches {
+            ITEM_TREE[at0026] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0027] occurrences matches {0..1} matches {    -- Activity Name
+                        value matches {
+                            DV_TEXT[at9032]
+                        }
+                    }
+                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Service type
+                        value matches {
+                            DV_TEXT[at9033]
+                        }
+                    }
+                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9034]
+                        }
+                    }
+                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- Reason
+                        value matches {
+                            DV_TEXT[at9035]
+                        }
+                    }
+                    ELEMENT[at0031] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9036]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0015] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Requestor identifier
+                        value matches {
+                            DV_IDENTIFIER[at9037]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0017] matches {    -- Requestor
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Receiver identifier
+                        value matches {
+                            DV_IDENTIFIER[at9038]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0019] matches {    -- Receiver
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0025] occurrences matches {0..1} matches {    -- Screening Date/Time
+                        value matches {
+                            DV_DATE_TIME[at9039]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Screening Activity">
+                description = <"Health-related activity or test used to screen a patient for a health condition or assessment of health risks.">
+            >
+            ["at0002"] = <
+                text = <"Screening planned">
+                description = <"Screening is planned.">
+            >
+            ["at0003"] = <
+                text = <"Screening scheduled">
+                description = <"Appointment for a screening service has been made.">
+            >
+            ["at0004"] = <
+                text = <"Screening performed">
+                description = <"The healthcare provider has performed the Screening activity.">
+            >
+            ["at0005"] = <
+                text = <"Screening activities complete">
+                description = <"All planned screening activities have been completed.">
+            >
+            ["at0006"] = <
+                text = <"Screening abandoned">
+                description = <"The Screening has been ceased before the activity has been completed.">
+            >
+            ["at0008"] = <
+                text = <"Screening postponed">
+                description = <"The planned Screening has been postponed.">
+            >
+            ["at0009"] = <
+                text = <"Screening cancelled">
+                description = <"The planned Screening has been cancelled prior to commencement.">
+            >
+            ["at0010"] = <
+                text = <"Screening suspended">
+                description = <"The Screening has been suspended without completion.">
+            >
+            ["at0013"] = <
+                text = <"Description">
+                description = <"Description of the service provided.">
+            >
+            ["at0014"] = <
+                text = <"Service type">
+                description = <"Type of service to be carried out or being carried out.">
+            >
+            ["at0016"] = <
+                text = <"Requestor identifier">
+                description = <"The local ID assigned to the order by the healthcare provider or organisation requesting the service. This is also referred to as Placer Order Identifier.">
+            >
+            ["at0017"] = <
+                text = <"Requestor">
+                description = <"Details about the healthcare provider or organisation requesting the service.">
+            >
+            ["at0018"] = <
+                text = <"Receiver identifier">
+                description = <"The ID assigned to the order by the healthcare provider or organisation receiving the request for Screening. This is also referred to as Filler Order Identifier.">
+            >
+            ["at0019"] = <
+                text = <"Receiver">
+                description = <"Details about the healthcare provider or organisation receiving the request for Screening.">
+            >
+            ["at0023"] = <
+                text = <"Screening expired">
+                description = <"The Screening has expired before the Screening episode has been completed.">
+            >
+            ["at0024"] = <
+                text = <"Screening incomplete">
+                description = <"The Screening was commenced but unable to be completed.">
+            >
+            ["at0025"] = <
+                text = <"Screening Date/Time">
+                description = <"The scheduled date and/or time for the Screening service. This will indicate the scheduled date/time when recorded against the Scheduled care pathway step or the actual Start date/time in the Screening Performed step.">
+            >
+            ["at0027"] = <
+                text = <"Activity Name">
+                description = <"Identification of the screening activity.">
+            >
+            ["at0028"] = <
+                text = <"Reason">
+                description = <"Reason for activity, for example reason the screening test was aborted or reason the screening test was performed.">
+            >
+            ["at0029"] = <
+                text = <"Screening rescheduled">
+                description = <"Appointment for a repeat screening service has been made.">
+            >
+            ["at0030"] = <
+                text = <"Screening declined">
+                description = <"The planned Screening was offered but was declined prior to commencement.">
+            >
+            ["at0031"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the screening test not captured in other fields.">
+            >
+            ["at9000"] = <
+                text = <"planned">
+                description = <"planned">
+            >
+            ["at9001"] = <
+                text = <"postponed">
+                description = <"postponed">
+            >
+            ["at9002"] = <
+                text = <"cancelled">
+                description = <"cancelled">
+            >
+            ["at9003"] = <
+                text = <"scheduled">
+                description = <"scheduled">
+            >
+            ["at9004"] = <
+                text = <"active">
+                description = <"active">
+            >
+            ["at9005"] = <
+                text = <"suspended">
+                description = <"suspended">
+            >
+            ["at9006"] = <
+                text = <"aborted">
+                description = <"aborted">
+            >
+            ["at9007"] = <
+                text = <"complete">
+                description = <"complete">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/526>
+            ["at9001"] = <http://openehr.org/id/527>
+            ["at9002"] = <http://openehr.org/id/528>
+            ["at9003"] = <http://openehr.org/id/529>
+            ["at9004"] = <http://openehr.org/id/245>
+            ["at9005"] = <http://openehr.org/id/530>
+            ["at9006"] = <http://openehr.org/id/531>
+            ["at9007"] = <http://openehr.org/id/532>
+        >
+    >

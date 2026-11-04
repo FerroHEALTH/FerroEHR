@@ -1,0 +1,176 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=5f1fef7d-9241-4c65-8805-4029f262db89; build_uid=5be082db-269a-422d-8951-d6202f62c536)
+    openEHR-EHR-ADMIN_ENTRY.triage.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Rony Ventura, Alina Rehberg">
+                ["organisation"] = <"Universitätsklinikum Schleswig-Holstein, Medizinische Hochschule Hannover">
+                ["email"] = <"rony.ventura@uksh.de, rehberg.alina@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Mikkel Johan Gaup Grønmo">
+                ["organisation"] = <"Helse Nord IKT">
+                ["email"] = <"mikkel.johan.gaup.gronmo@hnikt.no">
+            >
+            accreditation = <"Nasjonal IKT">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics, Australia">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2007-04-12">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Derived from: Triage  Priority, Draft Archetype [Internet]. Digital Health Agency, Australian Digital Health Agency Clinical Knowledge Manager. No longer available.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, Australia<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"76BDDF352380038C2B42697E03E8F1C3">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Erfassung von Details über die Zuweisung eines Dringlichkeitsgrades bei Wunden oder Erkrankungen, um die Reihenfolge der Behandlung einer großen Anzahl von Patienten oder Verletzten festzulegen.">
+            keywords = <"Triage", "Bewertung", "Beurteilung", "Priorität", "Notfall", "Screening", "Katastrophe">
+            use = <"Zur Erfassung von Details zur Zuweisung eines Dringlichkeitsgrades bei Wunden oder Erkrankungen, um die Behandlungsreihenfolge einer großen Anzahl von Patienten oder Verletzten festzulegen.
+
+Dieses Archetyp wurde entwickelt, um einen generischen Rahmen für jede Triage-Priorität bereitzustellen, die innerhalb einer Vorlage für ein bestimmtes klinisches Szenario oder einen bestimmten Ort bzw. ein Ereignis speziell definiert werden kann. Die Triage-Priorität kann zeitbezogen sein und darauf hinweisen, dass der Patient innerhalb eines festgelegten Zeitrahmens behandelt werden muss.
+
+Dieses Archetyp kann spezialisiert werden, um spezifische Triage-Bewertungsinstrumente darzustellen.">
+            misuse = <"">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registerere detaljer om hastegrad i forbindelse med akutt sykdom eller skade, for å bestemme rekkefølgen på behandling der antall pasienter er større enn kapasiteten for å gi samtidig behandling.">
+            keywords = <"triage", "vurdering", "evaluering", "prioritet", "nødsituasjon", "screening", "katastrofe">
+            use = <"For å registerere detaljer om hastegrad i forbindelse med akutt sykdom eller skade, for å bestemme rekkefølgen på behandling der antall pasienter er større enn kapasiteten for å gi samtidig behandling.
+
+Denne arketypen har blitt utformet for å gi et generisk rammeverk for enhver triagering, og kan spesifiseres for spesifikke kliniske lokasjoner eller som en hendelse i et templat for et spesifikt klinisk scenario. Triagerprioriteten kan være tidsrelatert, slik at pasienter kan flagges for behandling innen et angitt tidsvindu.
+
+Arketypen kan spesialiseres for å representere spesifikke triageringsverktøy.">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about the assignment of a degree of urgency to wounds or illnesses, in order to decide the order of treatment of a large number of patients or casualties.">
+            keywords = <"triage", "evaluation", "assessment", "priority", "emergency", "screening", "disaster">
+            use = <"Use to record details about the assignment of a degree of urgency to wounds or illnesses, in order to decide the order of treatment of a large number of patients or casualties.
+
+This archetype has been designed to provide a generic framework for any triage priority, which may be specifically defined for a specific clinical location or event within a template for a specified clinical scenario. The triage priority may be time-related, indicating that the patient must be attended to within a specified timeframe.
+
+This archetype may be specialised to represent specific triage assessment tools.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    ADMIN_ENTRY[at0000] matches {    -- Triage
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Priority assignment
+                        value matches {
+                            DV_TEXT[at9003]
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Rationale
+                        value matches {
+                            DV_TEXT[at9001]
+                        }
+                    }
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Disposition
+                        value matches {
+                            DV_TEXT[at9002]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Triage">
+                description = <"Die Zuweisung eines Dringlichkeitsgrades bei Wunden oder Erkrankungen, um die Reihenfolge der Behandlung einer großen Anzahl von Patienten oder Verletzten festzulegen.">
+            >
+            ["at0002"] = <
+                text = <"Prioritätszuweisung">
+                description = <"Klinische Beurteilung des für die Behandlung einer Verletzung oder Erkrankung angemessenen Dringlichkeitsgrades">
+                comment = <"Es gibt viele Beispiele für Triage-Kategorien in Gebrauch. Dieses Archetyp ermöglicht es, beliebige Kategorien zu modellieren, indem spezifische Werte in diesem Datenelement innerhalb einer Vorlage für ein bestimmtes klinisches Szenario eingeschlossen werden. Zum Beispiel: Hoch oder Niedrig; Jetzt (sofort/lebensbedrohlich), Bald (dringend, bis zu 1 Stunde), Gehen (verzögert; bis zu 3 Stunden), Tot (keine Behandlung erforderlich); oder andere definierte Kategorien.">
+            >
+            ["at0003"] = <
+                text = <"Begründung">
+                description = <"Die Begründung für die durchgeführte Beurteilung">
+                comment = <"Die Codierung mit einer externen Terminologie wird, wo möglich, bevorzugt.">
+            >
+            ["at0004"] = <
+                text = <"Disposition">
+                description = <"Der unmittelbare Plan zur weiteren Versorgung eines Patienten, nachdem die Triage durchgeführt wurde.">
+                comment = <"Zum Beispiel: Zu sehen/zu registrieren; Überweisung an eine andere Einrichtung; oder Überweisung an eine andere Abteilung.
+Die Codierung mit einer externen Terminologie wird, wo möglich, bevorzugt.">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Triage">
+                description = <"Hastegraden i forbindelse med akutt sykdom eller skade, for å bestemme rekkefølgen på behandling der antall pasienter er større enn kapasiteten for å gi samtidig behandling.">
+            >
+            ["at0002"] = <
+                text = <"Hastegrad">
+                description = <"Klinisk vurdering av hastegrad for behandling av en skade eller sykdom.">
+                comment = <"Det finnes mange eksempler på triagekategorier. Denne arketypen tillater modellering av enhver kategori ved å inkludere spesifikke verdier i dette dataelementet i ett templat for et spesifikt klinisk scenario. For eksempel: Høy eller Lav; Nå (umiddelbart/livstruende), Snart (haster, inntil 1 time), Går (utsatt, inntil 3 timer), Død (ingen behandling); eller andre definerte kategorier.">
+            >
+            ["at0003"] = <
+                text = <"Begrunnelse">
+                description = <"Begrunnelse for vurdering.">
+                comment = <"Det anbefales å kode \"Begrunnelse\" med en ekstern terminologi hvis mulig.">
+            >
+            ["at0004"] = <
+                text = <"Disposisjon">
+                description = <"Den umiddelbare plan for å fortsette helsehjelp hos et individ etter tragering.">
+                comment = <"For eksempel: Må tilsees/regsitrert; henvises til høyere nivå; eller henvises til annen avdeling.
+Det anbefales å kode \"Disposisjon\" med en ekstern terminologi.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Triage">
+                description = <"The assignment of a degree of urgency to wounds or illnesses, in order to decide the order of treatment of a large number of patients or casualties.">
+            >
+            ["at0002"] = <
+                text = <"Priority assignment">
+                description = <"Clinical assessment of the degree of urgency appropriate for treatement of an injury or illness.">
+                comment = <"There are many examples of triage categories in use. This archetype allows for any and all to be modelled by inclusion of specific values in this data element within a template for a specific clinical scenario. For example: High or Low; Now (immediate/life-threatening), Soon (urgent, up to 1 hour), Walk (delayed; up to 3 hours), Dead (no care required); or other defined categories.">
+            >
+            ["at0003"] = <
+                text = <"Rationale">
+                description = <"The rationale for the assessment provided.">
+                comment = <"Coding with an external terminology is preferred, where possible.">
+            >
+            ["at0004"] = <
+                text = <"Disposition">
+                description = <"The immediate plan for continuing health care for an individual after triage has occurred.">
+                comment = <"For example: To be seen/registered; refer to  other facility; or refer to other department.
+ Coding with an external terminology is preferred, where possible.">
+            >
+        >
+    >

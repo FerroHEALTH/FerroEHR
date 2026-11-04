@@ -1,0 +1,729 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=f9402113-0bc2-446d-ac86-6d5cc065bb01; build_uid=412f5cad-ddad-4fe4-87ac-21d21bddc86c)
+    openEHR-EHR-CLUSTER.tnm.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch, Vebjørn Arntzen">
+                ["organisation"] = <"Medizinische Hochschule Hannover, Oslo University Hospital">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de, varntzen@ous-hf.no">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Vebjørn Arntzen, Sabine Leh">
+                ["organisation"] = <"Oslo University Hospital HF, Helse Bergen HF">
+                ["email"] = <"varntzen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2016-08-26">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Heidi Aursand, Oslo universitetssykehus, Norway", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Vegar Dagenborg, OUS, Norway", "Kristin Eik, Kreftregisteret, Norway", "Hildegard Franke, freshEHR Clinical Informatics Ltd. UK", "Morten Hørthe, DIPS, Norway", "Sergey Kovalenko, Chelyabinsk Regional Children Hospital, Russia", "Siri Laronningen, Kreftregisteret, Norway", "Liv Laugen, Oslo universitetssykehus, Norway", "Sabine Leh, Haukeland University Hospital, Department of Pathology, Norway", "Miha Lenic, Marand, Slovenia", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Anne M Gromsrud, DIPS AS, Norway", "Ian McNicoll, freshEHR Clinical Informatics Ltd. UK", "Bjørn Næss, DIPS ASA, Norway", "SARA PRETE, Abinsula, Italy", "Trine Strand, Oslo Universitetssykehus (OUS), Norway", "Natalia Strauch, Medizinische Hochschule Hannover, Germany", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Brierley JD, Gospodarowicz MK, Wittekind C. TNM Classification of Malignant Tumours, 8th Edition. Wiley-Springer; 2016. 272 p.">
+        ["2"] = <"Principles of Cancer Staging. AJCC American Joint Committee on Cancer; [cited 2019 03 15]. Available at: https://cancerstaging.org/references-tools/deskreferences/Documents/Principles%20of%20Cancer%20Staging.pdf.">
+        ["3"] = <"TNM Classification Help (Manual for Cancer Staging); [cited 2019 10 04].  Available at: http://cancerstaging.blogspot.com/.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, heather.leslie@atomicainformatics.com">
+        ["MD5-CAM-1.0.1"] = <"48BA7281FAFAD1B5D72DD78E6D2A3E85">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung der klinischen Klassifikation und die Einteilung der Malignität in Stadien anhand des TNM-Systems.">
+            keywords = <"TNM, Krebs, Tumor, cTNM, Grading, Einstufung, Malignität, Klassifikation, Einteilung, Stadium, Neoplasie", ...>
+            use = <"Zur Darstellung der klinischen Klassifikation, als TNM oder cTNM bezeichnet, und der Stadieneinteilung der Malignität.
+
+Dieser Archetyp wurde entworfen, um in einem ENTRY-Archetyp, der einen klinischen Kontext und den Tumortyp für den TNM-Datensatz bereitstellt, verschachtelt zu werden - zum Beispiel: der SLOT \"Spezifische Angaben\" im Archetyp EVALUATION.problem_diagnosis.
+
+Jeder Krebs hat einen Satz eindeutigen TNM-Klassifikationswerte. Dieser Archetyp kann unter Verwendung einer Spezialisierung oder eines Templates für jede Tumorentität und jede Auflage der TNM-Klassifikation weiter eingeschränkt werden, um individuelle Anforderungen zu berücksichtigen.
+
+Bei bestimmten Tumorarten, wie Hodgkin-Lymphomen und anderen Non-Hodgkin-Lymphomen, wird zur Bestimmung des Ausmaßes und der Prognose von Krankheiten ein anderes System verwendet. In diesem Fall wird nur die Stadieneinteilung definiert.">
+            misuse = <"Nicht zur Darstellung der pathologischen TNM-Klassifikation verwenden - verwenden Sie für diesen Zweck den Archetyp CLUSTER.tnm-pathological.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere klinisk klassifikasjon og stadium av maligne tumorer ved å bruke TNM-systemet.">
+            keywords = <"TNM, kreft, svulst, tumor, cTNM, gradering, staging, malignitet, klassifikasjon, gruppering, stage, neoplasi, neoplastisk vekst, metastase, spredning, canser, cancer, malign tumor, stadie, stadium, carcinoma, karsinom", ...>
+            use = <"Brukes for å klassifisere og angi stadium av maligne tumorer, betegnet som TNM eller cTNM.
+
+Arketypen er laget for å benyttes i en ENTRY arketype som vil gi den kliniske konteksten for TNM registreringen og typen tumor. For eksempel: I SLOTet \"Spesifikke detaljer\" i arketypen EVALUATION.problem_diagnose (Problem/diagnose).
+
+Hver kreftform har et sett av unike TNM klassifikasjonsverdier. Det er antatt at denne arketypen blir tilpasset for å ivareta de unike kravene for hver type tumor og aktuell utgave av TNM-klassifikasjonen, enten ved å bruke en spesialisering av arketypen eller ved å justere i et templat.
+
+For noen bestemte kreftformer, som Hodgkins eller non-Hodgkins lymfom vil andre klassifikasjonssystemer benyttes for å angi omfang av sykdom eller prognose. I disse tilfellene vil kun stadium defineres.">
+            misuse = <"Skal ikke brukes for å registrere patologisk TNM-klassifikasjon. Bruk arketypen CLUSTER.tnm-pathological (TNM-klassifikasjon patologi) for dette formålet.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the clinical classification and stage grouping of malignancies using the TNM system.">
+            keywords = <"TNM, cancer, tumour, cTNM, grading, staging, malignancy, classification, grouping, stage, neoplasia", ...>
+            use = <"Use to record the clinical classification, designated as TNM or cTNM, and stage grouping of malignancies.
+
+This archetype has been designed to be nested inside an ENTRY archetype which will provide a clinical context and the tumour type for the TNM record - for example: the 'Specific details' SLOT within the EVALUATION.problem_diagnosis archetype.
+
+Each cancer has a set of unique TNM classification values. It is expected that this archetype will be further constrained to reflect the unique requirements for each tumour and edition of the TNM classification, using either an archetype specialisation or a template.
+
+With certain types of tumours, such as Hodgkin and other non-Hodgkin lymphomas, a different system for designating the extent of disease and prognosis is used. In these circumstances only the stage group is defined.">
+            misuse = <"Not to be used to record the TNM pathological classification - use the CLUSTER.tnm-pathological archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- TNM clinical classification
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Anatomical site
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Anatomical subsite
+                value matches {
+                    DV_TEXT[at9005]
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Primary tumour (T)
+                value matches {
+                    DV_TEXT[at9006]
+                }
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Regional lymph nodes (N)
+                value matches {
+                    DV_TEXT[at9007]
+                }
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Distant metastasis (M)
+                value matches {
+                    DV_TEXT[at9008]
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Histopathological grade (G)
+                value matches {
+                    DV_TEXT[at9009]
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Residual tumour (R)
+                value matches {
+                    DV_CODED_TEXT[at9010] matches {
+                        defining_code matches {[ac9000]}    -- Residual tumour (R) (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0012] occurrences matches {0..1} matches {    -- Lymphatic invasion (L)
+                value matches {
+                    DV_CODED_TEXT[at9011] matches {
+                        defining_code matches {[ac9001]}    -- Lymphatic invasion (L) (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0016] occurrences matches {0..1} matches {    -- Venous invasion (V)
+                value matches {
+                    DV_CODED_TEXT[at9012] matches {
+                        defining_code matches {[ac9002]}    -- Venous invasion (V) (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0021] occurrences matches {0..1} matches {    -- Perineural invasion (Pn)
+                value matches {
+                    DV_CODED_TEXT[at9013] matches {
+                        defining_code matches {[ac9003]}    -- Perineural invasion (Pn) (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0025] occurrences matches {0..1} matches {    -- Multiple primary tumours (m)
+                value matches {
+                    DV_COUNT[at9014]
+                    DV_BOOLEAN[at9015]
+                }
+            }
+            ELEMENT[at0026] occurrences matches {0..1} matches {    -- Multimodality therapy (y)
+                value matches {
+                    DV_BOOLEAN[at9016] matches {
+                        value matches {True}
+                    }
+                }
+            }
+            ELEMENT[at0027] occurrences matches {0..1} matches {    -- Recurrent (r)
+                value matches {
+                    DV_BOOLEAN[at9017] matches {
+                        value matches {True}
+                    }
+                }
+            }
+            ELEMENT[at0028] occurrences matches {0..1} matches {    -- Autopsy (a)
+                value matches {
+                    DV_BOOLEAN[at9018] matches {
+                        value matches {True}
+                    }
+                }
+            }
+            ELEMENT[at0029] occurrences matches {0..1} matches {    -- Carcinoma in situ (is)
+                value matches {
+                    DV_BOOLEAN[at9019] matches {
+                        value matches {True}
+                    }
+                }
+            }
+            ELEMENT[at0030] occurrences matches {0..1} matches {    -- TNM assessment
+                value matches {
+                    DV_TEXT[at9020]
+                }
+            }
+            ELEMENT[at0031] occurrences matches {0..1} matches {    -- Stage grouping
+                value matches {
+                    DV_TEXT[at9021]
+                }
+            }
+            ELEMENT[at0032] occurrences matches {0..1} matches {    -- TNM Edition
+                value matches {
+                    DV_TEXT[at9022]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Klinische TNM-Klassifikation">
+                description = <"Ein Archetyp für die klinische Klassifikation und die Einteilung der Malignität in Stadien anhand des TNM-Systems.">
+                comment = <"Bezeichnet als TNM oder cTNM.">
+            >
+            ["at0001"] = <
+                text = <"Anatomische Lokalisation">
+                description = <"Die anatomische Stelle, an der sich der beurteilte Tumor befindet.">
+                comment = <"Verwenden Sie für jede Krebsart den Wert aus der TNM-Variante. Zum Beispiel: Magen oder Dünndarm.">
+            >
+            ["at0002"] = <
+                text = <"Anatomischer Unterbereich der Lokalisation">
+                description = <"Der anatomische Unterbereich der Lokalisation, an der sich der beurteilte Tumor befindet.">
+                comment = <"Verwenden Sie für jede Krebsart den Wert aus der TNM-Variante. Zum Beispiel: Kardia, Fundus, Corpus, Antrum und Pylorus (Magen); oder Zwölffingerdarm, Jejunum oder Ileum (Dünndarm).">
+            >
+            ["at0003"] = <
+                text = <"Primärtumor (T)">
+                description = <"Die Beurteilung des Ausmaßes des Primärtumors.">
+                comment = <"Die Codierung mit einem T-Code, der der Art des Tumors und der anatomischen Lokalisation entspricht, wird erwartet. Zum Beispiel: \"T1\" oder \"cT3\". Dargestellt als \"T\" oder \"cT\" in der \"TNM-Bewertung\".">
+            >
+            ["at0004"] = <
+                text = <"Regionäre Lymphknoten (N)">
+                description = <"Die Beurteilung des Fehlens oder Vorhandenseins und des Ausmaßes regionären Lymphknotenmetastasen.">
+                comment = <"Die Codierung mit einem N-Code, der der Art des Tumors und der anatomischen Lokalisation entspricht, wird erwartet. Zum Beispiel: \"NX\" oder \"cN2\". Dargestellt als \"N\" oder \"cN\" in der \"TNM-Bewertung\".">
+            >
+            ["at0005"] = <
+                text = <"Fernmetastasierung (M)">
+                description = <"Beurteilung des Fehlens oder Vorhandenseins von Fernmetastasen.">
+                comment = <"Die Codierung mit einem M-Code, der der Art des Tumors und der anatomischen Lokalisation entspricht, wird erwartet. Zum Beispiel: \"M1\"; \"cM1a\"; \"M1 PUL\" oder \"cM0\". Dargestellt als \"M\" oder \"cM\" in der \"TNM-Bewertung\".">
+            >
+            ["at0006"] = <
+                text = <"Histopathologisches Grading (G)">
+                description = <"Histopathologisches Grading des Tumors.">
+                comment = <"Die prätherapeutische histopathologische Beurteilung kann aus einer begrenzten Biopsie vor der formalen Resektion bestimmt werden. Die Codierung mit einem G-Code, der der identifizierten Art des Tumors und der anatomischen Lokalisation entspricht, wird erwartet. Zum Beispiel: \"G2\"; \"GX\" oder \"niedriges Grading\" zur Klassifizierung von Knochen- und Weichteilsarkomen. Dargestellt als \"G\" in der \"TNM-Bewertung\".
+
+">
+            >
+            ["at0007"] = <
+                text = <"Residualtumor (R)">
+                description = <"Die Beurteilung des Vorhandenseins eines Resttumors nach der Behandlung.">
+                comment = <"Zum Beispiel: \"R2 (Makroskopischer Residualtumor)\". Dargestellt als \"R\" in der \"TNM-Bewertung\".">
+            >
+            ["at0008"] = <
+                text = <"RX">
+                description = <"Das Vorhandensein von Residualtumor kann nicht beurteilt werden.">
+            >
+            ["at0009"] = <
+                text = <"R0">
+                description = <"Kein Residualtumor.">
+            >
+            ["at0010"] = <
+                text = <"R1">
+                description = <"Mikroskopischer Residualtumor.">
+            >
+            ["at0011"] = <
+                text = <"R2">
+                description = <"Makroskopischer Residualtumor.">
+            >
+            ["at0012"] = <
+                text = <"Lymphgefäßinvasion (L)">
+                description = <"Die Beurteilung der Invasion in das lymphathische System.">
+                comment = <"Zum Beispiel: \"L0 (Keine Lymphgefäßinvasion)\". Dargestellt als \"L\" in der \"TNM-Bewertung\".
+">
+            >
+            ["at0013"] = <
+                text = <"LX">
+                description = <"Die Lymphgefäßinvasion kann nicht beurteilt werden.">
+            >
+            ["at0014"] = <
+                text = <"L0">
+                description = <"Keine Lymphgefäßinvasion.">
+            >
+            ["at0015"] = <
+                text = <"L1">
+                description = <"Lymphgefäßinvasion.">
+            >
+            ["at0016"] = <
+                text = <"Veneninvasion (V)">
+                description = <"Die Beurteilung der Invasion in das venöse System.">
+                comment = <"Zum Beispiel: \"V1 (Mikroskopische Veneninvasion)\". Dargestellt als \"V\" in der \"TNM-Bewertung\".">
+            >
+            ["at0017"] = <
+                text = <"VX">
+                description = <"Die Veneninvasion kann nicht beurteilt werden.">
+            >
+            ["at0018"] = <
+                text = <"V0">
+                description = <"Keine Veneninvasion.">
+            >
+            ["at0019"] = <
+                text = <"V1">
+                description = <"Mikroskopische Veneninvasion.">
+            >
+            ["at0020"] = <
+                text = <"V2">
+                description = <"Makroskopische Veneninvasion.">
+            >
+            ["at0021"] = <
+                text = <"Perineurale Invasion (Pn)">
+                description = <"Die Beurteilung der Invasion in den Bereich, der die Nerven umgibt.">
+                comment = <"Zum Beispiel: \"Pn0 (keine Perineurale Invasion)\". Dargestellt als \"Pn\" in der \"TNM-Bewertung\".">
+            >
+            ["at0022"] = <
+                text = <"PnX">
+                description = <"Die Perineurale Invasion kann nicht beurteilt werden.">
+            >
+            ["at0023"] = <
+                text = <"Pn0">
+                description = <"Keine Perineurale Invasion.">
+            >
+            ["at0024"] = <
+                text = <"Pn1">
+                description = <"Perineurale Invasion.">
+            >
+            ["at0025"] = <
+                text = <"Multiple Primärtumoren (m)">
+                description = <"Das Vorhandensein multipler simultaner Primärtumoren mit einer Lokalisation.">
+                comment = <"Dargestellt durch das Suffix, entweder als \"(m)\" oder als Anzahl der Primärtumoren, die dem T-Code in Klammern hinzugefügt wurden. Zum Beispiel: \"T2(m)\" oder \"cT2(4)\".">
+            >
+            ["at0026"] = <
+                text = <"Multimodale Therapie (y)">
+                description = <"Als WAHR darzustellen, wenn die Beurteilung während oder nach einer initialen multimodalen Therapie erfolgt.">
+                comment = <"Dargestellt durch das Präfix \"y\", das der \"TNM-Bewertung\" hinzugefügt wurde.">
+            >
+            ["at0027"] = <
+                text = <"Rezidiv (r)">
+                description = <"Als WAHR darzustellen, wenn die Beurteilung für einen rezidivierenden Tumor nach einem tumorfreien Zeitintervall erfolgt.">
+                comment = <"Dargestellt durch das Präfix \"r\", das der \"TNM-Bewertung\" hinzugefügt wurde.">
+            >
+            ["at0028"] = <
+                text = <"Autopsie (a)">
+                description = <"Als WAHR darzustellen, wenn die Beurteilung bei der postmortalen Untersuchung erfolgt.">
+                comment = <"Dargestellt durch das Präfix \"a\", das der \"TNM-Bewertung\" hinzugefügt wurde.">
+            >
+            ["at0029"] = <
+                text = <"Carcinoma in situ (is)">
+                description = <"Als WAHR darzustellen, wenn ein mit primärtumor-assoziiertes Karzinom in situ vorhanden ist.">
+                comment = <"Dargestellt durch das Präfix \"is\", das der \"TNM-Bewertung\" hinzugefügt wurde.">
+            >
+            ["at0030"] = <
+                text = <"TNM-Bewertung">
+                description = <"Verknüpfung von Bewertungen \"T\", \"N\" und \"M\" sowie ggf. optionale Bewertungen von „G“, „R“, „L“, „V“, Präfixen und / oder Suffixen.">
+            >
+            ["at0031"] = <
+                text = <"Stadiumeinteilung">
+                description = <"Die Kategorisierung des anatomischen Stadiums des Tumors, in der Regel basierend auf die TNM-Bewertung.">
+                comment = <"Zum Beispiel: Carcinoma in situ wird in das Stadium 0 eingeteilt; oder Tumoren mit Fernmetastasen werden in das Stadium IV eingruppiert.">
+            >
+            ["at0032"] = <
+                text = <"TNM Auflage">
+                description = <"Die Auflage, auf der die TNM-Klassifikation basiert, die für die Beurteilung verwendet wurde.">
+            >
+            ["ac9000"] = <
+                text = <"Residualtumor (R) (synthesised)">
+                description = <"Die Beurteilung des Vorhandenseins eines Resttumors nach der Behandlung. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Lymphgefäßinvasion (L) (synthesised)">
+                description = <"Die Beurteilung der Invasion in das lymphathische System. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Veneninvasion (V) (synthesised)">
+                description = <"Die Beurteilung der Invasion in das venöse System. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Perineurale Invasion (Pn) (synthesised)">
+                description = <"Die Beurteilung der Invasion in den Bereich, der die Nerven umgibt. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"TNM-klassifikasjon klinisk">
+                description = <"Et rammeverk for klinisk klassifikasjon og gradering av maligne tumorer før behandling, i henhold til TNM-systemet.">
+                comment = <"Betegnes som TNM eller cTNM.">
+            >
+            ["at0001"] = <
+                text = <"Anatomisk lokalisering">
+                description = <"Den anatomiske lokaliseringen til tumoren.">
+                comment = <"Bruk verdien fra TNM for den enkelte typen tumor, for eksempel \"Magesekk\" eller \"Tynntarm\".">
+            >
+            ["at0002"] = <
+                text = <"Underordnet anatomisk lokalisasjon">
+                description = <"Den underordnede anatomiske lokaliseringer til tumoren.">
+                comment = <"Bruk verdien fra TNM for den enkelte typen tumor, for eksempel: cardia, fundus, corpus, antrum og pylorus (mage), eller duodenum, jejunum eller ileum (tynntarm).">
+            >
+            ["at0003"] = <
+                text = <"Primærtumor (T)">
+                description = <"Vurdering av primærtumor.">
+                comment = <"Kodes med en T-kode som passer for tumortypen og den anatomiske lokaliseringen, for eksempel \"T1\" eller \"T3\". Fremkommer i \"TNM-vurdering\" som \"T\" eller \"cT\".">
+            >
+            ["at0004"] = <
+                text = <"Regionale lymfeknuter (N)">
+                description = <"Vurdering av hvorvidt det er metastaser i regionale lymfeknuter eller ikke, og i så fall i hvilken grad.">
+                comment = <"Kodes med en N-kode som passer for tumortypen og den anatomiske lokaliseringen, for eksempel \"NX\" eller \"cN2\". Fremkommer i \"TNM-vurdering\" som \"N\" eller \"cN\".">
+            >
+            ["at0005"] = <
+                text = <"Fjernmetastase (M)">
+                description = <"Vurdering av hvorvidt det er fjernmetastaser eller ikke.">
+                comment = <"Kodes med en M-kode som passer for tumortypen og den anatomiske lokaliseringen, for eksempel \"M1\", \"cM1a\", \"M1 PUL\" eller or \"cM0\". Fremkommer i \"TNM-vurdering\" som \"M\" eller \"cM\".">
+            >
+            ["at0006"] = <
+                text = <"Histopatologisk gradering (G)">
+                description = <"Histopatologisk gradering av tumoren.">
+                comment = <"Histopatologisk vurdering før annen behandling er gitt, kan gjøres på grunnlag av en biopsi før kirurgisk reseksjon. Kodes med en G-kode som passer for tumortypen og den anatomiske lokaliseringen. For eksempel: \"G2\", \"GX\", eller \"Lavgradig\" klassifisering av ben- eller bløtvevssarkom\". Fremkommer i \"TNM-vurdering\" som \"G\".">
+            >
+            ["at0007"] = <
+                text = <"Residualtumor (R)">
+                description = <"Vurdering av tilstedeværelse av resttumor etter behandling.">
+                comment = <"For eksempel \"R2 (Makroskopisk resttumor)\". Fremkommer i \"TNM-vurdering\" som \"R\".">
+            >
+            ["at0008"] = <
+                text = <"RX">
+                description = <"Det kan ikke vurderes om resttumor er til stede.">
+            >
+            ["at0009"] = <
+                text = <"R0">
+                description = <"Ingen resttumor">
+            >
+            ["at0010"] = <
+                text = <"R1">
+                description = <"Mikroskopisk resttumor.">
+            >
+            ["at0011"] = <
+                text = <"R2">
+                description = <"Makroskopisk resttumor.">
+            >
+            ["at0012"] = <
+                text = <"Infiltrasjon i lymfekar (L)">
+                description = <"Vurdering av infiltrasjon inn i lymfekar.">
+                comment = <"For eksempel \"L0 (Ingen infiltrasjon i lymfekar)\". Fremkommer i \"TNM-vurdering\" som \"L\".">
+            >
+            ["at0013"] = <
+                text = <"LX">
+                description = <"Det kan ikke vurderes om infiltrasjon i lymfekar er tilstede.">
+            >
+            ["at0014"] = <
+                text = <"L0">
+                description = <"Ingen infiltrasjon i lymfekar.">
+            >
+            ["at0015"] = <
+                text = <"L1">
+                description = <"Infiltrasjon i lymfekar.">
+            >
+            ["at0016"] = <
+                text = <"Veneinfiltrasjon (V)">
+                description = <"Vurdering av veneinfiltrasjon.">
+                comment = <"For eksempel \"V1 (Mikroskopisk veneinfiltrasjon)\". Fremkommer i \"TNM-vurdering\" som \"V\".">
+            >
+            ["at0017"] = <
+                text = <"VX">
+                description = <"Veneinfiltrasjon kan ikke vurderes.">
+            >
+            ["at0018"] = <
+                text = <"V0">
+                description = <"Ingen veneinfiltrasjon.">
+            >
+            ["at0019"] = <
+                text = <"V1">
+                description = <"Mikroskopisk veneinfiltrasjon.">
+            >
+            ["at0020"] = <
+                text = <"V2">
+                description = <"Makroskopisk veneinfiltrasjon.">
+            >
+            ["at0021"] = <
+                text = <"Perineural infiltrasjon (Pn)">
+                description = <"Vurdering av infiltrasjon inn i vev som ligger i tilslutning til nerver.">
+                comment = <"For eksempel \"Pn0 (Ingen perineural infiltrasjon)\". Fremkommer i \"TNM-vurdering\" som \"Pn\".">
+            >
+            ["at0022"] = <
+                text = <"PnX">
+                description = <"Det kan ikke vurderes om perineural infiltrasjon er tilstede.">
+            >
+            ["at0023"] = <
+                text = <"Pn0">
+                description = <"Ingen perineural infiltrasjon.">
+            >
+            ["at0024"] = <
+                text = <"Pn1">
+                description = <"Perineural infiltrasjon.">
+            >
+            ["at0025"] = <
+                text = <"Multiple primærtumorer (m)">
+                description = <"Tilstedeværelse av multiple samtidige primærtumorer på ett enkelt sted.">
+                comment = <"Angis med en tilføyelse, enten bokstaven \"m\" eller antallet av primærsvulster, i parantes bak T-koden, for eksempel \"T2(m)\" eller \"cT2(4)\".">
+            >
+            ["at0026"] = <
+                text = <"Multimodal behandling (y)">
+                description = <"Registreres som 'Sann' hvis vurdering er utført under eller etter den første multimodale behandlingen.">
+                comment = <"Angis ved å legge til prefikset \"y\" i \"TNM-vurdering\".">
+            >
+            ["at0027"] = <
+                text = <"Residiv (r)">
+                description = <"Registreres som 'Sann' hvis vurdering er utført for en tilbakevendende kreft etter en kreftfri periode.">
+                comment = <"Angis ved å legge til prefikset \"r\" i \"TNM-vurdering\".">
+            >
+            ["at0028"] = <
+                text = <"Obduksjon (a)">
+                description = <"Registreres som 'Sann' hvis vurderingen er gjort ved en undersøkelse post mortem.">
+                comment = <"Angis ved å legge til prefikset \"a\" i \"TNM-vurdering\".">
+            >
+            ["at0029"] = <
+                text = <"Carcinoma in situ (is)">
+                description = <"Registreres som 'Sann' hvis tilstedeværelse av carcinoma in situ i tilknytning til primærsvulsten.">
+                comment = <"Angis ved å legge til prefikset \"is\" i \"TNM-vurdering\".">
+            >
+            ["at0030"] = <
+                text = <"TNM-vurdering">
+                description = <"Sammentrekning av vurdering av \"T\", \"N\" og \"M\", pluss eventuelle tilleggsvurderinger av \"G\", \"R\", \"L\", \"V\", prefiks og/eller tillegg der det er passende.">
+            >
+            ["at0031"] = <
+                text = <"Stadium">
+                description = <"Kategorisering av tumorens stadium, vanligvis basert på TNM vurderingen.">
+                comment = <"For eksempel: Karsinom in situ er kategorisert som stadium 0, tumorer med fjernmetastaser er kategorisert som stadium IV.">
+            >
+            ["at0032"] = <
+                text = <"TNM-utgave">
+                description = <"TNM-utgaven som er brukt for å bestemme TNM-klassifiseringen.">
+            >
+            ["ac9000"] = <
+                text = <"Residualtumor (R) (synthesised)">
+                description = <"Vurdering av tilstedeværelse av resttumor etter behandling. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Infiltrasjon i lymfekar (L) (synthesised)">
+                description = <"Vurdering av infiltrasjon inn i lymfekar. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Veneinfiltrasjon (V) (synthesised)">
+                description = <"Vurdering av veneinfiltrasjon. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Perineural infiltrasjon (Pn) (synthesised)">
+                description = <"Vurdering av infiltrasjon inn i vev som ligger i tilslutning til nerver. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"TNM clinical classification">
+                description = <"A framework for the clinical classification and stage grouping of malignancies using the TNM system.">
+                comment = <"Designated as TNM or cTNM.">
+            >
+            ["at0001"] = <
+                text = <"Anatomical site">
+                description = <"The anatomical site where the assessed tumour is situated.">
+                comment = <"Use the value from the TNM variant for each type of cancer. For example: stomach; or small intestine.">
+            >
+            ["at0002"] = <
+                text = <"Anatomical subsite">
+                description = <"The anatomical subsite where the assessed tumour is situated.">
+                comment = <"Use the value from the TNM variant for each type of cancer. For example: cardia, fundus, corpus, antrum and pylorus (stomach); or duodenum, jejunum or ileum (small intestine).">
+            >
+            ["at0003"] = <
+                text = <"Primary tumour (T)">
+                description = <"Assessment of the the extent of the primary tumour.">
+                comment = <"Coding with a T code appropriate for the tumour type and anatomical site is expected. For example: 'T1'; or 'cT3'. Represented as 'T' or 'cT' in the 'TNM assessment'.">
+            >
+            ["at0004"] = <
+                text = <"Regional lymph nodes (N)">
+                description = <"Assessment of the the absence or presence and extent of regional lymph node metastasis.">
+                comment = <"Coding with an N code appropriate for the tumour type and anatomical site is expected. For example: 'NX'; or 'cN2'. Represented as 'N' or 'cN' within the 'TNM assessment'.">
+            >
+            ["at0005"] = <
+                text = <"Distant metastasis (M)">
+                description = <"Assessment of the absence or presence of distant metastasis.">
+                comment = <"Coding with an M code appropriate for the tumour type and anatomical site is expected. For example: 'M1'; 'cM1a'; 'M1 PUL'; or 'cM0'. Represented as 'M' or 'cM' within the 'TNM assessment'.">
+            >
+            ["at0006"] = <
+                text = <"Histopathological grade (G)">
+                description = <"Histopathological grading of the tumour.">
+                comment = <"Pretreatment histopathological assessment may be determined from a limited biopsy prior to formal resection. Coding with a G code appropriate for the identified tumour type and anatomical site is expected. For example: 'G2'; 'GX'; or 'low grade' for bone and soft tissue sarcoma classification. Represented as 'G' within the 'TNM assessment'.">
+            >
+            ["at0007"] = <
+                text = <"Residual tumour (R)">
+                description = <"Assessment of the presence of residual tumour after treatment.">
+                comment = <"For example: 'R2 (Macroscopic residual tumour)'. Represented as 'R' within the 'TNM assessment'.">
+            >
+            ["at0008"] = <
+                text = <"RX">
+                description = <"Presence of residual tumour cannot be assessed.">
+            >
+            ["at0009"] = <
+                text = <"R0">
+                description = <"No residual tumour.">
+            >
+            ["at0010"] = <
+                text = <"R1">
+                description = <"Microscopic residual tumour.">
+            >
+            ["at0011"] = <
+                text = <"R2">
+                description = <"Macroscopic residual tumour.">
+            >
+            ["at0012"] = <
+                text = <"Lymphatic invasion (L)">
+                description = <"Assessment of invasion into the lymphatic system.">
+                comment = <"For example: 'L0 (No lymphatic invasion)'. Represented as 'L' within the 'TNM assessment'.">
+            >
+            ["at0013"] = <
+                text = <"LX">
+                description = <"Lymphatic invasion cannot be assessed.">
+            >
+            ["at0014"] = <
+                text = <"L0">
+                description = <"No lymphatic invasion.">
+            >
+            ["at0015"] = <
+                text = <"L1">
+                description = <"Lymphatic invasion.">
+            >
+            ["at0016"] = <
+                text = <"Venous invasion (V)">
+                description = <"Assessment of invasion into the venous system.">
+                comment = <"For example: 'V1 (Microscopic venous invasion)'. Represented as 'V' within the 'TNM assessment'.">
+            >
+            ["at0017"] = <
+                text = <"VX">
+                description = <"Venous invasion cannot be assessed.">
+            >
+            ["at0018"] = <
+                text = <"V0">
+                description = <"No venous invasion.">
+            >
+            ["at0019"] = <
+                text = <"V1">
+                description = <"Microscopic venous invasion.">
+            >
+            ["at0020"] = <
+                text = <"V2">
+                description = <"Macroscopic venous invasion.">
+            >
+            ["at0021"] = <
+                text = <"Perineural invasion (Pn)">
+                description = <"Assessment of invasion into the space surrounding nerves.">
+                comment = <"For example: 'Pn0 (No perineural invasion)'. Represented as 'Pn' within the 'TNM assessment'.">
+            >
+            ["at0022"] = <
+                text = <"PnX">
+                description = <"Perineural invasion cannot be assessed.">
+            >
+            ["at0023"] = <
+                text = <"Pn0">
+                description = <"No perineural invasion.">
+            >
+            ["at0024"] = <
+                text = <"Pn1">
+                description = <"Perineural invasion.">
+            >
+            ["at0025"] = <
+                text = <"Multiple primary tumours (m)">
+                description = <"Presence of multiple simultaneous primary tumours at a single site.">
+                comment = <"Represented by the suffix, either as '(m)' or the number of primary tumours added to the T code in brackets . For example: 'T2(m)' or 'cT2(4)'.">
+            >
+            ["at0026"] = <
+                text = <"Multimodality therapy (y)">
+                description = <"Record as True if assessment is performed during or following initial multimodal therapy.">
+                comment = <"Represented by the prefix 'y' added to the 'TNM assessment'.">
+            >
+            ["at0027"] = <
+                text = <"Recurrent (r)">
+                description = <"Record as True if assessment is performed for a recurring cancer after a disease-free interval.">
+                comment = <"Represented by the prefix 'r' added to the 'TNM assessment'.">
+            >
+            ["at0028"] = <
+                text = <"Autopsy (a)">
+                description = <"Record as True if assessment is performed at postmortem examination.">
+                comment = <"Represented by the prefix 'a' added to the 'TNM assessment'.">
+            >
+            ["at0029"] = <
+                text = <"Carcinoma in situ (is)">
+                description = <"Record as True if presence of carcinoma in situ associated with the primary tumour.">
+                comment = <"Represented by the prefix 'is' added to the 'TNM assessment'.">
+            >
+            ["at0030"] = <
+                text = <"TNM assessment">
+                description = <"Concatenation of 'T', 'N' and 'M' assessments plus any optional assessments of 'G', 'R', 'L', 'V', prefixes and/or suffixes, as applicable.">
+            >
+            ["at0031"] = <
+                text = <"Stage grouping">
+                description = <"The categorisation of the anatomical stage of the tumour, usually based on TNM assessment.">
+                comment = <"For example: carcinoma in situ is categorised as stage 0; or tumours with distant metastasis are categorised as stage IV.">
+            >
+            ["at0032"] = <
+                text = <"TNM Edition">
+                description = <"The edition of the TNM classification system used for the assessment.">
+            >
+            ["ac9000"] = <
+                text = <"Residual tumour (R) (synthesised)">
+                description = <"Assessment of the presence of residual tumour after treatment. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Lymphatic invasion (L) (synthesised)">
+                description = <"Assessment of invasion into the lymphatic system. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Venous invasion (V) (synthesised)">
+                description = <"Assessment of invasion into the venous system. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Perineural invasion (Pn) (synthesised)">
+                description = <"Assessment of invasion into the space surrounding nerves. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0017", "at0018", "at0019", "at0020">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0013", "at0014", "at0015">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0008", "at0009", "at0010", "at0011">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0022", "at0023", "at0024">
+        >
+    >

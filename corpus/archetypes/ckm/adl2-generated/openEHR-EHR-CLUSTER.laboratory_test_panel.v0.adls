@@ -1,0 +1,123 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=440253f1-61d9-49d3-ae27-58129bbeb6e0; build_uid=0d4d4802-dd56-45e3-accf-96ac97c242b3)
+    openEHR-EHR-CLUSTER.laboratory_test_panel.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Anneka Sargeant">
+                ["organisation"] = <"UMG Göttingen">
+                ["email"] = <"anneka.sargeant@med.uni-goettingen.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke">
+                ["organisation"] = <"Nasjonal IKT HF">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"freshEHR Clinical Informatics, UK">
+        ["email"] = <"ian@freshehr.com">
+        ["date"] = <"2015-07-20">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Heather Leslie, Ocean Informatics, Australia", "Nasjonal IKT, Norway">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Pathology Test Result, Draft Archetype [Internet]. Australian Digital Health Agency, Australian Digital Health Agency Clinical Knowledge Manager [cited: 2017-06-27]. Available from: http://dcm.nehta.org.au/ckm/#showArchetype_1013.1.839 ">
+        ["2"] = <"Pathology (Data Specifications) Version 1.0 [Internet]. Sydney, Australia: National E-Health Transition Authority; 2007 May 29 [cited 2011 Jul 11]; Available at http://www.nehta.gov.au/component/docman/doc_download/962-pathology-v10">
+        ["3"] = <"Laboratory Technical Framework, Volume 3: Content, Revision 3.0 [Internet]. USA: IHE International; 2011 May 19; [cited 2011 Jul 11]. Available from: http://www.ihe.net/Technical_Framework/index.cfm#laboratory">
+        ["4"] = <"Hl7 FHIR Observation resource: HL7 [Internet]; [cited 2017 Jun 27]. Available from http://www.hl7.org/implement/standards/fhir/observation.html">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"16ACB1FB473C63B4BC99E2DDF970BED2">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Dient zur Erfassung von Laborergebnissen als Panel/Profil von Einzelresultaten. Verbreitet im medizinischen Labor, z.B. bei biochemischen, hämatologischen und immunologischen Tests.">
+            keywords = <"Labor, Pathologie, Panel, Profil", ...>
+            use = <"Dient zur Erfassung von Laborergebnissen als Panel/Profil von Einzelresultaten. Verbreitet im medizinischen Labor, z.B. bei biochemischen, hämatologischen und immunologischen Tests. Wird normalerweise als abgeleitete Klasse von OBSERVATION.laboratory_test_result verwendet.
+
+Wenn komplexere Resultatsstrukturen erforderlich sind, kann es hilfreich sein, den Archetyp zu spezialisieren oder durch einen anderen zu ersetzen.">
+            misuse = <"Nicht zur Erfassung von makroskopischen/mikroskopischen Resultaten in der anatomischen Pathologie.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere laboratorieanalyser som en enkeltverdi eller i en analysepakke.">
+            keywords = <"laboratorie", "panel", "batteri", "analytt", "analyse", "svar", "resultat", "pakke">
+            use = <"For å registrere laboratorieanalyser som en enkeltverdi eller i en analysepakke. Brukes normalt i arketypen OBSERVATION.laboratory_test.
+
+Navnene på elementene Laboratoriesvar/Svarverdi vil ordinært erstattes i en templat elller applikasjon med navnet på den spesifikke analysen. f.eks. \"Hemoglobin\", og ofte kodet med en terminologi som NLK, SNOMED CT eller LOINC.
+
+Der det kreves mer komplekse svarmønstre kan det være nødvendig å spesialisere denne arketypen, eller erstatte den med en annen.">
+            misuse = <"Skal ikke brukes til å registrere funn ved patologiundersøkelser.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record laboratory test results in a panel/battery/profile structure common to clinical pathology testing for example biochemistry, haematology and immunology.">
+            keywords = <"laboratory", "pathology", "panel", "battery", "profile">
+            use = <"To record laboratory test results in a panel/battery structure common to clinical pathology testing  biochemistry, haematology and immunology. Normally used in conjunction with a parent 
+OBSERVATION.laboratory_test_result.
+
+Where other more complex result patterns are required it may be helpful to specialise this archetype or substitute another.">
+            misuse = <"Not to be used to record Anatomical pathology macroscopic/microscopic findings.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Laboratory test panel
+        items cardinality matches {1..*; unordered} matches {
+            allow_archetype CLUSTER[at0013] matches {    -- Panel detail
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.laboratory_test_panel(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-CLUSTER\.laboratory_test_analyte(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-CLUSTER\.specimen(-[a-zA-Z0-9_]+)*\.v0\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Labortest-Panel">
+                description = <"Laborergebnis als Panel/Profil von Einzelresultaten. Verbreitet im medizinischen Labor.">
+            >
+            ["at0013"] = <
+                text = <"Panel-Detail">
+                description = <"Weitere Details zum Panel, einschließlich der einzelnen Analyte, Proben für das Panel oder weitere, verschachtelte Panels.">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"*Laboratory test panel(en)">
+                description = <"*Laboratory test result as a panel/battery format common to clinical pathology testing.(en)">
+            >
+            ["at0013"] = <
+                text = <"*Panel detail(en)">
+                description = <"*Further details including the individual analytes, specimen for the panel or a further nested panel.(en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Laboratory test panel">
+                description = <"Laboratory test result as a panel/battery/profile structure common to clinical pathology testing.">
+            >
+            ["at0013"] = <
+                text = <"Panel detail">
+                description = <"Further details including the individual analytes, specimen for the panel or a further nested panel.">
+            >
+        >
+    >

@@ -1,0 +1,282 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=0e31c04f-693c-3bcc-8870-7dc8a3845648; build_uid=6e381deb-fdf8-4f3c-a543-52b8c6c5c536)
+    openEHR-EHR-OBSERVATION.temperature.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["eu"] = <
+            language = <[ISO_639-1::eu]>
+            author = <
+                ["name"] = <"Ander Iruetaguena">
+                ["organisation"] = <"EHU">
+                ["email"] = <"ander.iruetaguena@ehu.es">
+            >
+        >
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Maximilian Meixner">
+                ["organisation"] = <"Berlin Institute of Health - BIH @ Charité">
+                ["email"] = <"maximilian.meixner@bih-charite.de">
+            >
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            author = <
+                ["name"] = <"Dr. Leonardo Der Jachadurian">
+                ["organisation"] = <"Bitios.com">
+            >
+            accreditation = <"Medical Doctor (Internal Medicine Specialist)">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+                ["email"] = <"monasaleh01@live.com">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2008-09-18">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, heather.leslie@atomicainformatics.com">
+        ["MD5-CAM-1.0.1"] = <"269AF5AFAA0260BBCCD2081C14490FE2">
+    >
+    details = <
+        ["eu"] = <
+            language = <[ISO_639-1::eu]>
+            purpose = <"Identifikatutako objektuaren neurturiko tenperatura gordetzea.">
+            use = <"*Used for recording the specific temperature of an identified object.(en)">
+            misuse = <"*This temperature is not to be used to record the body temperature, which is a surrogate for the whole body temperature of the subject - use OBSERVATION.body_temperature instead in this situation.(en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zum Aufzeichnen der gemessenen Temperatur eines identifizierten Objekts.">
+            keywords = <"Temperatur", ...>
+            use = <"Wird zur Aufzeichnung der spezifischen Temperatur eines identifizierten Objekts verwendet.">
+            misuse = <"Nicht zu verwenden zur Aufzeichnung der Körpertemperatur, welche als Ersatz für die gesamte Körpertemperatur des Probanden dient. Verwenden Sie zu diesem Zweck OBSERVATION.body_temperature.">
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            purpose = <"Para registrar la temperatura medida de un objeto identificado.">
+            keywords = <"temperatura", ...>
+            use = <"Usado para registrar la temperatura de un objeto identificado.">
+            misuse = <"Esta temperatura no es para registrar al temperatura corporal, para la cual se debe usar OBSERVATION.body_temperature.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the measured temperature of an identified object.">
+            keywords = <"temperature", ...>
+            use = <"Used for recording the specific temperature of an identified object.">
+            misuse = <"Not to be used to record the body temperature, which is a surrogate for the whole body temperature of the subject - use OBSERVATION.body_temperature for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتسجيل درجة الحرارة التي تم قياسها لشيئ بعينه">
+            keywords = <"درجة الحرارة", ...>
+            use = <"يستخدم لتسجيل درجة الحرارة النوعية لشيئ معين">
+            misuse = <"لا تستخدم درجة الحرارة هذه لتسجيل درجة حرارة الجسم, التي هي بديل عن درجة حرارة الجسم الكلية لشخص معين. استخدم نموذج ملاحظة. درجة حرارة الجسم, في تلك الحالة">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Temperature
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Object
+                                        value matches {
+                                            DV_TEXT[at9001]
+                                        }
+                                    }
+                                    ELEMENT[at0004] occurrences matches {1} matches {    -- Temperature
+                                        value matches {
+                                            DV_QUANTITY[at9002] matches {
+                                                [magnitude, units, precision] matches {
+                                                    [{|>=0.0|}, {"Cel"}, {1}],
+                                                    [{|>=0.0|}, {"[degF]"}, {1}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0007] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0009] matches {    -- Device
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    allow_archetype CLUSTER[at0010] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["eu"] = <
+            ["at0000"] = <
+                text = <"Tenperatura">
+                description = <"Objektu espezifiko baten tenperatura neurketa.">
+            >
+            ["at0002"] = <
+                text = <"*Any event(en)">
+                description = <"**(en)">
+            >
+            ["at0004"] = <
+                text = <"Tenperatura">
+                description = <"Objetuaren neurtutako tenperatura.">
+            >
+            ["at0006"] = <
+                text = <"*Object(en)">
+                description = <"*Identify the object for which the temperature is being measured.(en)">
+            >
+            ["at0009"] = <
+                text = <"Tresna">
+                description = <"Tenperatura neurketa egiteko erabili den tresnaren inguruko xehetasunak.">
+            >
+            ["at0010"] = <
+                text = <"*Extension (en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms. (en)">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR or equivalents. (en)">
+            >
+        >
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Temperatur">
+                description = <"Eine Messung der Temperatur eines bestimmten Objekts.">
+            >
+            ["at0002"] = <
+                text = <"Beliebiges Ereignis">
+                description = <"Standardwert, ein undefinierter/s Zeitpunkt oder Intervallereignis, das explizit im Template oder zur Laufzeit der Anwendung definiert werden kann.">
+            >
+            ["at0004"] = <
+                text = <"Temperatur">
+                description = <"Die gemessene Temperatur des Objekts.">
+            >
+            ["at0006"] = <
+                text = <"Objekt">
+                description = <"Identifizieren Sie das Objekt, für das die Temperatur gemessen wird.">
+            >
+            ["at0009"] = <
+                text = <"Gerät">
+                description = <"Details über das Gerät, das zur Temperaturmessung benutzt wurde.">
+            >
+            ["at0010"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen, die zur Erfassung lokaler Inhalte oder zur Abstimmung mit anderen Referenzmodellen/Formalismen erforderlich sind.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen oder Äquivalentes.">
+            >
+        >
+        ["es-ar"] = <
+            ["at0000"] = <
+                text = <"Temperatura">
+                description = <"La medición de la temperatura de un objeto especificado.">
+            >
+            ["at0002"] = <
+                text = <"Cualquier evento">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"Temperatura">
+                description = <"La temperatura medida del objeto.">
+            >
+            ["at0006"] = <
+                text = <"Objeto">
+                description = <"Identificar el objeto al cual se le ha medido la temperatura.">
+            >
+            ["at0009"] = <
+                text = <"Instrumento">
+                description = <"Detalles del instrumento usado para medir la temperatura.">
+            >
+            ["at0010"] = <
+                text = <"*Extension (en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms. (en)">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR or equivalents. (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Temperature">
+                description = <"A measurement of temperature of a specified object.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Temperature">
+                description = <"The measured temperature of the object.">
+            >
+            ["at0006"] = <
+                text = <"Object">
+                description = <"Identify the object for which the temperature is being measured.">
+            >
+            ["at0009"] = <
+                text = <"Device">
+                description = <"Details of the device used to measure the temperature.">
+            >
+            ["at0010"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or equivalents.">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"درجة الحرارة">
+                description = <"قياس درجة حرارة شيئ معيَّن">
+            >
+            ["at0002"] = <
+                text = <"إحدى الوقائع">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"درجة الحرارة">
+                description = <"درجة الحرارة التي تم قياسها للشيئ">
+            >
+            ["at0006"] = <
+                text = <"الشيئ">
+                description = <"عرِّف الشيئ الذي يتم قياس درجة حرارته">
+            >
+            ["at0009"] = <
+                text = <"الجهاز (الجهيزة) - عنقود">
+                description = <"تفاصيل عن الجهاز (الجهيزة) المستخدمة في قياس درجة الحرارة">
+            >
+            ["at0010"] = <
+                text = <"*Extension (en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms. (en)">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR or equivalents. (en)">
+            >
+        >
+    >

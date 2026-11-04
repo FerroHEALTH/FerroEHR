@@ -1,0 +1,326 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=1ba5fdc6-dfe5-48ab-8b47-76a2fda6140f; build_uid=b3f7e0ab-30fb-4c8f-8837-f5904f0893a7)
+    openEHR-EHR-CLUSTER.imaging_exam-testicle.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-CLUSTER.imaging_exam.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Peter Fedorcsak, Vebjørn Arntzen">
+                ["organisation"] = <"University of Oslo, Oslo University Hospital">
+                ["email"] = <"peterfe@uio.no, varntzen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-11-24">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital", "Liv Laugen, Oslo University Hospital", "Peter Fedorcsak, Oslo University Hospital">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"3E9924E78BA52B3CB6E2088C71E412B5">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung der Befunde einer radiologischen Untersuchung einer bestimmten Körperstruktur oder -region und deren Interpretation.">
+            keywords = <"Befund, Ergebnis, Bildgebung, Körper, Organ, System, Struktur, Region, Beobachtung, Diagnostik, Radiologie, Bild", ...>
+            use = <"*Use to record the findings on radiological examination of a specified body structure or region, and their interpretation.
+
+In practice, the design intent is for the CLUSTER.imaging_exam family of archetypes to be used to record all detailed findings on radiological examination. The family of specialised archetypes are derived from this generic parent archetype, CLUSTER.imaging_exam, designed as a universal pattern for recording any findings in any specified body structure or region and using any modality.
+
+Each structure- or region-specific specialisation of this parent archetype is intended to be inclusive of all reasonably anticipated and relevant findings. For example, the CLUSTER.imaging_exam-ovary will support recording of all findings that would be expected in reporting on imaging of the ovary using any radiological modality, including the size of the ovary, largest follicle size and the diameter and description of specific follicles. Similarly, CLUSTER.imaging_exam-lymph_node_group will contain data elements required to record specific findings of a lymph node group, including its precise or relative location in the body and the number of lymph nodes in the group. 
+
+If an appropriate specialisation is not available for a body structure or region, this archetype can be used to record all relevant findings related to the structure or region. 
+
+This archetype and its related family of specialisations are designed to be nested within the 'Structured imaging findings' SLOT in the OBSERVATION.imaging_exam_result or within other relevant CLUSTER.imaging_exam archetypes, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. If this archetype of its specialisations need to be extended with further levels of detailed findings, additional instances of the CLUSTER.imaging_exam or its specialisations can be nested in the 'Additional details' SLOT. (en)">
+            misuse = <"Nicht zur Darstellung von Befunden verwenden, die außerhalb der identifizierten Körperstruktur oder -region beobachtet wurden. Verwenden Sie zu diesem Zweck eine separate Instanz eines oder mehrerer Archetypen aus der Familie CLUSTER.imaging_exam.
+
+Darf nicht verwendet werden, um Details in Bezug auf die Gesamtbefunde, den Kontext oder technische Details in Bezug auf ein vollständiges Testergebnis einer bildgebenden Untersuchung darzustellen. Verwenden Sie zu diesem Zweck das OBSERVATION.imaging_exam_result. Zum Beispiel Kommentare zur Studienqualität, zu Differenzialdiagnosen und zum Gesamteindruck.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere en fritekstbeskrivelse, strukturerte detaljer og klinisk tolkning av funn og observasjoner ved bildediagnostisk undersøkelse av testikkel.">
+            use = <"Brukes for å registrere funn ved bildediagnostisk undersøkelse av en testikkel og tolkning av dem.
+
+Bruk en separat instans av arketypen for hver testikkel.
+
+Det tiltenkte omfanget for denne CLUSTER.imaging_exam (Bildediagnostisk undersøkelse) - arketypen er til slutt å kunne registrere alle detaljerte funn ved bildediagnostisk undersøkelse av en testikkel, uavhengig av modalitet. Det er forventet at flere dataelementer kan bli lagt til når krav til slike er identifisert og bekreftet.
+
+Denne arketypen er utformet for å bli nøstet i SLOT'et \"Ytterligere detaljer\" i arketypen i SLOT'et \"Strukturerte funn\" i OBSERVATION.imaging_exam_result (Bildediagnostisk svar),eller i CLUSTER.imaging_finding-scrotum, men kan også brukes innen andre ENTRY- og CLUSTER-arketyper der det er klinisk passende. Hvis denne arketypen, eller en spesialisering av denne, må utvides med flere nivåer med detaljerte funn eller observasjoner, kan flere forekomster av arketypen eller dens spesialiseringer nøstes i SLOT'et \"Ytterligere detaljer\".">
+            misuse = <"Skal ikke brukes til å registrere funn ved andre kroppsstrukturer eller områder enn en testikkel. Bruk andre arketyper fra gruppen av CLUSTER.imaging_exam-arketyper for dette.
+
+Skal ikke brukes til å registrere overordnede undersøkelsesfunn, kontekst eller tekniske detaljer relatert til et fullstendig svar på billedundersøkelsen. Bruk arketypen OBSERVATION.imaging_exam_result (Bildediagnostisk svar) for å registrere dette, for eksempel kommentar om undersøkelseskvalitet, differensialdiagnose og overordnet konklusjon.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a narrative description, structured details and clinical impression of the findings observed in an imaging examination targeting a testicle.">
+            use = <"Use to record a narrative description, structured details and clinical impression of the findings observed in an imaging examination targeting a testicle.
+
+This archetype has been designed to be used in the 'Structured imaging findings' SLOT within the OBSERVATION.imaging_exam_result archetype or the CLUSTER.exam_findings-scrotum, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. 
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Additional details' SLOT within this archetype to record additional nested levels of structured imaging findings for related body substructures.">
+            misuse = <"Not to be used to record findings outside the specified body structure or region. Use other archetypes from the CLUSTER.imaging_exam family for this purpose.
+
+Not to be used to record details related to the overall findings, context or technical details related to a complete imaging examination test result. Use the OBERSERVATION.imaging_exam_result for this purpose. For example, comments on the study quality, differential diagnoses, and overall impression.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Imaging examination of a testicle
+        items matches {
+            ELEMENT[at0001.1] matches {    -- Body structure
+                value matches {
+                    DV_CODED_TEXT[at0.9001] matches {
+                        defining_code matches {[ac0.9000]}    -- Body structure (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1}
+            ELEMENT[at0.3] occurrences matches {0..1} matches {    -- Length
+                value matches {
+                    DV_QUANTITY[at0.9004] matches {
+                        property matches {[at0.9002]}    -- Length
+                        [magnitude, units, precision] matches {
+                            [{|>=0.0|}, {"mm"}, {0}],
+                            [{|>=0.0|}, {"cm"}, {1}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0.4] occurrences matches {0..1} matches {    -- Width
+                value matches {
+                    DV_QUANTITY[at0.9005] matches {
+                        property matches {[at0.9002]}    -- Length
+                        [magnitude, units, precision] matches {
+                            [{|>=0.0|}, {"mm"}, {0}],
+                            [{|>=0.0|}, {"cm"}, {1}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0.5] occurrences matches {0..1} matches {    -- Depth
+                value matches {
+                    DV_QUANTITY[at0.9006] matches {
+                        property matches {[at0.9002]}    -- Length
+                        [magnitude, units, precision] matches {
+                            [{|>=0.0|}, {"mm"}, {0}],
+                            [{|>=0.0|}, {"cm"}, {1}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0.6] occurrences matches {0..1} matches {    -- Volume
+                value matches {
+                    DV_QUANTITY[at0.9007] matches {
+                        property matches {[at0.9003]}    -- Volume
+                        magnitude matches {|>=0.0|}
+                        units matches {"mL"}
+                        precision matches {0}
+                    }
+                }
+            }
+            ELEMENT[at0.7] occurrences matches {0..1} matches {    -- Doppler description
+                value matches {
+                    DV_TEXT[at0.9008]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000.1"] = <
+                text = <"Bildgebende Untersuchung einer Körperstruktur">
+                description = <"Befunde zur radiologischen Untersuchung einer bestimmten Körperstruktur oder -region.">
+            >
+            ["at0001.1"] = <
+                text = <"Körperstruktur">
+                description = <"Identifizierung der untersuchten Körperstruktur oder Region.">
+                comment = <"Zum Beispiel: „Leber“, „Rechtes Fußgelenk“ oder „Lymphknotengruppe“. Es wird empfohlen, die Körperstruktur mit einer geeigneten Terminologie, wie z. B. SNOMED CT, zu codieren.">
+            >
+            ["at0.1"] = <
+                text = <"Left testicle">
+                description = <"The left testicle was examined.">
+            >
+            ["at0.2"] = <
+                text = <"Right testicle">
+                description = <"The right testicle was examined.">
+            >
+            ["at0.3"] = <
+                text = <"Length">
+                description = <"Measurement of the longest axis of the testicle.">
+            >
+            ["at0.4"] = <
+                text = <"Width">
+                description = <"Measurement of the widest axis of the testicle, perpendicular to the length.">
+            >
+            ["at0.5"] = <
+                text = <"Depth">
+                description = <"Measurement of the depth of the testicle, perpendicular to the length and width.">
+            >
+            ["at0.6"] = <
+                text = <"Volume">
+                description = <"">
+            >
+            ["at0.7"] = <
+                text = <"Doppler description">
+                description = <"Narrative description of findings on Doppler ultrasound.">
+            >
+            ["at0.9002"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["at0.9003"] = <
+                text = <"* Volume (en)">
+                description = <"* Volume (en)">
+            >
+            ["ac0.9000"] = <
+                text = <"Körperstruktur (synthesised)">
+                description = <"Identifizierung der untersuchten Körperstruktur oder Region. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0.1"] = <
+                text = <"Venstre testikkel">
+                description = <"Undersøkelse av venstre testikkel.">
+            >
+            ["at0.2"] = <
+                text = <"Høyre testikkel">
+                description = <"Undersøkelse av høyre testikkel.">
+            >
+            ["at0.3"] = <
+                text = <"Lengde">
+                description = <"Testikkelens lengste akse.">
+            >
+            ["at0.4"] = <
+                text = <"Bredde">
+                description = <"Testikkelens bredeste akse, vinkelrett på den lengste aksen.">
+            >
+            ["at0.5"] = <
+                text = <"Dybde">
+                description = <"Testikkelens dybde, vinkelrett på både lengde og bredde.">
+            >
+            ["at0.6"] = <
+                text = <"Volum">
+                description = <"Testikkelens volum.">
+            >
+            ["at0.7"] = <
+                text = <"Doppler beskrivelse">
+                description = <"Fritektstbeskrivelse av funn ved Doppler ultralydundersøkelse.">
+            >
+            ["at0000.1"] = <
+                text = <"Bildediagnostisk undersøkelse - testikkel">
+                description = <"Funn eller observasjoner ved bildeundersøkelse av testikkel med bruk av radiologiske metoder.">
+            >
+            ["at0001.1"] = <
+                text = <"Struktur">
+                description = <"Navn av undersøkt struktur eller område på eller i kroppen.">
+            >
+            ["at0.9002"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["at0.9003"] = <
+                text = <"* Volume (en)">
+                description = <"* Volume (en)">
+            >
+            ["ac0.9000"] = <
+                text = <"Struktur (synthesised)">
+                description = <"Navn av undersøkt struktur eller område på eller i kroppen. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Imaging examination of a testicle">
+                description = <"Findings observed in an imaging examination targeting a testicle, using radiographic techniques.">
+            >
+            ["at0001.1"] = <
+                text = <"Body structure">
+                description = <"Identification of the body structure or region examined.">
+            >
+            ["at0.1"] = <
+                text = <"Left testicle">
+                description = <"The left testicle was examined.">
+            >
+            ["at0.2"] = <
+                text = <"Right testicle">
+                description = <"The right testicle was examined.">
+            >
+            ["at0.3"] = <
+                text = <"Length">
+                description = <"Measurement of the longest axis of the testicle.">
+            >
+            ["at0.4"] = <
+                text = <"Width">
+                description = <"Measurement of the widest axis of the testicle, perpendicular to the length.">
+            >
+            ["at0.5"] = <
+                text = <"Depth">
+                description = <"Measurement of the depth of the testicle, perpendicular to the length and width.">
+            >
+            ["at0.6"] = <
+                text = <"Volume">
+                description = <"">
+            >
+            ["at0.7"] = <
+                text = <"Doppler description">
+                description = <"Narrative description of findings on Doppler ultrasound.">
+            >
+            ["at0.9002"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["at0.9003"] = <
+                text = <"Volume">
+                description = <"Volume">
+            >
+            ["ac0.9000"] = <
+                text = <"Body structure (synthesised)">
+                description = <"Identification of the body structure or region examined. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at0.9002"] = <http://openehr.org/id/122>
+            ["at0.9003"] = <http://openehr.org/id/129>
+        >
+        ["SNOMED-CT"] = <
+            ["at0.1"] = <http://snomed.info/id/63239009>
+            ["at0.2"] = <http://snomed.info/id/15598003>
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.1", "at0.2">
+        >
+    >

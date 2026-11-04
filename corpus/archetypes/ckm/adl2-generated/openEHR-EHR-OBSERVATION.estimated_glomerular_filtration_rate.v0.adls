@@ -1,0 +1,634 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=00aabfe0-aedc-4157-899d-5c5a8db20490; build_uid=e267f265-ed9a-4c62-8231-0174d25b6c42)
+    openEHR-EHR-OBSERVATION.estimated_glomerular_filtration_rate.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Jimmy Axelsson">
+                ["organisation"] = <"Cambio Healthcare Systems">
+            >
+        >
+        ["si"] = <
+            language = <[ISO_639-1::si]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+        ["el"] = <
+            language = <[ISO_639-1::el]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+        ["da"] = <
+            language = <[ISO_639-1::da]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Gustavo Bacelar-Silva">
+        ["organisation"] = <"Faculty of Medicine of Porto University">
+        ["email"] = <"mail@gustavobacelar.com">
+        ["date"] = <"2012-05-03">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Rong Chen, Cambio Healthcare Systems, Sweden", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "José Hilário Patriarca de Almeida, Faculty of Medicine of Porto University, Portugal", "Ricardo Cruz-Correia, Faculty of Medicine of Porto University, Portugal", "Heather Leslie, Atomica Informatics, Australia">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"HDCN-- Calculators, GFR / 1.73 m² by MDRD (± SUN and SAlb) Calculator. Available at: http://www.hdcn.com/calcf/gfr.htm. Accessed May, 2012.">
+        ["2"] = <"Levey AS, Bosch JP, Lewis JB, Greene T, Rogers N, Roth D. A more accurate method to estimate glomerular filtration rate from serum creatinine: A new prediction equation. Modification of Diet in Renal Disease Study Group. Ann Intern Med 1999; 130: 461-70">
+        ["3"] = <"Levey AS, Coresh J, Greene T, Stevens LA, Zhang YL, Hendriksen S, Kusek JW, Van Lente F; Chronic Kidney Disease Epidemiology Collaboration. Using standardized serum creatinine values in the modification of diet in renal disease study equation for estimating glomerular filtration rate.Ann Intern Med. 2006 Aug 15; 145 (4): 247-54.">
+        ["4"] = <"NKDEP - National Kideny Disease Education Program, GFR Calculators. Available at: http://www.nkdep.nih.gov/lab-evaluation/gfr-calculators.shtml. Accessed May, 2012.">
+        ["5"] = <"Schwartz GJ, Muñoz A, Schneider MF, et al. New equations to estimate GFR in children with CKD. J Am Soc Nephrol. 2009: 20 (3): 629-37.">
+        ["6"] = <"Schwartz GJ and Work DF. Measurement and estimation of GFR in children and adolescents. Clin J Am Soc Nephrol. 2009; 4 (11): 1832-43.">
+        ["7"] = <"Colin C. Geddes, Yook Mun Woo, Stefan Brady, Glomerular filtration rate—what is the rationale and justification of normalizing GFR for body surface area?, Nephrology Dialysis Transplantation, Volume 23, Issue 1, January 2008, Pages 4–6, https://doi.org/10.1093/ndt/gfm662">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"783378739686DE258C9E187CEE934050">
+    >
+    details = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"*To record the estimated glomerular filtration rate (eGFR) of an individual. (en)">
+            keywords = <"kidney function", "glomerular filtration rate", "GFR", "creatinine", "kidney", "chronic kidney disease", "CKD-EPI formula", "MDRD formula", "Schwartz equation">
+            use = <"*Use to record the estimated glomerular filtration rate (eGFR) of an individual.
+
+There are multiple formulas used to calculate the eGFR. The formula used to calculate the eGFR can be recorded in the Protocol.
+
+It is also possible to record the method of recording - either calculated and directly entered by the clinician or calculated and entered by the clinical software system. (en)">
+            misuse = <"*Not to be used to record values of formula components, such as creatinine. These should be recorded using archetypes designed for this purpose, such as OBSERVATION.laboratory_test_result. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["si"] = <
+            language = <[ISO_639-1::si]>
+            purpose = <"*To record the estimated glomerular filtration rate (eGFR) of an individual. (en)">
+            keywords = <"kidney function", "glomerular filtration rate", "GFR", "creatinine", "kidney", "chronic kidney disease", "CKD-EPI formula", "MDRD formula", "Schwartz equation">
+            use = <"*Use to record the estimated glomerular filtration rate (eGFR) of an individual.
+
+There are multiple formulas used to calculate the eGFR. The formula used to calculate the eGFR can be recorded in the Protocol.
+
+It is also possible to record the method of recording - either calculated and directly entered by the clinician or calculated and entered by the clinical software system. (en)">
+            misuse = <"*Not to be used to record values of formula components, such as creatinine. These should be recorded using archetypes designed for this purpose, such as OBSERVATION.laboratory_test_result. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["el"] = <
+            language = <[ISO_639-1::el]>
+            purpose = <"*To record the estimated glomerular filtration rate (eGFR) of an individual. (en)">
+            keywords = <"kidney function", "glomerular filtration rate", "GFR", "creatinine", "kidney", "chronic kidney disease", "CKD-EPI formula", "MDRD formula", "Schwartz equation">
+            use = <"*Use to record the estimated glomerular filtration rate (eGFR) of an individual.
+
+There are multiple formulas used to calculate the eGFR. The formula used to calculate the eGFR can be recorded in the Protocol.
+
+It is also possible to record the method of recording - either calculated and directly entered by the clinician or calculated and entered by the clinical software system. (en)">
+            misuse = <"*Not to be used to record values of formula components, such as creatinine. These should be recorded using archetypes designed for this purpose, such as OBSERVATION.laboratory_test_result. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the estimated glomerular filtration rate (eGFR) of an individual.">
+            keywords = <"kidney function", "glomerular filtration rate", "GFR", "creatinine", "kidney", "chronic kidney disease", "CKD-EPI formula", "MDRD formula", "Schwartz equation">
+            use = <"Use to record the estimated glomerular filtration rate (eGFR) of an individual.
+
+There are multiple formulas used to calculate the eGFR. The formula used to calculate the eGFR can be recorded in the Protocol.
+
+It is also possible to record the method of recording - either calculated and directly entered by the clinician or calculated and entered by the clinical software system.">
+            misuse = <"Not to be used to record values of formula components, such as creatinine. These should be recorded using archetypes designed for this purpose, such as OBSERVATION.laboratory_test_result.
+			Not to be used to record the directly measured Glomerular filtration rate - Use the OBSERVATION.laboratory_test_result for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["da"] = <
+            language = <[ISO_639-1::da]>
+            purpose = <"*To record the estimated glomerular filtration rate (eGFR) of an individual. (en)">
+            keywords = <"*kidney function(en)", "*glomerular filtration rate(en)", "*GFR(en)", "*creatinine(en)", "*kidney(en)", "*chronic kidney disease(en)", "*CKD-EPI formula(en)", "*MDRD formula(en)", "*Schwartz equation(en)">
+            use = <"*Use to record the estimated glomerular filtration rate (eGFR) of an individual.
+
+There are multiple formulas used to calculate the eGFR. The formula used to calculate the eGFR can be recorded in the Protocol.
+
+It is also possible to record the method of recording - either calculated and directly entered by the clinician or calculated and entered by the clinical software system. (en)">
+            misuse = <"*Not to be used to record values of formula components, such as creatinine. These should be recorded using archetypes designed for this purpose, such as OBSERVATION.laboratory_test_result. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Estimated glomerular filtration rate (eGFR)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Relative eGFR
+                                        value matches {
+                                            DV_QUANTITY[at9003] matches {
+                                                property matches {[at9000]}    -- Flow rate, volume
+                                                units matches {"mL/min/{1.73_m2}"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Absolute eGFR
+                                        value matches {
+                                            DV_QUANTITY[at9004] matches {
+                                                units matches {"ml/min"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9005]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0022] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Formula
+                        value matches {
+                            DV_CODED_TEXT[at9006] matches {
+                                defining_code matches {[ac9001]}    -- Formula (synthesised)
+                            }
+                            DV_TEXT[at9007]
+                        }
+                    }
+                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Method
+                        value matches {
+                            DV_CODED_TEXT[at9008] matches {
+                                defining_code matches {[ac9002]}    -- Method (synthesised)
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0024] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"*Estimated glomerular filtration rate (eGFR) (en)">
+                description = <"*Calculated estimate of glomerular filtration rate as an indicator of renal function. (en)">
+            >
+            ["at0002"] = <
+                text = <"Vilken händelse som helst">
+                description = <"Daterad registrering av Body Mass Index.">
+            >
+            ["at0004"] = <
+                text = <"*Relative eGFR (en)">
+                description = <"*Estimation of glomerular filtration rate normalised to a body surface area of 1.73m² (mL/min/1.73m²). (en)">
+            >
+            ["at0006"] = <
+                text = <"Metod">
+                description = <"Metoden som används för att registrera värdet av den beräknade glomerulära filtrationshastigheten.">
+            >
+            ["at0007"] = <
+                text = <"Automatisk registrering">
+                description = <"*Calculated and entered automatically by the clinical system. (en)">
+            >
+            ["at0008"] = <
+                text = <"Direktregistrering">
+                description = <"*Calculated and entered directly by user. (en)">
+            >
+            ["at0010"] = <
+                text = <"Formel">
+                description = <"Formeln som används för att beräkna den glomerulära filtrationshastigheten. ">
+            >
+            ["at0013"] = <
+                text = <"MDRD-formel - ej IDMS-normaliserat serum Cr">
+                description = <"*Modification of Diet in Renal Disease study formula using standard creatinine measurement. (en)">
+            >
+            ["at0014"] = <
+                text = <"MDRD-formel - IDMS-normaliserat serum Cr">
+                description = <"*Modification of Diet in Renal Disease study formula using creatinine measured by an IDMS-calibrated assay. (en)">
+            >
+            ["at0015"] = <
+                text = <"*CKD-EPI Creatinine (en)">
+                description = <"*Chronic Kidney Disease Epidemiology Collaboration formula using creatinine. (en)">
+            >
+            ["at0016"] = <
+                text = <"Cockcroft-Gault formel">
+                description = <"*Estimated creatinine clearance rate (eCCr) using Cockcroft-Gault formula. (en)">
+            >
+            ["at0017"] = <
+                text = <"Bedside Schwartz ekvation">
+                description = <"*Bedside IDMS-traceable Schwartz GFR Calculator for Children. (en)">
+            >
+            ["at0018"] = <
+                text = <"Kommentar">
+                description = <"Utrymme för ytterligare kommentarer.">
+            >
+            ["at0020"] = <
+                text = <"*Absolute eGFR (en)">
+                description = <"*Estimation of glomerular filtration rate calculated using the relative eGFR, weight and height. (en)">
+            >
+            ["at0021"] = <
+                text = <"*LM Revised(en)">
+                description = <"*Revised Lund-Malmö Study equation. (en)">
+            >
+            ["at0024"] = <
+                text = <"*Extension (en)">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"*CKD-EPI Cystatin C (en)">
+                description = <"*Chronic Kidney Disease Epidemiology Collaboration formula using cystatin C. (en)">
+            >
+            ["at0026"] = <
+                text = <"*CKD-EPI Creatinine-Cystatin C (en)">
+                description = <"*Chronic Kidney Disease Epidemiology Collaboration formula using creatinine and cystatin C. (en)">
+            >
+            ["at9000"] = <
+                text = <"* Flow rate, volume (en)">
+                description = <"* Flow rate, volume (en)">
+            >
+            ["ac9001"] = <
+                text = <"Formel (synthesised)">
+                description = <"Formeln som används för att beräkna den glomerulära filtrationshastigheten.  (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Metod (synthesised)">
+                description = <"Metoden som används för att registrera värdet av den beräknade glomerulära filtrationshastigheten. (synthesised)">
+            >
+        >
+        ["si"] = <
+            ["at0000"] = <
+                text = <"*Estimated glomerular filtration rate (eGFR) (en)">
+                description = <"*Calculated estimate of glomerular filtration rate as an indicator of renal function. (en)">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Any timed recording of Body Mass Index.">
+            >
+            ["at0004"] = <
+                text = <"*Relative eGFR (en)">
+                description = <"*Estimation of glomerular filtration rate normalised to a body surface area of 1.73m² (mL/min/1.73m²). (en)">
+            >
+            ["at0006"] = <
+                text = <"Method">
+                description = <"The method of entering the Estimated Glomerular Filtration Rate.">
+            >
+            ["at0007"] = <
+                text = <"Automatic entry">
+                description = <"*Calculated and entered automatically by the clinical system. (en)">
+            >
+            ["at0008"] = <
+                text = <"Direct entry">
+                description = <"*Calculated and entered directly by user. (en)">
+            >
+            ["at0010"] = <
+                text = <"Formula">
+                description = <"Formula used to calculate the Estimated Glomerular Filtration Rate.">
+            >
+            ["at0013"] = <
+                text = <"MDRD formula - non-IDMS-normalized serum Cr">
+                description = <"*Modification of Diet in Renal Disease study formula using standard creatinine measurement. (en)">
+            >
+            ["at0014"] = <
+                text = <"MDRD formula - IDMS-normalized serum Cr">
+                description = <"*Modification of Diet in Renal Disease study formula using creatinine measured by an IDMS-calibrated assay. (en)">
+            >
+            ["at0015"] = <
+                text = <"*CKD-EPI Creatinine (en)">
+                description = <"*Chronic Kidney Disease Epidemiology Collaboration formula using creatinine. (en)">
+            >
+            ["at0016"] = <
+                text = <"Cockcroft-Gault formula">
+                description = <"*Estimated creatinine clearance rate (eCCr) using Cockcroft-Gault formula. (en)">
+            >
+            ["at0017"] = <
+                text = <"Bedside Schwartz equation">
+                description = <"*Bedside IDMS-traceable Schwartz GFR Calculator for Children. (en)">
+            >
+            ["at0018"] = <
+                text = <"Comment">
+                description = <"*">
+            >
+            ["at0020"] = <
+                text = <"*Absolute eGFR (en)">
+                description = <"*Estimation of glomerular filtration rate calculated using the relative eGFR, weight and height. (en)">
+            >
+            ["at0021"] = <
+                text = <"*LM Revised(en)">
+                description = <"*Revised Lund-Malmö Study equation. (en)">
+            >
+            ["at0024"] = <
+                text = <"*Extension (en)">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"*CKD-EPI Cystatin C (en)">
+                description = <"*Chronic Kidney Disease Epidemiology Collaboration formula using cystatin C. (en)">
+            >
+            ["at0026"] = <
+                text = <"*CKD-EPI Creatinine-Cystatin C (en)">
+                description = <"*Chronic Kidney Disease Epidemiology Collaboration formula using creatinine and cystatin C. (en)">
+            >
+            ["at9000"] = <
+                text = <"* Flow rate, volume (en)">
+                description = <"* Flow rate, volume (en)">
+            >
+            ["ac9001"] = <
+                text = <"Formula (synthesised)">
+                description = <"Formula used to calculate the Estimated Glomerular Filtration Rate. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Method (synthesised)">
+                description = <"The method of entering the Estimated Glomerular Filtration Rate. (synthesised)">
+            >
+        >
+        ["el"] = <
+            ["at0000"] = <
+                text = <"*Estimated glomerular filtration rate (eGFR) (en)">
+                description = <"*Calculated estimate of glomerular filtration rate as an indicator of renal function. (en)">
+            >
+            ["at0002"] = <
+                text = <"*Any event(en)">
+                description = <"*Any timed recording of Body Mass Index.(en)">
+            >
+            ["at0004"] = <
+                text = <"*Relative eGFR (en)">
+                description = <"*Estimation of glomerular filtration rate normalised to a body surface area of 1.73m² (mL/min/1.73m²). (en)">
+            >
+            ["at0006"] = <
+                text = <"*Method(en)">
+                description = <"*The method of entering the Estimated Glomerular Filtration Rate.(en)">
+            >
+            ["at0007"] = <
+                text = <"*Automatic entry(en)">
+                description = <"*Calculated and entered automatically by the clinical system. (en)">
+            >
+            ["at0008"] = <
+                text = <"*Direct entry(en)">
+                description = <"*Calculated and entered directly by user. (en)">
+            >
+            ["at0010"] = <
+                text = <"*Formula(en)">
+                description = <"*Formula used to calculate the Estimated Glomerular Filtration Rate.(en)">
+            >
+            ["at0013"] = <
+                text = <"*MDRD formula - non-IDMS-normalized serum Cr(en)">
+                description = <"*Modification of Diet in Renal Disease study formula using standard creatinine measurement. (en)">
+            >
+            ["at0014"] = <
+                text = <"*MDRD formula - IDMS-normalized serum Cr(en)">
+                description = <"*Modification of Diet in Renal Disease study formula using creatinine measured by an IDMS-calibrated assay. (en)">
+            >
+            ["at0015"] = <
+                text = <"*CKD-EPI Creatinine (en)">
+                description = <"*Chronic Kidney Disease Epidemiology Collaboration formula using creatinine. (en)">
+            >
+            ["at0016"] = <
+                text = <"*Cockcroft-Gault formula(en)">
+                description = <"*Estimated creatinine clearance rate (eCCr) using Cockcroft-Gault formula. (en)">
+            >
+            ["at0017"] = <
+                text = <"*Bedside Schwartz equation(en)">
+                description = <"*Bedside IDMS-traceable Schwartz GFR Calculator for Children. (en)">
+            >
+            ["at0018"] = <
+                text = <"Σχόλιο">
+                description = <"**(en)">
+            >
+            ["at0020"] = <
+                text = <"*Absolute eGFR (en)">
+                description = <"*Estimation of glomerular filtration rate calculated using the relative eGFR, weight and height. (en)">
+            >
+            ["at0021"] = <
+                text = <"*LM Revised(en)">
+                description = <"*Revised Lund-Malmö Study equation. (en)">
+            >
+            ["at0024"] = <
+                text = <"*Extension (en)">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"*CKD-EPI Cystatin C (en)">
+                description = <"*Chronic Kidney Disease Epidemiology Collaboration formula using cystatin C. (en)">
+            >
+            ["at0026"] = <
+                text = <"*CKD-EPI Creatinine-Cystatin C (en)">
+                description = <"*Chronic Kidney Disease Epidemiology Collaboration formula using creatinine and cystatin C. (en)">
+            >
+            ["at9000"] = <
+                text = <"* Flow rate, volume (en)">
+                description = <"* Flow rate, volume (en)">
+            >
+            ["ac9001"] = <
+                text = <"*Formula(en) (synthesised)">
+                description = <"*Formula used to calculate the Estimated Glomerular Filtration Rate.(en) (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"*Method(en) (synthesised)">
+                description = <"*The method of entering the Estimated Glomerular Filtration Rate.(en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Estimated glomerular filtration rate (eGFR)">
+                description = <"Calculated estimate of glomerular filtration rate as an indicator of renal function.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Any timed recording of Body Mass Index.">
+            >
+            ["at0004"] = <
+                text = <"Relative eGFR">
+                description = <"Estimation of glomerular filtration rate normalised to a body surface area of 1.73m² (mL/min/1.73m²).">
+            >
+            ["at0006"] = <
+                text = <"Method">
+                description = <"The method of entering the Estimated Glomerular Filtration Rate.">
+            >
+            ["at0007"] = <
+                text = <"Automatic entry">
+                description = <"Calculated and entered automatically by the clinical system.">
+            >
+            ["at0008"] = <
+                text = <"Direct entry">
+                description = <"Calculated and entered directly by user.">
+            >
+            ["at0010"] = <
+                text = <"Formula">
+                description = <"Formula used to calculate the Estimated Glomerular Filtration Rate.">
+            >
+            ["at0013"] = <
+                text = <"MDRD formula - non-IDMS-normalized serum Cr">
+                description = <"Modification of Diet in Renal Disease study formula using standard creatinine measurement.">
+            >
+            ["at0014"] = <
+                text = <"MDRD formula - IDMS-normalized serum Cr">
+                description = <"Modification of Diet in Renal Disease study formula using creatinine measured by an IDMS-calibrated assay.">
+            >
+            ["at0015"] = <
+                text = <"CKD-EPI Creatinine">
+                description = <"Chronic Kidney Disease Epidemiology Collaboration formula using creatinine.">
+            >
+            ["at0016"] = <
+                text = <"Cockcroft-Gault formula">
+                description = <"Estimated creatinine clearance rate (eCCr) using Cockcroft-Gault formula.">
+            >
+            ["at0017"] = <
+                text = <"Bedside Schwartz equation">
+                description = <"Bedside IDMS-traceable Schwartz GFR Calculator for Children.">
+            >
+            ["at0018"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the eGFR, not captured in other fields.">
+            >
+            ["at0020"] = <
+                text = <"Absolute eGFR">
+                description = <"Estimation of glomerular filtration rate calculated using the relative eGFR, weight and height.">
+            >
+            ["at0021"] = <
+                text = <"LM Revised">
+                description = <"Revised Lund-Malmö Study equation.">
+            >
+            ["at0024"] = <
+                text = <"Extension">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"CKD-EPI Cystatin C">
+                description = <"Chronic Kidney Disease Epidemiology Collaboration formula using cystatin C.">
+            >
+            ["at0026"] = <
+                text = <"CKD-EPI Creatinine-Cystatin C">
+                description = <"Chronic Kidney Disease Epidemiology Collaboration formula using creatinine and cystatin C.">
+            >
+            ["at9000"] = <
+                text = <"Flow rate, volume">
+                description = <"Flow rate, volume">
+            >
+            ["ac9001"] = <
+                text = <"Formula (synthesised)">
+                description = <"Formula used to calculate the Estimated Glomerular Filtration Rate. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Method (synthesised)">
+                description = <"The method of entering the Estimated Glomerular Filtration Rate. (synthesised)">
+            >
+        >
+        ["da"] = <
+            ["at0000"] = <
+                text = <"*Estimated glomerular filtration rate (eGFR) (en)">
+                description = <"*Calculated estimate of glomerular filtration rate as an indicator of renal function. (en)">
+            >
+            ["at0002"] = <
+                text = <"*Any event(en)">
+                description = <"*Any timed recording of Body Mass Index.(en)">
+            >
+            ["at0004"] = <
+                text = <"*Relative eGFR (en)">
+                description = <"*Estimation of glomerular filtration rate normalised to a body surface area of 1.73m² (mL/min/1.73m²). (en)">
+            >
+            ["at0006"] = <
+                text = <"*Method(en)">
+                description = <"*The method of entering the Estimated Glomerular Filtration Rate.(en)">
+            >
+            ["at0007"] = <
+                text = <"*Automatic entry(en)">
+                description = <"*Calculated and entered automatically by the clinical system. (en)">
+            >
+            ["at0008"] = <
+                text = <"*Direct entry(en)">
+                description = <"*Calculated and entered directly by user. (en)">
+            >
+            ["at0010"] = <
+                text = <"*Formula(en)">
+                description = <"*Formula used to calculate the Estimated Glomerular Filtration Rate.(en)">
+            >
+            ["at0013"] = <
+                text = <"*MDRD formula - non-IDMS-normalized serum Cr(en)">
+                description = <"*Modification of Diet in Renal Disease study formula using standard creatinine measurement. (en)">
+            >
+            ["at0014"] = <
+                text = <"*MDRD formula - IDMS-normalized serum Cr(en)">
+                description = <"*Modification of Diet in Renal Disease study formula using creatinine measured by an IDMS-calibrated assay. (en)">
+            >
+            ["at0015"] = <
+                text = <"*CKD-EPI Creatinine (en)">
+                description = <"*Chronic Kidney Disease Epidemiology Collaboration formula using creatinine. (en)">
+            >
+            ["at0016"] = <
+                text = <"*Cockcroft-Gault formula(en)">
+                description = <"*Estimated creatinine clearance rate (eCCr) using Cockcroft-Gault formula. (en)">
+            >
+            ["at0017"] = <
+                text = <"*Bedside Schwartz equation(en)">
+                description = <"*Bedside IDMS-traceable Schwartz GFR Calculator for Children. (en)">
+            >
+            ["at0018"] = <
+                text = <"kommentar">
+                description = <"**(en)">
+            >
+            ["at0020"] = <
+                text = <"*Absolute eGFR (en)">
+                description = <"*Estimation of glomerular filtration rate calculated using the relative eGFR, weight and height. (en)">
+            >
+            ["at0021"] = <
+                text = <"*LM Revised(en)">
+                description = <"*Revised Lund-Malmö Study equation. (en)">
+            >
+            ["at0024"] = <
+                text = <"*Extension (en)">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"*CKD-EPI Cystatin C (en)">
+                description = <"*Chronic Kidney Disease Epidemiology Collaboration formula using cystatin C. (en)">
+            >
+            ["at0026"] = <
+                text = <"*CKD-EPI Creatinine-Cystatin C (en)">
+                description = <"*Chronic Kidney Disease Epidemiology Collaboration formula using creatinine and cystatin C. (en)">
+            >
+            ["at9000"] = <
+                text = <"* Flow rate, volume (en)">
+                description = <"* Flow rate, volume (en)">
+            >
+            ["ac9001"] = <
+                text = <"*Formula(en) (synthesised)">
+                description = <"*Formula used to calculate the Estimated Glomerular Filtration Rate.(en) (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"*Method(en) (synthesised)">
+                description = <"*The method of entering the Estimated Glomerular Filtration Rate.(en) (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/126>
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0007", "at0008">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0013", "at0014", "at0015", "at0017", "at0016", "at0021", "at0025", "at0026">
+        >
+    >

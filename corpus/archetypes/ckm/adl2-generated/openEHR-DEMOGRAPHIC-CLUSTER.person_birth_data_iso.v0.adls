@@ -1,0 +1,414 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=7ec2230d-357d-466f-9094-3d751cedd787; build_uid=164a6d55-c8e1-4ea9-9993-de78cb0e77cb)
+    openEHR-DEMOGRAPHIC-CLUSTER.person_birth_data_iso.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Sarah Ballout">
+                ["email"] = <"ballout.sarah@mh-hannover.de">
+            >
+        >
+        ["pt-pt"] = <
+            language = <[ISO_639-1::pt-pt]>
+            author = <
+                ["name"] = <"Hugo Silva">
+                ["organisation"] = <"University of Minho">
+                ["email"] = <"pg50416@uminho.pt">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Sergio Miranda Freire">
+                ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+                ["email"] = <"sergio@lampada.uerj.br">
+            >
+        >
+        ["el"] = <
+            language = <[ISO_639-1::el]>
+            author = <
+                ["name"] = <"Erasmia Partafylla">
+                ["organisation"] = <"Sigmasoft">
+                ["email"] = <"c.partafylla@sigmasoft.gr">
+            >
+        >
+        ["es-py"] = <
+            language = <[ISO_639-1::es-py]>
+            author = <
+                ["name"] = <"Ellen Mendez">
+                ["organisation"] = <"Facultad Politecnica - UNA">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sergio Miranda Freire & Rigoleta Dutra Mediano Dias">
+        ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+        ["email"] = <"sergio@lampada.uerj.br">
+        ["date"] = <"2009-05-20">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Rigoleta Dutra, Ministry of Defense, Brazil (openEHR Editor)", "Sergio Freire, State University of Rio de Janeiro, Brazil (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"ISO/TS 22220:2008(E) - Identification of Subject of Care - Technical Specification - International Organization for Standardization">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"E13D5E8AB5370ED50FD13F7178453592">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Dokumentation der Geburtsdaten einer Person">
+            keywords = <"demografische Dienste / Dienstleistungen", "demografische Daten zur Geburt">
+            use = <"Wird in demografischen Diensten verwendet, um Daten zur Geburt einer Person zu sammeln.">
+            misuse = <"">
+        >
+        ["pt-pt"] = <
+            language = <[ISO_639-1::pt-pt]>
+            purpose = <"Representação dos dados de nascimento de uma pessoa">
+            keywords = <"serviço demográfico", "dados demográficos de nascimento">
+            use = <"Utilizado em serviços demográficos para recolher dados de nascimento de uma pessoa">
+            misuse = <"">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Coleta de dados demográficos do nascimento">
+            keywords = <"serviço demográfico", "dados do nascimento">
+            use = <"Usado em serviços de demografia para coletar dados do nascimento de uma pessoa">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["el"] = <
+            language = <[ISO_639-1::el]>
+            purpose = <"Αναπαράσταση των δεδομένων γέννησης ενός ατόμου">
+            keywords = <"*Δημογραφική Υπηρεσία", "*δημογραφικά στοιχεία γέννησης">
+            use = <"Χρησιμοποιείται σε δημογραφικές υπηρεσίες για τη συλλογή δεδομένων γέννησης ενός ατόμου">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Representation of a person's birth data.">
+            keywords = <"demographic service", "birth demographic data.">
+            use = <"Used in demographic services to collect a person's birth data.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es-py"] = <
+            language = <[ISO_639-1::es-py]>
+            purpose = <"Colección de datos demográficos de nacimiento">
+            keywords = <"servicio demográfico", "datos del nacimiento">
+            use = <"Utilizado en servicios demográficos para recolección de datos de nacimiento de una persona.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Birth data
+        items matches {
+            ELEMENT[at0001] occurrences matches {1} matches {    -- Birth date
+                value matches {
+                    DV_DATE[at9000]
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Country of birth
+                value matches {
+                    DV_CODED_TEXT[at9001] matches {
+                        defining_code matches {[ac1]}    -- Country codes
+                    }
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Birth plurality
+                value matches {
+                    DV_CODED_TEXT[at9002] matches {
+                        defining_code matches {[ac2]}    -- Birth plurality codes
+                    }
+                }
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Birth order
+                value matches {
+                    DV_CODED_TEXT[at9003] matches {
+                        defining_code matches {[ac3]}    -- Birth order codes
+                    }
+                }
+            }
+            ELEMENT[at0005] matches {    -- Date of birth follow-up indicator
+                value matches {
+                    DV_BOOLEAN[at9004]
+                }
+            }
+            allow_archetype CLUSTER[at0006] occurrences matches {0..1} matches {    -- Country specific data
+                include
+                    archetype_id/value matches {/.*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Daten zur Geburt">
+                description = <"demografische Daten die Geburt betreffend">
+            >
+            ["at0001"] = <
+                text = <"Geburtsdatum">
+                description = <"Das Geburtsdatum der Person.">
+            >
+            ["at0002"] = <
+                text = <"Geburtsland">
+                description = <"Das Geburtsland der Person.">
+            >
+            ["at0003"] = <
+                text = <"Anzahl der geborenen Personen">
+                description = <"Ein Indikator für Mehrlingsgeburten. Er gibt die Anzahl der geborenen Personen an, die aus einer Schwangerschaft resultierten.
+">
+            >
+            ["at0004"] = <
+                text = <"Geburtsreihenfolge">
+                description = <"Die Nummer der Kinder bei einer Mehrlingsgeburt, unabhängig davon ob es sich um Lebend- oder Totgeburten handelte.">
+            >
+            ["at0005"] = <
+                text = <"Ein Indikator für die Nachverfolgung eines Geburtsdatums.">
+                description = <"Kennzeichen das angibt, ob es
+notwendig ist das Geburtsdatum
+nachzuverfolgen, um ein genaueres
+Datum zu erhalten.">
+            >
+            ["at0006"] = <
+                text = <"Länderspezifische Daten">
+                description = <"Zusätzliche länderspezifische Daten die Geburt betreffend">
+            >
+            ["ac1"] = <
+                text = <"Ländercodes">
+                description = <"Gültige Ländercodes.">
+            >
+            ["ac2"] = <
+                text = <"Kodierungen für Mehrlingsgeburten">
+                description = <"Gültige Codes für Mehrlingsgeburten">
+            >
+            ["ac3"] = <
+                text = <"Codes für die Geburtsreihenfolge">
+                description = <"Gültige Kodierungen für die Darstellung der Reihenfolge der Geburten">
+            >
+        >
+        ["pt-pt"] = <
+            ["at0000"] = <
+                text = <"Dados de nascimento">
+                description = <"Dados demográficos de nascimento">
+            >
+            ["at0001"] = <
+                text = <"Data de nascimento">
+                description = <"A data de nascimento de uma pessoa">
+            >
+            ["at0002"] = <
+                text = <"País de nascimento">
+                description = <"O país onde uma pessoa nasceu">
+            >
+            ["at0003"] = <
+                text = <"Pluralidade de nascimento">
+                description = <"Um indicador de nascimentos múltiplos, que mostra o número total de nascimentos resultantes de uma única gravidez">
+            >
+            ["at0004"] = <
+                text = <"Ordem de nascimento">
+                description = <"A ordem sequencial desta pessoa num nascimento múltiplo, independentemente de ter nascido vivo ou falecido">
+            >
+            ["at0005"] = <
+                text = <"Indicador de seguimento da data de nascimento">
+                description = <"Indicador de quando a data de nascimento atual requer acompanhamento para obter uma data mais precisa">
+            >
+            ["at0006"] = <
+                text = <"Dados específicos do país">
+                description = <"Dados adicionais de nascimento específicos do país">
+            >
+            ["ac1"] = <
+                text = <"Códigos de país">
+                description = <"Códigos válidos para países">
+            >
+            ["ac2"] = <
+                text = <"Códigos de pluralidade de nascimentos">
+                description = <"Códigos válidos para a pluralidade de nascimentos">
+            >
+            ["ac3"] = <
+                text = <"Códigos de ordem de nascimento">
+                description = <"Códigos válidos para a ordem de nascimento">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Dados do nascimento">
+                description = <"Dados demográficos do nascimento">
+            >
+            ["at0001"] = <
+                text = <"Data do nascimento">
+                description = <"A data do nascimento da pessoa">
+            >
+            ["at0002"] = <
+                text = <"país de nascimento">
+                description = <"O país onde a pessoa nasceu">
+            >
+            ["at0003"] = <
+                text = <"Nascimento multiplo">
+                description = <"Um indicador de nascimento múltiplo, mostrando o número total de nascimentos resultantes de uma única gestação">
+            >
+            ["at0004"] = <
+                text = <"Ordem de Nascimento">
+                description = <"A ordem seqüencial desta pessoa em um nascimento múltiplo, não importando se foi um nascido vivo ou morto">
+            >
+            ["at0005"] = <
+                text = <"Indicador de seguimento da data de nascimento">
+                description = <"Indicador que informa quando a data de nascimento corrente precisa de ser acompanhada para obter uma data mais acurada.">
+            >
+            ["at0006"] = <
+                text = <"Dados específicos de um país">
+                description = <"Dados adicionais do nascimento que são específicos de cada país">
+            >
+            ["ac1"] = <
+                text = <"Códigos de países">
+                description = <"códigos válidos para paises">
+            >
+            ["ac2"] = <
+                text = <"Códigos para nascimento múltiplo">
+                description = <"códigos válidos para nascimento múltiplo">
+            >
+            ["ac3"] = <
+                text = <"Códigos para ordem de nascimento">
+                description = <"códigos válidos para  ordem de nascimento">
+            >
+        >
+        ["el"] = <
+            ["at0000"] = <
+                text = <"Δεδομένα Γέννησης">
+                description = <"Δημογραφικά στοιχεία γέννησης">
+            >
+            ["at0001"] = <
+                text = <"Ημερομηνία Γέννησης">
+                description = <"Η ημερομηνία γέννησης ενός ατόμου">
+            >
+            ["at0002"] = <
+                text = <"Χώρα Γέννησης">
+                description = <"Η χώρα όπου γεννήθηκε ένα άτομο">
+            >
+            ["at0003"] = <
+                text = <"Πλουραλισμός γεννήσεων">
+                description = <"Ένας δείκτης πολλαπλών γεννήσεων, που δείχνει τον συνολικό αριθμό γεννήσεων που προκύπτουν από μία μόνο εγκυμοσύνη">
+            >
+            ["at0004"] = <
+                text = <"Σειρά γέννησης">
+                description = <"Η διαδοχική σειρά αυτού του ατόμου σε πολλαπλή γέννηση ανεξάρτητα από τη ζωντανή ή τη νεκρή γέννηση">
+            >
+            ["at0005"] = <
+                text = <"Δείκτης παρακολούθησης ημερομηνίας γέννησης">
+                description = <"Σημαία που υποδεικνύει πότε η τρέχουσα ημερομηνία γέννησης απαιτεί παρακολούθηση για τη λήψη ακριβέστερης ημερομηνίας">
+            >
+            ["at0006"] = <
+                text = <"Δεδομένα ανά χώρα">
+                description = <"Πρόσθετα δεδομένα γεννήσεων που αφορούν συγκεκριμένες χώρες">
+            >
+            ["ac1"] = <
+                text = <"Κωδικοί χωρών">
+                description = <"Έγκυροι κωδικοί για χώρες">
+            >
+            ["ac2"] = <
+                text = <"Κωδικοί πλουραλισμού γέννησης">
+                description = <"Έγκυροι κωδικοί για τον πλουραλισμό γέννησης">
+            >
+            ["ac3"] = <
+                text = <"Κωδικοί σειράς γέννησης">
+                description = <"Έγκυροι κωδικοί για τη σειρά γέννησης">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Birth data">
+                description = <"Birth demographic data.">
+            >
+            ["at0001"] = <
+                text = <"Birth date">
+                description = <"The date of birth of a person.">
+            >
+            ["at0002"] = <
+                text = <"Country of birth">
+                description = <"The country where a person was born.">
+            >
+            ["at0003"] = <
+                text = <"Birth plurality">
+                description = <"An indicator of multiple birth, showing the total number of births resulting from a single pregnancy.">
+            >
+            ["at0004"] = <
+                text = <"Birth order">
+                description = <"The sequential order of this person in a multiple birth regardless of live or still birth.">
+            >
+            ["at0005"] = <
+                text = <"Date of birth follow-up indicator">
+                description = <"Flag that indicates when the current date of birth requires follow-up to obtain a more accurate date.">
+            >
+            ["at0006"] = <
+                text = <"Country specific data">
+                description = <"Additional birth data that are country specific.">
+            >
+            ["ac1"] = <
+                text = <"Country codes">
+                description = <"valid codes for countries.">
+            >
+            ["ac2"] = <
+                text = <"Birth plurality codes">
+                description = <"valid codes for birth plurality.">
+            >
+            ["ac3"] = <
+                text = <"Birth order codes">
+                description = <"valid codes for birth order.">
+            >
+        >
+        ["es-py"] = <
+            ["at0000"] = <
+                text = <"Datos del nacimiento">
+                description = <"Datos demográficos del nacimiento">
+            >
+            ["at0001"] = <
+                text = <"Fecha de nacimiento">
+                description = <"La fecha de nacimiento de la persona">
+            >
+            ["at0002"] = <
+                text = <"País de nacimiento">
+                description = <"El país donde la persona nació.">
+            >
+            ["at0003"] = <
+                text = <"Nacimiento múltiple">
+                description = <"Un indicador de nacimiento múltiple, mostrando el número total de nacimiento resultates de una única gestación">
+            >
+            ["at0004"] = <
+                text = <"Orden de Nacimiento">
+                description = <"El orden secuencia de la persona un un nacimiento multiple, no importanto si fue un nacido vivo o muerto">
+            >
+            ["at0005"] = <
+                text = <"Indicador de seguimiento de la fecha de nacimiento">
+                description = <"Indicador que informa cuando la fecha de nacimiento corriente necesita ser acompañada para obtener una fecha mas precisa.">
+            >
+            ["at0006"] = <
+                text = <"Datos específicos de un país">
+                description = <"Datos adicionales del nacimiento que son específicos de cada país.">
+            >
+            ["ac1"] = <
+                text = <"Código de paises">
+                description = <"códigos válidos para paises">
+            >
+            ["ac2"] = <
+                text = <"Códigos para nacimiento múltiple">
+                description = <"Códigos válidos para nacimiento múltiple">
+            >
+            ["ac3"] = <
+                text = <"Códigos para orden de nacimiento">
+                description = <"códigos válidos para orden de nacimiento">
+            >
+        >
+    >

@@ -1,0 +1,651 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=6076fa30-016a-417a-9056-3b0c30101f62; build_uid=fb66c320-e278-4848-88d7-edbc8bf423a3)
+    openEHR-EHR-CLUSTER.radiotherapy.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::de]>
+    translations = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            author = <
+                ["name"] = <"Samer Alkarkoukly">
+                ["organisation"] = <"University Hospital Cologne, Germany">
+                ["email"] = <"Mabbouda@uni-koeln.de">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Natalia Strauch">
+        ["organisation"] = <"Medizinische Hochschule Hannover">
+        ["email"] = <"strauch.natalia@mh-hannover.de">
+        ["date"] = <"2019-08-06">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Irradiation, Published archetype [Internet]. HiGHmed, HiGHmed Clinical Knowledge Manager [cited: 2024-08-22]. Available from: https://ckm.highmed.org/ckm/archetypes/1246.145.602">
+        ["2"] = <"NCCN Radiation Therapy Compendium™: NCCN.org/rtcompendium">
+        ["3"] = <"http://www.cancernetwork.com/cancer-management-11/chapter02/article/10165/1399960">
+        ["4"] = <"Deutschland:">
+        ["5"] = <"Deutsche Krebsgesellschaft: https://www.krebsgesellschaft.de/onko-internetportal/basis-informationen-krebs/therapieformen/strahlentherapie-bei-krebs.html">
+        ["6"] = <"http://www.tumorzentren.de">
+    >
+    other_details = <
+        ["current_contact"] = <"strauch.natalia@mh-hannover.de">
+        ["MD5-CAM-1.0.1"] = <"2D463B7A08B1D291189004611AB7B0AA">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Dieser Archetyp dient dazu, die detaillierten Angaben der Bestrahlung von Krebspatienten aus kurativen oder palliativen Gründen darzustellen.">
+            keywords = <"Strahlentherapie", "Bestrahlung", "Radiotherapie", "Strahlenbehandlung", "Strahlung", "Zielgebiet", "Strahlendosis", "Gray", "Brachytherapie", "Teletherapie", "Radioonkologie", "Nuklearmedizin", "Radionuklidentherapie", "Metabolische Therapie", "Zielvolumen">
+            use = <"Zur Darstellung detaillierter Angaben zur Bestrahlung eines Zielgebietes mit einer bestimmten Dosis. Dieser Archetyp wurde für die Verwendung als Details zur Prozedur innerhalb des Archetyps \"Prozedur\" bestimmt, um spezifische Details einer Radiotherapie-Prozedur darzustellen.">
+            misuse = <"Nicht zur Darstellung von Informationen über die erforderlichen Aktivitäten zum Ausführen einer Radiotherapie-Prozedur bestimmt. Verwenden Sie dafür den ACTION.Archetyp \"Prozedur\".
+
+Nicht zur Darstellung einer Strahlenexposition, als Gesamtheit aller Umwelteinflüsse, denen ein Mensch, ausgesetzt werden kann.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the details of a radiotherapy of a cancer patient for curative or palliative reasons.">
+            keywords = <"Irradiation therapy", "Radiation", "Radiotherapy", "Treatment with radiation", "Target area", "Radiation dose", "Gray", "Brachytherapy", "Teletherapy", "Radio-oncology", "Nuclear Medicine", "Radionuclide therapy", "Metabolic therapy", "Radiation Therapy", "Irradiation", "Target region">
+            use = <"To record information about the radiotherapy of a target region with a specific dose. This archetype is designed to represent specific details of a radiotherapy process. This archetype should be used in the 'Procedure detail' SLOT in the ACTION.procedure archetype.">
+            misuse = <"Not to be used to represent information about the activities required to perform a radiotherapy procedure. Use the ACTION.archetype 'Procedure' for this purpose.
+
+
+Not to be used to represent radiation exposure as the entirety of all environmental factors to which a person may be exposed.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Bestrahlung
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Zielgebiet
+                value matches {
+                    DV_TEXT[at9005]
+                }
+            }
+            allow_archetype CLUSTER[at0002] matches {    -- Details zum Zielgebiet
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location\.v1\..*/}
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Beginn
+                value matches {
+                    DV_DATE_TIME[at9006]
+                }
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Ende
+                value matches {
+                    DV_DATE_TIME[at9007]
+                }
+            }
+            ELEMENT[at0047] occurrences matches {0..1} matches {    -- Therapiemethode
+                value matches {
+                    DV_CODED_TEXT[at9008] matches {
+                        defining_code matches {[ac9000]}    -- Therapiemethode (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0005] matches {    -- Applikationsart
+                value matches {
+                    DV_TEXT[at9009]
+                }
+            }
+            ELEMENT[at0027] matches {    -- Strahlenart
+                value matches {
+                    DV_CODED_TEXT[at9010] matches {
+                        defining_code matches {[ac9001]}    -- Strahlenart (synthesised)
+                    }
+                    DV_TEXT[at9011]
+                }
+            }
+            CLUSTER[at0006] occurrences matches {0..1} matches {    -- Einzeldosis
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Dosis (ED)
+                        value matches {
+                            DV_QUANTITY[at9012] matches {
+                                property matches {[at9002]}    -- * Qualified real (en)
+                                magnitude matches {|0.0..999.999|}
+                                units matches {"1"}
+                            }
+                        }
+                    }
+                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Einheit (ED)
+                        value matches {
+                            DV_CODED_TEXT[at9013] matches {
+                                defining_code matches {[ac9003]}    -- Einheit (ED) (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0011] occurrences matches {0..1} matches {    -- Gesamtdosis
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Dosis (SD)
+                        value matches {
+                            DV_QUANTITY[at9014] matches {
+                                property matches {[at9002]}    -- * Qualified real (en)
+                                magnitude matches {|0.0..999.999|}
+                                units matches {"1"}
+                            }
+                        }
+                    }
+                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Einheit (SD)
+                        value matches {
+                            DV_CODED_TEXT[at9015] matches {
+                                defining_code matches {[ac9004]}    -- Einheit (SD) (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Anzahl Fraktionen
+                value matches {
+                    DV_COUNT[at9016]
+                }
+            }
+            CLUSTER[at0015] occurrences matches {0..1} matches {    -- Fraktion
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Folgenummer der Fraktion
+                        value matches {
+                            DV_COUNT[at9017]
+                        }
+                    }
+                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Datum
+                        value matches {
+                            DV_DATE_TIME[at9018]
+                        }
+                    }
+                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Kommentar
+                        value matches {
+                            DV_TEXT[at9019]
+                        }
+                    }
+                }
+            }
+            allow_archetype CLUSTER[at0024] matches {    -- Bildgebung/Bestrahlungsplanung
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.media_file(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0025] matches {    -- Toxizität
+                value matches {
+                    DV_TEXT[at9020]
+                }
+            }
+            allow_archetype CLUSTER[at0021] matches {    -- Spezifische Details
+                include
+                    archetype_id/value matches {/.*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Bestrahlung">
+                description = <"Detaillierte Angaben zur Bestrahlung in der Radiotherapie.">
+            >
+            ["at0001"] = <
+                text = <"Zielgebiet">
+                description = <"Das Zielgebiet, das bestrahlt wurde, z. B. Pankreas.">
+                comment = <"Die Kodierung des Zielgebietes ist über eine Terminologie zu bevorzugen. Verwenden Sie dieses Datenelement, um vorab präkoordinierte anatomische Lokalisationen zu erfassen. Wenn die Anforderungen an die Erfassung des Zielgebietes zur Laufzeit der Anwendung bestimmt werden oder komplexere Modellierungen wie z. B. relative Lage erforderlich sind, dann verwenden Sie in diesem Archetyp den CLUSTER.anatomical_location oder CLUSTER.relative_location innerhalb des SLOT \"Details zum Zielgebiet\".">
+            >
+            ["at0002"] = <
+                text = <"Details zum Zielgebiet">
+                description = <"Spezifische strukturierte Angaben zum Zielgebiet oder Zielvolumen, das bestrahlt wurde.">
+                comment = <"Verwenden Sie diesen Slot, um die Archetypen CLUSTER.anatomical_location oder CLUSTER.anatomical_location_relative einzufügen, wenn die Anforderungen für die Darstellung des Zielgebietes zur Laufzeit der Anwendung bestimmt werden oder komplexere Modellierungen wie z. B. relative Positionen erforderlich sind. Wenn die anatomische Lage über präkoordinierte Kodes im Feld \"Zielgebiet\" enthalten ist, kann die Verwendung dieses Slots überflüssig sein.">
+            >
+            ["at0003"] = <
+                text = <"Beginn">
+                description = <"Das Datum, an dem mit der Bestrahlung des Zielgebietes begonnen wurde.">
+            >
+            ["at0004"] = <
+                text = <"Ende">
+                description = <"Das Datum, an dem die Bestrahlung des Zielgebietes beendet wurde.">
+            >
+            ["at0005"] = <
+                text = <"Applikationsart">
+                description = <"Bestrahlungstechnik, als eine weitere Klassifizierung der Therapiemethode.">
+                comment = <"Die Techniken einer Bestrahlung sind vielfältig. Die Kodierung mit einer Terminologie wird, wenn möglich, bevorzugt.">
+            >
+            ["at0006"] = <
+                text = <"Einzeldosis">
+                description = <"Die Einzeldosis, mit der das Zielgebiet bestrahlt wurde. Die Dosis bezieht sich auf die verschriebene Isodose (gleiche Energie- oder Ionendosis auf einer Linie oder Fläche).">
+            >
+            ["at0007"] = <
+                text = <"Dosis (ED)">
+                description = <"Der Wert der Einzeldosis.">
+                comment = <"Beispiel: Bei der Angabe von Strahlendosis 3,0 Gy ist der Wert \"3,0\".">
+            >
+            ["at0008"] = <
+                text = <"Einheit (ED)">
+                description = <"Die Angabe, in welcher Einheit die Einzeldosis angegeben wurde.">
+                comment = <"Die Einzeldosis bei der Strahlentherapie wird üblicherweise in Gray (Gy) und seltener in Gigabequerel (GBq) erfasst. Bei einer Strahlendosis von \"3,0 Gy\" ist die Einheit für die Dosis \"Gy\". Bei einer Strahlendosis von \"2,6 GBq\" ist die Einheit für die Dosis \"GBq\".">
+            >
+            ["at0009"] = <
+                text = <"Gy">
+                description = <"Energiedosis in SI-Einheit Gray.">
+            >
+            ["at0010"] = <
+                text = <"GBq">
+                description = <"Radioaktivität in SI-Einheit Gigabecquerel.">
+            >
+            ["at0011"] = <
+                text = <"Gesamtdosis">
+                description = <"Die Gesamtdosis, mit der das Zielgebiet bestrahlt wurde.">
+                comment = <"Die Gesamtdosis setzt sich aus mehreren Einzeldosen (Fraktionen) zusammen. Zum Beispiel: 30,0 Gy kann in 10 Fraktionen á 3,0 Gy verabreicht werden.">
+            >
+            ["at0012"] = <
+                text = <"Dosis (SD)">
+                description = <"Der Wert der Gesamtdosis.">
+                comment = <"Beispiel: Bei der Angabe von Strahlendosis 30,0 Gy ist der Wert \"30,0\".">
+            >
+            ["at0013"] = <
+                text = <"Einheit (SD)">
+                description = <"Die Angabe, in welcher Einheit die Gesamtdosis angegeben wurde.">
+                comment = <"Die Einzeldosis bei der Strahlentherapie wird üblicherweise in Gray (Gy) und seltener in Gigabequerel (GBq) erfasst. Bei einer Strahlendosis von \"30,0 Gy\" ist die Einheit für die Dosis \"Gy\". Bei einer Strahlendosis von \"26,0 GBq\" ist die Einheit für die Dosis \"GBq\".">
+            >
+            ["at0014"] = <
+                text = <"Anzahl Fraktionen">
+                description = <"Die Anzahl der Fraktionen (Einzeldosen), auf die die Gesamtdosis verteilt wurde.">
+            >
+            ["at0015"] = <
+                text = <"Fraktion">
+                description = <"Details zu den einzelnen Fraktionen.">
+                comment = <"Die Bestrahlung wird zur besseren Verträglichkeit in der Regel in viele kleine Einzeldosen unterteilt, diese nennt man Fraktionen.">
+            >
+            ["at0016"] = <
+                text = <"Folgenummer der Fraktion">
+                description = <"Die Reihenfolge der Fraktion innerhalb der Abfolge von Fraktionen einer Zielgebietsbestrahlung.">
+            >
+            ["at0017"] = <
+                text = <"Datum">
+                description = <"Das Datum, an dem die Fraktion durchgeführt wurde.">
+                comment = <"Die einzelne Bestrahlung (Fraktion) findet meist an einem gesonderten Tag statt oder es können mehrere einzelne Bestrahlungen an einem Tag stattfinden (Hyperfraktionierte Bestrahlung).">
+            >
+            ["at0018"] = <
+                text = <"Kommentar">
+                description = <"Ergänzende Beschreibung zur Fraktion, die nicht in anderen Bereichen erfasst wurde.">
+            >
+            ["at0021"] = <
+                text = <"Spezifische Details">
+                description = <"Spezifische strukturierte Angaben zu der Zielgebietsbestrahlung.">
+                comment = <"Zum Beispiel spezifische detaillierte Angaben zu einer Applikationstechnik, wie Boost-Bestrahlung bei einer Tele- oder Brachytherapie; oder Strahlenart und/oder -qualität und weitere spezifische Informationen einer Zielgebietsbestrahlung.">
+            >
+            ["at0022"] = <
+                text = <"Gy">
+                description = <"Energiedosis in SI-Einheit Gray.">
+            >
+            ["at0023"] = <
+                text = <"GBq">
+                description = <"Radioaktivität in SI-Einheit Gigabecquerel.">
+            >
+            ["at0024"] = <
+                text = <"Bildgebung/Bestrahlungsplanung">
+                description = <"Strukturierte Informationen über die Bildgebung und/oder Bestrahlungsplanung.">
+                comment = <"Ein Bestrahlungsplan ist ein Bilddatensatz mit 100 -120 dreidimensionalen Bildern.">
+            >
+            ["at0025"] = <
+                text = <"Toxizität">
+                description = <"Klinische Symptome und / oder Anzeichen, die als Nebenwirkungen beobachtet oder in die Relation zur Bestrahlung des Zielgebietes gebracht werden.">
+                comment = <"Toxizität kann im einzelnen Wort, Ausdruck oder in einer kurzen Beschreibung ausgedruckt werden. Zum Beispiel: Übelkeit, vereinzelte Hautrötungen. \"Keine Nebenwirkungen\" kann ebenfalls angebracht sein, wenn keine toxische Wirkung während und nach der Bestrahlung festgestellt wurde. Die \"Toxizität\" soll nach Möglichkeit mit einer Terminologie kodiert werden. Zu den gebräuchlichen Terminologien zählen die CTCAE-, MedDRA Codes unter anderem SNOMED-CT oder ICD10.">
+            >
+            ["at0027"] = <
+                text = <"Strahlenart">
+                description = <"Art der Strahlung nach ihren Bestandteilen.">
+                comment = <"Es können mehr als eine Strahlenart ausgewählt werden.">
+            >
+            ["at0032"] = <
+                text = <"Photonen (ɣ)">
+                description = <"Bestrahlung unter Verwendung von Photonen (Ultraharte Röntgenstrahlung).">
+            >
+            ["at0033"] = <
+                text = <"Elektronen (e−)">
+                description = <"Bestrahlung unter Verwendung von Elektronen.">
+            >
+            ["at0034"] = <
+                text = <"Protonen (p+)">
+                description = <"Bestrahlung unter Verwendung von Protonen.">
+            >
+            ["at0035"] = <
+                text = <"Kohlenstoffionen">
+                description = <"Bestrahlung unter Verwendung von schweren Kohlenstoffionen.">
+            >
+            ["at0036"] = <
+                text = <"Alpha-Strahlen (α)">
+                description = <"Radioaktive Bestrahlung unter Verwendung von Alpha-Strahlen.">
+            >
+            ["at0041"] = <
+                text = <"Neutronen (n)">
+                description = <"Bestrahlung unter Verwendung von Neutronen.">
+            >
+            ["at0042"] = <
+                text = <"Heliumionen">
+                description = <"Bestrahlung unter Verwendung von Heliumionen.">
+            >
+            ["at0043"] = <
+                text = <"Beta-Strahlen (β)">
+                description = <"Radioaktive Bestrahlung unter Verwendung von Beta-Strahlen.">
+            >
+            ["at0044"] = <
+                text = <"Gamma-Strahlen (γ)">
+                description = <"Radioaktive Bestrahlung unter Verwendung von Gamma-Strahlen.">
+            >
+            ["at0045"] = <
+                text = <"GyE">
+                description = <"Die Einheit der biologisch-effektiven Dosis in Gray equivalent (keine SI-Einheit).">
+            >
+            ["at0046"] = <
+                text = <"GyE">
+                description = <"Die Einheit der biologisch-effektiven Dosis in Gray equivalent (keine SI-Einheit).">
+            >
+            ["at0047"] = <
+                text = <"Therapiemethode">
+                description = <"Bezeichnung des technischen Verfahrens. Je nachdem, wie die Strahlen in den Körper eindringen, werden verschiedene Methoden der Bestrahlung unterschieden.">
+            >
+            ["at0048"] = <
+                text = <"Teletherapie">
+                description = <"Perkutane Strahlentherapie (perkutan – durch die Haut hindurch).">
+            >
+            ["at0049"] = <
+                text = <"Brachytherapie">
+                description = <"Bestrahlung innerhalb oder in unmittelbarer Nähe des zu bestrahlenden Gebietes im Körper.">
+            >
+            ["at0050"] = <
+                text = <"Metabolische Therapie">
+                description = <"Therapie mit Anwendung von Radionukliden. Die Radionuklidtherapie wird zu den nuklearmedizinischen Therapien gerechnet.">
+            >
+            ["at0051"] = <
+                text = <"Sonstige Therapie">
+                description = <"Andere Therapien z.B. Stereotaxie oder kombinierte Therapie.">
+            >
+            ["at0052"] = <
+                text = <"MBq">
+                description = <"Radioaktivität in SI-Einheit Megabecquerel.">
+            >
+            ["at0053"] = <
+                text = <"MBq">
+                description = <"Radioaktivität in SI-Einheit Megabecquerel.">
+            >
+            ["at0054"] = <
+                text = <"kBq">
+                description = <"Radioaktivität in SI-Einheit Kilobecquerel.">
+            >
+            ["at0055"] = <
+                text = <"kBq">
+                description = <"Radioaktivität in SI-Einheit Kilobecquerel.">
+            >
+            ["at9002"] = <
+                text = <"* Qualified real (en)">
+                description = <"* Qualified real (en)">
+            >
+            ["ac9000"] = <
+                text = <"Therapiemethode (synthesised)">
+                description = <"Bezeichnung des technischen Verfahrens. Je nachdem, wie die Strahlen in den Körper eindringen, werden verschiedene Methoden der Bestrahlung unterschieden. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Strahlenart (synthesised)">
+                description = <"Art der Strahlung nach ihren Bestandteilen. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Einheit (ED) (synthesised)">
+                description = <"Die Angabe, in welcher Einheit die Einzeldosis angegeben wurde. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Einheit (SD) (synthesised)">
+                description = <"Die Angabe, in welcher Einheit die Gesamtdosis angegeben wurde. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Irradiation">
+                description = <"Detailed information about the irradiation in radiotherapy.">
+            >
+            ["at0001"] = <
+                text = <"Target region">
+                description = <"The target region that was irradiated, e.g. pancreas.">
+                comment = <"The terminology encoding of the target region is preferred. Use this data element to record the pre-identified anatomical location. If it's required to document the targeted region during the time of application, or more complicated modelling is required, such as relative location, then use the CLUSTER.anatomical_location or CLUSTER.relative_location within the SLOT 'Target region details' in this archetype.">
+            >
+            ["at0002"] = <
+                text = <"Target region details">
+                description = <"Specific structured information on the target region that was irradiated.">
+                comment = <"Use this slot to insert CLUSTER.anatomical_location or CLUSTER.anatomical_location_relative archetypes if it's required to document the target region during the time of application, or when more complicated modelling, such as relative positions, is needed. If the anatomical location is included in the 'target region' field via pre-existing codes, the use of this slot might be redundant.">
+            >
+            ["at0003"] = <
+                text = <"Start">
+                description = <"The date, on which the radiotherapy of the target region was started.">
+            >
+            ["at0004"] = <
+                text = <"End">
+                description = <"The date, on which the radiotherapy of the target region was ended.">
+            >
+            ["at0005"] = <
+                text = <"Application type">
+                description = <"Irradiation technique, as a further classification of the treatment method.">
+                comment = <"The techniques of irradiation are diverse. If possible, encoding with a
+terminology is preferred.">
+            >
+            ["at0006"] = <
+                text = <"Single dose">
+                description = <"The single dose used to irradiated the target region. The dose refers to the prescribed isodose (equal energy or ion dose on a line or area).">
+            >
+            ["at0007"] = <
+                text = <"Dose (ED)">
+                description = <"The value of the single dose.">
+                comment = <"Example: When specifying radiation dose 3.0 Gy, the value is '3.0'.">
+            >
+            ["at0008"] = <
+                text = <"Unit (ED)">
+                description = <"The unit in which the single dose was specified.">
+                comment = <"The individual dose in radiation therapy is usually recorded in grays (Gy) and less frequently in gigabequerels (GBq). For a radiation dose of '3.0 Gy', the unit for the dose is 'Gy'. For a radiation dose of '2.6 GBq', the unit for the dose is 'GBq'.">
+            >
+            ["at0009"] = <
+                text = <"Gy">
+                description = <"Absorbed dose in SI-unit Gray.">
+            >
+            ["at0010"] = <
+                text = <"GBq">
+                description = <"Radioactivity in SI unit gigabecquerel.">
+            >
+            ["at0011"] = <
+                text = <"Total dose">
+                description = <"The total dose used to irradiate the
+target region.">
+                comment = <"The total dose is composed of several individual doses (fractions). For example: 30.0 Gy can be administered in 10 fractions of 3.0 Gy each.">
+            >
+            ["at0012"] = <
+                text = <"Dose (SD)">
+                description = <"The value of the total dose.">
+                comment = <"Example: When indicating radiation dose of 30.0 Gy, the value is '30.0'.">
+            >
+            ["at0013"] = <
+                text = <"Unit (SD)">
+                description = <"The unit in which the total dose was
+specified.">
+                comment = <"The individual dose in radiation therapy is usually recorded in grays (Gy) and less frequently in gigabequerels (GBq). For a radiation dose of '30.0 Gy', the unit for the dose is 'Gy'. For a radiation dose of '26.0 GBq', the unit for the dose is 'GBq'.">
+            >
+            ["at0014"] = <
+                text = <"Number of dose fractions">
+                description = <"The number of fractions (individual doses) to which the total dose was allocated.">
+            >
+            ["at0015"] = <
+                text = <"Fraction">
+                description = <"Details on the individual fractions.">
+                comment = <"For better tolerability, the radiation is usually divided into many small individual doses, these are called fractions.">
+            >
+            ["at0016"] = <
+                text = <"Sequence number of the fraction">
+                description = <"The order of the fraction within the sequence of fractions of a target area irradiation.">
+            >
+            ["at0017"] = <
+                text = <"Date">
+                description = <"The date on which the fraction was
+applied.">
+                comment = <"The individual irradiation (fraction) usually takes place on a separate day or several individual irradiations can take place on one day (hyper-fractionated irradiation).">
+            >
+            ["at0018"] = <
+                text = <"Comment">
+                description = <"Supplementary description for the fraction that was not recorded in other areas.">
+            >
+            ["at0021"] = <
+                text = <"Specific details">
+                description = <"Specific structured information on the irradiation of the target region.">
+                comment = <"For example, specific detailed information on an application technique, such as boost irradiation for teletherapy or brachytherapy; or radiation type and/or quality and other specific information of a target region irradiation.">
+            >
+            ["at0022"] = <
+                text = <"Gy">
+                description = <"Absorbed dose in SI-unit Gray.">
+            >
+            ["at0023"] = <
+                text = <"GBq">
+                description = <"Radioactivity in SI unit gigabecquerel.">
+            >
+            ["at0024"] = <
+                text = <"Imaging/radiation planning">
+                description = <"Structured information about the
+imaging and/or radiation plan.">
+                comment = <"A radiation plan is an image data-set with 100 -120 three-dimensional images.">
+            >
+            ["at0025"] = <
+                text = <"Toxicity">
+                description = <"Clinical symptoms and/or signs observed as side effects, or considered related to the irradiation of the target region.">
+                comment = <"Toxicity can be expressed in the single word, phrase or in a short description. For example: Nausea, isolated skin redness. 'No side effects' may also be appropriate if no toxic effect was observed during and after irradiation. 'Toxicity' should be encoded with a terminology if possible. Common terminologies include the CTCAE, MedDRA codes, in addition to SNOMED-CT and ICD10.">
+            >
+            ["at0027"] = <
+                text = <"Type of radiation">
+                description = <"Type of radiation according to its components.">
+                comment = <"More than one radiation type can be selected.">
+            >
+            ["at0032"] = <
+                text = <"Photons (ɣ)">
+                description = <"Irradiation using photons (ultra-hard X-rays).">
+            >
+            ["at0033"] = <
+                text = <"Electrons (e-)">
+                description = <"Irradiation using electrons.">
+            >
+            ["at0034"] = <
+                text = <"Protons (p+)">
+                description = <"Irradiation using protons.">
+            >
+            ["at0035"] = <
+                text = <"Carbon ions">
+                description = <"Irradiation using heavy carbon ions.">
+            >
+            ["at0036"] = <
+                text = <"Alpha rays (α)">
+                description = <"Radioactive irradiation using alpha rays.">
+            >
+            ["at0041"] = <
+                text = <"Neutrons (n)">
+                description = <"Irradiation using neutrons.">
+            >
+            ["at0042"] = <
+                text = <"Helium ions">
+                description = <"Irradiation using helium ions.">
+            >
+            ["at0043"] = <
+                text = <"Beta rays (β)">
+                description = <"Radioactive irradiation using beta rays.">
+            >
+            ["at0044"] = <
+                text = <"Gamma rays (γ)">
+                description = <"Radioactive irradiation using gamma rays.">
+            >
+            ["at0045"] = <
+                text = <"GyE">
+                description = <"The unit of the biological effective dose in Gray equivalent (no SI unit).">
+            >
+            ["at0046"] = <
+                text = <"GyE">
+                description = <"The unit of the biological effective dose in Gray equivalent (no SI unit).">
+            >
+            ["at0047"] = <
+                text = <"Treatment method">
+                description = <"Description of the technical procedure. Depending on how the radiation penetrates the body, different methods of irradiation are distinguished.">
+            >
+            ["at0048"] = <
+                text = <"Teletherapy">
+                description = <"Percutaneous radiotherapy (percutaneous - through the skin).">
+            >
+            ["at0049"] = <
+                text = <"Brachytherapy">
+                description = <"Radiotherapy within, or in the close surroundings of the region to be irradiated in the body.">
+            >
+            ["at0050"] = <
+                text = <"Metabolic therapy">
+                description = <"Therapy with the use of radionuclides. Radionuclide therapy is classified as a nuclear medicine therapy.">
+            >
+            ["at0051"] = <
+                text = <"Other therapy">
+                description = <"Other therapies e.g. Stereotactic radiosurgery or combined therapy.">
+            >
+            ["at0052"] = <
+                text = <"MBq">
+                description = <"Radioactivity in SI unit megabecquerel.">
+            >
+            ["at0053"] = <
+                text = <"MBq">
+                description = <"Radioactivity in SI unit megabecquerel.">
+            >
+            ["at0054"] = <
+                text = <"kBq">
+                description = <"Radioactivity in SI unit kilobecquerel.">
+            >
+            ["at0055"] = <
+                text = <"kBq">
+                description = <"Radioactivity in SI unit kilobecquerel.">
+            >
+            ["at9002"] = <
+                text = <"Qualified real">
+                description = <"Qualified real">
+            >
+            ["ac9000"] = <
+                text = <"Treatment method (synthesised)">
+                description = <"Description of the technical procedure. Depending on how the radiation penetrates the body, different methods of irradiation are distinguished. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Type of radiation (synthesised)">
+                description = <"Type of radiation according to its components. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Unit (ED) (synthesised)">
+                description = <"The unit in which the single dose was specified. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Unit (SD) (synthesised)">
+                description = <"The unit in which the total dose was
+specified. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9002"] = <http://openehr.org/id/380>
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0032", "at0033", "at0041", "at0034", "at0042", "at0035", "at0036", "at0043", "at0044">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0048", "at0049", "at0050", "at0051">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0022", "at0046", "at0023", "at0053", "at0055">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0009", "at0045", "at0010", "at0052", "at0054">
+        >
+    >

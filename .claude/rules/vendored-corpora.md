@@ -20,6 +20,7 @@ commit the result.
 | CKM templates (OPT 1.4) — curated journey pack + full library | `scripts/vendor/ckm-templates.sh` | `corpus/templates/ckm/{,full/}` |
 | CKM archetypes (**ADL 1.4**) | `scripts/vendor/ckm-archetypes.sh` | `corpus/archetypes/ckm/adl14/` |
 | ADL **2** archetypes + their 1.4 twins | `scripts/vendor/adl2-archetypes.sh` | `crates/openehr-adl/tests/corpus/adl2-reference/`, `corpus/archetypes/adl2/` |
+| CKM's **generated** ADL 2 export (its converter's output, never authored ADL 2; a measurement pack, #4973) | `scripts/vendor/ckm-adl2-export.sh` | `corpus/archetypes/ckm/adl2-generated/` |
 | CKM example skeletons (generated once vs a composed SUT) | `scripts/generate-ckm-examples.sh` | `…/templates/ckm/*.example.json` |
 | EU legal acts (GDPR, ePrivacy, EHDS + implementing acts 2026/2083 and 2026/2099, Recommendation 2019/243, NIS2 + its English corrigendum, CRA + its English corrigenda + implementing act 2025/2392 + delegated acts 2026/881 and 2025/1535, Regulations 2019/1020 and 765/2008, MDR) + the EDPB guidelines (01/2025 pseudonymisation, 2/2023 ePrivacy Art. 5(3); the compliance citations' referents) | `scripts/vendor/law-eu.sh` | `docs/law/eu/` |
 | Dutch acts and decrees (+ the NEN 75xx records, text absent by copyright) | `scripts/vendor/law-nl.sh` | `docs/law/nl/` |
@@ -57,7 +58,11 @@ existed). Read it first, then re-verify on the wire before trusting a guess.
   `GET /ckm/retrieveArchetype?cid-archetype=<cid>&format=ADL2` returns an
   `.adls` whose header carries `generated` (verified 2026-09-03). It is a
   1.4->2 conversion, never an authored source, so the ADL 2 corpus stays
-  `openEHR/adl-archetypes`. Bulk: `GET /ckm/retrieveResources` with no
+  `openEHR/adl-archetypes`. Since CKM Release 1.22.0 (2026-11-04) the
+  conversion is Archie's (`adl_version=2.4.0; generated`); it answers `200`
+  with an empty body where the conversion fails and `404` for a resource that
+  is not public. `ckm-adl2-export.sh` vendors it as a measurement of CKM's
+  converter (#4973), never as the ADL 2 corpus. Bulk: `GET /ckm/retrieveResources` with no
   parameters ships the whole published archetype library as one zip.
 - **A 404 on an export is usually not a bug**: resources held in a private
   CKM incubator are only exportable by a signed-in account with access. Record

@@ -1,0 +1,541 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=c7658373-630c-48dd-b30f-f2cfaa105d54; build_uid=7327cec3-422d-41cb-b9e6-132373d5215a)
+    openEHR-EHR-EVALUATION.poisoning_summary.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2024-09-15">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Nicola Ewen, SERHA/Ministry of Health and Wellness, Jamaica", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Yohann White, Ministry of Health and Wellness, Jamaica">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"C46A4BF6F4CE6BAB5F5E2E58A44C1DD3">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record summary details about a single poisoning event.">
+            use = <"Use to record summary details about a single poisoning event.
+
+Use cases include, but are not limited to:
+- public health surveillance about poisoning events.">
+            misuse = <"Not to be used to record summary information about a broader pattern of exposure to a substance. Use the EVALUATION.exposure_summary for this purpose.">
+            copyright = <"© openEHR Foundation, Ministry of Health and Wellness Jamaica">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Poisoning event summary
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Substance name
+                        value matches {
+                            DV_TEXT[at9011]
+                        }
+                    }
+                    ELEMENT[at0042] occurrences matches {0..1} matches {    -- Date/time of exposure
+                        value matches {
+                            DV_DATE_TIME[at9007]
+                        }
+                    }
+                    ELEMENT[at0040] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9019]
+                        }
+                    }
+                    ELEMENT[at0057] occurrences matches {0..1} matches {    -- Substance colour
+                        value matches {
+                            DV_TEXT[at9028]
+                        }
+                    }
+                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Substance state
+                        value matches {
+                            DV_CODED_TEXT[at9013] matches {
+                                defining_code matches {[ac9036]}    -- Substance state (synthesised)
+                            }
+                            DV_TEXT[at9014]
+                        }
+                    }
+                    ELEMENT[at0073] occurrences matches {0..1} matches {    -- Solid state type
+                        value matches {
+                            DV_CODED_TEXT[at9040] matches {
+                                defining_code matches {[ac9037]}    -- Solid state type (synthesised)
+                            }
+                            DV_TEXT[at9041]
+                        }
+                    }
+                    ELEMENT[at0084] occurrences matches {0..1} matches {    -- Liquid state type
+                        value matches {
+                            DV_CODED_TEXT[at9042] matches {
+                                defining_code matches {[ac9038]}    -- Liquid state type (synthesised)
+                            }
+                            DV_TEXT[at9043]
+                        }
+                    }
+                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Amount
+                        value matches {
+                            DV_QUANTITY[at9020] matches {
+                                [units] matches {
+                                    [{"g"}],
+                                    [{"[oz_av]"}],
+                                    [{"L"}],
+                                    [{"mL"}]
+                                }
+                            }
+                            DV_CODED_TEXT[at9021] matches {
+                                defining_code matches {[at0023]}    -- Unknown
+                            }
+                            DV_TEXT[at9031]
+                        }
+                    }
+                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Route of exposure
+                        value matches {
+                            DV_TEXT[at9016]
+                            DV_CODED_TEXT[at9017] matches {
+                                defining_code matches {[ac9003]}    -- Route of exposure (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Packaging context
+                        value matches {
+                            DV_CODED_TEXT[at9029] matches {
+                                defining_code matches {[ac9026]}    -- Packaging context (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0055] occurrences matches {0..1} matches {    -- Packaging description
+                        value matches {
+                            DV_TEXT[at9030]
+                        }
+                    }
+                    ELEMENT[at0058] matches {    -- Occupational context
+                        value matches {
+                            DV_TEXT[at9032]
+                            DV_CODED_TEXT[at9044] matches {
+                                defining_code matches {[ac9039]}    -- Occupational context (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0034] matches {    -- Physical context
+                        value matches {
+                            DV_CODED_TEXT[at9024] matches {
+                                defining_code matches {[ac9006]}    -- Physical context (synthesised)
+                            }
+                            DV_TEXT[at9046]
+                        }
+                    }
+                    ELEMENT[at0024] matches {    -- Location context
+                        value matches {
+                            DV_CODED_TEXT[at9022] matches {
+                                defining_code matches {[ac9027]}    -- Location context (synthesised)
+                            }
+                            DV_TEXT[at9047]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0029] matches {    -- Specific location
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.organisation(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.address(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    ELEMENT[at0096] matches {    -- Safety context
+                        value matches {
+                            DV_TEXT[at9048]
+                        }
+                    }
+                    ELEMENT[at0060] matches {    -- Risk factor
+                        value matches {
+                            DV_TEXT[at9034]
+                        }
+                    }
+                    ELEMENT[at0043] matches {    -- Date/time of healthcare encounter
+                        value matches {
+                            DV_DATE_TIME[at9008]
+                        }
+                    }
+                    ELEMENT[at0044] occurrences matches {0..1} matches {    -- Event occurrence
+                        value matches {
+                            DV_CODED_TEXT[at9009] matches {
+                                defining_code matches {[ac9000]}    -- Event occurrence (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0047] occurrences matches {0..1} matches {    -- Occurrence number
+                        value matches {
+                            DV_COUNT[at9010]
+                        }
+                    }
+                    ELEMENT[at0095] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9045]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0037] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0039] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0048] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9025]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Poisoning event summary">
+                description = <"Summary details about a single poisoning event, including accidental exposure to a substance at home, in the workplace, or within the broader community or environment, as well as deliberate self-poisoning.">
+            >
+            ["at0004"] = <
+                text = <"Substance name">
+                description = <"Name of the substance or agent causally linked with the poisoning.">
+            >
+            ["at0009"] = <
+                text = <"Substance state">
+                description = <"The physical form or presentation of the substance at the time of exposure.">
+                comment = <"The state of the substance or agent may be different in its' stored form, for example a liquid that is inhaled as a gas.">
+            >
+            ["at0015"] = <
+                text = <"Packaging context">
+                description = <"Category of packaging for the substance.">
+            >
+            ["at0016"] = <
+                text = <"Route of exposure">
+                description = <"The route of exposure for the affected individual.">
+            >
+            ["at0017"] = <
+                text = <"Ingested">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Injected">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Inhaled">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Direct contact">
+                description = <"Contact via skin or mucosa.">
+            >
+            ["at0022"] = <
+                text = <"Amount">
+                description = <"The amount, or estimate of the amount, of substance ingested, inhaled or absorbed by the individual.">
+            >
+            ["at0023"] = <
+                text = <"Unknown">
+                description = <"An unknown amount was ingested.">
+            >
+            ["at0024"] = <
+                text = <"Location context">
+                description = <"Narrative or category of the physical location where the poisoning event took place.">
+            >
+            ["at0025"] = <
+                text = <"Residential">
+                description = <"Home of the poisoned individual or another person.">
+            >
+            ["at0027"] = <
+                text = <"School">
+                description = <"Educational institution, such as a school, kindergarten, or university.">
+            >
+            ["at0028"] = <
+                text = <"Workplace">
+                description = <"Place of employment where the individual was working or present in a professional capacity.">
+            >
+            ["at0029"] = <
+                text = <"Specific location">
+                description = <"Specific details about the organisation or physical address where the poisoning event took place.">
+            >
+            ["at0034"] = <
+                text = <"Physical context">
+                description = <"Narrative or category describing of the physical or environmental context where the poisoning event occurred.">
+                comment = <"For example: well ventilated or enclosed space; indoors or outdoors.">
+            >
+            ["at0035"] = <
+                text = <"Well ventilated">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Poorly ventilated">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0040"] = <
+                text = <"Description">
+                description = <"Narrative description about the poisoning event.">
+            >
+            ["at0042"] = <
+                text = <"Date/time of exposure">
+                description = <"The date and optional time of exposure to the substance or, for exposures extending over a period, the start of the exposure.">
+            >
+            ["at0043"] = <
+                text = <"Date/time of healthcare encounter">
+                description = <"Date and time when the individual first attended a medical service after exposure.">
+                comment = <"More than one occurrence to record date/time for each level of medical service provided.">
+            >
+            ["at0044"] = <
+                text = <"Event occurrence">
+                description = <"The type of occurrence of the poisoning event.">
+                comment = <"For example: first event or subsequent episode of poisoning">
+            >
+            ["at0045"] = <
+                text = <"First occurrence">
+                description = <"The event is the first ever exposure for the individual.">
+            >
+            ["at0046"] = <
+                text = <"Subsequent occurrence">
+                description = <"The event is a second or subsequent exposure for the individual.">
+            >
+            ["at0047"] = <
+                text = <"Occurrence number">
+                description = <"The sequence number of this event within a series of related poisoning events.">
+            >
+            ["at0048"] = <
+                text = <"Last updated">
+                description = <"Date/time this poisoning event summary was last updated.">
+            >
+            ["at0053"] = <
+                text = <"Original packaging/container">
+                description = <"Substance was stored in the manufacturer's original packaging and container.">
+            >
+            ["at0054"] = <
+                text = <"Other packaging/container">
+                description = <"Substance was not stored in the manufacturer's original packaging or container.">
+            >
+            ["at0055"] = <
+                text = <"Packaging description">
+                description = <"Narrative description about the packaging of the substance.">
+                comment = <"For example: if the substance was labelled or packaged inappropriately.">
+            >
+            ["at0057"] = <
+                text = <"Substance colour">
+                description = <"The colour of the substance at the time of exposure.">
+            >
+            ["at0058"] = <
+                text = <"Occupational context">
+                description = <"Narrative or category describing the occupational context of the poisoning event.">
+                comment = <"For example: occupational or non-occupational.">
+            >
+            ["at0060"] = <
+                text = <"Risk factor">
+                description = <"Identification of a risk factor that contributed to the occurrence of the poisoning event.">
+                comment = <"This data element has multiple occurrences to allow more than one risk factor to be recorded. Coding with an external terminology is recommended, if available.">
+            >
+            ["at0062"] = <
+                text = <"Other">
+                description = <"Another site other than residential, educational or workplace.">
+            >
+            ["at0064"] = <
+                text = <"Liquid">
+                description = <"Substance flows to take the shape of its container; exposure by ingestion, dermal absorption, or accidental splashes.">
+            >
+            ["at0065"] = <
+                text = <"Gas">
+                description = <"Substance exists in a gaseous state, often invisible; exposure primarily by inhalation.">
+            >
+            ["at0066"] = <
+                text = <"Aerosol">
+                description = <"Substance is a suspension of fine particles or liquid droplets dispersed in a gas.">
+            >
+            ["at0067"] = <
+                text = <"Solid">
+                description = <"Substance is a fixed shape and volume; exposure by ingestion, inhalation as a dust or skin absorption.">
+            >
+            ["at0073"] = <
+                text = <"Solid state type">
+                description = <"Specific type of solid form or presentation of the substance at the time of exposure.">
+            >
+            ["at0074"] = <
+                text = <"Tablet">
+                description = <"A solid dosage form of a substance, often compacted into a small, flat, or slightly rounded shape for oral administration.">
+            >
+            ["at0075"] = <
+                text = <"Capsule">
+                description = <"A solid dosage form consisting of a substance enclosed within a soluble gelatin or similar shell for oral consumption.">
+            >
+            ["at0076"] = <
+                text = <"Pellet">
+                description = <"A small, solid, rounded or cylindrical mass of a substance, typically used for controlled release or specific applications (e.g., pesticide pellets).">
+            >
+            ["at0077"] = <
+                text = <"Block">
+                description = <"A large, solid mass of a substance, typically uniform in shape, used in bulk applications (e.g., rat poison blocks).">
+            >
+            ["at0078"] = <
+                text = <"Powder">
+                description = <"A finely ground, loose, dry substance consisting of small particles (e.g., talcum powder, powdered drugs).">
+            >
+            ["at0079"] = <
+                text = <"Granule">
+                description = <"Small, irregularly shaped particles larger than powder but smaller than pellets (e.g., granular fertilizers or detergents).">
+            >
+            ["at0080"] = <
+                text = <"Crystal">
+                description = <"Solid substances with a defined geometric shape and internal structure due to their molecular arrangement  (e.g., salt crystals, methamphetamine).">
+            >
+            ["at0081"] = <
+                text = <"Shard">
+                description = <"Sharp, irregular fragments of a brittle solid.">
+            >
+            ["at0082"] = <
+                text = <"Flake">
+                description = <"Thin, flat pieces of a substance, often irregularly shaped (e.g., paint flakes, graphite flakes).">
+            >
+            ["at0083"] = <
+                text = <"Fibre">
+                description = <"Thin, thread-like structures that may be woven or used individually (e.g., fiberglass, asbestos fibers).">
+            >
+            ["at0084"] = <
+                text = <"Liquid state type">
+                description = <"Specific type of liquid form or presentation of the substance at the time of exposure.">
+            >
+            ["at0085"] = <
+                text = <"Solution">
+                description = <"Homogeneous mixtures where the poison is fully dissolved in a solvent, such as water or alcohol. For example: antifreeze (ethylene glycol) and certain cleaning agents.">
+            >
+            ["at0086"] = <
+                text = <"Suspension">
+                description = <"Heterogeneous mixtures containing solid particles dispersed in a liquid medium. For example, liquid pesticides with suspended active ingredients.">
+            >
+            ["at0087"] = <
+                text = <"Emulsion/Cream">
+                description = <"Mixtures of two immiscible liquids where one is dispersed in the other, often stabilized by emulsifiers. For example: medicinal creams and lotions.">
+            >
+            ["at0088"] = <
+                text = <"Gel">
+                description = <"Semi-solid systems where a liquid is entrapped within a three-dimensional polymeric network, giving a jelly-like consistency. For example, hand sanitizers and certain topical medications.">
+            >
+            ["at0089"] = <
+                text = <"Chunk">
+                description = <"Irregular, larger solid pieces, not uniform in shape or size (e.g., broken pieces of solid chemicals).">
+            >
+            ["at0090"] = <
+                text = <"Bead">
+                description = <"Small, spherical particles, often uniform in size, used in industrial or pharmaceutical applications (e.g., silica gel beads, bead-based medications).">
+            >
+            ["at0091"] = <
+                text = <"Dust">
+                description = <"Fine, dry particulate matter suspended in air or settled on surface.">
+            >
+            ["at0092"] = <
+                text = <"Foam">
+                description = <"Colloidal systems where gas bubbles are dispersed in a liquid matrix. For example, some cleaning agents and cosmetic products.">
+            >
+            ["at0093"] = <
+                text = <"Occupational">
+                description = <"The exposure occurred in an occupational context.">
+            >
+            ["at0094"] = <
+                text = <"Non-occupational context">
+                description = <"The exposure did not occur in an occupational context.">
+            >
+            ["at0095"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the poisoning event not captured in other fields.">
+            >
+            ["at0096"] = <
+                text = <"Safety context">
+                description = <"Narrative or category describing the safety context of the poisoning event.">
+                comment = <"For example: supervised or unsupervised.">
+            >
+            ["ac9036"] = <
+                text = <"Substance state (synthesised)">
+                description = <"The physical form or presentation of the substance at the time of exposure. (synthesised)">
+            >
+            ["ac9037"] = <
+                text = <"Solid state type (synthesised)">
+                description = <"Specific type of solid form or presentation of the substance at the time of exposure. (synthesised)">
+            >
+            ["ac9038"] = <
+                text = <"Liquid state type (synthesised)">
+                description = <"Specific type of liquid form or presentation of the substance at the time of exposure. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Route of exposure (synthesised)">
+                description = <"The route of exposure for the affected individual. (synthesised)">
+            >
+            ["ac9026"] = <
+                text = <"Packaging context (synthesised)">
+                description = <"Category of packaging for the substance. (synthesised)">
+            >
+            ["ac9039"] = <
+                text = <"Occupational context (synthesised)">
+                description = <"Narrative or category describing the occupational context of the poisoning event. (synthesised)">
+            >
+            ["ac9006"] = <
+                text = <"Physical context (synthesised)">
+                description = <"Narrative or category describing of the physical or environmental context where the poisoning event occurred. (synthesised)">
+            >
+            ["ac9027"] = <
+                text = <"Location context (synthesised)">
+                description = <"Narrative or category of the physical location where the poisoning event took place. (synthesised)">
+            >
+            ["ac9000"] = <
+                text = <"Event occurrence (synthesised)">
+                description = <"The type of occurrence of the poisoning event. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9039"] = <
+            id = <"ac9039">
+            members = <"at0093", "at0094">
+        >
+        ["ac9038"] = <
+            id = <"ac9038">
+            members = <"at0085", "at0086", "at0087", "at0088", "at0092">
+        >
+        ["ac9037"] = <
+            id = <"ac9037">
+            members = <"at0074", "at0075", "at0076", "at0077", "at0078", "at0079", "at0080", "at0081", "at0082", "at0083", "at0089", "at0090", "at0091">
+        >
+        ["ac9036"] = <
+            id = <"ac9036">
+            members = <"at0065", "at0066", "at0064", "at0067">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0045", "at0046">
+        >
+        ["ac9006"] = <
+            id = <"ac9006">
+            members = <"at0035", "at0036">
+        >
+        ["ac9027"] = <
+            id = <"ac9027">
+            members = <"at0025", "at0027", "at0028", "at0062">
+        >
+        ["ac9026"] = <
+            id = <"ac9026">
+            members = <"at0053", "at0054">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0017", "at0018", "at0019", "at0020">
+        >
+    >

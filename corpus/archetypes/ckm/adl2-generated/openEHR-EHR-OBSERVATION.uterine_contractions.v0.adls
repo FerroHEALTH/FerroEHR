@@ -1,0 +1,479 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=64413921-dec1-47f1-93af-d08ad2a0f913; build_uid=0531166b-6636-406f-8ecd-50e63f3c51f1)
+    openEHR-EHR-OBSERVATION.uterine_contractions.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+                ["email"] = <"monasaleh01@live.com">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics, Australia">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2008-07-27">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, Australia<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"F7B45915CF01B2D63F8C7209569FE1E5">
+    >
+    details = <
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"توثيق تفاصيل التقلصات الرحمية">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Documenting details about uterine contractions.">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Uterine contractions
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Strength
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0005]}],    -- Not noticable to mother
+                                                    [{1}, {[at0006]}],    -- Very mild
+                                                    [{2}, {[at0007]}],    -- Mild
+                                                    [{3}, {[at0008]}],    -- Moderate
+                                                    [{4}, {[at0009]}],    -- Strong
+                                                    [{5}, {[at0010]}]    -- Very strong
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Pattern
+                                        value matches {
+                                            DV_CODED_TEXT[at9007] matches {
+                                                defining_code matches {[ac9001]}    -- Pattern (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Duration
+                                        value matches {
+                                            DV_DURATION[at9008] matches {
+                                                value
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0037] occurrences matches {0..1} matches {    -- Duration comment
+                                        value matches {
+                                            DV_TEXT[at9009]
+                                        }
+                                    }
+                                    CLUSTER[at0012] occurrences matches {0..1} matches {    -- Frequency
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0013] occurrences matches {0..1} matches {    -- Begin every...
+                                                value matches {
+                                                    DV_DURATION[at9010] matches {
+                                                        value
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Frequency per 10 minutes
+                                                value matches {
+                                                    DV_QUANTITY[at9011] matches {
+                                                        property matches {[at9002]}    -- Frequency
+                                                        units matches {"/min"}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0035] occurrences matches {0..1} matches {    -- Frequency per hour
+                                                value matches {
+                                                    DV_QUANTITY[at9012] matches {
+                                                        property matches {[at9002]}    -- Frequency
+                                                        units matches {"/h"}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0024] occurrences matches {0..1} matches {    -- Effectiveness
+                                        value matches {
+                                            DV_CODED_TEXT[at9013] matches {
+                                                defining_code matches {[ac9003]}    -- Effectiveness (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Intra-uterine pressure
+                                        value matches {
+                                            DV_QUANTITY[at9014] matches {
+                                                property matches {[at9004]}    -- Pressure
+                                                units matches {"mm[Hg]"}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0027] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- Method
+                        value matches {
+                            DV_CODED_TEXT[at9015] matches {
+                                defining_code matches {[ac9005]}    -- Method (synthesised)
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0038] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Uterine contractions">
+                description = <"The strength, duration and frequency of uterine contractions.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Strength">
+                description = <"The strength of uterine contractions.">
+            >
+            ["at0005"] = <
+                text = <"Not noticable to mother">
+                description = <"The contractions are not noticable.">
+            >
+            ["at0006"] = <
+                text = <"Very mild">
+                description = <"Noticable but not effective.">
+            >
+            ["at0007"] = <
+                text = <"Mild">
+                description = <"Causing some sensation in the back or lower pelvis.">
+            >
+            ["at0008"] = <
+                text = <"Moderate">
+                description = <"Causing discomfort or strong pressure in the back or lower pelvis.">
+            >
+            ["at0009"] = <
+                text = <"Strong">
+                description = <"Fully active uterus during labour.">
+            >
+            ["at0010"] = <
+                text = <"Very strong">
+                description = <"Possibly excessively strong contractions.">
+            >
+            ["at0011"] = <
+                text = <"Duration">
+                description = <"The duration of the contractions.">
+            >
+            ["at0012"] = <
+                text = <"Frequency">
+                description = <"A group of frequency statements.">
+            >
+            ["at0013"] = <
+                text = <"Begin every...">
+                description = <"The time from the begining of one contraction to the beginning of the next.">
+            >
+            ["at0014"] = <
+                text = <"Frequency per 10 minutes">
+                description = <"*">
+            >
+            ["at0015"] = <
+                text = <"Intra-uterine pressure">
+                description = <"The peak intra-uterine pressure during the contraction.">
+            >
+            ["at0016"] = <
+                text = <"Pattern">
+                description = <"The rhythm of the contractions.">
+            >
+            ["at0017"] = <
+                text = <"Regular">
+                description = <"The contractions are regular or equally spaced.">
+            >
+            ["at0018"] = <
+                text = <"Irregular">
+                description = <"The contractions are irregular or at different intervals.">
+            >
+            ["at0019"] = <
+                text = <"Continuous">
+                description = <"The uterus is not relaxing between contractions.">
+            >
+            ["at0023"] = <
+                text = <"Not effective">
+                description = <"Contractions are not effective.">
+            >
+            ["at0024"] = <
+                text = <"Effectiveness">
+                description = <"The effectiveness of the contractions.">
+            >
+            ["at0025"] = <
+                text = <"Effective">
+                description = <"Contractions are effective.">
+            >
+            ["at0026"] = <
+                text = <"Expulsive">
+                description = <"Uterine contractions are expelling the baby.">
+            >
+            ["at0028"] = <
+                text = <"Method">
+                description = <"The method used to determine the uterine contraction features.">
+            >
+            ["at0029"] = <
+                text = <"Manual">
+                description = <"By palpation.">
+            >
+            ["at0030"] = <
+                text = <"Maternal report">
+                description = <"By the subjects report.">
+            >
+            ["at0031"] = <
+                text = <"Tocogram">
+                description = <"Measurement with a tocogram.">
+            >
+            ["at0035"] = <
+                text = <"Frequency per hour">
+                description = <"*">
+            >
+            ["at0036"] = <
+                text = <"Diminishing">
+                description = <"*">
+            >
+            ["at0037"] = <
+                text = <"Duration comment">
+                description = <"A textual comment on the duration of contractions - e.g. '10 to 20 seconds'.">
+            >
+            ["at0038"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at9004"] = <
+                text = <"Pressure">
+                description = <"Pressure">
+            >
+            ["at9002"] = <
+                text = <"Frequency">
+                description = <"Frequency">
+            >
+            ["ac9015"] = <
+                text = <"Strength (synthesised)">
+                description = <"The strength of uterine contractions. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Pattern (synthesised)">
+                description = <"The rhythm of the contractions. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Effectiveness (synthesised)">
+                description = <"The effectiveness of the contractions. (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Method (synthesised)">
+                description = <"The method used to determine the uterine contraction features. (synthesised)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"التقلصات الرَّحِمية">
+                description = <"قوة و مدة و تكرار التقلصات الرَّحِمية">
+            >
+            ["at0002"] = <
+                text = <"إحدى الوقائع">
+                description = <"**(en)">
+            >
+            ["at0004"] = <
+                text = <"القوة">
+                description = <"قوة التقلصات الرَّحِمية">
+            >
+            ["at0005"] = <
+                text = <"غير ملحوظة لدى الأم">
+                description = <"التقلصات غير ملحوظة ">
+            >
+            ["at0006"] = <
+                text = <"معتدل جدا">
+                description = <"ملحوظة لكن غير فعالة">
+            >
+            ["at0007"] = <
+                text = <"معتدل">
+                description = <"تسبب بعض الحِسّ في الظهر أو أسفل الحوض">
+            >
+            ["at0008"] = <
+                text = <"متوسطة">
+                description = <"تسبب إزعاجا أو ضغطا قويا في الظهر أو أسفل الحوض">
+            >
+            ["at0009"] = <
+                text = <"قوي">
+                description = <"الرحم نشِط بشكل كلّي في أثناء الوضع/المخاض">
+            >
+            ["at0010"] = <
+                text = <"قوي جدا">
+                description = <"احتمال تقلصات قوية بشكل مفرط">
+            >
+            ["at0011"] = <
+                text = <"المدة">
+                description = <"مدة التقلصات">
+            >
+            ["at0012"] = <
+                text = <"التكرار">
+                description = <"مجموعة من البيانات عن التكرار">
+            >
+            ["at0013"] = <
+                text = <"يبدأ كل ...">
+                description = <"الفترة بين بداية تقلص إلى بداية التقلص الذي يليه">
+            >
+            ["at0014"] = <
+                text = <"التكرار لكل 10 دقائق">
+                description = <"**(en)">
+            >
+            ["at0015"] = <
+                text = <"الضغط داخل الرحم">
+                description = <"ذِروة قياس الضغط داخل الرحم في أثناء التقلصات">
+            >
+            ["at0016"] = <
+                text = <"الطراز">
+                description = <"نَظْم التقلصات">
+            >
+            ["at0017"] = <
+                text = <"منتظمة">
+                description = <"التقلصات منتظمة أو متباعدة بشكل متساوي">
+            >
+            ["at0018"] = <
+                text = <"غير منتظمة">
+                description = <"التقلصات غير منتظمة أو تحدث على فواصل / فترات مختلفة">
+            >
+            ["at0019"] = <
+                text = <"مستمر">
+                description = <"الرحم لا يرتخي / يسهل بين التقلصات">
+            >
+            ["at0023"] = <
+                text = <"غير فعالة">
+                description = <"التقلصات غير فعالة">
+            >
+            ["at0024"] = <
+                text = <"الفعالية">
+                description = <"فعالية التقلصات">
+            >
+            ["at0025"] = <
+                text = <"فعالة">
+                description = <"التقلصات فعالة">
+            >
+            ["at0026"] = <
+                text = <"طارد/ دافع">
+                description = <"التقلصات تطرد / تدفع الطفل / الرضيع">
+            >
+            ["at0028"] = <
+                text = <"الطريقة">
+                description = <"الطريقة المستخدمة لتحديد ملامح / قسمات التقلصات الرحمية">
+            >
+            ["at0029"] = <
+                text = <"يدوية">
+                description = <"عن طريق الجَسّ">
+            >
+            ["at0030"] = <
+                text = <"تقرير أمومي">
+                description = <"عن طريق التقرير الموضوعي">
+            >
+            ["at0031"] = <
+                text = <"مِخطاط قوة المخاض">
+                description = <"القياس عن طريق مِخطاط قوة المخاض">
+            >
+            ["at0035"] = <
+                text = <"التكرار لكل ساعة">
+                description = <"**(en)">
+            >
+            ["at0036"] = <
+                text = <"متناقص">
+                description = <"**(en)">
+            >
+            ["at0037"] = <
+                text = <"تعليق حول المدة">
+                description = <"تعليق تعليق نصي عن مدة التقلصات, مثلا 10 إلى 20 ثانية">
+            >
+            ["at0038"] = <
+                text = <"*Element(en)">
+                description = <"**(en)">
+            >
+            ["at9004"] = <
+                text = <"* Pressure (en)">
+                description = <"* Pressure (en)">
+            >
+            ["at9002"] = <
+                text = <"* Frequency (en)">
+                description = <"* Frequency (en)">
+            >
+            ["ac9015"] = <
+                text = <"القوة (synthesised)">
+                description = <"قوة التقلصات الرَّحِمية (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"الطراز (synthesised)">
+                description = <"نَظْم التقلصات (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"الفعالية (synthesised)">
+                description = <"فعالية التقلصات (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"الطريقة (synthesised)">
+                description = <"الطريقة المستخدمة لتحديد ملامح / قسمات التقلصات الرحمية (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9004"] = <http://openehr.org/id/125>
+            ["at9002"] = <http://openehr.org/id/382>
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0017", "at0018", "at0019", "at0036">
+        >
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0029", "at0030", "at0031">
+        >
+        ["ac9015"] = <
+            id = <"ac9015">
+            members = <"at0005", "at0006", "at0007", "at0008", "at0009", "at0010">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0023", "at0025", "at0026">
+        >
+    >

@@ -1,0 +1,221 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated)
+    openEHR-EHR-CLUSTER.hip_procedure_valdoltra.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            author = <
+                ["name"] = <"***">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"HANDIHealth,UK">
+        ["email"] = <"ian@handihealth.org">
+        ["date"] = <"2014-12-04">
+    >
+    lifecycle_state = <"AuthorDraft">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"D9F9595442B077FEF19BB08D0DD1FB9B">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record additional hip procedure details to align with Valdoltra hip registry.">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            purpose = <"*To record additional hip procedure details to align with Valdoltra hip registry.(en)">
+            use = <"*(en)">
+            misuse = <"*(en)">
+            copyright = <"*(en)">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Hip procedure registry details (Valdoltra)
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Trochanter osteotomy
+                value matches {
+                    DV_CODED_TEXT[at9003] matches {
+                        defining_code matches {[ac9000]}    -- Trochanter osteotomy (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Prophylactic antibiotics
+                value matches {
+                    DV_CODED_TEXT[at9004] matches {
+                        defining_code matches {[ac9001]}    -- Prophylactic antibiotics (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Wound drainage
+                value matches {
+                    DV_CODED_TEXT[at9005] matches {
+                        defining_code matches {[ac9002]}    -- Wound drainage (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Duration of procedure
+                value matches {
+                    DV_DURATION[at9006] matches {
+                        value matches {PTM/|>=PT0S|}
+                    }
+                }
+            }
+            allow_archetype CLUSTER[at0009] matches {    -- Details
+                include
+                    archetype_id/value matches {/.*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Hip procedure registry details (Valdoltra)">
+                description = <"Additional hip procedure details to align with Valdoltra hospital hip registry.">
+            >
+            ["at0002"] = <
+                text = <"Prophylactic antibiotics">
+                description = <"Were prophylactic systemic antibiotics used?">
+            >
+            ["at0003"] = <
+                text = <"Systemic prophylactic antibiotics used">
+                description = <"Systemic antibiotic prophylaxis was given to the patient.">
+            >
+            ["at0004"] = <
+                text = <"Systemic prophylactic antibiotics not used">
+                description = <"Systemic antibiotic prophylaxis was not given to the patient.">
+            >
+            ["at0005"] = <
+                text = <"Wound drainage">
+                description = <"Was wound drainage used?">
+            >
+            ["at0006"] = <
+                text = <"Wound drainage used">
+                description = <"Wound drainage was used.">
+            >
+            ["at0007"] = <
+                text = <"Wound drainage not used">
+                description = <"Wound drainage was not used.">
+            >
+            ["at0009"] = <
+                text = <"Details">
+                description = <"Further procedure details.">
+            >
+            ["at0010"] = <
+                text = <"Duration of procedure">
+                description = <"The duration of the hip procedure.">
+            >
+            ["at0011"] = <
+                text = <"Trochanter osteotomy">
+                description = <"Was trochanter osteotomy performed?">
+            >
+            ["at0012"] = <
+                text = <"Trochanter osteotomy performed">
+                description = <"Trochanter osteotomy was performed.">
+            >
+            ["at0013"] = <
+                text = <"Trochanter osteotomy not performed">
+                description = <"Trochanter osteotomy was not performed.">
+            >
+            ["ac9000"] = <
+                text = <"Trochanter osteotomy (synthesised)">
+                description = <"Was trochanter osteotomy performed? (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Prophylactic antibiotics (synthesised)">
+                description = <"Were prophylactic systemic antibiotics used? (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Wound drainage (synthesised)">
+                description = <"Was wound drainage used? (synthesised)">
+            >
+        >
+        ["sl"] = <
+            ["at0000"] = <
+                text = <"*Hip procedure registry details (Valdoltra)(en)">
+                description = <"*Additional hip procedure details to align with Valdoltra hospital hip registry.(en)">
+            >
+            ["at0002"] = <
+                text = <"*Prophylactic antibiotics(en)">
+                description = <"*Were prophylactic systemic antibiotics used?(en)">
+            >
+            ["at0003"] = <
+                text = <"*Systemic prophylactic antibiotics used(en)">
+                description = <"*Systemic antibiotic prophylaxis was given to the patient.(en)">
+            >
+            ["at0004"] = <
+                text = <"*Systemic prophylactic antibiotics not used(en)">
+                description = <"*Systemic antibiotic prophylaxis was not given to the patient.(en)">
+            >
+            ["at0005"] = <
+                text = <"*Wound drainage(en)">
+                description = <"*Was wound drainage used?(en)">
+            >
+            ["at0006"] = <
+                text = <"*Wound drainage used(en)">
+                description = <"*Wound drainage was used.(en)">
+            >
+            ["at0007"] = <
+                text = <"*Wound drainage not used(en)">
+                description = <"*Wound drainage was not used.(en)">
+            >
+            ["at0009"] = <
+                text = <"*Details(en)">
+                description = <"*Further procedure details.(en)">
+            >
+            ["at0010"] = <
+                text = <"*Duration of procedure(en)">
+                description = <"*The duration of the hip procedure.(en)">
+            >
+            ["at0011"] = <
+                text = <"*Trochanter osteotomy(en)">
+                description = <"*Was trochanter osteotomy performed?(en)">
+            >
+            ["at0012"] = <
+                text = <"*Trochanter osteotomy performed(en)">
+                description = <"*Trochanter osteotomy was performed.(en)">
+            >
+            ["at0013"] = <
+                text = <"*Trochanter osteotomy not performed(en)">
+                description = <"*Trochanter osteotomy was not performed.(en)">
+            >
+            ["ac9000"] = <
+                text = <"*Trochanter osteotomy(en) (synthesised)">
+                description = <"*Was trochanter osteotomy performed?(en) (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"*Prophylactic antibiotics(en) (synthesised)">
+                description = <"*Were prophylactic systemic antibiotics used?(en) (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"*Wound drainage(en) (synthesised)">
+                description = <"*Was wound drainage used?(en) (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0006", "at0007">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0003", "at0004">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0012", "at0013">
+        >
+    >

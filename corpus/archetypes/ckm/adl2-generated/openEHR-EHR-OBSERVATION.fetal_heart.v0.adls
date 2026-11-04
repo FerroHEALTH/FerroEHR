@@ -1,0 +1,383 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=ceb0a5b3-1032-3334-8ed9-fe226eabb938; build_uid=65d95bd5-6ce4-4e2f-a5bd-925ae73f88b8)
+    openEHR-EHR-OBSERVATION.fetal_heart.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Manna Vosta">
+                ["organisation"] = <"Karolinska University Hospital">
+                ["email"] = <"manna.vosta@regionstockholm.se">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2011-12-20">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"SOGC Fetal health Surveillance: antepartum and intrapartum Consensus Guideline: http://www.sogc.org/guidelines/documents/gui197CPG0709r.pdf">
+        ["2"] = <"Intrapartum care: management and delivery of care to women in labour: http://www.nice.org.uk/nicemedia/live/11837/36275/36275.pdf">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, Australia">
+        ["MD5-CAM-1.0.1"] = <"5A42A4519D6FCB25FEC019435801D67F">
+    >
+    details = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att registrera uppgifter om fostrets hjärtfrekvens genom intermittenta observationer.">
+            keywords = <"foster", "fosterhjärta", "fosterhjärtfrekvens", "hjärtfrekvens", "hjärtslag", "hjärtrytm">
+            use = <"Används för att registrera intermittenta observationer av fostrets hjärtfrekvens och hjärtslagens egenskaper under graviditeten.
+
+Ska endast användas när fostret är vårdsubjekt.">
+            misuse = <"Ska inte användas för att registrera de mer detaljerade uppgifter som krävs vid elektronisk övervakning av fostrets hjärtfrekvens över tid. Använd i stället specialiseringen OBSERVATION.fetal_heart-monitoring.
+
+Ska inte användas för att registrera hjärtfrekvens hos spädbarn, barn eller vuxna.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about the fetal heart rate via intermittent observations.">
+            keywords = <"fetal", "heart", "beat", "rate", "rhythm">
+            use = <"Use to record the intermittent observations of the heart rate and heart beat characteristics of a fetus during pregnancy.
+
+Only to be used where the subject of care is the fetus.">
+            misuse = <"Not to be used to record more the complex details required for intervals of electronic fetal heart monitoring - use the specialisation OBSERVATION.fetal_heart-monitoring instead.
+
+Not to be used for recording the heart rate of infants, children or adults.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Fetal heart rate
+        subject matches {
+            PARTY_RELATED[at9003] matches {
+                relationship matches {
+                    DV_CODED_TEXT[at9004] matches {
+                        defining_code matches {[at9000]}    -- foetus
+                    }
+                }
+            }
+        }
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] occurrences matches {0..1} matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Presence
+                                        value matches {
+                                            DV_CODED_TEXT[at9011] matches {
+                                                defining_code matches {[ac9009]}    -- Presence (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Rate
+                                        value matches {
+                                            DV_QUANTITY[at9006] matches {
+                                                magnitude matches {|0.0..<1000.0|}
+                                                units matches {"1/min"}
+                                                precision matches {0}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0010] matches {    -- Clinical interpretation
+                                        value matches {
+                                            DV_TEXT[at9008]
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9007]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0011] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Position of mother
+                                        value matches {
+                                            DV_CODED_TEXT[at9009] matches {
+                                                defining_code matches {[ac9002]}    -- Position of mother (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9012]
+                                        }
+                                    }
+                                    ELEMENT[at0023] occurrences matches {0..1} matches {    -- In labour
+                                        value matches {
+                                            DV_CODED_TEXT[at9013] matches {
+                                                defining_code matches {[ac9010]}    -- In labour (synthesised)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0018] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0020] matches {    -- Device
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    allow_archetype CLUSTER[at0021] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Fosterhjärtfrekvens">
+                description = <"Observationer av fostrets hjärtfrekvens.">
+            >
+            ["at0002"] = <
+                text = <"Ospecificerad händelse">
+                description = <"Ospecificerad standardhändelse vid en tidpunkt eller inom ett tidsintervall som explicit kan definieras i en template eller genereras automatiskt av vissa IT-system.">
+            >
+            ["at0004"] = <
+                text = <"Förekomst">
+                description = <"Fosterhjärtslag kan detekteras.">
+                comment = <"Förekomst antas om fostrets hjärtfrekvens är > 0.">
+            >
+            ["at0005"] = <
+                text = <"Hjärtfrekvens">
+                description = <"Fostrets observerade hjärtfrekvens.">
+            >
+            ["at0009"] = <
+                text = <"Kommentar">
+                description = <"Kommentarer avseende fostrets hjärtfrekvens som inte beskrivs i övriga datafält.">
+            >
+            ["at0010"] = <
+                text = <"Klinisk tolkning">
+                description = <"Enstaka ord, fras eller kort beskrivning som anger den kliniska innebörden och relevansen av fostrets hjärtfrekvens.">
+                comment = <"Exempelvis bradykardi eller takykardi.">
+            >
+            ["at0012"] = <
+                text = <"Moderns kroppsställning">
+                description = <"Moderns kroppsställning när fostrets hjärtfrekvens mättes.">
+            >
+            ["at0013"] = <
+                text = <"Stående">
+                description = <"Modern står vid mätningen av fostrets hjärtfrekvens.">
+            >
+            ["at0014"] = <
+                text = <"Sittande">
+                description = <"Modern sitter vid mätningen av fostrets hjärtfrekvens.">
+            >
+            ["at0015"] = <
+                text = <"Halvliggande">
+                description = <"Modern är halvliggande vid mätningen av fostrets hjärtfrekvens.">
+            >
+            ["at0016"] = <
+                text = <"Liggande">
+                description = <"Modern ligger plant vid mätningen av fostrets hjärtfrekvens.">
+            >
+            ["at0017"] = <
+                text = <"Liggande med vänsterlutning">
+                description = <"Modern ligger plant med viss sidolutning åt vänster.">
+            >
+            ["at0020"] = <
+                text = <"Utrustning">
+                description = <"Uppgifter om den utrustning som används för att detektera fostrets hjärtfrekvens.">
+                comment = <"Exempelvis Pinardstetoskop eller dopplerultraljud.">
+            >
+            ["at0021"] = <
+                text = <"Tilläggsinformation">
+                description = <"Plats för tilläggsinformation som krävs för lokala anpassningar eller anpassning till andra referensmodeller eller formella krav.">
+                comment = <"Exempelvis lokala informationskrav eller metadata för anpassning till FHIR.">
+            >
+            ["at0022"] = <
+                text = <"Möjliga felkällor">
+                description = <"Beskrivning av faktorer och felkällor som inte registrerats i övriga datafält och som kan påverka mätningen av fostrets hjärtfrekvens.">
+                comment = <"Exempelvis feber hos modern eller fysisk ansträngning.">
+            >
+            ["at0023"] = <
+                text = <"Pågående förlossning">
+                description = <"Är modern i aktiv förlossning under observationen?">
+            >
+            ["at0024"] = <
+                text = <"Pågående förlossning">
+                description = <"Modern är i förlossning när observationen görs.">
+            >
+            ["at0025"] = <
+                text = <"Ingen pågående förlossning">
+                description = <"Modern är inte i förlossning när observationen görs.">
+            >
+            ["at0026"] = <
+                text = <"Förekommer">
+                description = <"Fostrets hjärtslag kan detekteras.">
+            >
+            ["at0027"] = <
+                text = <"Förekommer inte">
+                description = <"Fostrets hjärtslag kan inte detekteras.">
+            >
+            ["at9000"] = <
+                text = <"* foetus (en)">
+                description = <"* foetus (en)">
+            >
+            ["ac9009"] = <
+                text = <"Förekomst (synthesised)">
+                description = <"Fosterhjärtslag kan detekteras. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Moderns kroppsställning (synthesised)">
+                description = <"Moderns kroppsställning när fostrets hjärtfrekvens mättes. (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"Pågående förlossning (synthesised)">
+                description = <"Är modern i aktiv förlossning under observationen? (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Fetal heart rate">
+                description = <"Observations about the fetal heart rate.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Presence">
+                description = <"The fetal heart beat is detected.">
+                comment = <"Implied as present if fetal heart rate > 0.">
+            >
+            ["at0005"] = <
+                text = <"Rate">
+                description = <"The observed fetal heart rate.">
+            >
+            ["at0009"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the fetal heart rate, not captured in other fields.">
+            >
+            ["at0010"] = <
+                text = <"Clinical interpretation">
+                description = <"Single word, phrase or brief description that represents the clinical meaning and significance of the fetal heart rate.">
+                comment = <"For example, bradycardia or tachycardia.">
+            >
+            ["at0012"] = <
+                text = <"Position of mother">
+                description = <"The position of the mother when the fetal heart rate was measured.">
+            >
+            ["at0013"] = <
+                text = <"Standing">
+                description = <"Mother standing at the time of fetal heart rate measurement.">
+            >
+            ["at0014"] = <
+                text = <"Sitting">
+                description = <"Mother sitting at the time of fetail heart rate measurement.">
+            >
+            ["at0015"] = <
+                text = <"Reclining">
+                description = <"Mother reclining at the time of fetal heart rate measurement.">
+            >
+            ["at0016"] = <
+                text = <"Lying">
+                description = <"Lying flat at the time of fetal heart rate measurement.">
+            >
+            ["at0017"] = <
+                text = <"Lying with tilt to left">
+                description = <"Mother lying flat with some lateral tilt towards the left.">
+            >
+            ["at0022"] = <
+                text = <"Confounding factors">
+                description = <"Description of incidental factors, not recorded elsewhere, that may be influencing the fetal heart rate measurement.">
+                comment = <"For example, maternal fever or exertion.">
+            >
+            ["at0020"] = <
+                text = <"Device">
+                description = <"Details about the device used to detect the fetal heart rate.">
+                comment = <"For example, Pinard's stethoscope or Doppler Ultrasound.">
+            >
+            ["at0026"] = <
+                text = <"Present">
+                description = <"The fetal heart beat is detected.">
+            >
+            ["at0027"] = <
+                text = <"Absent">
+                description = <"The fetal heart beat is not detected.">
+            >
+            ["at0021"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0023"] = <
+                text = <"In labour">
+                description = <"Is the mother in active labor during the observation?">
+            >
+            ["at0024"] = <
+                text = <"In labour">
+                description = <"The mother is in labour as the observation is made.">
+            >
+            ["at0025"] = <
+                text = <"Not in labour">
+                description = <"The mother is not in labour as the observation is made.">
+            >
+            ["at9000"] = <
+                text = <"foetus">
+                description = <"foetus">
+            >
+            ["ac9009"] = <
+                text = <"Presence (synthesised)">
+                description = <"The fetal heart beat is detected. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Position of mother (synthesised)">
+                description = <"The position of the mother when the fetal heart rate was measured. (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"In labour (synthesised)">
+                description = <"Is the mother in active labor during the observation? (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/3>
+        >
+    >
+    value_sets = <
+        ["ac9009"] = <
+            id = <"ac9009">
+            members = <"at0026", "at0027">
+        >
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0013", "at0014", "at0015", "at0016", "at0017">
+        >
+        ["ac9010"] = <
+            id = <"ac9010">
+            members = <"at0024", "at0025">
+        >
+    >

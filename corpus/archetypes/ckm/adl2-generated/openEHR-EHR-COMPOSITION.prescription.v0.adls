@@ -1,0 +1,122 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=dd3c4fc0-05cf-487e-b6e2-9b22d49489b0; build_uid=a686d8f6-84c3-41cf-96f2-8ece363ae217)
+    openEHR-EHR-COMPOSITION.prescription.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Monica Saleh">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"sam.heard@oceaninformatics.com">
+        ["date"] = <"2006-03-23">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"F6E374B7E08DE198D867B90CCC3D4755">
+    >
+    details = <
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"بِنية لنقل الأوامر بالأدوية إلى الصيدلية.">
+            keywords = <"الدواء", "وصف العلاج", "الأمر">
+            use = <"تستخدم هذه البنية فقط في توصيل الأدوية إلى الصيدلية.">
+            misuse = <"يستخدم نموذج فعل. وصف العلاج, لتسجيل الأوامر بالأدوية و التعليمات الخاصة بها. 
+تستخدم هذه البنية فقط في توصيل الأدوية إلى الصيدلية عبر الـ openEHR.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"A composition for transferring medication orders to the pharmacy.">
+            keywords = <"medication", "prescribe", "order">
+            use = <"This composition is only required for transfer of medications to the pharmacy.">
+            misuse = <"Medication orders, as instructions, have a prescribe action that records prescription and communication to the pharmacy. This composition is only required if the medication orders are required to be transmitted within openEHR to the pharmacy.">
+        >
+    >
+
+definition
+    COMPOSITION[at0000] matches {    -- Prescription
+        category matches {
+            DV_CODED_TEXT[at9002] matches {
+                defining_code matches {[at9000]}    -- event
+            }
+        }
+        context matches {
+            EVENT_CONTEXT[at9003] matches {
+                other_context matches {
+                    ITEM_TREE[at0001] matches {
+                        items cardinality matches {0..*; unordered} matches {
+                            allow_archetype CLUSTER[at0007] matches {    -- Extension
+                                include
+                                    archetype_id/value matches {/.*/}
+                            }
+                            ELEMENT[at0008] matches {    -- Prescription identifier
+                                value matches {
+                                    DV_IDENTIFIER[at9004]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Prescription">
+                description = <"Set of medication orders communicated to pharmacy.">
+            >
+            ["at0007"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"e.g. Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0008"] = <
+                text = <"Prescription identifier">
+                description = <"An identifier for the prescription as a whole.">
+            >
+            ["at9000"] = <
+                text = <"event">
+                description = <"event">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"وصف العلاج">
+                description = <"مجموعة من أوامر الأدوية يتم توصيلها إلى الصيدلية.">
+            >
+            ["at0007"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local context or to align with other reference models/formalisms.(en)">
+                comment = <"*e.g. Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.(en)">
+            >
+            ["at0008"] = <
+                text = <"*Prescription identifier(en)">
+                description = <"*An identifier for the prescription as a whole.(en)">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/433>
+        >
+    >

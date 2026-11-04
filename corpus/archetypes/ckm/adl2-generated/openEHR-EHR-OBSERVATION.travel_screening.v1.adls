@@ -1,0 +1,595 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=e4d84369-bfa5-4550-a9a4-bf1a61e96820; build_uid=1884ff0b-8cfc-48a8-b850-706f0b732b8a)
+    openEHR-EHR-OBSERVATION.travel_screening.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Darin Leonhardt">
+                ["organisation"] = <"PLRI, PLRI für medizinische Informatik/ Medizinische Hochschule">
+                ["email"] = <"leonhardt.darin@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silja Mikkola Jensen">
+                ["organisation"] = <"Helse Nord">
+                ["email"] = <"silja.mikkola.jensen@helse-nord.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2022-10-21">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Ivar Berge, Oslo University Hospital, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Hanne Marte Bårholm, Helse Vest IKT, Norway (openEHR Editor)", "Gunn Elin Blakkisrud, DIPS ASA, Norway", "Aleksander Furnes, Helse Nord IKT, Norway", "Ciprian Gerstenberger, Helse Nord IKT, Norway (openEHR Editor)", "Heather Grain, Llewelyn Grain Informatics, Australia", "Evelyn Hovenga, EJSH Consulting, Australia", "Anne K Fossum, OUS, Norway", "June Marie Nepstad Knappskog, Helse Nord IKT AS, Norway (openEHR Editor)", "Kanika Kuwelker, Helse Vest IKT, Norway (openEHR Editor)", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Eli Larsen, UNN, Norway (openEHR Editor)", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Jonas Lyshaug, FSE/ HN IKT, Norway", "Olha Nikolaieva, University Hospital Basel, Switzerland", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Marlene Pérez Colman, Digital Health and Care Wales, United Kingdom", "Terje Sagmyr, Helse Vest IKT, Norway (openEHR Editor)", "Lena Schell-Majoor, University of Oldenburg, Germany", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "Nyree Taylor, CSIRo, Australia", "John Tore Valand, Helse Vest IKT, Norway (openEHR Editor)", "Karsten Øvretveit, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"Fragebogen zum Reise-Screening, Archetypen-Entwurf [Internet]. openEHR Foundation, OpenEHR International Clinical Knowledge Manager [zitiert am: 28.01.2025]. Abgerufen von: https://ckm.openehr.org/ckm/archetypes/1013.1.4431">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"61C7497C638C0C808F55166F2059C97E">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Schaffung eines Rahmens für die Erfassung von Antworten auf vordefinierte Screening-Fragen zur Reisetätigkeit.">
+            keywords = <"Reise, Fahrt, Ausflug, Übersee, inländisch, Inland, lokal, national, Ausland, Auslandsreise, international, Schiff, Seereise.", ...>
+            use = <"Zur Darstellung eines Schemas für die Aufzeichnung von Antworten auf vordefinierte Screening-Fragen zur Reisetätigkeit.
+
+Häufige Anwendungsfälle sind unter anderem:
+- Überwachung von Infektionskrankheiten
+- Erstellung eines Patientenprofils in einem Krankheitsregister
+- Systematische Befragung im Rahmen einer Konsultation im Zusammenhang mit Krankheitsmustern.
+
+Die Semantik dieses Archetyps ist absichtlich freier, und eine Abfrage dieses Archetyps wäre normalerweise nur im Kontext der jeweiligen Vorlage sinnvoll oder sicher. Jedes Datenelement wird in der Regel in einer Vorlage umbenannt, um die spezifische Frage darzustellen. Wenn Wertemengen für allgemeine Anwendungsfälle vorgeschlagen wurden, können diese an die lokalen Anforderungen angepasst werden, indem die Datentypen DV_TEXT oder DV_BOOLEAN verwendet werden, um jedem spezifischen Anwendungsfall zu entsprechen.
+
+Die Verwendung dieses Schemas in einer Vorlage ermöglicht die Dokumentation eines breiten Spektrums von Frage-Antwort-Paaren, wie z. B.:
+- Waren Sie in den letzten 6 Wochen im Ausland? Ja, Nein, Unsicher.
+- Sind Sie im letzten Jahr nach Afrika gereist? Ja, Nein, Unsicher.
+- Ist der Patient in den letzten 2 Wochen in ein Gebiet gereist, in dem Malaria endemisch ist? Ja, Nein, Unbekannt.
+- Ist der Patient jemals in ein aktives Kriegsgebiet gereist? Ja, Nein, Unbekannt.
+
+Die EVENT-Struktur aus dem Referenzmodell kann verwendet werden, um anzugeben, ob sich die Fragen auf einen bestimmten Zeitpunkt oder auf einen Zeitraum beziehen. Verwenden Sie eine separate Instanz dieses Archetyps, um zwischen einem Fragebogen zu unterscheiden, der Informationen über Untersuchungen oder Tests aufzeichnet, die zu einem beliebigen Zeitpunkt in der Vergangenheit durchgeführt wurden, und einem Fragebogen, der Informationen über Untersuchungen oder Tests enthält, die innerhalb eines bestimmten Zeitintervalls durchgeführt wurden – zum Beispiel der Unterschied zwischen „Sind Sie jemals in ein Gebiet mit hoher Strahlungsaktivität gereist?“ und „Sind Sie in den letzten vier Wochen in ein Gebiet mit hoher Strahlungsaktivität gereist?“
+Die Quelle der Informationen in einer Fragebogenantwort kann in verschiedenen Kontexten variieren, kann aber mit Hilfe des Elements \"Informationsanbieter\" im Referenzmodell spezifisch identifiziert werden.
+
+Dieser Archetyp wurde für die Verwendung als Screening-Instrument oder für die Aufzeichnung einfacher Daten im Fragebogenformat zur Verwendung in Situationen wie einem Krankheitsregister konzipiert. Wenn der Screening-Fragebogen angibt, dass eine Untersuchung durchgeführt wurde, können zusätzliche Details, die für die Persistenz als Teil einer klinischen Akte erforderlich sind, mit Hilfe spezifischer Archetypen für Testergebnisse erfasst werden.
+">
+            misuse = <"Nicht für die Aufzeichnung eines Reiseverlaufs zu verwenden - verwenden Sie zu diesem Zweck ADMIN_ENTRY.travel_event.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å lage et rammeverk for registrering av svar på forhåndsdefinerte kartleggingsspørsmål om reiseaktivitet til eller fra ett eller flere geografiske steder utenfor personens vanlige bosted.
+">
+            keywords = <"reise, utenlandsreise, innenlands, lokal, nasjonal, internasjonal  ferie, ferietur, utenlandsferie, tur, sjøreise.", ...>
+            use = <"Brukes til å lage et rammeverk for å registrere svar på forhåndsdefinerte kartleggingsspørsmål om reiseaktivitet til eller fra ett eller flere geografiske steder utenfor personens vanlige bosted, for eksempel for å kartlegge mulig opphold i et katastrofeområde eller mulig eksponering for et smittestoff.
+
+Bruksområder inkluderer, men er ikke begrenset til:
+- overvåkning av smittsomme sykdommer
+- opprettelse av pasientprofil i et sykdomsregister
+- systematiske spørsmål i hvilken som helst konsultasjon relatert til sykdomsmønster
+ 
+Semantikken i denne arketypen er med overlegg løst definert, og spørringer etter data i arketypen vil vanligvis kun være hensiktsmessig eller sikkert innenfor konteksten av et spesifikt templat. Hvert dataelement vil normalt sett bli døpt om i templatet for å representere den spesifikke spørsmålsstillingen. Flere steder er det foreslått verdisett som passer til de vanligste bruksområder, men det er allikevel mulig å tilpasse/endre verdisett for lokal bruk ved å benytte de alternative datatypene DV_TEXT eller DV_BOOLEAN i stedet.
+
+ 
+Å bruke dette rammeverket i et templat tillater dokumentasjon av et bredt spekter av spørsmål/svar som f.eks.:
+- Har du vært i utlandet i løpet av de siste 6 ukene? Ja, Nei, Usikker.
+- Har du reist til Afrika i løpet av de siste 12 månedene? Ja, Nei, Usikker.
+- Har pasienten reist til et område der malaria er endemisk i løpet av de siste 2 ukene? Ja, Nei, Ukjent.
+- Har pasienten noen gang reist til en aktiv krigssone? Ja, Nei, Ukjent.
+ 
+EVENT-strukturen fra referansemodellen kan brukes til å spesifisere om spørsmålene er relatert til et tidspunkt eller et tidsintervall. Bruk en separat instans av denne arketypen for å skille mellom spørsmål om undersøkelser eller tester som er gjort når som helst i fortiden og spørsmål om undersøkelser eller tester som er gjort i et spesifikt tidsintervall - for eksempel forskjellen mellom \"Har du reist i et område med høy radioaktiv aktivitet?\" og \"Har du reist i et område med høy radioaktiv aktivitet i løpet av de siste fire ukene?\".
+ 
+Kilden til informasjonen i et spørreskjema kan variere i ulike kontekster, men kan spesifiseres ved å bruke elementet \"Information provider\" i openEHR-referansemodellen.
+ 
+Denne arketypen er utformet for å brukes som et kartleggingsverktøy eller for å lagre enkle spørreskjema-data for bruk i f.eks. sykdomsregister. Hvis kartleggingsskjemaet avdekker en reiseaktivitet som har funnet sted, kan tilleggsopplysninger som kreves for varig dokumentasjon (persistens) i en klinisk journal registreres ved hjelp av relevante arketyper.">
+            misuse = <"Denne arketypen skal ikke brukes til å registrere en komplett reisehistorikk. Bruk i stedet ADMIN_ENTRY.travel_event til dette formålet.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To create a framework for recording answers to pre-defined screening questions about  movement to or from one or more geographic locations outside of the individual’s usual place ofresidence.">
+            keywords = <"travel, overseas, domestic, local, national, abroad, international, journey, trip, voyage.", ...>
+            use = <"Use to create a framework for recording answers to pre-defined screening questions about movement to or from one or more geographic
+locations outside of the individual’s usual place of residence,  for example to survey for possible stay within a disaster area or for possible
+exposure to an infectious agent.
+
+Common use cases include, but are not limited to:
+- Infectious disease surveillance
+- Creating a patient profile in a disease registry
+- Systematic questioning in any consultation related to patterns of disease.
+
+The semantics of this archetype are intentionally loose, and querying this archetype would normally only be useful or safe within the context of each specific template. Each data element would usually be renamed in a template to represent the specific question asked. Where value sets have been proposed for common use cases, these can be adapted to align with local requirements by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case. 
+
+Utilising this framework within a template can enable documentation of a broad range of question/answer pairs such as:
+- Have you been overseas in the past 6 weeks? Yes, No, Unsure.
+- Have you travelled to Africa in the past 1 year? Yes, No, Unsure.
+- Has the patient travelled to an area where malaria is endemic in the past 2 weeks? Yes, No, Unknown.
+- Has the patient ever travelled to an active war zone? Yes, No, Unknown.
+
+The EVENT structure from the reference model can be used to specify whether the questions relate to a specific point in time or a period of time. Use a separate instance of this archetype to distinguish between a questionnaire recording information about an investigation or test that has been done at any time in the past and information about an investigation or test done within a specified time interval - for example, the difference between \"Have you ever travelled to an area with high radiation activity?\" and \"Have you travelled to an area with high radiation activity during the last four weeks?\".
+
+The source of the information in a questionnaire response may vary in different contexts but can be specifically identified using the 'Information provider' element in the Reference Model.
+
+This archetype has been designed to be used as a screening tool or to record simple questionnaire-format data for use in situations such as a disease registry. If the screening questionnaire identifies a travel activity tha has been carried out, additional details required for persistence as part of a clinical record can be captured using relevant archetypes.">
+            misuse = <"Not to be used for recording a travel history - use ADMIN_ENTRY.travel_event for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Travel screening questionnaire
+        data matches {
+            HISTORY[at0022] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    EVENT[at0023] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0001] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0027] matches {    -- Any travel?
+                                        value matches {
+                                            DV_CODED_TEXT[at9005] matches {
+                                                defining_code matches {[ac9019]}    -- Any travel? (synthesised)
+                                            }
+                                            DV_TEXT[at9006]
+                                            DV_BOOLEAN[at9007]
+                                        }
+                                    }
+                                    ELEMENT[at0040] occurrences matches {0..1} matches {    -- Screening purpose
+                                        value matches {
+                                            DV_TEXT[at9004]
+                                        }
+                                    }
+                                    ELEMENT[at0043] occurrences matches {0..1} matches {    -- Description
+                                        value matches {
+                                            DV_TEXT[at9008]
+                                        }
+                                    }
+                                    CLUSTER[at0026] matches {    -- Specific travel
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0021] occurrences matches {1} matches {    -- Travel activity
+                                                value matches {
+                                                    DV_TEXT[at9009]
+                                                    DV_CODED_TEXT[at9010] matches {
+                                                        defining_code matches {[ac9002]}    -- Travel activity (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0024] occurrences matches {0..1} matches {    -- Occurred?
+                                                value matches {
+                                                    DV_CODED_TEXT[at9011] matches {
+                                                        defining_code matches {[ac9020]}    -- Occurred? (synthesised)
+                                                    }
+                                                    DV_TEXT[at9012]
+                                                    DV_BOOLEAN[at9013]
+                                                }
+                                            }
+                                            ELEMENT[at0003] matches {    -- Timing
+                                                value matches {
+                                                    DV_DATE_TIME[at9014]
+                                                    DV_TEXT[at9015]
+                                                    DV_INTERVAL<DV_DATE_TIME>[at9016]
+                                                    DV_INTERVAL<DV_DURATION>[at9017]
+                                                    DV_DURATION[at9018]
+                                                }
+                                            }
+                                            allow_archetype CLUSTER[at0041] matches {    -- Additional details
+                                                include
+                                                    archetype_id/value matches {/.*/}
+                                            }
+                                            ELEMENT[at0025] occurrences matches {0..1} matches {    -- Comment
+                                                value matches {
+                                                    DV_TEXT[at9019]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0044] occurrences matches {0..1} matches {    -- Additional details
+                                        include
+                                            archetype_id/value matches {/.*/}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0005] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0019] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Fragebogen zum Reise-Screening">
+                description = <"Eine Reihe von Fragen und dazugehörigen Antworten, die zur Überprüfung der Reiseaktivität verwendet werden.">
+                comment = <"Die Antworten können als Selbstauskunft gegeben werden.">
+            >
+            ["at0003"] = <
+                text = <"Zeitpunkt">
+                description = <"Angabe des mit der Reise verbundenen Zeitpunkts.">
+                comment = <"Das Datenelement „Zeitpunkt“ wurde bewusst offener modelliert, um die unzähligen Möglichkeiten zu unterstützen, wie es in Fragebögen zur Erfassung des Zeitpunkts einer Untersuchung verwendet werden kann. Die spezifische und beabsichtigte Semantik kann in einer Vorlage weiter verdeutlicht werden. Zum Beispiel: das tatsächliche Datum und/oder die tatsächliche Uhrzeit der Reise; die Abfahrts- und Rückkehrzeit der Reise; die Zeitspanne, in der die Person unterwegs war; die Dauer der Reise; das Alter der Person zum Zeitpunkt der Reise; oder die Zeitspanne seit der Reise. Bei Verwendung des Datentyps DV_DATE_TIME ist ein Teildatum gültig, um nur ein Jahr aufzuzeichnen.">
+            >
+            ["at0019"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen, die erforderlich sind, um das Modell um lokale Inhalte zu erweitern oder es an andere Referenzmodelle oder Formalismen anzupassen.">
+                comment = <"Zum Beispiel: lokale Informationsanforderungen; oder zusätzliche Metadaten zur Anpassung an FHIR.">
+            >
+            ["at0021"] = <
+                text = <"Reiseaktivität">
+                description = <"Bezeichnung der Reiseart.">
+                comment = <"Zum Beispiel: \"Lokal\", \"National\", \"Übersee\", \"Kreuzfahrtschiff\" oder \"Kriegsgebiet\".
+Wenn möglich, wird die Kodierung des Elementes \"Bezeichnung der Reiseart\" mit einer Terminologie bevorzugt.">
+            >
+            ["at0023"] = <
+                text = <"Beliebiges Ereignis">
+                description = <"Standard, nicht spezifizierter Zeitpunkt oder Intervallereignis, das explizit in einer Vorlage oder zur Laufzeit definiert werden kann.">
+            >
+            ["at0024"] = <
+                text = <"Auftreten?">
+                description = <"Gibt es eine Vorgeschichte zur identifizierten \"Reiseaktivität\"?">
+                comment = <"In einer Vorlage würde das Datenelement in der Regel in die spezifische Frage umbenannt, die gestellt wird. Der vorgeschlagene Wertesatz kann für die lokale Verwendung angepasst werden, indem zwischen den Datentypen DV_TEXT oder DV_BOOLEAN gewählt wird, um jedem spezifischen Anwendungsfall gerecht zu werden.">
+            >
+            ["at0025"] = <
+                text = <"Kommentar">
+                description = <"Zusätzliche Angaben über die konkrete Reiseaktivität, dei in anderen Bereichen nicht erfasst wird.">
+            >
+            ["at0026"] = <
+                text = <"Spezifische Reise">
+                description = <"Angaben zu einer bestimmten Reiseaktivität, die für den Untersuchungszweck relevant ist.">
+            >
+            ["at0027"] = <
+                text = <"Irgendeine Reise?">
+                description = <"Gibt es eine Vorgeschichte der Reiseaktivität im Zusammenhang mit dem Untersuchungszweck?">
+                comment = <"In einer Vorlage würde das Datenelement in der Regel in die spezifische Frage umbenannt, die gestellt wird. Der vorgeschlagene Wertesatz kann für die lokale Verwendung angepasst werden, indem zwischen den Datentypen DV_TEXT oder DV_BOOLEAN gewählt wird, um jedem spezifischen Anwendungsfall gerecht zu werden.">
+            >
+            ["at0028"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Nein">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Unbekannt">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"Nein">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Unbekannt">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Zweck des Screenings">
+                description = <"Der Kontext oder Grund für das Screening.">
+                comment = <"Dieses Datenelement soll bei einer späteren Abfrage den Erfassungskontext für die Frage-/Antwortgruppen liefern. Es wird nicht erwartet, dass dieses Datenelement der Person offengelegt wird, sondern nur in den Daten gespeichert wird. Zum Beispiel: Screening vor der Aufnahme, der Name des eigentlichen Fragebogens oder Screening für frühere Untersuchungen.">
+            >
+            ["at0041"] = <
+                text = <"Zusätzliche Angaben">
+                description = <"Strukturierte Angaben oder Fragen zur konkreten Reiseaktivität.">
+            >
+            ["at0043"] = <
+                text = <"Beschreibung">
+                description = <"Narrative Beschreibung der Geschichte jeglicher Reiseaktivität, die für den Zweck des Screenings relevant ist.">
+            >
+            ["at0044"] = <
+                text = <"Zusätzliche Angaben">
+                description = <"Strukturierte Angaben oder Fragen zum Screening für alle Reiseaktivitäten.">
+            >
+            ["at0045"] = <
+                text = <"Nationale Reise">
+                description = <"Die Reisen erfolgten in Orte oder Regionen innerhalb des Landes, in dem der gewöhnliche Wohnsitz liegt.">
+            >
+            ["at0046"] = <
+                text = <"Internationale Reisen">
+                description = <"Die Reisen erfolgten in andere Orte oder Regionen innerhalb von Ländern als das Land des gewöhnlichen Wohnsitzes.">
+            >
+            ["at0047"] = <
+                text = <"Unsicher">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"Unsicher">
+                description = <"">
+            >
+            ["ac9019"] = <
+                text = <"Irgendeine Reise? (synthesised)">
+                description = <"Gibt es eine Vorgeschichte der Reiseaktivität im Zusammenhang mit dem Untersuchungszweck? (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Reiseaktivität (synthesised)">
+                description = <"Bezeichnung der Reiseart. (synthesised)">
+            >
+            ["ac9020"] = <
+                text = <"Auftreten? (synthesised)">
+                description = <"Gibt es eine Vorgeschichte zur identifizierten \"Reiseaktivität\"? (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Kartleggingsspørsmål om reiseaktivitet">
+                description = <"Spørsmål og tilhørende svar som brukes til å kartlegge reiseaktivitet til eller fra ett eller flere geografiske steder utenfor personens vanlige bosted.
+
+">
+                comment = <"Svarene kan være selvrapportert.">
+            >
+            ["at0003"] = <
+                text = <"Tidsangivelse">
+                description = <"Tidsinformasjon relatert til den identifiserte reiseaktiviteten.">
+                comment = <"Dataelementet \"Tidsangivelse\" er med overlegg løst definert for å kunne støtte alle mulige måter det kan brukes i spørreskjema for å fastslå når en undersøkelse er gjennomført. Den spesifikke eller tiltenkte semantikken kan beskrives mer detaljert i et templat. 
+For eksempel: faktisk dato og/eller tid for reise, tidspunkt for utreise og hjemkomst, tidsintervallet personen var på reise, lengde på reisen, personens alder på tidspunktet for reisen, hvor lenge det er siden reisen ble gjennomført. Ved å bruke datatypen DV_DATE_TIME er datofragment gyldig verdi for å registrere kun årstall.">
+            >
+            ["at0019"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0021"] = <
+                text = <"Reiseaktivitet">
+                description = <"Navn på reisetype.">
+                comment = <"For eksempel: \"Lokal\", \"Innenlands\", \"Utland\", \"Cruiseskip\" eller \"Krigssone\".
+Det er foretrukket å kode \"Navn på reisetype\" med terminologi der hvor det er mulig.">
+            >
+            ["at0023"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard uspesifisert tidspunkt- eller intervallhendelse som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0024"] = <
+                text = <"Gjennomført?">
+                description = <"Finnes det en historikk for den identifiserte \"reiseaktiviteten\"?">
+                comment = <"I et templat vil dataelementet vanligvis bli omdøpt til det spesifikke spørsmålet som stilles. Det foreslåtte verdisettet kan tilpasses til lokal bruk ved å velge mellom DV_TEXT eller DV_BOOLEAN datatypene for å tilrettelegge for hvert enkelt bruksområde.">
+            >
+            ["at0025"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om den spesifikke reisen som ikke er fanget opp i andre felt.">
+            >
+            ["at0026"] = <
+                text = <"Spesifikk reise">
+                description = <"Detaljer om én spesifikk reiseaktivitet som er relevant for kartleggingsformålet.">
+            >
+            ["at0027"] = <
+                text = <"Noen reise?">
+                description = <"Finnes det historikk for reiseaktivitet relatert til kartleggingsformålet?">
+                comment = <"I et templat vil dataelementet vanligvis omformuleres til det spesifikke spørsmålet som stilles. Det foreslåtte verdisettet kan tilpasses til lokal bruk ved å velge mellom DV_TEXT eller DV_BOOLEAN datatypene for å tilrettelegge for hvert enkelt bruksområde.">
+            >
+            ["at0028"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Ukjent">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Ukjent">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Kartleggingsformål">
+                description = <"Konteksten eller årsaken for kartleggingen.">
+                comment = <"Dette dataelementet er ment for å sette en kontekst for spørsmålene om man senere ønsker å gjøre spørringer på dataene. Det er ikke forventet at dette dataelementet skal være synlig for en bruker av skjemaet, men kun tilgjengelig i de lagrede dataene. For eksempel: \"Kartlegging av reise siste 12 måneder\" eller navnet på det faktiske spørreskjemaet.">
+            >
+            ["at0041"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Ytterligere strukturerte detaljer angående den spesifikke reiseaktiviteten.">
+            >
+            ["at0043"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstbeskrivelse av relevant reiseaktivitet for kartleggingsformålet.">
+            >
+            ["at0044"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Strukturerte detaljer eller spørsmål om all reiseaktivitet.">
+            >
+            ["at0045"] = <
+                text = <"Innenlandsreise">
+                description = <"Reisen gikk til et sted eller en region i bostedslandet.">
+            >
+            ["at0046"] = <
+                text = <"Utenlandsreise">
+                description = <"Reisen gikk til et sted eller en region utenfor bostedslandet.">
+            >
+            ["at0047"] = <
+                text = <"Usikker">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"Usikker">
+                description = <"">
+            >
+            ["ac9019"] = <
+                text = <"Noen reise? (synthesised)">
+                description = <"Finnes det historikk for reiseaktivitet relatert til kartleggingsformålet? (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Reiseaktivitet (synthesised)">
+                description = <"Navn på reisetype. (synthesised)">
+            >
+            ["ac9020"] = <
+                text = <"Gjennomført? (synthesised)">
+                description = <"Finnes det en historikk for den identifiserte \"reiseaktiviteten\"? (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Travel screening questionnaire">
+                description = <"Series of questions and associated answers used to screen for movement to or from one or more geographic locations outside of the individual’s usual place of residence.">
+                comment = <"The answers may be self-reported.">
+            >
+            ["at0003"] = <
+                text = <"Timing">
+                description = <"Timing information related to the identified 'Travel activity'.">
+                comment = <"The 'Timing' data element has deliberately been loosely modelled to support the myriad of ways that it can be used in questionnaires to capture when an investigation was carried out. The specific and intended semantics can be further clarified in a template. For example: the actual date and/or time of travel; the departure and return time for the trip; the interval of time during which the individual was travelling; the duration of the trip; the age of the individual at the time of the trip; or the duration of time since the trip occurred. A partial date is valid, using the DV_DATE_TIME data type, to record only a year.">
+            >
+            ["at0019"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0021"] = <
+                text = <"Travel activity">
+                description = <"Name of the type of travel.">
+                comment = <"For example: 'Local', 'National', 'International', 'Cruise ship'; or 'War zone'.
+Coding of the 'Travel activity' with a terminology is preferred, where possible.">
+            >
+            ["at0023"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0024"] = <
+                text = <"Occurred?">
+                description = <"Is there a history of the identified 'Travel activity'?">
+                comment = <"In a template, the data element would usually be renamed to the specific question asked. The proposed value set can be adapted for local use by choosing between the DV_TEXT or the DV_BOOLEAN datatypes to match each specific use case.">
+            >
+            ["at0025"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the travel activity not captured in other fields.">
+            >
+            ["at0026"] = <
+                text = <"Specific travel">
+                description = <"Details about a specified travel activity relevant for the screening purpose.">
+            >
+            ["at0027"] = <
+                text = <"Any travel?">
+                description = <"Is there a history of any travel activity related to the screening purpose?">
+                comment = <"In a template, the data element would usually be renamed to the specific question asked. The proposed value set can be adapted for local use by choosing between the DV_TEXT or the DV_BOOLEAN datatypes to match each specific use case.">
+            >
+            ["at0028"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Unknown">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Unknown">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Screening purpose">
+                description = <"The context or reason for screening.">
+                comment = <"This data element is intended to provide collection context for the question/answer groups when queried at a later date. It is not expected that this data element will be exposed to the individual, but only stored in data. For example: pre-admission screening, the name of the actual questionnaire or screening for potential exposures.">
+            >
+            ["at0041"] = <
+                text = <"Additional details">
+                description = <"Structured details or questions about the specific travel activity.">
+            >
+            ["at0043"] = <
+                text = <"Description">
+                description = <"Narrative description about the history of any travel activity relevant for the screening purpose.">
+            >
+            ["at0044"] = <
+                text = <"Additional details">
+                description = <"Structured details or questions about screening for all travel activities.">
+            >
+            ["at0045"] = <
+                text = <"National travel">
+                description = <"Travel occurred to places or regions within the usual country of residence.">
+            >
+            ["at0046"] = <
+                text = <"International travel">
+                description = <"Travel occurred to places or regions within countries other than the usual country of residence.">
+            >
+            ["at0047"] = <
+                text = <"Unsure">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"Unsure">
+                description = <"">
+            >
+            ["ac9019"] = <
+                text = <"Any travel? (synthesised)">
+                description = <"Is there a history of any travel activity related to the screening purpose? (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Travel activity (synthesised)">
+                description = <"Name of the type of travel. (synthesised)">
+            >
+            ["ac9020"] = <
+                text = <"Occurred? (synthesised)">
+                description = <"Is there a history of the identified 'Travel activity'? (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0030"] = <http://snomed.info/id/261665006>
+            ["at0028"] = <http://snomed.info/id/373066001>
+            ["at0029"] = <http://snomed.info/id/373067005>
+            ["at0036"] = <http://snomed.info/id/373066001>
+            ["at0037"] = <http://snomed.info/id/373067005>
+            ["at0039"] = <http://snomed.info/id/261665006>
+        >
+    >
+    value_sets = <
+        ["ac9020"] = <
+            id = <"ac9020">
+            members = <"at0036", "at0037", "at0039", "at0048">
+        >
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0045", "at0046">
+        >
+        ["ac9019"] = <
+            id = <"ac9019">
+            members = <"at0028", "at0029", "at0030", "at0047">
+        >
+    >

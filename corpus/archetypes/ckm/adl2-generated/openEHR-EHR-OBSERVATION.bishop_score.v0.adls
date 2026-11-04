@@ -1,0 +1,302 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=456a2b23-9a06-4728-8dbc-b6d3d5e3b57e; build_uid=d30f583a-3705-4469-bb7d-3f25fdcbb158)
+    openEHR-EHR-OBSERVATION.bishop_score.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Marit Alice Venheim">
+        ["organisation"] = <"Helse Vest IKT AS">
+        ["email"] = <"marit.alice.venheim@helse-vest-ikt.no">
+        ["date"] = <"2019-02-05">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Mikkel Gaup Grønmo, Helse-Nord, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)", "Dennis Forslund, Cambio Healthcare Systems, Sweden">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Bishop EH. Pelvic scoring for elective induction. Obstet Gynecol. 1964 Aug;24:266-8. PubMed PMID: 14199536.">
+        ["2"] = <"Ezebialu IU, Eke AC, Eleje GU, Nwachukwu CE. Methods for assessing pre-induction cervical ripening. Cochrane Database Syst Rev. 2015 Jun 12;(6):CD010762. doi: 10.1002/14651858.CD010762.pub2. Review. PubMed PMID: 26068943; PubMed Central PMCID: PMC4473357.">
+        ["3"] = <"Hostinská E, Lubušký M, Huml K, Pilka R. [Original Bishop score with modifications]. Ceska Gynekol. Winter 2016;81(6):426-430. Review. PubMed PMID: 27918160.">
+        ["4"] = <"Newman RB, Goldenberg RL, Iams JD, Meis PJ, Mercer BM, Moawad AH, Thom E, Miodovnik M, Caritis SN, Dombrowski M. Preterm prediction study: comparison of the cervical score and Bishop score for prediction of spontaneous preterm delivery. Obstet Gynecol. 2008 Sep;112(3):508-15. doi: 10.1097/AOG.0b013e3181842087. PubMed PMID: 18757646; PubMed Central PMCID: PMC2728002.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"CE59DC64770F73C49297B73DD437B127">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the Bishop Score findings on vaginal examination of a pregnant woman.">
+            keywords = <"Bishop score", "Cervix score", "ripeness", "induction">
+            use = <"Use to record the Bishop Score findings on vaginal examination of a pregnant woman.">
+            misuse = <"Not to be used to record the findings of physical examination of the vagina and cervix. Use the 	
+CLUSTER.exam-palpation-cervix for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Bishop score
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0023] occurrences matches {0..1} matches {    -- Position
+                                        value matches {
+                                            DV_ORDINAL[at9005] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0024]}],    -- Posterior
+                                                    [{1}, {[at0025]}],    -- Middle
+                                                    [{2}, {[at0026]}]    -- Anterior
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Consistency
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0020]}],    -- Firm
+                                                    [{1}, {[at0021]}],    -- Medium
+                                                    [{2}, {[at0022]}]    -- Soft
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Effacement
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0015]}],    -- 0 - 30%
+                                                    [{1}, {[at0016]}],    -- 40 - 50%
+                                                    [{2}, {[at0017]}],    -- 60 - 70%
+                                                    [{3}, {[at0018]}]    -- 80+ %
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Dilation
+                                        value matches {
+                                            DV_ORDINAL[at9008] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0010]}],    -- Closed
+                                                    [{1}, {[at0011]}],    -- 1-2 cm
+                                                    [{2}, {[at0012]}],    -- 3-4 cm
+                                                    [{3}, {[at0013]}]    -- 5+ cm
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Fetal station
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0006]}],    -- - 2
+                                                    [{1}, {[at0005]}],    -- - 3
+                                                    [{2}, {[at0007]}],    -- -1, 0
+                                                    [{3}, {[at0008]}]    -- +1, +2
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0027] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9010] matches {
+                                                magnitude matches {|0..13|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0030] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9011]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0028] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0031] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Bishop score">
+                description = <"Assessment of readiness of the cervix in anticipation of induction of labour.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Fetal station">
+                description = <"The position of the fetal head in relation to the ischial spines.">
+                comment = <"Negative numbers indicate that the head is further inside than the ischial spines and positive numbers show that the head is below the level of the ischial spines.">
+            >
+            ["at0005"] = <
+                text = <"- 3">
+                description = <"Fetal station is 3cm above the level of the ischial spines.">
+            >
+            ["at0006"] = <
+                text = <"- 2">
+                description = <"Fetal station is 2cm above the level of the ischial spines.">
+            >
+            ["at0007"] = <
+                text = <"-1, 0">
+                description = <"Fetal station is 1cm above the level of the ischial spines or leveled with the ischial spines; 0cm.">
+            >
+            ["at0008"] = <
+                text = <"+1, +2">
+                description = <"Fetal station is 1 or 2cm below the level of the ischial spines.">
+            >
+            ["at0009"] = <
+                text = <"Dilation">
+                description = <"Diameter of the cervical os.">
+            >
+            ["at0010"] = <
+                text = <"Closed">
+                description = <"The cervical os is closed.">
+            >
+            ["at0011"] = <
+                text = <"1-2 cm">
+                description = <"The cervical os is 1-2 cm dilated.">
+            >
+            ["at0012"] = <
+                text = <"3-4 cm">
+                description = <"The cervical os is 3-4 cm dilated.">
+            >
+            ["at0013"] = <
+                text = <"5+ cm">
+                description = <"The cervical os is 5+ cm dilated.">
+            >
+            ["at0014"] = <
+                text = <"Effacement">
+                description = <"Thinning of the cervix.">
+                comment = <"A fully effaced cervix (80+%) is described as paper-thin.">
+            >
+            ["at0015"] = <
+                text = <"0 - 30%">
+                description = <"Cervical effacement is estimated to 0 - 30%.">
+            >
+            ["at0016"] = <
+                text = <"40 - 50%">
+                description = <"Cervical effacement is estimated to 40 - 50%.">
+            >
+            ["at0017"] = <
+                text = <"60 - 70%">
+                description = <"Cervical effacement is estimated to 60 - 70%.">
+            >
+            ["at0018"] = <
+                text = <"80+ %">
+                description = <"Cervical effacement is estimated to 80+ %.">
+            >
+            ["at0019"] = <
+                text = <"Consistency">
+                description = <"The amount of softening of the cervix, indicating a decline in the tissue tensile strength.">
+            >
+            ["at0020"] = <
+                text = <"Firm">
+                description = <"The cervix feels firm.">
+            >
+            ["at0021"] = <
+                text = <"Medium">
+                description = <"The cervix feels neither firm nor soft, but in between.">
+            >
+            ["at0022"] = <
+                text = <"Soft">
+                description = <"The cervix feels soft.">
+            >
+            ["at0023"] = <
+                text = <"Position">
+                description = <"Position of the cervix.">
+            >
+            ["at0024"] = <
+                text = <"Posterior">
+                description = <"The cervix is located posteriorly, towards the sacrum.">
+            >
+            ["at0025"] = <
+                text = <"Middle">
+                description = <"The cervix is located centrally, in the typical anatomical position.">
+            >
+            ["at0026"] = <
+                text = <"Anterior">
+                description = <"The cervix is located anteriorly, towards the pubis.">
+            >
+            ["at0027"] = <
+                text = <"Total score">
+                description = <"Sum of the individual scores assigned for each of the contributing variables.">
+                comment = <"Total score may be generated at run-time. ">
+            >
+            ["at0030"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the overall Bishop score not captured in other fields.">
+            >
+            ["at0031"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["ac9011"] = <
+                text = <"Position (synthesised)">
+                description = <"Position of the cervix. (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"Consistency (synthesised)">
+                description = <"The amount of softening of the cervix, indicating a decline in the tissue tensile strength. (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"Effacement (synthesised)">
+                description = <"Thinning of the cervix. (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Dilation (synthesised)">
+                description = <"Diameter of the cervical os. (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Fetal station (synthesised)">
+                description = <"The position of the fetal head in relation to the ischial spines. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9013"] = <
+            id = <"ac9013">
+            members = <"at0015", "at0016", "at0017", "at0018">
+        >
+        ["ac9012"] = <
+            id = <"ac9012">
+            members = <"at0020", "at0021", "at0022">
+        >
+        ["ac9011"] = <
+            id = <"ac9011">
+            members = <"at0024", "at0025", "at0026">
+        >
+        ["ac9015"] = <
+            id = <"ac9015">
+            members = <"at0005", "at0006", "at0007", "at0008">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0010", "at0011", "at0012", "at0013">
+        >
+    >

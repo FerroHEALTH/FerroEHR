@@ -1,0 +1,173 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=8da74725-31e4-45ce-809a-ef588652e187; build_uid=7838dcfa-e0f0-43f3-867d-20a61ef567f9)
+    openEHR-EHR-SECTION.adverse_reaction_list.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["ru"] = <
+            language = <[ISO_639-1::ru]>
+            author = <
+                ["name"] = <"Art Latyp Латыпов Артур Шамилевич">
+                ["organisation"] = <"RusBITech РусБИТех, Москва">
+                ["email"] = <"alatypov@asteis.net">
+            >
+            accreditation = <"hmm">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Adriana Kitajima, Débora Farage, Fernanda Maia, Laíse Figueiredo, Marivan Abrahão">
+                ["organisation"] = <"Core Consulting">
+                ["email"] = <"contato@coreconsulting.com.br">
+            >
+            accreditation = <"Hospital Alemão Oswaldo Cruz (HAOC)">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2010-03-07">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Ian McNicoll, freshEHR Clinical Informatics, UK", "Heath Frankel, Ocean Informatics">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"6900D18BA6F2C488398A4E20FFFF54AF">
+    >
+    details = <
+        ["ru"] = <
+            language = <[ISO_639-1::ru]>
+            purpose = <"*To provide a framework and design guidance for consistent modelling of content within a template for an Adverse reaction list. (en)">
+            keywords = <"список", "реакция", "побочная", "известная", "исключение", "осложнение", "неблагоприятная">
+            use = <"*Use as a framework and suggested design guidance for consistent modelling of content within a template for an Adverse reaction list.
+
+This archetype is intended to be used within the COMPOSITION.adverse_reaction_list or as one component of other COMPOSITION archetypes. For example: complex documents, such as a discharge summary or referral.
+
+This list can be comprised of three types of statements, each represented by specific archetypes:
+- statements about the positive presence of adverse reactions can be recorded using multiple instances of the EVALUATION.adverse_reaction_risk, one instance of the archetype per substance; OR
+- statements about the positive exclusion of adverse reactions can be recorded using the specific EVALUATION.exclusion-global  - for example: 'No known adverse reactions'; OR
+- statements about no information being available - neither a positive presence of adverse reactions nor a positive exclusion - can be recorded using the EVALUATION.absence archetype. (en)">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"*To provide a framework and design guidance for consistent modelling of content within a template for an Adverse reaction list. (en)">
+            keywords = <"adverso", "reação", "exclusão", "ausência", "conhecido", "lista">
+            use = <"*Use as a framework and suggested design guidance for consistent modelling of content within a template for an Adverse reaction list.
+
+This archetype is intended to be used within the COMPOSITION.adverse_reaction_list or as one component of other COMPOSITION archetypes. For example: complex documents, such as a discharge summary or referral.
+
+This list can be comprised of three types of statements, each represented by specific archetypes:
+- statements about the positive presence of adverse reactions can be recorded using multiple instances of the EVALUATION.adverse_reaction_risk, one instance of the archetype per substance; OR
+- statements about the positive exclusion of adverse reactions can be recorded using the specific EVALUATION.exclusion-global  - for example: 'No known adverse reactions'; OR
+- statements about no information being available - neither a positive presence of adverse reactions nor a positive exclusion - can be recorded using the EVALUATION.absence archetype. (en)">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To provide a framework and design guidance for consistent modelling of content within a template for an Adverse reaction list.">
+            keywords = <"adverse", "reaction", "exclusion", "absence", "known", "list">
+            use = <"Use as a framework and suggested design guidance for consistent modelling of content within a template for an Adverse reaction list.
+
+This archetype is intended to be used within the COMPOSITION.adverse_reaction_list or as one component of other COMPOSITION archetypes. For example: complex documents, such as a discharge summary or referral.
+
+This list can be comprised of three types of statements, each represented by specific archetypes:
+- statements about the positive presence of adverse reactions can be recorded using multiple instances of the EVALUATION.adverse_reaction_risk, one instance of the archetype per substance; OR
+- statements about the positive exclusion of adverse reactions can be recorded using the specific EVALUATION.exclusion-global  - for example: 'No known adverse reactions'; OR
+- statements about no information being available - neither a positive presence of adverse reactions nor a positive exclusion - can be recorded using the EVALUATION.absence archetype.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    SECTION[at0000] matches {    -- Adverse reaction list
+        items cardinality matches {1..*; unordered} matches {
+            allow_archetype EVALUATION[at0001] matches {    -- Adverse reactions
+                include
+                    archetype_id/value matches {/openEHR-EHR-EVALUATION\.adverse_reaction_risk(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            allow_archetype EVALUATION[at0002] matches {    -- Exclusion statement
+                include
+                    archetype_id/value matches {/openEHR-EHR-EVALUATION\.exclusion_global(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            allow_archetype EVALUATION[at0003] matches {    -- Absence statement
+                include
+                    archetype_id/value matches {/openEHR-EHR-EVALUATION\.absence(-[a-zA-Z0-9_]+)*\.v2\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["ru"] = <
+            ["at0000"] = <
+                text = <"*Adverse reaction list (en)">
+                description = <"*Framework for consistent modelling of content within a template for an Adverse reaction list. (en)">
+            >
+            ["at0001"] = <
+                text = <"*Adverse reactions(en)">
+                description = <"*Positive statements about the presence of adverse reactions.(en)">
+            >
+            ["at0002"] = <
+                text = <"*Exclusion statement(en)">
+                description = <"*Positive statement about the exclusion of adverse reactions.(en)">
+                comment = <"*For example: 'No known adverse reactions'.(en)">
+            >
+            ["at0003"] = <
+                text = <"*Absence statement(en)">
+                description = <"*Positive statement that no information is available about adverse reactions.(en)">
+                comment = <"*For example: 'No information available about adverse reactions'.(en)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"*Adverse reaction list (en)">
+                description = <"*Framework for consistent modelling of content within a template for an Adverse reaction list. (en)">
+            >
+            ["at0001"] = <
+                text = <"*Adverse reactions(en)">
+                description = <"*Positive statements about the presence of adverse reactions.(en)">
+            >
+            ["at0002"] = <
+                text = <"*Exclusion statement(en)">
+                description = <"*Positive statement about the exclusion of adverse reactions.(en)">
+                comment = <"*For example: 'No known adverse reactions'.(en)">
+            >
+            ["at0003"] = <
+                text = <"*Absence statement(en)">
+                description = <"*Positive statement that no information is available about adverse reactions.(en)">
+                comment = <"*For example: 'No information available about adverse reactions'.(en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Adverse reaction list">
+                description = <"Framework for consistent modelling of content within a template for an Adverse reaction list.">
+            >
+            ["at0001"] = <
+                text = <"Adverse reactions">
+                description = <"Positive statements about the presence of adverse reactions.">
+            >
+            ["at0002"] = <
+                text = <"Exclusion statement">
+                description = <"A positive statement about the exclusion of adverse reactions.">
+                comment = <"For example: 'No known adverse reactions'.">
+            >
+            ["at0003"] = <
+                text = <"Absence statement">
+                description = <"A positive statement that no information is available about adverse reactions.">
+                comment = <"For example: 'No information available about adverse reactions'.">
+            >
+        >
+    >

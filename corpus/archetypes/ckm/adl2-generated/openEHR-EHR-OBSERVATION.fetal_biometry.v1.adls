@@ -1,0 +1,412 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=7dd1af1f-22c6-47bd-97bc-152f642a5bb6; build_uid=6c48fb43-841a-4397-9c4d-5f73f9bbd693)
+    openEHR-EHR-OBSERVATION.fetal_biometry.v1.0.3
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Vebjørn Arntzen">
+                ["organisation"] = <"Oslo University Hospital">
+                ["email"] = <"varntzen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-12-14">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Marit Alice Venheim, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Randi Brendberg, Helse Nord RHF, Norway", "Peter Fedorcsak, University of Oslo, Norway (openEHR Editor)", "Heather Grain, Llewelyn Grain Informatics, Australia", "Anne Helbig, MD PhD, Oslo University Hospital, Norway", "Anca Heyd, DIPS ASA, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Mikkel Johan Gaup Grønmo, Regional forvaltning EPJ, Helse Nord, Norway (Nasjonal IKT redaktør)", "Anjali Kulkarni, Karkinos, India", "Kanika Kuwelker, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "Tina Tellum, Oslo Universitetssykehus, Norway", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)", "Ina Wille, Helse-Vest RHF, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"Radiopaedia [Internet]. Radiopaedia.org; 2005-2022. Fetal biometric parameters; [revised 2021 Sep 20; cited 2022 May 25]. Available from: https://radiopaedia.org/articles/fetal-biometric-parameters.">
+        ["2"] = <"Wong L, Paul E, Murday HK, Fang J, Lavender I, Coombs PR, Teoh M. Biparietal diameter measurements using the outer-to-outer versus outer-to-inner measurement: A question of pedantry? Australas J Ultrasound Med. 2018 Apr 16;21(3):161-168. doi: 10.1002/ajum.12091. PMID: 34760517; PMCID: PMC8409806.">
+        ["3"] = <"https://helse-bergen.no/seksjon/Kvinneklinikken/Documents/Ultralydkurs%20vekst%20Doppler/Biometrihefte.pdf">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"F9DA5EDDFF41C6521DF3CA4CB54CC795">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere målinger av av et embryo eller foster gjort ved ultralyd og doppler.">
+            keywords = <"foster", "embryo", "femur", "lårben", "humerus", "overarm", "isse", "sete", "hode", "abdomen", "ultralyd", "svangerskap", "antenatal", "obstetrisk">
+            use = <"Bruk for å registrere målinger av av et embryo eller foster gjort ved ultralyd og doppler.
+
+Denne arketypen ble utviklet som en komponent i en bildediagnostisk undersøkelse, og må bli lagt til i et templat sammen med OBSERVATION.imaging_exam_result (Bildediagnostisk svar) og gruppen av CLUSTER-arketyper som omhandler Bildediagnostiske undersøkelser.">
+            misuse = <"Skal ikke brukes til å registrere direkte målinger av et barn. Bruk OBSERVATION.height (Høyde/Lengde), OBSERVATION.head_circumference (Hodeomkrets), OBSERVATION.body_segment_length (Kroppsmåling - lengde) and OBSERVATION.body_weight (Kroppsvekt) for slike målinger.
+
+Skal ikke brukes til å registrere informasjon om gestasjonssekk. Bruk arketypen CLUSTER.imaging_exam-gestational_sac (Bildediagnostisk undersøkelse - gestasjonssekk) for dette formålet.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record ultrasound and doppler measurements of an embryo or fetus in utero.">
+            keywords = <"fetus, embryo, femur, humerus, crown-rump, head, abdomen, ultrasound, antenatal, obstetric, foetus", ...>
+            use = <"Use to record ultrasound and doppler measurements of an embryo or fetus in utero.
+
+This archetype has been designed as one component of an imaging examination and will need to be added in a template alongside the OBSERVATION.imaging_exam_result and the imaging family of CLUSTERs..">
+            misuse = <"Not to be used to record direct measurements of an infant. Use OBSERVATION.height, OBSERVATION.head_circumference, OBSERVATION.body_segment_length and OBSERVATION.body_weight for equivalent measurements.
+
+Not to be used to record information about the gestational sac, use openEHR-EHR-CLUSTER.imaging_exam-gestational_sac.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Fetal biometry
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Crown-rump length (CRL)
+                                        value matches {
+                                            DV_QUANTITY[at9002] matches {
+                                                property matches {[at9000]}    -- Length
+                                                [magnitude, units, precision] matches {
+                                                    [{|>=0.0|}, {"mm"}, {0}],
+                                                    [{|>=0.0|}, {"cm"}, {1}],
+                                                    [{|>=0.0|}, {"[in_i]"}, {|>=0|}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Biparietal diameter (BPD)
+                                        value matches {
+                                            DV_QUANTITY[at9003] matches {
+                                                property matches {[at9000]}    -- Length
+                                                [magnitude, units, precision] matches {
+                                                    [{|>=0.0|}, {"mm"}, {0}],
+                                                    [{|>=0.0|}, {"cm"}, {1}],
+                                                    [{|>=0.0|}, {"[in_i]"}, {|>=0|}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Occipito-frontal diameter (OFD)
+                                        value matches {
+                                            DV_QUANTITY[at9004] matches {
+                                                property matches {[at9000]}    -- Length
+                                                [magnitude, units, precision] matches {
+                                                    [{|>=0.0|}, {"mm"}, {0}],
+                                                    [{|>=0.0|}, {"cm"}, {1}],
+                                                    [{|>=0.0|}, {"[in_i]"}, {|>=0|}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Head circumference (HC)
+                                        value matches {
+                                            DV_QUANTITY[at9005] matches {
+                                                property matches {[at9000]}    -- Length
+                                                [magnitude, units, precision] matches {
+                                                    [{|>=0.0|}, {"mm"}, {0}],
+                                                    [{|>=0.0|}, {"cm"}, {1}],
+                                                    [{|>=0.0|}, {"[in_i]"}, {|>=0|}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Trans-cerebellar diameter (TCD)
+                                        value matches {
+                                            DV_QUANTITY[at9006] matches {
+                                                property matches {[at9000]}    -- Length
+                                                [magnitude, units, precision] matches {
+                                                    [{|>=0.0|}, {"mm"}, {1}],
+                                                    [{|>=0.0|}, {"cm"}, {1}],
+                                                    [{|>=0.0|}, {"[in_i]"}, {|>=0|}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Interocular distance (IOD)
+                                        value matches {
+                                            DV_QUANTITY[at9007] matches {
+                                                property matches {[at9000]}    -- Length
+                                                [magnitude, units, precision] matches {
+                                                    [{|>=0.0|}, {"mm"}, {0}],
+                                                    [{|>=0.0|}, {"cm"}, {1}],
+                                                    [{|>=0.0|}, {"[in_i]"}, {|>=0|}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Binocular distance (BOD)
+                                        value matches {
+                                            DV_QUANTITY[at9008] matches {
+                                                property matches {[at9000]}    -- Length
+                                                [magnitude, units, precision] matches {
+                                                    [{|>=0.0|}, {"mm"}, {0}],
+                                                    [{|>=0.0|}, {"cm"}, {1}],
+                                                    [{|>=0.0|}, {"[in_i]"}, {|>=0|}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Abdominal circumference (AC)
+                                        value matches {
+                                            DV_QUANTITY[at9009] matches {
+                                                property matches {[at9000]}    -- Length
+                                                [magnitude, units, precision] matches {
+                                                    [{|>=0.0|}, {"mm"}, {0}],
+                                                    [{|>=0.0|}, {"cm"}, {1}],
+                                                    [{|>=0.0|}, {"[in_i]"}, {|>=0|}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Femur length (FL)
+                                        value matches {
+                                            DV_QUANTITY[at9010] matches {
+                                                property matches {[at9000]}    -- Length
+                                                [magnitude, units, precision] matches {
+                                                    [{|>=0.0|}, {"mm"}, {0}],
+                                                    [{|>=0.0|}, {"cm"}, {1}],
+                                                    [{|>=0.0|}, {"[in_i]"}, {|>=0|}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Humeral length (HL)
+                                        value matches {
+                                            DV_QUANTITY[at9011] matches {
+                                                property matches {[at9000]}    -- Length
+                                                [magnitude, units, precision] matches {
+                                                    [{|>=0.0|}, {"mm"}, {0}],
+                                                    [{|>=0.0|}, {"cm"}, {1}],
+                                                    [{|>=0.0|}, {"[in_i]"}, {|>=0|}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9012]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0016] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- BPD method
+                        value matches {
+                            DV_CODED_TEXT[at9013] matches {
+                                defining_code matches {[ac9001]}    -- BPD method (synthesised)
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0021] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Fosterbiometri">
+                description = <"Målinger av av et embryo eller foster gjort ved ultralyd og doppler.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Hode-setelengde (CRL)">
+                description = <"Lengden i en rett linje fra toppen av fosterhodet til nederst på setet.">
+            >
+            ["at0006"] = <
+                text = <"Biparietal diameter (BPD)">
+                description = <"Den største diameter av et tverrsnitt av fosterets skalle.">
+            >
+            ["at0007"] = <
+                text = <"Occipito-frontal diameter (OFD)">
+                description = <"Den maksimale diameter målt fra occipitalbenet til pannebenet i midtlinjen av fosterets skalle.">
+            >
+            ["at0008"] = <
+                text = <"Hodeomkrets (HC)">
+                description = <"Den lengste distansen rundt fosterets hode.">
+            >
+            ["at0009"] = <
+                text = <"Transcerebellar diameter (TCD)">
+                description = <"Den lengste tverrdiameter av fosterets cerebellum.">
+            >
+            ["at0010"] = <
+                text = <"Interokulær avstand (IOD)">
+                description = <"Avstand fra innerkant til innerkant av øyehulene.">
+            >
+            ["at0011"] = <
+                text = <"Binokulær avstand (BOD)">
+                description = <"Avstanden fra ytterkant til ytterkant av øyehulene.">
+            >
+            ["at0012"] = <
+                text = <"Abdominalomkrets (AC)">
+                description = <"Lengden rundt fosterets eller embryoets abdomen.">
+            >
+            ["at0013"] = <
+                text = <"Femurlengde (FL)">
+                description = <"Lengden av lårbenet.">
+            >
+            ["at0014"] = <
+                text = <"Humeruslengde (HL)">
+                description = <"Lengden av overarmsbenet.">
+            >
+            ["at0015"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om fosterbiometri som ikke er fanget i andre felt.">
+            >
+            ["at0017"] = <
+                text = <"Målemetode BPD">
+                description = <"Metoden som er brukt for å måle biparietal diameter.">
+            >
+            ["at0019"] = <
+                text = <"Ytre til ytre">
+                description = <"I et horisontalt snitt i nivå med thalamus og cavum septi pellucidi mellom ytre skallebenskontur på begge sider.">
+            >
+            ["at0020"] = <
+                text = <"Ytre til indre">
+                description = <"I et horisontalt snitt i nivå med thalamus og cavum septi pellucidi fra probenær ytre skallebenskontur, til probefjern indre skallebenskontur.">
+            >
+            ["at0021"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at9000"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac9001"] = <
+                text = <"Målemetode BPD (synthesised)">
+                description = <"Metoden som er brukt for å måle biparietal diameter. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Fetal biometry">
+                description = <"Ultrasound and Doppler measurements of the dimensions of an embryo or fetus.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"Crown-rump length (CRL)">
+                description = <"The length of the embryo or fetus from the top of its head to bottom of its rump.">
+            >
+            ["at0006"] = <
+                text = <"Biparietal diameter (BPD)">
+                description = <"The maximum diameter of a transverse section of the fetal skull.">
+            >
+            ["at0007"] = <
+                text = <"Occipito-frontal diameter (OFD)">
+                description = <"The maximal diameter from the occiput to the frontal bone in the midline of the fetal skull.">
+            >
+            ["at0008"] = <
+                text = <"Head circumference (HC)">
+                description = <"The distance around the fetal head.">
+            >
+            ["at0009"] = <
+                text = <"Trans-cerebellar diameter (TCD)">
+                description = <"The maximum transverse diameter of the fetal cerebellum.">
+            >
+            ["at0010"] = <
+                text = <"Interocular distance (IOD)">
+                description = <"The distance between medial osseous structures of the two orbitae.">
+            >
+            ["at0011"] = <
+                text = <"Binocular distance (BOD)">
+                description = <"The distance between lateral osseous structures of the two orbitae.">
+            >
+            ["at0012"] = <
+                text = <"Abdominal circumference (AC)">
+                description = <"The distance around the fetal abdomen.">
+            >
+            ["at0013"] = <
+                text = <"Femur length (FL)">
+                description = <"The length of the diaphysis of the femur.">
+            >
+            ["at0014"] = <
+                text = <"Humeral length (HL)">
+                description = <"The length of the diaphysis of the humerus.">
+            >
+            ["at0015"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the fetal biometry, not captured in other fields.">
+            >
+            ["at0017"] = <
+                text = <"BPD method">
+                description = <"The method of measuring the biparietal diameter.">
+            >
+            ["at0019"] = <
+                text = <"Outer-to-outer">
+                description = <"From the leading edge of the near‐field parietal bone to the far edge of the far‐sided parietal bone.">
+            >
+            ["at0020"] = <
+                text = <"Outer-to-inner">
+                description = <"From the leading edge of the near‐field parietal bone to the leading edge of the far‐sided parietal bone.">
+            >
+            ["at0021"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at9000"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["ac9001"] = <
+                text = <"BPD method (synthesised)">
+                description = <"The method of measuring the biparietal diameter. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/122>
+        >
+        ["LOINC"] = <
+            ["at0004"] = <http://loinc.org/id/11957-8>
+            ["at0006"] = <http://loinc.org/id/11820-8>
+            ["at0014"] = <http://loinc.org/id/11966-9>
+        >
+        ["SNOMED-CT"] = <
+            ["at0004"] = <http://snomed.info/id/276352009>
+            ["at0007"] = <http://snomed.info/id/1156893001>
+            ["at0006"] = <http://snomed.info/id/281688001>
+            ["at0008"] = <http://snomed.info/id/363812007>
+            ["at0012"] = <http://snomed.info/id/396552003>
+            ["at0013"] = <http://snomed.info/id/396551005>
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0019", "at0020">
+        >
+    >

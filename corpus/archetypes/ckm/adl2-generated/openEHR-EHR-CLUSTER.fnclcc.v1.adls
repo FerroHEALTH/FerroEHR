@@ -1,0 +1,329 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=1d34bdb2-68dd-44ce-920e-013185252790; build_uid=020c6d3e-8965-4f6a-870e-9276550e77dc)
+    openEHR-EHR-CLUSTER.fnclcc.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Kanika Kuwelker,  John Tore Valand">
+                ["organisation"] = <"Helse Vest IKT">
+                ["email"] = <"kanika.kuwelker@helse-vest-ikt.no, , john.tore.valand@helse-vest-ikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Kanika Kuwelker">
+        ["organisation"] = <"Helse Vest IKT">
+        ["email"] = <"kanika.kuwelker@helse-vest-ikt.no">
+        ["date"] = <"2024-03-19">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Hanne Marte Bårholm, Helse Vest IKT, Norway (openEHR Editor)", "Heather Grain, Llewelyn Grain Informatics, Australia", "Evelyn Hovenga, EJSH Consulting, Australia", "June Marie Nepstad Knappskog, Helse Nord IKT AS, Norway (openEHR Editor)", "Hans Kristian Haugland, Helse Bergen, Norway", "Anjali Kulkarni, Karkinos, India", "Kanika Kuwelker, Helse Vest IKT, Norway (openEHR Editor)", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Nina Louise Jebsen, Haukeland Universitetssykehus, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Olha Nikolaieva, University Hospital Basel, Switzerland", "Terje Nordberg, Helse Bergen, Norway", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Bjørn Næss, DIPS ASA, Norway", "Terje Sagmyr, Helse Vest IKT, Norway (openEHR Editor)", "John Tore Valand, Helse Vest IKT, Norway (openEHR Editor)", "Olga Zaikova, OUS, Radiumhospitalet, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Kumar R, Ludwig JA, Madewell JE. Soft Tissue Sarcomas. In: Oncologic Imaging: A Multidisciplinary Approach 2 ed. Elselvier: Saunders; 2022. Chapter 38; p.656-669.">
+        ["2"] = <"Jean-Michel Coindre; Grading of Soft Tissue Sarcomas: Review and Update. Arch Pathol Lab Med 1 October 2006; 130 (10): 1448–1453. doi: https://doi.org/10.5858/2006-130-1448-GOSTSR">
+        ["3"] = <"https://emedicine.medscape.com/article/2006584-overview?form=fpf">
+        ["4"] = <"https://www.cancer.org/cancer/types/soft-tissue-sarcoma/detection-diagnosis-staging/staging.html">
+        ["5"] = <"Norwegian translation: Helsedirektoratet. Nasjonalt handlingsprogram med retningslinjer for diagnostikk, behandling og oppfølging av sarkom. [revised 2022 February]. [Internet]. 2022 February. Available from: https://www.helsedirektoratet.no/retningslinjer/sarkomer-handlingsprogram">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"14FF06CB22469F2DAFDD8520F2C92AD2">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere histologisk grad av bløtvevssarkom ved bruk av FNCLCC sitt graderingssystem.">
+            keywords = <"sarkom, bløtvev, kreft, neoplasi, malignitet, onkologi, tumordifferensiering, tumornekrose, mitotosetall, grad, FNCLCC", ...>
+            use = <"Brukes for å registrere histologisk grad av bløtvevssarkom ved bruk av FNCLCC sitt graderingssystem.
+
+Arketypen er utviklet for å brukes i en ENTRY-arketype som vil gi den kliniske eller patologiske konteksten for registreringen. For eksempel: I SLOTet \"Spesifikke detaljer\" i arketypen Problem/diagnose (EVALUATION.problem_diagnosis), i en relevant patologirelatert CLUSTER-arketype som igjen nøstes i arketypen Laboratorieresultat (OBSERVATION.laboratory_test_result). Dette gir også mulighet for å registrere kroppssted.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the histological grading of soft tissue sarcoma using the FNCLCC grading system.">
+            keywords = <"sarcoma, soft tissue, tumour, cancer, neoplasia, oncology, malignancy, tumor differentiation, tumor necrosis, mitotic count, grading, grade, FNCLCC", ...>
+            use = <"Use to record the histological grading of soft tissue sarcoma using the FNCLCC grading system.
+
+The archetype is designed to be used in an ENTRY archetype that will provide the clinical or pathological context. For example: In the \"Specific Details\" SLOT in the EVALUATION.problem_diagnose (Problem/Diagnosis) archetype, or nested in a relevant pathology-related CLUSTER archetype which is again nested in the laboratory response archetype (OBSERVATION.laboratory_test_result). This will also allow for documentation of body site.">
+            misuse = <"">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- FNCLCC grading system
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Tumour differentiation
+                value matches {
+                    DV_ORDINAL[at9005] matches {
+                        [value, symbol] matches {
+                            [{1}, {[at0008]}],    -- Sarcoma closely resembling normal adult mesenchymal tissue (e.g., low-grade liposarcoma).
+                            [{2}, {[at0009]}],    -- Sarcomas for which histological typing is certain (e.g., myxoid/round cell liposarcoma).
+                            [{3}, {[at0010]}]    -- Embryonal and undifferentiated sarcomas, sarcomas of doubtful type, synovial sarcomas, soft tissue osteosarcoma, Ewing sarcoma/primitive neuroectodermal tumor (PNET) of soft tissue.
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Mitotic count
+                value matches {
+                    DV_ORDINAL[at9009] matches {
+                        [value, symbol] matches {
+                            [{1}, {[at0011]}],    -- 0-9 mitoses per 1,7 mm2
+                            [{2}, {[at0012]}],    -- 10-19 mitoses per 1.7 mm2
+                            [{3}, {[at0013]}]    -- ≥20 mitoses per 1.7 mm2
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Tumour necrosis
+                value matches {
+                    DV_ORDINAL[at9010] matches {
+                        [value, symbol] matches {
+                            [{0}, {[at0014]}],    -- No necrosis
+                            [{1}, {[at0015]}],    -- <50% tumor necrosis
+                            [{2}, {[at0016]}]    -- ≥50% tumor necrosis
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0021] occurrences matches {0..1} matches {    -- Total score
+                value matches {
+                    DV_COUNT[at9012] matches {
+                        magnitude matches {|2..8|}
+                    }
+                }
+            }
+            ELEMENT[at0017] occurrences matches {0..1} matches {    -- Histological grade
+                value matches {
+                    DV_CODED_TEXT[at9011] matches {
+                        defining_code matches {[ac9012]}    -- Histological grade (synthesised)
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"FNCLCC graderingssystem">
+                description = <"Histologisk gradering av bløtvevssarkom i henhold til FNCLCC sitt graderingssystem. ">
+                comment = <"FNCLCC - Fédération Nationale des Centres de Lutte Contre le Cancer.">
+            >
+            ["at0005"] = <
+                text = <"Tumors differensiering">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Mitosetall">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Tumornekrose">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Sarkom som ligner normalt og modent mesenkymalt vev">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Sarkom der histologisk type er sikker">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Embryonale og udifferensierte sarkomer">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"0-9 mitoser per 1,7 mm2">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"10-19 mitoser per 1,7 mm2">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"≥20 mitoser per 1,7 mm2">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Ingen nekrose">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"< 50 % nekrose (også vurdert makroskopisk)">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"≥ 50 % nekrose (også vurdert makroskopisk)">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Histologisk grad">
+                description = <"Vurdering av histologisk grad basert på total skår i FNCLCC graderingssystem.">
+                comment = <"I klinisk praksis for bløtvevssarkomer, blir 'Histologisk grad'-resultatet fra arketypen ofte gjenbrukt for å fylle ut dataelementet 'Histopatologisk gradering (G)' i arketypene TNM-klassifikasjon klinisk (CLUSTER.tnm) og TNM-klassifikasjon patologi (CLUSTER.tnm-pathological.v1).
+">
+            >
+            ["at0018"] = <
+                text = <"Grad 1">
+                description = <"Totalt 2 eller 3 poeng.">
+            >
+            ["at0019"] = <
+                text = <"Grad 2">
+                description = <"Totalt 4 eller 5 poeng.">
+            >
+            ["at0020"] = <
+                text = <"Grad 3">
+                description = <"Totalt 6, 7 eller 8 poeng.">
+            >
+            ["at0021"] = <
+                text = <"Total skår">
+                description = <"Den totale summen av hver komponentparameter for FNCLCC graderingssystem.">
+            >
+            ["at0022"] = <
+                text = <"GX">
+                description = <"Grad kan ikke vurderes.">
+            >
+            ["ac9016"] = <
+                text = <"Tumors differensiering (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Mitosetall (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Tumornekrose (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"Histologisk grad (synthesised)">
+                description = <"Vurdering av histologisk grad basert på total skår i FNCLCC graderingssystem. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"FNCLCC grading system">
+                description = <"The histological grading of soft tissue sarcoma using the FNCLCC grading system.">
+                comment = <"FNCLCC - Fédération Nationale des Centres de Lutte Contre le Cancer.">
+            >
+            ["at0005"] = <
+                text = <"Tumour differentiation">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Mitotic count">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Tumour necrosis">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Sarcoma closely resembling normal adult mesenchymal tissue (e.g., low-grade liposarcoma).">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Sarcomas for which histological typing is certain (e.g., myxoid/round cell liposarcoma).">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Embryonal and undifferentiated sarcomas, sarcomas of doubtful type, synovial sarcomas, soft tissue osteosarcoma, Ewing sarcoma/primitive neuroectodermal tumor (PNET) of soft tissue.">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"0-9 mitoses per 1,7 mm2">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"10-19 mitoses per 1.7 mm2">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"≥20 mitoses per 1.7 mm2">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"No necrosis">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"<50% tumor necrosis">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"≥50% tumor necrosis">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Histological grade">
+                description = <"Assessment of histological grade based on the total score in the FNCLCC grading system.">
+                comment = <"In clinical practice for soft tissue sarcomas, the 'Histological grade' result from this archetype is commonly reused to populate the 'Histopathological grade (G)' data element within the CLUSTER.tnm and CLUSTER.tnm-pathological archetypes. In that situation, this grading may be recorded within this archetype and also copied to the TNM archetypes.">
+            >
+            ["at0018"] = <
+                text = <"Grade 1">
+                description = <"Total score 2 or 3.">
+            >
+            ["at0019"] = <
+                text = <"Grade 2">
+                description = <"Total score 4 or 5.">
+            >
+            ["at0020"] = <
+                text = <"Grade 3">
+                description = <"Total score 6, 7 or 8.">
+            >
+            ["at0021"] = <
+                text = <"Total score">
+                description = <"The total sum of each component parameter for the FNCLCC grading system.">
+            >
+            ["at0022"] = <
+                text = <"GX">
+                description = <"Grade cannot be assessed.">
+            >
+            ["ac9016"] = <
+                text = <"Tumour differentiation (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Mitotic count (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Tumour necrosis (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"Histological grade (synthesised)">
+                description = <"Assessment of histological grade based on the total score in the FNCLCC grading system. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9012"] = <
+            id = <"ac9012">
+            members = <"at0022", "at0018", "at0019", "at0020">
+        >
+        ["ac9017"] = <
+            id = <"ac9017">
+            members = <"at0011", "at0012", "at0013">
+        >
+        ["ac9016"] = <
+            id = <"ac9016">
+            members = <"at0008", "at0009", "at0010">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0014", "at0015", "at0016">
+        >
+    >

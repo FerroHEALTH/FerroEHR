@@ -1,0 +1,162 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=87eae499-9fdf-4cd2-8ad7-063ebe70c4d2; build_uid=8635f1e1-c55b-4ca7-9c47-f65f54291f14)
+    openEHR-DEMOGRAPHIC-CLUSTER.identifier_other_details.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Sergio Miranda Freire">
+                ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+                ["email"] = <"sergio@lampada.uerj.br">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sergio Miranda Freire & Rigoleta Dutra Mediano Dias">
+        ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+        ["email"] = <"sergio@lampada.uerj.br">
+        ["date"] = <"2009-05-22">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Rigoleta Dutra, Ministry of Defense, Brazil (openEHR Editor)", "Sergio Freire, State University of Rio de Janeiro, Brazil (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"AB13CDBAC10337B1D0AB6510812B0137">
+    >
+    details = <
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Representação de outros detalhes relativos a um documento de identificação de uma pessoa/organização">
+            keywords = <"serviço demográfico", "identificador">
+            use = <"Usado em serviçoS demográficos para registrar outros detalhes relativos a um documento de identificação de uma pessoa/organização">
+            misuse = <"">
+            copyright = <"© copyright (c) 2009 openEHR Foundation, openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Representation of other details about a person/organization identifier">
+            keywords = <"demographic service", "identifier">
+            use = <"Used in demographic services to register other details about a person/organisation identifier">
+            misuse = <"">
+            copyright = <"© copyright (c) 2009 openEHR Foundation, openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Additional identifier data
+        items matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- City
+                value matches {
+                    DV_CODED_TEXT[at9000] matches {
+                        defining_code matches {[ac1]}    -- City codes
+                    }
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- State
+                value matches {
+                    DV_CODED_TEXT[at9001] matches {
+                        defining_code matches {[ac2]}    -- State codes
+                    }
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Country
+                value matches {
+                    DV_CODED_TEXT[at9002] matches {
+                        defining_code matches {[ac3]}    -- Country codes
+                    }
+                }
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Time validity
+                value matches {
+                    DV_INTERVAL<DV_DATE>[at9003] matches {
+                        upper matches {
+                            DV_DATE[at9004]
+                        }
+                        lower matches {
+                            DV_DATE[at9005]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Dados adicionais de um identificador">
+                description = <"Dados adicionais para um identificador para uma pessoa/organização">
+            >
+            ["at0001"] = <
+                text = <"Município">
+                description = <"Indica o município onde o documento foi emitido">
+            >
+            ["at0002"] = <
+                text = <"Estado">
+                description = <"Indica o estado onde o documento foi emitido">
+            >
+            ["at0003"] = <
+                text = <"País">
+                description = <"Indica o país onde o documento foi emitido">
+            >
+            ["at0004"] = <
+                text = <"Validade da identificação">
+                description = <"Período de validade da identificacao">
+            >
+            ["ac1"] = <
+                text = <"Códigos de cidades">
+                description = <"códigos válidos para cidade">
+            >
+            ["ac2"] = <
+                text = <"Códigos de estados">
+                description = <"códigos válidos para estados">
+            >
+            ["ac3"] = <
+                text = <"Códigos de países">
+                description = <"códigos válidos para paises">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Additional identifier data">
+                description = <"Additional data about an identifier for a person/organisation">
+            >
+            ["at0001"] = <
+                text = <"City">
+                description = <"Indicates the city where the identifier was issued">
+            >
+            ["at0002"] = <
+                text = <"State">
+                description = <"Indicates the state where the identifier was issued">
+            >
+            ["at0003"] = <
+                text = <"Country">
+                description = <"Indicates the country where the identifier was issued">
+            >
+            ["at0004"] = <
+                text = <"Time validity">
+                description = <"Period in which this identifier is valid">
+            >
+            ["ac1"] = <
+                text = <"City codes">
+                description = <"Valid codes for cities">
+            >
+            ["ac2"] = <
+                text = <"State codes">
+                description = <"Valid codes for states">
+            >
+            ["ac3"] = <
+                text = <"Country codes">
+                description = <"Valid codes for countries">
+            >
+        >
+    >

@@ -1,0 +1,319 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=fee8bbf1-5c7e-4d81-8f8e-cb0c79393952; build_uid=b6a168b7-85c3-49a2-9f19-de928173bbf8)
+    openEHR-EHR-OBSERVATION.au_absolute_cvd_risk.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2020-02-18">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Australian absolute cardiovascular disease risk calculator [Internet]. Australia; National Vascular Disease Prevention Alliance; 2012. Available from: http://www.cvdcheck.org.au/.">
+        ["2"] = <"Australian 5 year CVD risk calculator [Internet]. Australia; ASK-GP CRE (University of Sydney, Bond University); 2017. Available from: https://auscvdrisk.com.au/.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"9717C28798F2EF24E849D2088E65CD5F">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the results for each component parameter and their total sum for the Australian absolute CVD risk in the next 5 years.">
+            use = <"Use to record the results for each component parameter and their total sum for the Australian absolute CVD risk in the next 5 years.
+
+The AusCVDRisk and NVDPA risk calculators in the references, below, share a common subset of data elements. The AusCVDRisk version has some additional data elements that have been included in this maximal data set.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Australian absolute cardiovascular disease risk calculator
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    POINT_EVENT[at0002] matches {    -- Any point in time event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Gender
+                                        value matches {
+                                            DV_CODED_TEXT[at9005] matches {
+                                                defining_code matches {[ac9000]}    -- Gender (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Age
+                                        value matches {
+                                            DV_DURATION[at9006] matches {
+                                                value matches {PY/|P35Y..P74Y|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Systolic blood pressure
+                                        value matches {
+                                            DV_QUANTITY[at9007] matches {
+                                                magnitude matches {|>=75.0|}
+                                                units matches {"mm[Hg]"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Diastolic blood pressure
+                                        value matches {
+                                            DV_QUANTITY[at9008] matches {
+                                                magnitude matches {|>=0.0|}
+                                                units matches {"mm[Hg]"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Smoker
+                                        value matches {
+                                            DV_CODED_TEXT[at9009] matches {
+                                                defining_code matches {[ac9001]}    -- Smoker (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Total cholesterol
+                                        value matches {
+                                            DV_QUANTITY[at9010] matches {
+                                                magnitude matches {|>=2.0|}
+                                                units matches {"mmol/L"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- HDL cholesterol
+                                        value matches {
+                                            DV_QUANTITY[at9011] matches {
+                                                magnitude matches {|0.2..5.0|}
+                                                units matches {"mmol/L"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- ECG LVH
+                                        value matches {
+                                            DV_CODED_TEXT[at9012] matches {
+                                                defining_code matches {[ac9002]}    -- ECG LVH (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Diabetes
+                                        value matches {
+                                            DV_CODED_TEXT[at9013] matches {
+                                                defining_code matches {[ac9003]}    -- Diabetes (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Familial hypercholesterolaemia
+                                        value matches {
+                                            DV_CODED_TEXT[at9014] matches {
+                                                defining_code matches {[ac9003]}    -- Diabetes (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0023] occurrences matches {0..1} matches {    -- Chronic kidney disease
+                                        value matches {
+                                            DV_CODED_TEXT[at9015] matches {
+                                                defining_code matches {[ac9003]}    -- Diabetes (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0024] occurrences matches {0..1} matches {    -- Aboriginal or Torres Strait Islander
+                                        value matches {
+                                            DV_CODED_TEXT[at9016] matches {
+                                                defining_code matches {[ac9004]}    -- Aboriginal or Torres Strait Islander (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0029] occurrences matches {0..1} matches {    -- Calculated risk score
+                                        value matches {
+                                            DV_PROPORTION[at9017] matches {
+                                                numerator matches {|0.0..100.0|}
+                                                type matches {2}
+                                                precision matches {1}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0027] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0028] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Australian absolute cardiovascular disease risk calculator">
+                description = <"An assessment tool used to calculate the absolute cardiovascular disease risk (CVD) in the next 5 years.">
+            >
+            ["at0002"] = <
+                text = <"Any point in time event">
+                description = <"Default, unspecified point in time event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Gender">
+                description = <"The gender of an individual.">
+            >
+            ["at0005"] = <
+                text = <"Female">
+                description = <"The individual is female.">
+            >
+            ["at0006"] = <
+                text = <"Male">
+                description = <"The individual is male.">
+            >
+            ["at0007"] = <
+                text = <"Age">
+                description = <"Age, in years.">
+            >
+            ["at0008"] = <
+                text = <"Systolic blood pressure">
+                description = <"Recent systolic blood pressure measurement.">
+            >
+            ["at0009"] = <
+                text = <"Smoker">
+                description = <"Currently smoking or quite within last year.">
+            >
+            ["at0010"] = <
+                text = <"Yes">
+                description = <"Currently smoking or quit within last year.">
+            >
+            ["at0011"] = <
+                text = <"No">
+                description = <"Not currently smoking or quit longer than a year ago.">
+            >
+            ["at0012"] = <
+                text = <"Total cholesterol">
+                description = <"Recent test result for total cholesterol.">
+            >
+            ["at0013"] = <
+                text = <"HDL cholesterol">
+                description = <"Recent test result for HDL cholesterol.">
+            >
+            ["at0014"] = <
+                text = <"Diabetes">
+                description = <"Diabetes diagnosed?">
+            >
+            ["at0015"] = <
+                text = <"Yes">
+                description = <"Condition is diagnosed.">
+            >
+            ["at0016"] = <
+                text = <"No">
+                description = <"Condition not present.">
+            >
+            ["at0017"] = <
+                text = <"ECG LVH">
+                description = <"LVH diagnosed on ECG?">
+            >
+            ["at0018"] = <
+                text = <"Yes">
+                description = <"LVH is present on ECG.">
+            >
+            ["at0019"] = <
+                text = <"No">
+                description = <"LVH is not present on ECG.">
+            >
+            ["at0020"] = <
+                text = <"Unknown">
+                description = <"It is not known if LVH is present or absent on ECG.">
+            >
+            ["at0021"] = <
+                text = <"Diastolic blood pressure">
+                description = <"Recent systolic blood pressure measurement.">
+            >
+            ["at0022"] = <
+                text = <"Familial hypercholesterolaemia">
+                description = <"Familial hypercholesterolaemia diagnosed?">
+            >
+            ["at0023"] = <
+                text = <"Chronic kidney disease">
+                description = <"Chronic kidney disease diagnosed?">
+            >
+            ["at0024"] = <
+                text = <"Aboriginal or Torres Strait Islander">
+                description = <"Is the individual an aboriginal or Torres Strait islander?">
+            >
+            ["at0025"] = <
+                text = <"Yes">
+                description = <"Individual is an aboriginal or Torres Strait islander.">
+            >
+            ["at0026"] = <
+                text = <"No">
+                description = <"Individual is not an aboriginal or Torres Strait islander.">
+            >
+            ["at0028"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0029"] = <
+                text = <"Calculated risk score">
+                description = <"The calculated risk score.">
+            >
+            ["ac9000"] = <
+                text = <"Gender (synthesised)">
+                description = <"The gender of an individual. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Smoker (synthesised)">
+                description = <"Currently smoking or quite within last year. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"ECG LVH (synthesised)">
+                description = <"LVH diagnosed on ECG? (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Diabetes (synthesised)">
+                description = <"Diabetes diagnosed? (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Aboriginal or Torres Strait Islander (synthesised)">
+                description = <"Is the individual an aboriginal or Torres Strait islander? (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0018", "at0019", "at0020">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0010", "at0011">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0005", "at0006">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0025", "at0026">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0015", "at0016">
+        >
+    >

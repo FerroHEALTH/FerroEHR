@@ -1,0 +1,482 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=f3ddb6dd-5bfc-4851-a20a-c8b4ce019162; build_uid=14ee251a-7353-47ab-995e-a951f2131142)
+    openEHR-EHR-OBSERVATION.alcohol_intake.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Débora Farage, Adriana Kitajima, Fernanda Maia, Clóvis Puttini, Ana Paula Pannuti">
+                ["organisation"] = <"Core Consulting">
+                ["email"] = <"ana.andrade@coreconsulting.com.br">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2011-07-15">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Rita Apelt, Department of Health,NT, Australia", "Stephen Chu, NEHTA, Australia", "Tim Garden, NTG Department of Health, Australia", "Sam Heard, Ocean Informatics, Australia (Editor)", "Heather Leslie, Ocean Informatics, Australia (Editor)", "Ian McNicoll, Ocean Informatics UK, United Kingdom", "Jeremy Oats, NT Health, Australia", "Jo Wright, NT Dept of Health, Australia (Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Derived from: Derived from: Alcohol Use, Draft archetype [Internet]. Australian Digital Health Agency (NEHTA), ADHA Clinical Knowledge Manager. Authored: 2011-07-15. Available at: http://dcm.nehta.org.au/ (discontinued).">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"CD838D55CFC3EDBB32A50299B32ED4F8">
+    >
+    details = <
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Para gravar detalhes sobre o consumo real de álcool em um determinado período.">
+            keywords = <"álcool", "cerveja", "vinho", "destilados", "fortificado", "consumo", "uso", "abuso", "compulsão">
+            use = <"Usado para gravar detalhes sobre o consumo real de álcool e comportamentos associados em um determinado período.
+
+Um consumo diário de álcool pode ser construído no decorrer de um período pelo registro do consumo de álcool em dias sequenciais - gravar consumos reais usando o evento \"Dia específico\" para cada entrada diária.
+
+Os dados que podem ser usados para acessar o risco de abuso ou dependência de álcool serão gravados usando dois arquétipos: este arquétipo OBSERVATION (gravando medidas e observações repetitivas) e o arquétipo EVALUATION.alcohol_consumption_summary (para gravar o sumário e dados persistentes).
+
+Um registro do consumo médio de álcool durante um período pode ser gravado pela quantidade de álcool consumido usando o evento \"Uso médio\" - o uso médio em um ponto específico no tempo.
+
+
+">
+            misuse = <"Não deve ser usado para registro de detalhes persistentes sobre padrões típicos de consumo de álcool. Use o arquétipo EVALUATION.alcohol_consumption_summary para este propósito.
+
+Não deve ser usado para gravar uma análise sobre dependência de álcool. Use arquétipos específicos para este propósito, por exemplo para auditoria - openEHR-EHR-OBSERVATION.alcohol_audit.
+
+Não deve ser usado para gravar informação sobre consumo de outras substâncias a não ser álcool.
+">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about actual consumption of alcohol at a specified point in time or over an identified period of time.">
+            keywords = <"alcohol", "beer", "wine", "spirits", "fortified", "consumption", "use", "abuse", "binge">
+            use = <"Use to record details about actual consumption of alcohol and associated behaviour at a specified point in time or over an identified period of time.
+
+An alcohol consumption diary could be built up over time by recording the consumption of alcohol on multiple, sequential days - recording actual consumptions using the 'Specified Day' event for each daily entry.
+
+A record of average alcohol use during a period can be recorded by recording the amount of alcohol consumed using the 'Average use' event - the mean use over a specified period of time.
+
+Data that might be used to assess the risk of alcohol abuse or dependence will be recorded using two archetypes: this OBSERVATION archetype (recording the repeatable observations/measurements)  and in the EVALUATION.alcohol_consumption_summary archetype (recording the summary and persisting data).
+
+Binge drinking is not directly referred to in this archetype, yet this archetype will be a key resource used to support the identification of binge drinking through the accurate recording of the amount and frequency of drinking, triggers and social/cultureal context of consumption. The assessment of 'binge drinking' may be recorded as part of a 'Problem List'.">
+            misuse = <"Not to be used for recording persistent, summary details about typical patterns of alcohol drinking. Use the EVALUATION.alcohol_consumption_summary archetype for this purpose.
+
+Not to be used to record an assessment about alcohol dependence. Use specific archetypes for this purpose, for example the AUDIT assessment - openEHR-EHR-OBSERVATION.alcohol_audit.
+
+Not to be used to record information about consumption of other substances other than alcohol.">
+            copyright = <"© Australian Digital Health Agency, openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Alcohol intake
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] occurrences matches {0..1} matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0038] occurrences matches {0..1} matches {    -- Standard drinks consumed
+                                        value matches {
+                                            DV_QUANTITY[at9016]
+                                        }
+                                    }
+                                    ELEMENT[at0037] occurrences matches {0..1} matches {    -- Overall description
+                                        value matches {
+                                            DV_TEXT[at9017]
+                                        }
+                                    }
+                                    CLUSTER[at0005] matches {    -- Per type
+                                        name matches {
+                                            DV_CODED_TEXT[at9018] matches {
+                                                defining_code matches {[ac9014]}    -- Per type (synthesised)
+                                            }
+                                        }
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Specific type
+                                                value matches {
+                                                    DV_TEXT[at9004]
+                                                }
+                                            }
+                                            ELEMENT[at0036] occurrences matches {0..1} matches {    -- Description
+                                                value matches {
+                                                    DV_TEXT[at9019]
+                                                }
+                                            }
+                                            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Standard drinks consumed
+                                                value matches {
+                                                    DV_QUANTITY[at9020] matches {
+                                                        property matches {[at9015]}    -- Qualified real
+                                                        magnitude matches {|>=0.0|}
+                                                        units matches {"1"}
+                                                        precision matches {1}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0016] occurrences matches {0..1} matches {    -- Grams consumed
+                                                value matches {
+                                                    DV_QUANTITY[at9021] matches {
+                                                        property matches {[at9003]}    -- Mass
+                                                        magnitude matches {|>=0.0|}
+                                                        units matches {"g"}
+                                                        precision matches {1}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0017] occurrences matches {0..1} matches {    -- Triggers
+                                                value matches {
+                                                    DV_TEXT[at9007]
+                                                }
+                                            }
+                                            ELEMENT[at0018] occurrences matches {0..1} matches {    -- Context
+                                                value matches {
+                                                    DV_TEXT[at9008]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Evidence of dependence
+                                        value matches {
+                                            DV_TEXT[at9009]
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0027] matches {    -- Readiness for change
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.change(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9010]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    INTERVAL_EVENT[at0023] matches {    -- Specified day
+                        width matches {
+                            DV_DURATION[at9022] matches {
+                                value matches {PT24H; PT24H}
+                            }
+                        }
+                        data matches {
+                            use_node ITEM_TREE[at9011] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                    }
+                    INTERVAL_EVENT[at0022] matches {    -- Average intake
+                        math_function matches {
+                            DV_CODED_TEXT[at9012] matches {
+                                defining_code matches {[at9002]}    -- mean
+                            }
+                        }
+                        data matches {
+                            use_node ITEM_TREE[at9013] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0024] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0025] occurrences matches {0..1} matches {    -- Standard drink definition
+                        value matches {
+                            DV_QUANTITY[at9014] matches {
+                                property matches {[at9003]}    -- Mass
+                                magnitude matches {|>=0.0|}
+                                units matches {"g"}
+                                precision matches {1}
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0028] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Consumo de álcool">
+                description = <"Consumo real de álcool.">
+                comment = <"Por exemplo, como parte de um diário de bebida.">
+            >
+            ["at0002"] = <
+                text = <"Qualquer evento">
+                description = <"Padrão, ponto não especificado no tempo ou um evento em intervalo que pode ser definido em nível de modelo ou em tempo de execução.">
+            >
+            ["at0005"] = <
+                text = <"Por tipo">
+                description = <"Detalhes sobre o consumo de um tipo específico de bebida alcoólica.">
+                comment = <"A restrição em nível de execução neste Cluster permite modelos simples para cada tipo requerido seja desenhado em modelos, ou que os tipos podem ser gerenciados exclusivamente em execução. A lista de nomes pode ser estendida em execução caso tipos adicionais de bebidas alcoólicas sejam identificadas localmente.">
+            >
+            ["at0006"] = <
+                text = <"Tipo específico">
+                description = <"Tipo específico de álcool consumido, caso requerido.">
+                comment = <"A codificação da forma de álcool com uma terminologia é desejável, quando possível.">
+            >
+            ["at0014"] = <
+                text = <"Doses padrão consumidas">
+                description = <"Número de doses padrão consumidas para este tipo de álcool.">
+                comment = <"A definição opcional de uma dose padrão está disponível no Protocolo, já que varia internacionalmente. Este elemento de dado é redundado se há valor registrado em \"Gramas consumido\".">
+            >
+            ["at0016"] = <
+                text = <"Gramas consumidos">
+                description = <"Gramas de álcool consumidos.">
+                comment = <"Este elemento de dado é redundante se há valor registrado para \"Doses padrão consumidas\".">
+            >
+            ["at0017"] = <
+                text = <"Gatilhos">
+                description = <"Descrição narrativa sobre gatilhos que podem aumentar o consumo desta forma de álcool.">
+                comment = <"Por exemplo, problemas de relacionamento ou estresse no trabalho.">
+            >
+            ["at0018"] = <
+                text = <"Contexto">
+                description = <"Descrição narrativa sobre o contexto social ou cultural no qual esta forma de álcool é consumida.">
+                comment = <"Por exemplo, quando em uma festa ou com a refeição.">
+            >
+            ["at0019"] = <
+                text = <"Evidência de dependência">
+                description = <"Descrição narrativa sobre quaisquer questões comportamentais que podem indicar abuso ou dependência de álcool.">
+                comment = <"Por exemplo: bebida compulsiva; negligência de responsabilidades; problemas legais ou problemas no relacionamento relacionados ao comportamento do consumo de bebidas alcoólicas; beber em situações inapropriadas ou perigosas; ou precisar de uma bebida pela manhã para acalmar \"os nervos\".">
+            >
+            ["at0021"] = <
+                text = <"Comentário">
+                description = <"Narrativa adicional sobre o consumo de álcool do indivíduo, não capturado em outros campos.">
+            >
+            ["at0022"] = <
+                text = <"Consumo médio">
+                description = <"Consumo padrão ou típico em um período específico. Por exemplo, permite o registro de um número médio de doses padrão consumidas por semana nos últimos 10 anos.">
+            >
+            ["at0023"] = <
+                text = <"Dia específico">
+                description = <"Consumo real de álcool em um determinado dia. Suporta o registro do consumo em um Diário de Álcool.">
+            >
+            ["at0025"] = <
+                text = <"Definição de dose padrão">
+                description = <"Quantidade de álcool que define uma dose padrão.">
+            >
+            ["at0027"] = <
+                text = <"Inclinação para mudança">
+                description = <"Detalhes sobre a inclinação para a mudança no consumo de álcool.">
+            >
+            ["at0028"] = <
+                text = <"Extensão">
+                description = <"Informação adicional necessária para capturar conteúdo local ou para alinhar a outros modelos de referência/formalismos.">
+                comment = <"Por exemplo: informações locais necessárias ou metadados adicionais para alinhamento ao FIHR ou outras iniciativas equivalentes de modelagem de informações clínicas.">
+            >
+            ["at0029"] = <
+                text = <"Cerveja">
+                description = <"Bebida fermentada feita de mistura de grãos.">
+            >
+            ["at0030"] = <
+                text = <"Vinho">
+                description = <"Bebida fermentada feita de uvas e algumas vezes de outras frutas.">
+            >
+            ["at0031"] = <
+                text = <"Cidra">
+                description = <"Bebida fermentada feita de qualquer suco de fruta.">
+            >
+            ["at0032"] = <
+                text = <"Hidromel">
+                description = <"Bebida fermentada feita de mel, algumas vezes com várias frutas, temperos, grãos ou lúpulo.">
+            >
+            ["at0033"] = <
+                text = <"Pulque">
+                description = <"Bebida fermentada feita de melaço de cacto.">
+            >
+            ["at0034"] = <
+                text = <"Destilados">
+                description = <"Bebida fermentada feita por um processo de destilação. Normalmente tem conteúdo alcoólico >20%. Inclui licores, coquetéis e álcool retificado.">
+            >
+            ["at0035"] = <
+                text = <"Vinho fortificado">
+                description = <"Vinho adicionado de destilados.">
+            >
+            ["at0036"] = <
+                text = <"Descrição">
+                description = <"Descrição narrativa sobre o consumo deste tipo de álcool.">
+            >
+            ["at0037"] = <
+                text = <"Descrição geral">
+                description = <"Descrição narrativa sobre o consumo de todos os tipos de álcool.">
+            >
+            ["at0038"] = <
+                text = <"Doses padrão consumidas">
+                description = <"Número de doses padrão consumidas para este tipo de álcool.">
+            >
+            ["at9003"] = <
+                text = <"* Mass (en)">
+                description = <"* Mass (en)">
+            >
+            ["at9002"] = <
+                text = <"* mean (en)">
+                description = <"* mean (en)">
+            >
+            ["at9015"] = <
+                text = <"* Qualified real (en)">
+                description = <"* Qualified real (en)">
+            >
+            ["ac9014"] = <
+                text = <"Por tipo (synthesised)">
+                description = <"Detalhes sobre o consumo de um tipo específico de bebida alcoólica. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Alcohol intake">
+                description = <"Actual intake or consumption of alcohol.">
+                comment = <"For example as part of a drinking diary.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0005"] = <
+                text = <"Per type">
+                description = <"Details about consumption of a specified type of alcoholic beverage.">
+                comment = <"The run-time name constraint on this Cluster enables simple templates for each required type to be designed in templates, or the types to be managed exclusively at run-time. The list of names can be extended at run-time if additional types of alcoholic beverages are identified locally.">
+            >
+            ["at0006"] = <
+                text = <"Specific type">
+                description = <"Specific type of alcohol consumed, if required.">
+                comment = <"Coding of the form of alcohol with a terminology is desirable, where possible.">
+            >
+            ["at0014"] = <
+                text = <"Standard drinks consumed">
+                description = <"Number of standard drinks of this type of alcohol consumed.">
+                comment = <"Optional definition of a standard drink is available in the Protocol, as this varies internationally. This data element is redundant if a value is recorded for 'Grams consumed'.">
+            >
+            ["at0016"] = <
+                text = <"Grams consumed">
+                description = <"Grams of alcohol consumed.">
+                comment = <"This data element is redundant if a value is recorded for Standard drinks consumed'.">
+            >
+            ["at0017"] = <
+                text = <"Triggers">
+                description = <"Narrative description about triggers which may increase consumption of this form of alcohol.">
+                comment = <"For example, relationship issues or work stress.">
+            >
+            ["at0018"] = <
+                text = <"Context">
+                description = <"Narrative description about the social or cultural context in which this form of alcohol is consumed.">
+                comment = <"For example, when at a party or with a meal.">
+            >
+            ["at0019"] = <
+                text = <"Evidence of dependence">
+                description = <"Narrative description about any  behavioural issues that may indicate  alcohol abuse or dependence.">
+                comment = <"For example: binge drinking; neglecting responsibilities; legal problems or relationship issues related to drinking behaviour; drinking in inappropriate or dangerous situations; or needing a drink in the morning to steady 'the nerves'.">
+            >
+            ["at0021"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the individual's consumption of alcohol, not captured in other fields.">
+            >
+            ["at0022"] = <
+                text = <"Average intake">
+                description = <"Average, or typical, consumption over a specified time interval. For example, allows recording of average number of standard drinks consumed per week for the previous 10 years.">
+            >
+            ["at0023"] = <
+                text = <"Specified day">
+                description = <"Actual alcohol consumption on a specified day. Supports recording consumption in a Alcohol Diary.">
+            >
+            ["at0025"] = <
+                text = <"Standard drink definition">
+                description = <"Amount of alcohol defining a standard drink.">
+            >
+            ["at0027"] = <
+                text = <"Readiness for change">
+                description = <"Details about readiness to change consumption of alcohol.">
+            >
+            ["at0028"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents">
+            >
+            ["at0029"] = <
+                text = <"Beer">
+                description = <"Fermented beverage made from grain mash.">
+            >
+            ["at0030"] = <
+                text = <"Wine">
+                description = <"Fermented beverage made from grapes and sometimes other fruits.">
+            >
+            ["at0031"] = <
+                text = <"Cider">
+                description = <"Fermented beverage made from any fruit juice.">
+            >
+            ["at0032"] = <
+                text = <"Mead">
+                description = <"Fermented beverage made from honey, sometimes with various fruits spices, grains or hops.">
+            >
+            ["at0033"] = <
+                text = <"Pulque">
+                description = <"Fermented beverage made from 'honey water\" of cacti.">
+            >
+            ["at0034"] = <
+                text = <"Spirits">
+                description = <"Fermented beverage made by a distillation process. Usually has an alcohol content >20%. Includes liquers, cocktails and rectified spirits.">
+            >
+            ["at0035"] = <
+                text = <"Fortified wine">
+                description = <"Wine with added spirits.">
+            >
+            ["at0036"] = <
+                text = <"Description">
+                description = <"Narrative description about the consumption of the type of alcohol.">
+            >
+            ["at0037"] = <
+                text = <"Overall description">
+                description = <"Narrative description about the consumption of the all types of alcohol.">
+            >
+            ["at0038"] = <
+                text = <"Standard drinks consumed">
+                description = <"Number of standard drinks of all alcohol consumed.">
+            >
+            ["at9003"] = <
+                text = <"Mass">
+                description = <"Mass">
+            >
+            ["at9002"] = <
+                text = <"mean">
+                description = <"mean">
+            >
+            ["at9015"] = <
+                text = <"Qualified real">
+                description = <"Qualified real">
+            >
+            ["ac9014"] = <
+                text = <"Per type (synthesised)">
+                description = <"Details about consumption of a specified type of alcoholic beverage. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9003"] = <http://openehr.org/id/124>
+            ["at9002"] = <http://openehr.org/id/146>
+            ["at9015"] = <http://openehr.org/id/380>
+        >
+    >
+    value_sets = <
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0029", "at0030", "at0031", "at0032", "at0033", "at0034", "at0035">
+        >
+    >

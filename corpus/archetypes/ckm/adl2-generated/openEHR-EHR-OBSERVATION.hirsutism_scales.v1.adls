@@ -1,0 +1,1146 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=a0def596-d035-4b45-88ae-07a5b9b38525; build_uid=e22a0f2b-4636-4cd0-8f10-9dc35cdc5d47)
+    openEHR-EHR-OBSERVATION.hirsutism_scales.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Peter Fedorcsak, Vebjørn Arntzen">
+                ["organisation"] = <"Oslo University Hospital">
+                ["email"] = <"pfedorcs@ous-hf.no, varntzen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Peter Fedorcsak">
+        ["organisation"] = <"Oslo University Hospital">
+        ["email"] = <"peter.fedorcsak@medisin.uio.no">
+        ["date"] = <"2021-09-21">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Nelio Borrozzino, Prontmed, Brazil", "Peter Fedorcsak, University of Oslo, Norway", "Mikkel Johan Gaup Grønmo, Forvaltningssenter EPJ, Helse-Nord, Norway (openEHR Editor)", "Evelyn Hovenga, EJSH Consulting, Australia", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Jussara Rotzsch, Hospital Alemão Oswaldo Cruz, Brazil", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)", "Jan Mellembakken, Oslo universitetssykehus, Norway", "Elisabeth Qvigstad, Oslo universitetssykehus, Norway", "Tom Tanbo, Oslo universitetssykehus, Norway", "Eszter Vanky, St Olavs hospital, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"Ferriman, D. and J.D. Gallwey, CLINICAL ASSESSMENT OF BODY HAIR GROWTH IN WOMEN. The Journal of Clinical Endocrinology & Metabolism, 1961. 21(11): p. 1440-1447.">
+        ["2"] = <"Hatch, R., et al., Hirsutism: Implications, etiology, and management. American Journal of Obstetrics and Gynecology, 1981. 140(7): p. 815-830.">
+        ["3"] = <"Rosenfield, R.L., Clinical practice. Hirsutism. N Engl J Med, 2005. 353(24): p. 2578-88.">
+        ["4"] = <"The Practice Committee of the American Society for Reproductive Medicine. The evaluation and treatment of androgen excess. Fertility and Sterility, 2006. 86(5): p. S241-S247.">
+        ["5"] = <"Yildiz, B.O., et al., Visually scoring hirsutism. Human Reproduction Update, 2010. 16(1): p. 51-64.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"0FA8E5082BA1AF5203E8677528AF4D07">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"Skåringssystem for å vurdere hårvekst på opp til tretten kroppsområder, beregne total skår, og tallfeste androgensensitiv behåring hos kvinner.">
+            keywords = <"hirsutisme, hyperandrogenisme, hårvekst, terminalhår, virilisering, mannslignende hårvekst, androgensensitivt hår", ...>
+            use = <"Bruk for å registrere fordeling av androgensensitivt terminalhår hos kvinner.
+
+Denne arketypen har blitt designet for å kunne inkludere alle hirsutismeskåringer som er assosiert med den originale skåringen som opprinnelig ble foreslått av Ferriman og Gallwey, og som inkluderte elleve kroppsområder. Den utvidede versjonen inkluderer kinn og rumpeball i tillegg til de originale kroppsområdene. Den modifiserte Ferriman-Gallwey skår består av ni kroppsområder, og består av de ni originale minus underarm og legg.
+
+For å begrense antall informasjonselementer til den ønskede varianten av hirsutismeskår, fjern de uønskede elementene i et templat.">
+            misuse = <"Brukes ikke ved tilstander som kjennetegnes av generalisert eller økt hårvekst som ikke betraktes som hirsutisme.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record hair scores for up to thirteen body areas and a total sum of scores, in order to quantify excessive male-pattern hair growth in women.">
+            keywords = <"Ferriman Gallwey score, hirsutes, hirsutism, hyperandrogenism, body hair growth, terminal hair, virilization, male-pattern hair growth, androgen-sensitive hair growth, androgenic hair", ...>
+            use = <"Use to record pattern of growth of androgen-sensitive terminal hair in women.
+
+This archetype has been designed to be inclusive of all hirsutism scales that are associated with the original scale originally proposed by Ferriman and Gallwey which includes eleven body sites. The extended version is inclusive of all the original sites plus the sideburn area and the perineum. The modified Ferriman-Gallwey score, includes nine body sites, excluding the lower arm, lower leg, sideburn area and perineum.
+
+Use a template to constrain the data elements to represent the dataset for the required scale.">
+            misuse = <"Not to be used to record information about generalised or excessive hair growth that does not represent hirsutism.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Hirsutism scales
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Upper lip hair
+                                        value matches {
+                                            DV_ORDINAL[at9013] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0007]}],    -- None
+                                                    [{1}, {[at0008]}],    -- Grade 1
+                                                    [{2}, {[at0009]}],    -- Grade 2
+                                                    [{3}, {[at0010]}],    -- Grade 3
+                                                    [{4}, {[at0011]}]    -- Grade 4
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Chin hair
+                                        value matches {
+                                            DV_ORDINAL[at9014] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0020]}],    -- None
+                                                    [{1}, {[at0021]}],    -- Grade 1
+                                                    [{2}, {[at0022]}],    -- Grade 2
+                                                    [{3}, {[at0023]}],    -- Grade 3
+                                                    [{4}, {[at0024]}]    -- Grade 4
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0082] occurrences matches {0..1} matches {    -- Sideburn hair
+                                        value matches {
+                                            DV_ORDINAL[at9015] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0083]}],    -- None
+                                                    [{1}, {[at0084]}],    -- Grade 1
+                                                    [{2}, {[at0085]}],    -- Grade 2
+                                                    [{3}, {[at0086]}],    -- Grade 3
+                                                    [{4}, {[at0087]}]    -- Grade 4
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0025] occurrences matches {0..1} matches {    -- Chest hair
+                                        value matches {
+                                            DV_ORDINAL[at9016] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0026]}],    -- None
+                                                    [{1}, {[at0027]}],    -- Grade 1
+                                                    [{2}, {[at0028]}],    -- Grade 2
+                                                    [{3}, {[at0029]}],    -- Grade 3
+                                                    [{4}, {[at0030]}]    -- Grade 4
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0031] occurrences matches {0..1} matches {    -- Upper back hair
+                                        value matches {
+                                            DV_ORDINAL[at9017] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0032]}],    -- None
+                                                    [{1}, {[at0033]}],    -- Grade 1
+                                                    [{2}, {[at0034]}],    -- Grade 2
+                                                    [{3}, {[at0035]}],    -- Grade 3
+                                                    [{4}, {[at0036]}]    -- Grade 4
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0037] occurrences matches {0..1} matches {    -- Lower back hair
+                                        value matches {
+                                            DV_ORDINAL[at9018] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0038]}],    -- None
+                                                    [{1}, {[at0039]}],    -- Grade 1
+                                                    [{2}, {[at0040]}],    -- Grade 2
+                                                    [{3}, {[at0041]}],    -- Grade 3
+                                                    [{4}, {[at0042]}]    -- Grade 4
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0043] occurrences matches {0..1} matches {    -- Upper abdomen hair
+                                        value matches {
+                                            DV_ORDINAL[at9019] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0044]}],    -- None
+                                                    [{1}, {[at0045]}],    -- Grade 1
+                                                    [{2}, {[at0046]}],    -- Grade 2
+                                                    [{3}, {[at0047]}],    -- Grade 3
+                                                    [{4}, {[at0048]}]    -- Grade 4
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0049] occurrences matches {0..1} matches {    -- Lower abdomen hair
+                                        value matches {
+                                            DV_ORDINAL[at9020] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0050]}],    -- None
+                                                    [{1}, {[at0051]}],    -- Grade 1
+                                                    [{2}, {[at0052]}],    -- Grade 2
+                                                    [{3}, {[at0053]}],    -- Grade 3
+                                                    [{4}, {[at0054]}]    -- Grade 4
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0055] occurrences matches {0..1} matches {    -- Upper arm hair
+                                        value matches {
+                                            DV_ORDINAL[at9021] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0056]}],    -- None
+                                                    [{1}, {[at0057]}],    -- Grade 1
+                                                    [{2}, {[at0058]}],    -- Grade 2
+                                                    [{3}, {[at0059]}],    -- Grade 3
+                                                    [{4}, {[at0060]}]    -- Grade 4
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0061] occurrences matches {0..1} matches {    -- Lower arm hair
+                                        value matches {
+                                            DV_ORDINAL[at9022] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0062]}],    -- None
+                                                    [{1}, {[at0063]}],    -- Grade 1
+                                                    [{2}, {[at0064]}],    -- Grade 2
+                                                    [{3}, {[at0065]}],    -- Grade 3
+                                                    [{4}, {[at0066]}]    -- Grade 4
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0067] occurrences matches {0..1} matches {    -- Thigh hair
+                                        value matches {
+                                            DV_ORDINAL[at9023] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0068]}],    -- None
+                                                    [{1}, {[at0069]}],    -- Grade 1
+                                                    [{2}, {[at0070]}],    -- Grade 2
+                                                    [{3}, {[at0071]}],    -- Grade 3
+                                                    [{4}, {[at0072]}]    -- Grade 4
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0073] occurrences matches {0..1} matches {    -- Lower leg hair
+                                        value matches {
+                                            DV_ORDINAL[at9024] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0074]}],    -- None
+                                                    [{1}, {[at0075]}],    -- Grade 1
+                                                    [{2}, {[at0076]}],    -- Grade 2
+                                                    [{3}, {[at0077]}],    -- Grade 3
+                                                    [{4}, {[at0078]}]    -- Grade 4
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0091] occurrences matches {0..1} matches {    -- Perineum hair
+                                        value matches {
+                                            DV_ORDINAL[at9025] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0092]}],    -- None
+                                                    [{1}, {[at0093]}],    -- Grade 1
+                                                    [{2}, {[at0094]}],    -- Grade 2
+                                                    [{3}, {[at0095]}],    -- Grade 3
+                                                    [{4}, {[at0096]}]    -- Grade 4
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0079] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9026] matches {
+                                                magnitude matches {|0..52|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0089] occurrences matches {0..1} matches {    -- Ferriman-Gallwey score
+                                        value matches {
+                                            DV_COUNT[at9027] matches {
+                                                magnitude matches {|0..44|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0090] occurrences matches {0..1} matches {    -- Modified Ferriman-Gallwey score
+                                        value matches {
+                                            DV_COUNT[at9028] matches {
+                                                magnitude matches {|0..36|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0012] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0088] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Hirsutismeskåringer">
+                description = <"En arketype som består av varianter av samme skåringssystem for å kvantifisere fordeling og vekst av kroppsbehåring hos kvinner.">
+            >
+            ["at0002"] = <
+                text = <"Tidspunkt">
+                description = <"Spesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i en templat eller i en applikasjon.">
+            >
+            ["at0005"] = <
+                text = <"Behåring på overleppe">
+                description = <"Skår for hårvekst på overleppen.">
+            >
+            ["at0007"] = <
+                text = <"Ingen">
+                description = <"Ingen økt behåring.">
+            >
+            ["at0008"] = <
+                text = <"Grad 1">
+                description = <"Få hårstrå ved ytre leppekant.">
+            >
+            ["at0009"] = <
+                text = <"Grad 2">
+                description = <"Liten bart ved ytre leppekant.">
+            >
+            ["at0010"] = <
+                text = <"Grad 3">
+                description = <"Bart som dekker halvparten av overleppe mot ytre leppekant.">
+            >
+            ["at0011"] = <
+                text = <"Grad 4">
+                description = <"Bart som dekker hele overleppen.">
+            >
+            ["at0019"] = <
+                text = <"Behåring på hake">
+                description = <"Skår for hårvekst på haken.">
+            >
+            ["at0020"] = <
+                text = <"Ingen">
+                description = <"Ingen økt behåring.">
+            >
+            ["at0021"] = <
+                text = <"Grad 1">
+                description = <"Få spredte hårstrå.">
+            >
+            ["at0022"] = <
+                text = <"Grad 2">
+                description = <"Spredte hårstrå med enkelte fortetninger.">
+            >
+            ["at0023"] = <
+                text = <"Grad 3">
+                description = <"Komplett, lett dekkende hår.">
+            >
+            ["at0024"] = <
+                text = <"Grad 4">
+                description = <"Komplett, tett dekkende hår.">
+            >
+            ["at0025"] = <
+                text = <"Behåring på bryst">
+                description = <"Skår for hårvekst på bryst.">
+            >
+            ["at0026"] = <
+                text = <"Ingen">
+                description = <"Ingen økt behåring.">
+            >
+            ["at0027"] = <
+                text = <"Grad 1">
+                description = <"Behåring rundt brystvorte.">
+            >
+            ["at0028"] = <
+                text = <"Grad 2">
+                description = <"Behåring rundt brystvorte og mellom bryst.">
+            >
+            ["at0029"] = <
+                text = <"Grad 3">
+                description = <"Sammenhengende behåring som dekker tre-fjerdedel av område rundt brystvorter og mellom brystene.">
+            >
+            ["at0030"] = <
+                text = <"Grad 4">
+                description = <"Komplett dekkende behåring.">
+            >
+            ["at0031"] = <
+                text = <"Behåring på øvre rygg">
+                description = <"Skår for hårvekst på øvre del av ryggen.">
+            >
+            ["at0032"] = <
+                text = <"Ingen">
+                description = <"Ingen økt behåring.">
+            >
+            ["at0033"] = <
+                text = <"Grad 1">
+                description = <"Få spredte hårstrå.">
+            >
+            ["at0034"] = <
+                text = <"Grad 2">
+                description = <"Noe mer, spredt behåring.">
+            >
+            ["at0035"] = <
+                text = <"Grad 3">
+                description = <"Komplett, lett dekkende hår.">
+            >
+            ["at0036"] = <
+                text = <"Grad 4">
+                description = <"Komplett, tett dekkende hår.">
+            >
+            ["at0037"] = <
+                text = <"Behåring på nedre rygg">
+                description = <"Skår for hårvekst på nedre del av ryggen.">
+            >
+            ["at0038"] = <
+                text = <"Ingen">
+                description = <"Ingen økt behåring.">
+            >
+            ["at0039"] = <
+                text = <"Grad 1">
+                description = <"Hårtust over korsbeinet.">
+            >
+            ["at0040"] = <
+                text = <"Grad 2">
+                description = <"Hårtust over og ved siden av korsbeinet.">
+            >
+            ["at0041"] = <
+                text = <"Grad 3">
+                description = <"Tre-fjerdedel dekkende hår.">
+            >
+            ["at0042"] = <
+                text = <"Grad 4">
+                description = <"Komplett dekkende hår.">
+            >
+            ["at0043"] = <
+                text = <"Behåring på øvre mage">
+                description = <"Skår for hårvekst på øvre del av magen.">
+            >
+            ["at0044"] = <
+                text = <"Ingen">
+                description = <"Ingen økt behåring.">
+            >
+            ["at0045"] = <
+                text = <"Grad 1">
+                description = <"Enkelte hårstrå i midtlinjen.">
+            >
+            ["at0046"] = <
+                text = <"Grad 2">
+                description = <"Mer hår i midtlinjen.">
+            >
+            ["at0047"] = <
+                text = <"Grad 3">
+                description = <"Halvveis dekkende behåring.">
+            >
+            ["at0048"] = <
+                text = <"Grad 4">
+                description = <"Fullt dekkende hår.">
+            >
+            ["at0049"] = <
+                text = <"Behåring på nedre mage">
+                description = <"Skår for hårvekst på nedre del av magen.">
+            >
+            ["at0050"] = <
+                text = <"Ingen">
+                description = <"Ingen økt behåring.">
+            >
+            ["at0051"] = <
+                text = <"Grad 1">
+                description = <"Enkelte hårstrå i midtlinjen.">
+            >
+            ["at0052"] = <
+                text = <"Grad 2">
+                description = <"Linje av behåring i midtlinjen.">
+            >
+            ["at0053"] = <
+                text = <"Grad 3">
+                description = <"Stripe av behåring i midtlinjen.">
+            >
+            ["at0054"] = <
+                text = <"Grad 4">
+                description = <"Omvendt V-formet hårvekst.">
+            >
+            ["at0055"] = <
+                text = <"Behåring på overarm">
+                description = <"Skår for hårvekst på overarm.">
+            >
+            ["at0056"] = <
+                text = <"Ingen">
+                description = <"Ingen økt behåring.">
+            >
+            ["at0057"] = <
+                text = <"Grad 1">
+                description = <"Sparsom hårvekst som ikke dekker mer enn fjerdedel av lemmets overflate.">
+            >
+            ["at0058"] = <
+                text = <"Grad 2">
+                description = <"Mer enn sparsom hårvekst, inkomplett dekning.">
+            >
+            ["at0059"] = <
+                text = <"Grad 3">
+                description = <"Komplett, lett dekkende hår.">
+            >
+            ["at0060"] = <
+                text = <"Grad 4">
+                description = <"Komplett, tett dekkende hår.">
+            >
+            ["at0061"] = <
+                text = <"Behåring på underarm">
+                description = <"Skår for hårvekst på underarm.">
+            >
+            ["at0062"] = <
+                text = <"Ingen">
+                description = <"Ingen økt behåring.">
+            >
+            ["at0063"] = <
+                text = <"Grad 1">
+                description = <"Lett dekkende hår på baksiden.">
+            >
+            ["at0064"] = <
+                text = <"Grad 2">
+                description = <"Komplett, lett dekkende hår på baksiden.">
+            >
+            ["at0065"] = <
+                text = <"Grad 3">
+                description = <"Tett dekkende hår på baksiden.">
+            >
+            ["at0066"] = <
+                text = <"Grad 4">
+                description = <"Komplett, tett dekkende hår på baksiden.">
+            >
+            ["at0067"] = <
+                text = <"Behåring på lår">
+                description = <"Skår for hårvekst på lår.">
+            >
+            ["at0068"] = <
+                text = <"Ingen">
+                description = <"Ingen økt behåring.">
+            >
+            ["at0069"] = <
+                text = <"Grad 1">
+                description = <"Sparsom hårvekst som ikke dekker mer enn en fjerdedel av kroppsdelens overflate.">
+            >
+            ["at0070"] = <
+                text = <"Grad 2">
+                description = <"Mer enn sparsom hårvekst, inkomplett dekning.">
+            >
+            ["at0071"] = <
+                text = <"Grad 3">
+                description = <"Komplett, lett dekkende hår.">
+            >
+            ["at0072"] = <
+                text = <"Grad 4">
+                description = <"Komplett, tett dekkende hår.">
+            >
+            ["at0073"] = <
+                text = <"Behåring på legg">
+                description = <"Skår for hårvekst på legg.">
+            >
+            ["at0074"] = <
+                text = <"Ingen">
+                description = <"Ingen økt behåring.">
+            >
+            ["at0075"] = <
+                text = <"Grad 1">
+                description = <"Sparsom hårvekst som ikke dekker mer enn en fjerdedel av kroppsdelens overflate.">
+            >
+            ["at0076"] = <
+                text = <"Grad 2">
+                description = <"Mer enn sparsom hårvekst, inkomplett dekning.">
+            >
+            ["at0077"] = <
+                text = <"Grad 3">
+                description = <"Komplett, lett dekkende hår.">
+            >
+            ["at0078"] = <
+                text = <"Grad 4">
+                description = <"Komplett, tett dekkende hår.">
+            >
+            ["at0079"] = <
+                text = <"Totalskår">
+                description = <"Summen av skårene for behåring på hvert enkelt kroppsområde.">
+            >
+            ["at0082"] = <
+                text = <"Behåring på kinn">
+                description = <"Skår for hårvekst på kinn.">
+            >
+            ["at0083"] = <
+                text = <"Ingen">
+                description = <"Ingen økt behåring.">
+            >
+            ["at0084"] = <
+                text = <"Grad 1">
+                description = <"Få spredte hårstrå.">
+            >
+            ["at0085"] = <
+                text = <"Grad 2">
+                description = <"Spredte hårstrå med enkelte fortetninger.">
+            >
+            ["at0086"] = <
+                text = <"Grad 3">
+                description = <"Komplett, lett dekkende hår.">
+            >
+            ["at0087"] = <
+                text = <"Grad 4">
+                description = <"Komplett, tett dekkende hår.">
+            >
+            ["at0088"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0089"] = <
+                text = <"Ferriman-Gallwey skår">
+                description = <"Summen av skårene for behåring på hvert enkelt av de elleve kroppsområdene.">
+                comment = <"Summen av skårene for behåring på hvert enkelt av de elleve kroppsområdene opprinnelig foreslått av Ferriman og Gallwey, dvs unntatt kinn og perineum.">
+            >
+            ["at0090"] = <
+                text = <"Modifisert Ferriman-Gallwey skår">
+                description = <"Summen av skårene for behåring på hvert enkelt av de ni kroppsområdene.">
+                comment = <"Summen av skårene for behåring på hvert enkelt av de ni kroppsområdene, unntatt underarm, legg, kinn og perineum.">
+            >
+            ["at0091"] = <
+                text = <"Behåring på perineum">
+                description = <"Skår for hårvekst på perineum.">
+            >
+            ["at0092"] = <
+                text = <"Ingen">
+                description = <"Ingen økt behåring.">
+            >
+            ["at0093"] = <
+                text = <"Grad 1">
+                description = <"Hår rundt endetarmsåpningen.">
+            >
+            ["at0094"] = <
+                text = <"Grad 2">
+                description = <"Hårvekst utvidet mot rumpesprekk.">
+            >
+            ["at0095"] = <
+                text = <"Grad 3">
+                description = <"Trefjerdedels dekning av rumpeballene.">
+            >
+            ["at0096"] = <
+                text = <"Grad 4">
+                description = <"Komplett dekning av rumpeballene.">
+            >
+            ["ac9028"] = <
+                text = <"Behåring på overleppe (synthesised)">
+                description = <"Skår for hårvekst på overleppen. (synthesised)">
+            >
+            ["ac9029"] = <
+                text = <"Behåring på hake (synthesised)">
+                description = <"Skår for hårvekst på haken. (synthesised)">
+            >
+            ["ac9030"] = <
+                text = <"Behåring på kinn (synthesised)">
+                description = <"Skår for hårvekst på kinn. (synthesised)">
+            >
+            ["ac9031"] = <
+                text = <"Behåring på bryst (synthesised)">
+                description = <"Skår for hårvekst på bryst. (synthesised)">
+            >
+            ["ac9032"] = <
+                text = <"Behåring på øvre rygg (synthesised)">
+                description = <"Skår for hårvekst på øvre del av ryggen. (synthesised)">
+            >
+            ["ac9033"] = <
+                text = <"Behåring på nedre rygg (synthesised)">
+                description = <"Skår for hårvekst på nedre del av ryggen. (synthesised)">
+            >
+            ["ac9034"] = <
+                text = <"Behåring på øvre mage (synthesised)">
+                description = <"Skår for hårvekst på øvre del av magen. (synthesised)">
+            >
+            ["ac9035"] = <
+                text = <"Behåring på nedre mage (synthesised)">
+                description = <"Skår for hårvekst på nedre del av magen. (synthesised)">
+            >
+            ["ac9036"] = <
+                text = <"Behåring på overarm (synthesised)">
+                description = <"Skår for hårvekst på overarm. (synthesised)">
+            >
+            ["ac9037"] = <
+                text = <"Behåring på underarm (synthesised)">
+                description = <"Skår for hårvekst på underarm. (synthesised)">
+            >
+            ["ac9038"] = <
+                text = <"Behåring på lår (synthesised)">
+                description = <"Skår for hårvekst på lår. (synthesised)">
+            >
+            ["ac9039"] = <
+                text = <"Behåring på legg (synthesised)">
+                description = <"Skår for hårvekst på legg. (synthesised)">
+            >
+            ["ac9040"] = <
+                text = <"Behåring på perineum (synthesised)">
+                description = <"Skår for hårvekst på perineum. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Hirsutism scales">
+                description = <"A grouping of related assessment scales used to quantify distribution and growth of body hair in women.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0005"] = <
+                text = <"Upper lip hair">
+                description = <"Hair score on the upper lip.">
+            >
+            ["at0007"] = <
+                text = <"None">
+                description = <"No excess hair.">
+            >
+            ["at0008"] = <
+                text = <"Grade 1">
+                description = <"A few hairs at outer margin.">
+            >
+            ["at0009"] = <
+                text = <"Grade 2">
+                description = <"A small moustache at outer margin.">
+            >
+            ["at0010"] = <
+                text = <"Grade 3">
+                description = <"A moustache extending halfway from outer margin.">
+            >
+            ["at0011"] = <
+                text = <"Grade 4">
+                description = <"A moustache extending to mid-line.">
+            >
+            ["at0019"] = <
+                text = <"Chin hair">
+                description = <"Hair score on the chin.">
+            >
+            ["at0020"] = <
+                text = <"None">
+                description = <"No excess hair.">
+            >
+            ["at0021"] = <
+                text = <"Grade 1">
+                description = <"A few scattered hairs.">
+            >
+            ["at0022"] = <
+                text = <"Grade 2">
+                description = <"Scattered hairs with small concentrations.">
+            >
+            ["at0023"] = <
+                text = <"Grade 3">
+                description = <"Complete light cover.">
+            >
+            ["at0024"] = <
+                text = <"Grade 4">
+                description = <"Complete heavy cover.">
+            >
+            ["at0025"] = <
+                text = <"Chest hair">
+                description = <"Hair score on the chest.">
+            >
+            ["at0026"] = <
+                text = <"None">
+                description = <"No excess hair.">
+            >
+            ["at0027"] = <
+                text = <"Grade 1">
+                description = <"Circumareolar hairs.">
+            >
+            ["at0028"] = <
+                text = <"Grade 2">
+                description = <"Circumareolar hairs with midline hair in addition.">
+            >
+            ["at0029"] = <
+                text = <"Grade 3">
+                description = <"Fusion of circumareolar and midline areas, with three-quarter cover.">
+            >
+            ["at0030"] = <
+                text = <"Grade 4">
+                description = <"Complete cover.">
+            >
+            ["at0031"] = <
+                text = <"Upper back hair">
+                description = <"Hair score on the upper back.">
+            >
+            ["at0032"] = <
+                text = <"None">
+                description = <"No excess hair.">
+            >
+            ["at0033"] = <
+                text = <"Grade 1">
+                description = <"A few scattered hairs.">
+            >
+            ["at0034"] = <
+                text = <"Grade 2">
+                description = <"Rather more hairs, still scattered.">
+            >
+            ["at0035"] = <
+                text = <"Grade 3">
+                description = <"Complete light cover.">
+            >
+            ["at0036"] = <
+                text = <"Grade 4">
+                description = <"Complete heavy cover.">
+            >
+            ["at0037"] = <
+                text = <"Lower back hair">
+                description = <"Hair score on the lower back.">
+            >
+            ["at0038"] = <
+                text = <"None">
+                description = <"No excess hair.">
+            >
+            ["at0039"] = <
+                text = <"Grade 1">
+                description = <"A sacral tuft of hair.">
+            >
+            ["at0040"] = <
+                text = <"Grade 2">
+                description = <"A sacral tuft of hair with some lateral extension.">
+            >
+            ["at0041"] = <
+                text = <"Grade 3">
+                description = <"Three-quarter cover.">
+            >
+            ["at0042"] = <
+                text = <"Grade 4">
+                description = <"Complete cover.">
+            >
+            ["at0043"] = <
+                text = <"Upper abdomen hair">
+                description = <"Hair score on the upper abdomen.">
+            >
+            ["at0044"] = <
+                text = <"None">
+                description = <"No excess hair.">
+            >
+            ["at0045"] = <
+                text = <"Grade 1">
+                description = <"A few mid-line hairs.">
+            >
+            ["at0046"] = <
+                text = <"Grade 2">
+                description = <"Rather more hairs, still mid-line.">
+            >
+            ["at0047"] = <
+                text = <"Grade 3">
+                description = <"Half cover.">
+            >
+            ["at0048"] = <
+                text = <"Grade 4">
+                description = <"Full cover.">
+            >
+            ["at0049"] = <
+                text = <"Lower abdomen hair">
+                description = <"Hair score on the lower abdomen.">
+            >
+            ["at0050"] = <
+                text = <"None">
+                description = <"No excess hair.">
+            >
+            ["at0051"] = <
+                text = <"Grade 1">
+                description = <"A few mid-line hairs.">
+            >
+            ["at0052"] = <
+                text = <"Grade 2">
+                description = <"A mid-line streak of hair.">
+            >
+            ["at0053"] = <
+                text = <"Grade 3">
+                description = <"A mid-line band of hair.">
+            >
+            ["at0054"] = <
+                text = <"Grade 4">
+                description = <"An inverted V-shaped growth.">
+            >
+            ["at0055"] = <
+                text = <"Upper arm hair">
+                description = <"Hair score on the upper arms.">
+            >
+            ["at0056"] = <
+                text = <"None">
+                description = <"No excess hair.">
+            >
+            ["at0057"] = <
+                text = <"Grade 1">
+                description = <"Sparse growth not affecting more than a quarter of the limb surface.">
+            >
+            ["at0058"] = <
+                text = <"Grade 2">
+                description = <"More than sparse growth, cover still incomplete.">
+            >
+            ["at0059"] = <
+                text = <"Grade 3">
+                description = <"Complete light cover.">
+            >
+            ["at0060"] = <
+                text = <"Grade 4">
+                description = <"Complete heavy cover.">
+            >
+            ["at0061"] = <
+                text = <"Lower arm hair">
+                description = <"Hair score on the lower arms.">
+            >
+            ["at0062"] = <
+                text = <"None">
+                description = <"No excess hair.">
+            >
+            ["at0063"] = <
+                text = <"Grade 1">
+                description = <"Light cover of dorsal surface.">
+            >
+            ["at0064"] = <
+                text = <"Grade 2">
+                description = <"Complete light cover of dorsal surface.">
+            >
+            ["at0065"] = <
+                text = <"Grade 3">
+                description = <"Heavy cover of dorsal surface.">
+            >
+            ["at0066"] = <
+                text = <"Grade 4">
+                description = <"Complete heavy cover of dorsal surface.">
+            >
+            ["at0067"] = <
+                text = <"Thigh hair">
+                description = <"Hair score on the thighs.">
+            >
+            ["at0068"] = <
+                text = <"None">
+                description = <"No excess hair.">
+            >
+            ["at0069"] = <
+                text = <"Grade 1">
+                description = <"Sparse growth affecting not more than a quarter of the limb surface.">
+            >
+            ["at0070"] = <
+                text = <"Grade 2">
+                description = <"More than sparse growth, cover still incomplete.">
+            >
+            ["at0071"] = <
+                text = <"Grade 3">
+                description = <"Complete light cover.">
+            >
+            ["at0072"] = <
+                text = <"Grade 4">
+                description = <"Complete heavy cover.">
+            >
+            ["at0073"] = <
+                text = <"Lower leg hair">
+                description = <"Hair score on the lower legs.">
+            >
+            ["at0074"] = <
+                text = <"None">
+                description = <"No excess hair.">
+            >
+            ["at0075"] = <
+                text = <"Grade 1">
+                description = <"Sparse growth affecting not more than a quarter of the limb surface.">
+            >
+            ["at0076"] = <
+                text = <"Grade 2">
+                description = <"More than sparse growth, cover still incomplete.">
+            >
+            ["at0077"] = <
+                text = <"Grade 3">
+                description = <"Complete light growth.">
+            >
+            ["at0078"] = <
+                text = <"Grade 4">
+                description = <"Complete heavy growth.">
+            >
+            ["at0079"] = <
+                text = <"Total score">
+                description = <"The total sum of the hair scores recorded for each of the body area.">
+            >
+            ["at0082"] = <
+                text = <"Sideburn hair">
+                description = <"Hair score on the sideburns.">
+            >
+            ["at0083"] = <
+                text = <"None">
+                description = <"No excess hair.">
+            >
+            ["at0084"] = <
+                text = <"Grade 1">
+                description = <"A few scattered hairs.">
+            >
+            ["at0085"] = <
+                text = <"Grade 2">
+                description = <"Scattered hairs with small concentrations.">
+            >
+            ["at0086"] = <
+                text = <"Grade 3">
+                description = <"Complete light cover.">
+            >
+            ["at0087"] = <
+                text = <"Grade 4">
+                description = <"Complete heavy cover.">
+            >
+            ["at0088"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR.">
+            >
+            ["at0089"] = <
+                text = <"Ferriman-Gallwey score">
+                description = <"The total sum of the hair scores recorded for each of eleven body areas.">
+                comment = <"The total sum of the hair scores recorded for each of eleven body areas originally proposed by Ferriman and Gallwey (excluding scores for the sideburn area and the perineum).">
+            >
+            ["at0090"] = <
+                text = <"Modified Ferriman-Gallwey score">
+                description = <"The total sum of the hair scores recorded for each of nine body areas.">
+                comment = <"The total sum of the hair scores recorded for each of nine body areas (excluding scores for the lower arm, lower leg, sideburn area and perineum).">
+            >
+            ["at0091"] = <
+                text = <"Perineum hair">
+                description = <"Hair score on the perineum.">
+            >
+            ["at0092"] = <
+                text = <"None">
+                description = <"No excess hair.">
+            >
+            ["at0093"] = <
+                text = <"Grade 1">
+                description = <"Perianal terminal hair.">
+            >
+            ["at0094"] = <
+                text = <"Grade 2">
+                description = <"Lateral extension of terminal hair to edge of gluteal cleft.">
+            >
+            ["at0095"] = <
+                text = <"Grade 3">
+                description = <"Three-quarter coverage of buttocks.">
+            >
+            ["at0096"] = <
+                text = <"Grade 4">
+                description = <"Complete coverage of buttocks.">
+            >
+            ["ac9028"] = <
+                text = <"Upper lip hair (synthesised)">
+                description = <"Hair score on the upper lip. (synthesised)">
+            >
+            ["ac9029"] = <
+                text = <"Chin hair (synthesised)">
+                description = <"Hair score on the chin. (synthesised)">
+            >
+            ["ac9030"] = <
+                text = <"Sideburn hair (synthesised)">
+                description = <"Hair score on the sideburns. (synthesised)">
+            >
+            ["ac9031"] = <
+                text = <"Chest hair (synthesised)">
+                description = <"Hair score on the chest. (synthesised)">
+            >
+            ["ac9032"] = <
+                text = <"Upper back hair (synthesised)">
+                description = <"Hair score on the upper back. (synthesised)">
+            >
+            ["ac9033"] = <
+                text = <"Lower back hair (synthesised)">
+                description = <"Hair score on the lower back. (synthesised)">
+            >
+            ["ac9034"] = <
+                text = <"Upper abdomen hair (synthesised)">
+                description = <"Hair score on the upper abdomen. (synthesised)">
+            >
+            ["ac9035"] = <
+                text = <"Lower abdomen hair (synthesised)">
+                description = <"Hair score on the lower abdomen. (synthesised)">
+            >
+            ["ac9036"] = <
+                text = <"Upper arm hair (synthesised)">
+                description = <"Hair score on the upper arms. (synthesised)">
+            >
+            ["ac9037"] = <
+                text = <"Lower arm hair (synthesised)">
+                description = <"Hair score on the lower arms. (synthesised)">
+            >
+            ["ac9038"] = <
+                text = <"Thigh hair (synthesised)">
+                description = <"Hair score on the thighs. (synthesised)">
+            >
+            ["ac9039"] = <
+                text = <"Lower leg hair (synthesised)">
+                description = <"Hair score on the lower legs. (synthesised)">
+            >
+            ["ac9040"] = <
+                text = <"Perineum hair (synthesised)">
+                description = <"Hair score on the perineum. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0005"] = <http://snomed.info/id/302095008>
+            ["at0019"] = <http://snomed.info/id/302096009>
+            ["at0025"] = <http://snomed.info/id/302098005>
+            ["at0031"] = <http://snomed.info/id/302101009>
+            ["at0037"] = <http://snomed.info/id/302102002>
+            ["at0043"] = <http://snomed.info/id/302099002>
+            ["at0049"] = <http://snomed.info/id/302100005>
+            ["at0055"] = <http://snomed.info/id/302103007>
+            ["at0061"] = <http://snomed.info/id/302104001>
+            ["at0067"] = <http://snomed.info/id/302105000>
+            ["at0073"] = <http://snomed.info/id/302106004>
+            ["at0082"] = <http://snomed.info/id/302097000>
+        >
+    >
+    value_sets = <
+        ["ac9028"] = <
+            id = <"ac9028">
+            members = <"at0007", "at0008", "at0009", "at0010", "at0011">
+        >
+        ["ac9031"] = <
+            id = <"ac9031">
+            members = <"at0026", "at0027", "at0028", "at0029", "at0030">
+        >
+        ["ac9030"] = <
+            id = <"ac9030">
+            members = <"at0083", "at0084", "at0085", "at0086", "at0087">
+        >
+        ["ac9035"] = <
+            id = <"ac9035">
+            members = <"at0050", "at0051", "at0052", "at0053", "at0054">
+        >
+        ["ac9034"] = <
+            id = <"ac9034">
+            members = <"at0044", "at0045", "at0046", "at0047", "at0048">
+        >
+        ["ac9033"] = <
+            id = <"ac9033">
+            members = <"at0038", "at0039", "at0040", "at0041", "at0042">
+        >
+        ["ac9032"] = <
+            id = <"ac9032">
+            members = <"at0032", "at0033", "at0034", "at0035", "at0036">
+        >
+        ["ac9039"] = <
+            id = <"ac9039">
+            members = <"at0074", "at0075", "at0076", "at0077", "at0078">
+        >
+        ["ac9038"] = <
+            id = <"ac9038">
+            members = <"at0068", "at0069", "at0070", "at0071", "at0072">
+        >
+        ["ac9037"] = <
+            id = <"ac9037">
+            members = <"at0062", "at0063", "at0064", "at0065", "at0066">
+        >
+        ["ac9036"] = <
+            id = <"ac9036">
+            members = <"at0056", "at0057", "at0058", "at0059", "at0060">
+        >
+        ["ac9029"] = <
+            id = <"ac9029">
+            members = <"at0020", "at0021", "at0022", "at0023", "at0024">
+        >
+        ["ac9040"] = <
+            id = <"ac9040">
+            members = <"at0092", "at0093", "at0094", "at0095", "at0096">
+        >
+    >

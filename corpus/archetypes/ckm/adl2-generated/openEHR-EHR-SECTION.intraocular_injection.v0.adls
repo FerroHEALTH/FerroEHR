@@ -1,0 +1,108 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=4e776c55-6e63-474c-a93c-5cc9ff1cee33; build_uid=c164a3dd-1bde-4a8e-a259-a66e3f1ea7a7)
+    openEHR-EHR-SECTION.intraocular_injection.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Aitor Eguzkitza">
+        ["organisation"] = <"Universidad Pública de Navarra - Complejo Hospitalario de Navarra">
+        ["email"] = <"aitor.eguzkiza@unavarra.es">
+        ["date"] = <"2015-06-27">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"José Andonegui, Hospital de Navarra, jose.andonegui.navarro@cfnavarra.es", "Luis Serrano, Universidad Pública de Navarra (UPNA), lserrano@unavarra.es", "Jesús D. Trigo, Universidad Pública de Navarra (UPNA), jesusdaniel.trigo@unavarra.es">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"78E345F8B4E8B318F90A5A2A9ABBFCB0">
+    >
+    details = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registrar la información clínica correspondiente al procedimiento de inyección intraocular, desde que ésta es programada hasta que la intervención es llevada a cabo por un oftalmólogo.">
+            use = <"Se podría utilizar cada vez que un proceso clínico complejo incluye el procedimiento de inyección intravítrea.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Register the clinical details for the procedure of intraocular injections, from it is scheduled until the intervention is conducted by an ophthalmologist.">
+            keywords = <"intraocular", "injection">
+            use = <"To be used whenever a complex clinical process comprehends the procedure of intravitreal injection.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    SECTION[at0000] matches {    -- Intraocular injection
+        items cardinality matches {1..*; unordered} matches {
+            allow_archetype INSTRUCTION[at0001] matches {    -- Intravitreal injection order
+                include
+                    archetype_id/value matches {/openEHR-EHR-INSTRUCTION\.medication_order(-[a-zA-Z0-9_]+)*\.v([0-9]+)/}
+            }
+            allow_archetype ACTION[at0002] matches {    -- Intravitreal injection procedure
+                include
+                    archetype_id/value matches {/openEHR-EHR-ACTION\.medication(-[a-zA-Z0-9_]+)*\.v([0-9]+)/}
+            }
+            allow_archetype EVALUATION[at0003] matches {    -- Adverse reaction
+                include
+                    archetype_id/value matches {/openEHR-EHR-EVALUATION\.adverse_reaction_risk(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                exclude
+                    archetype_id/value matches {/.*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Intraocular injection">
+                description = <"Manages the process of planning and then carrying out an ophthalmic treatment by means of intraocular injection.">
+            >
+            ["at0001"] = <
+                text = <"Intravitreal injection order">
+                description = <"Details about the prescription of intravitreal injections.">
+            >
+            ["at0002"] = <
+                text = <"Intravitreal injection procedure">
+                description = <"Details of any administration of intravitreal injection conducted.">
+            >
+            ["at0003"] = <
+                text = <"Adverse reaction">
+                description = <"Any adverse reaction identified as a consequence of intravitreal injection procedure.">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Intraocular injection">
+                description = <"Gestiona la planificación y posterior realización de un tratamiento oftalmológico que incluya la inyección intraocular.">
+            >
+            ["at0001"] = <
+                text = <"Solicitud de medicación">
+                description = <"Detalles de un medicamento, vacuna o cualquier otro elemento terapéutico acompañado de instrucciones para su uso.">
+            >
+            ["at0002"] = <
+                text = <"Medicación realizada">
+                description = <"Acción derivada de una orden de medicación creada por un médico que especifique qué medicamentos tomar, cuándo, por cuánto tiempo, etc.">
+            >
+            ["at0003"] = <
+                text = <"Reacción adversa">
+                description = <"Cualquier reacción adversa identificada como consecuencia del procedimiento de inyección intravítrea.">
+            >
+        >
+    >

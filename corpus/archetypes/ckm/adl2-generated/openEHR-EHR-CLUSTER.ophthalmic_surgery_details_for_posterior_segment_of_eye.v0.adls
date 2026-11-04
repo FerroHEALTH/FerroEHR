@@ -1,0 +1,167 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=724396eb-b146-480d-83c5-adfd54ec38ed; build_uid=a3070c74-5263-4a1b-85a7-8ffd6e3ee653)
+    openEHR-EHR-CLUSTER.ophthalmic_surgery_details_for_posterior_segment_of_eye.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Aitor Eguzkitza">
+        ["organisation"] = <"Universidad Pública de Navarra - Complejo Hospitalario de Navarra">
+        ["email"] = <"aitor.eguzkiza@unavarra.es">
+        ["date"] = <"2014-05-23">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"C7204C677242410C8AF623AA0D80398E">
+    >
+    details = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registro de detalles específicos acerca de procedimientos quirúrgicos destinados a tratar el segmento posterior del ojo.">
+            use = <"*(en)">
+            misuse = <"*(en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Registering specific details about surgical procedures aimed to treat the posterior segment of eye.">
+            keywords = <"surgery", "posterior segment of eye">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Ophthalmic surgery details for posterior segment of eye
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Laterality
+                value matches {
+                    DV_CODED_TEXT[at9001] matches {
+                        defining_code matches {[ac9000]}    -- Laterality (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Operative procedure
+                value matches {
+                    DV_CODED_TEXT[at9002] matches {
+                        defining_code matches {[ac2]}    -- Operative procedures on posterior segment of eye
+                    }
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Comments
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Ophthalmic surgery details for posterior segment of eye">
+                description = <"Defines specific details concerning any operative procedure assigned to the posterior segment of the eye.">
+            >
+            ["at0001"] = <
+                text = <"Laterality">
+                description = <"Eyes in which the surgery is carried out.">
+            >
+            ["at0002"] = <
+                text = <"Left eye">
+                description = <"Left eye observation.">
+            >
+            ["at0003"] = <
+                text = <"Right eye">
+                description = <"Right eye observation.">
+            >
+            ["at0004"] = <
+                text = <"Both eyes">
+                description = <"Treatment performed on both eyes of the patient.">
+            >
+            ["at0005"] = <
+                text = <"Operative procedure">
+                description = <"Defines the type of operative procedure to perform.">
+            >
+            ["at0007"] = <
+                text = <"Comments">
+                description = <"Comments directed to surgeons describing specific characteristics concerning the intervention.">
+            >
+            ["ac2"] = <
+                text = <"Operative procedures on posterior segment of eye">
+                description = <"List of operative procedures on the posterior segment of eye.">
+            >
+            ["ac9000"] = <
+                text = <"Laterality (synthesised)">
+                description = <"Eyes in which the surgery is carried out. (synthesised)">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Detalles de cirugía oftálmica en el segmento posterior del ojo">
+                description = <"Define detalles específicos concernientes a cualquier procedimiento quirúrgico asignado al segmento posterior del ojo.">
+            >
+            ["at0001"] = <
+                text = <"Lateralidad">
+                description = <"Ojos en los que se lleva a cabo la cirugía.">
+            >
+            ["at0002"] = <
+                text = <"Ojo izquierdo">
+                description = <"Se observa el ojo izquierdo.">
+            >
+            ["at0003"] = <
+                text = <"Ojo derecho">
+                description = <"Se observa el ojo derecho.">
+            >
+            ["at0004"] = <
+                text = <"Ambos ojos">
+                description = <"La intervención se realiza en ambos ojos del paciente.">
+            >
+            ["at0005"] = <
+                text = <"Procedimiento quirúrgico">
+                description = <"Define el tipo de procedimiento quirúrgico a realizar.">
+            >
+            ["at0007"] = <
+                text = <"Comentarios">
+                description = <"Comentarios dirigidos a los cirujanos para especificar particularidades relativas a la intervención.">
+            >
+            ["ac2"] = <
+                text = <"*New constraint(en)">
+                description = <"**(en)">
+            >
+            ["ac9000"] = <
+                text = <"Lateralidad (synthesised)">
+                description = <"Ojos en los que se lleva a cabo la cirugía. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0001"] = <http://snomed.info/id/272741003>
+            ["at0002"] = <http://snomed.info/id/362503005>
+            ["at0003"] = <http://snomed.info/id/362502000>
+            ["at0004"] = <http://snomed.info/id/362508001>
+            ["at0005"] = <http://snomed.info/id/17348004>
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0002", "at0003", "at0004">
+        >
+    >

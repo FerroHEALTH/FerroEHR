@@ -1,0 +1,345 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=be6d55ad-69d4-4441-89d2-d4fd7cbbfb3c; build_uid=7789c947-6a4a-43ad-822a-6158833e9c95)
+    openEHR-EHR-ADMIN_ENTRY.citizenship.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Karsten Ovretveit">
+        ["organisation"] = <"Helse Vest IKT">
+        ["email"] = <"karsten.ovretveit@helse-vest-ikt.no">
+        ["date"] = <"2026-02-04">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo universitetssykehus HF, Norway (openEHR Norway redaktør)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Norway redaktør)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Gunn Elin Blakkisrud, DIPS ASA, Norway", "Kåre Flø, DIPS ASA, Norway", "Aleksander Furnes, Helse Nord IKT, Norway (openEHR Editor)", "Ciprian Gerstenberger, HN IKT, Norway", "Heather Grain, Llewelyn Grain Informatics, Australia", "Marte Vassli Gullesen, HNIKT, Norway", "Atle Hansen, Universitetssykehuset Nord-Norge, Norway", "Grete Hovde Bøe, Sykehuspartner HF, Norway (openEHR Editor)", "Elin Kristiansen, Sykehuspartner HF, Norway (openEHR Editor)", "Kanika Kuwelker, Helse Vest IKT, Norway (openEHR Norway redaktør)", "Eli Larsen, UNN, Norway (openEHR Editor)", "Liv Laugen, Oslo universitetssykehus, Norway (openEHR Norway redaktør)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Ruth Lochan, Akademiska Sjukhuset Uppsala, Sweden", "Hanne Marte Bårholm, Helse Vest IKT, Norway (openEHR Norway redaktør)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Martin Milde, Helse Vest IKT, Norway (openEHR Norway redaktør)", "Olha Nikolaieva, University Hospital Basel, Switzerland", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Ruben Rognmo, Helse Nord IKT, Norway", "Terje Sagmyr, Helse Vest IKT, Norway (openEHR Norway redaktør)", "Lena Schell-Majoor, University of Oldenburg, Germany", "Nyree Taylor, CSIRO, Australia", "John Tore Valand, Helse Vest IKT, Norway (openEHR Norway redaktør)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Norway redaktør)", "Lin Zhang, Freelancer, China", "Karsten Øvretveit, Helse Vest IKT, Norway (openEHR Norway redaktør)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"5462F47DDAF7E535E01D0C9C0B846B7D">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere personens juridiske statsborgerskapsstatus ved å identifisere staten(e) personen er statsborger i. Arketypen kan også brukes for å dokumentere at personen er statsløs eller at personens statsborgerskap ikke kan fastslås.">
+            keywords = <"statsborgerskap, statsborger, nasjonalitet, nasjon, statsløs, juridisk status, land, stat", ...>
+            use = <"Brukes for å registrere personens juridiske statsborgerskapsstatus ved å identifisere staten(e) personen er statsborger i. Arketypen kan også brukes for å dokumentere at personen er statsløs eller at personens statsborgerskap ikke kan fastslås.">
+            misuse = <"Brukes ikke for å registrere fødeland, etnisitet, kulturell identitet, immigrasjonsstatus, oppholdstillatelse eller språk. Dette kan registreres i andre arketyper, for eksempel EVALUATION.birth_details, EVALUATION.ethnicity og CLUSTER.language.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the individual’s legal citizenship status, identify the state(s) of which the individual is a citizen, or document that the individual is stateless or that their citizenship cannot be determined.">
+            keywords = <"citizen, nationality, nation, stateless, national, country, state", ...>
+            use = <"Use to record the individual’s legal citizenship status, identify the state(s) of which the individual is a citizen, or document that the individual is stateless or that their citizenship cannot be determined. Stateless indicates absence of any current citizenship. Historical citizenships may still be documented. Citizenship can be included in data submissions to national health registries and public health reporting systems, where citizenship status may affect cohort definitions, statistics, billing, legal rights, or reporting obligations.">
+            misuse = <"Not to be used to record country of birth, this can be recorded in EVALUATION.birth_details.
+
+Not to be used to record self-identified cultural or national identity, this can be recorded in EVALUATION.ethnicity.
+
+Not to be used to record language, this can be recorded in CLUSTER.language.
+
+Not to be used to record immigration status, residence permits, long-term visas, or language. The need for specific archetypes for these purposes is acknowledged but had not yet been developed at the time of the publication of this archetype.">
+        >
+    >
+
+definition
+    ADMIN_ENTRY[at0000] matches {    -- Citizenship
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Status
+                        value matches {
+                            DV_CODED_TEXT[at9003] matches {
+                                defining_code matches {[ac9000]}    -- Status (synthesised)
+                            }
+                        }
+                    }
+                    CLUSTER[at0016] matches {    -- Specific citizenship
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0030] occurrences matches {1} matches {    -- Country
+                                value matches {
+                                    DV_TEXT[at9014]
+                                }
+                            }
+                            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Current?
+                                value matches {
+                                    DV_CODED_TEXT[at9005] matches {
+                                        defining_code matches {[ac9001]}    -- Current? (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Information source
+                                value matches {
+                                    DV_CODED_TEXT[at9006] matches {
+                                        defining_code matches {[ac9010]}    -- Information source (synthesised)
+                                    }
+                                    DV_TEXT[at9007]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0028] matches {    -- Information source details
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.media_file(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.knowledge_base_reference(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                            }
+                            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Valid from
+                                value matches {
+                                    DV_DATE[at9008]
+                                }
+                            }
+                            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Valid to
+                                value matches {
+                                    DV_DATE[at9009]
+                                }
+                            }
+                            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Comment
+                                value matches {
+                                    DV_TEXT[at9010]
+                                }
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0022] matches {    -- Additional details
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0023] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9011]
+                        }
+                    }
+                    ELEMENT[at0029] occurrences matches {0..1} matches {    -- Overall comment
+                        value matches {
+                            DV_TEXT[at9012]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Statsborgerskap">
+                description = <"En registrering av personens juridiske statsborgerskap, som identifiserer hvilken stat eller hvilke stater personen er statsborger i.">
+            >
+            ["at0004"] = <
+                text = <"Gyldig fra">
+                description = <"Starten på statsborgerskap.">
+            >
+            ["at0005"] = <
+                text = <"Gyldig til">
+                description = <"Slutten på statsborgerskap.">
+            >
+            ["at0006"] = <
+                text = <"Nåværende?">
+                description = <"Tidsstatus for registrert statsborgerskap.">
+            >
+            ["at0007"] = <
+                text = <"Informasjonskilde">
+                description = <"Opplysningskilde for statsborgerskap.">
+                comment = <"Bruk fritekst til å beskrive andre opplysningskilder for statsborgerskap.">
+            >
+            ["at0008"] = <
+                text = <"Nåværende">
+                description = <"Nåværende statsborger.">
+            >
+            ["at0009"] = <
+                text = <"Tidligere">
+                description = <"Tidligere statsborger.">
+            >
+            ["at0010"] = <
+                text = <"Selvrapportert">
+                description = <"Informasjon oppgitt direkte av personen.">
+            >
+            ["at0011"] = <
+                text = <"Dokumentbasert">
+                description = <"For eksempel pass eller andre offisielle dokumenter.">
+            >
+            ["at0012"] = <
+                text = <"Registerbasert">
+                description = <"For eksempel et nasjonalt folkeregister.">
+            >
+            ["at0014"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om det spesifikke statsborgerskapet som ikke er registrert i andre felt.">
+            >
+            ["at0016"] = <
+                text = <"Spesifikt statsborgerskap">
+                description = <"Detaljer om nåværende og/eller tidligere statsborgerskap som personen har hatt.">
+            >
+            ["at0017"] = <
+                text = <"Status">
+                description = <"Juridisk statsborgerskapsstatus.">
+            >
+            ["at0018"] = <
+                text = <"Statsborger">
+                description = <"Personen er juridisk anerkjent som statsborger av minst én stat.">
+            >
+            ["at0019"] = <
+                text = <"Statsløs">
+                description = <"Personen er ikke anerkjent som statsborger av noen stat.">
+            >
+            ["at0020"] = <
+                text = <"Ukjent">
+                description = <"Personens statsborgerskap er ukjent.">
+            >
+            ["at0022"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Ytterligere detaljer om statsborgerskapsstatus.">
+            >
+            ["at0023"] = <
+                text = <"Sist oppdatert">
+                description = <"Datoen statsborgerskap sist ble oppdatert.">
+            >
+            ["at0028"] = <
+                text = <"Detaljer om informasjonskilde">
+                description = <"Ytterligere detaljer om kilde til det spesifikke statsborgerskapet.">
+            >
+            ["at0029"] = <
+                text = <"Generell kommentar">
+                description = <"Ytterligere fritekst om statsborgerskap som ikke er registrert i andre felt.">
+            >
+            ["at0030"] = <
+                text = <"Land">
+                description = <"Landet for statsborgerskap.">
+                comment = <"Koding med en ekstern terminologi bør brukes der det er mulig, for eksempel ISO 3166-1 alpha-2.">
+            >
+            ["ac9000"] = <
+                text = <"Status (synthesised)">
+                description = <"Juridisk statsborgerskapsstatus. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Nåværende? (synthesised)">
+                description = <"Tidsstatus for registrert statsborgerskap. (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"Informasjonskilde (synthesised)">
+                description = <"Opplysningskilde for statsborgerskap. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Citizenship">
+                description = <"A record of the individual’s legal citizenship status, identifying the state or states of which the individual is a citizen.">
+                comment = <"While \"citizenship\" and \"nationality\" can differ in some legal contexts, they are often used interchangeably in practice. In this archetype, the term \"citizenship\" is used.">
+            >
+            ["at0004"] = <
+                text = <"Valid from">
+                description = <"When the citizenship started.">
+            >
+            ["at0005"] = <
+                text = <"Valid to">
+                description = <"When the citizenship ended.">
+            >
+            ["at0006"] = <
+                text = <"Current?">
+                description = <"The status of the citizenship.">
+            >
+            ["at0007"] = <
+                text = <"Information source">
+                description = <"The source of information of the citizenship.">
+                comment = <"Use free text to describe other sources of information of the citizenship.">
+            >
+            ["at0008"] = <
+                text = <"Current">
+                description = <"Current citizenship.">
+            >
+            ["at0009"] = <
+                text = <"Previous">
+                description = <"Previous citizenship.">
+            >
+            ["at0010"] = <
+                text = <"Self-reported">
+                description = <"Information provided directly by the individual.">
+            >
+            ["at0011"] = <
+                text = <"Document-based">
+                description = <"For example passport or other official documents.">
+            >
+            ["at0012"] = <
+                text = <"Registry-based">
+                description = <"For example a national population register.">
+            >
+            ["at0014"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the specific citizenship, not captured in other fields.">
+            >
+            ["at0016"] = <
+                text = <"Specific citizenship">
+                description = <"Details about a specific current or former citizenship held by the individual.">
+                comment = <"Multiple citizenships can be recorded by repeating this cluster.">
+            >
+            ["at0017"] = <
+                text = <"Status">
+                description = <"The status of the individual's citizenship.">
+            >
+            ["at0018"] = <
+                text = <"Citizen">
+                description = <"The individual is legally recognized as a citizen by at least one state.">
+            >
+            ["at0019"] = <
+                text = <"Stateless">
+                description = <"The individual is not legally recognized as a citizen by any state.">
+            >
+            ["at0020"] = <
+                text = <"Unknown">
+                description = <"The individual’s citizenship is unknown.">
+            >
+            ["at0022"] = <
+                text = <"Additional details">
+                description = <"Additional structured details about citizenship status.">
+            >
+            ["at0023"] = <
+                text = <"Last updated">
+                description = <"The date the citizenship details were last updated.">
+            >
+            ["at0028"] = <
+                text = <"Information source details">
+                description = <"Additional structured details about the source of the specific citizenship.">
+            >
+            ["at0029"] = <
+                text = <"Overall comment">
+                description = <"Additional narrative about citizenship, not captured in other fields.">
+            >
+            ["at0030"] = <
+                text = <"Country">
+                description = <"The country of the citizenship.">
+                comment = <"Coding with an external terminology is preferred, where possible, for example ISO 3166-1 alpha-2.">
+            >
+            ["ac9000"] = <
+                text = <"Status (synthesised)">
+                description = <"The status of the individual's citizenship. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Current? (synthesised)">
+                description = <"The status of the citizenship. (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"Information source (synthesised)">
+                description = <"The source of information of the citizenship. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0008", "at0009">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0018", "at0019", "at0020">
+        >
+        ["ac9010"] = <
+            id = <"ac9010">
+            members = <"at0010", "at0011", "at0012">
+        >
+    >

@@ -1,0 +1,478 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=fff64045-1d0b-4529-af4e-c0334e1dfbaf; build_uid=7a214d31-b6ba-4587-ba45-62bc8633c895)
+    openEHR-EHR-EVALUATION.device_summary.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Aljoscha Kindermann">
+                ["organisation"] = <"Heidelberg University Hospital">
+                ["email"] = <"aljoscha.kindermann@med.uni-heidelberg.de">
+            >
+            accreditation = <"Data Steward">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand">
+                ["organisation"] = <"Helse Bergen HF">
+                ["email"] = <"john.tore.valand@helse-bergen.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2015-10-05">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Kathy Currie, NT Hearing Health Program Leader, Australia", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    references = <
+        ["1"] = <"Derived from: Device summary, Draft Archetype [Internet]. nehta, Australia, nehta Clinical Knowledge Manager [cited: 2016-05-12]. Available from: http://dcm.nehta.org.au/ckm/#showArchetype_1013.1.1397">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"A4B07F5C96E527E2834C1225877B312E">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung einer fortlaufenden und dauerhaften Übersicht über Medizinprodukte, die angepasst oder implantiert wurden.">
+            use = <"Zur Darstellung einer Zusammenfassung der angepassten oder implantierten Medizinprodukte, einschließlich, aber nicht beschränkt auf:
+- Hörhilfen, wie Hörgeräte oder Hörimplantate;
+- Orthesen oder Prothesen; 
+- Zahnersatz oder Zahnimplantate; und
+- Brille oder Kontaktlinsen.
+
+Dieser Archetyp wurde entwickelt, um eine Übersicht über den Einsatz von Medizinprodukten im Zeitverlauf darzustellen. Er kann als Zusammenfassung in Nachrichten oder zwischen klinischen Systemen verwendet werden, wenn die Details nicht erforderlich sind. Wenn in der Vergangenheit bestimmte Geräte verwendet wurden, können in diesem Archetyp so viele Details wie möglich hinzugefügt werden, um einen Kontext zu schaffen, der Entscheidungen über aktuelle oder zukünftige Geräte des gleichen Typs beeinflussen kann.
+
+In der Praxis werden einige klinische Systeme spezifische und detaillierte INSTRUCTION- und ACTION-Archetypen aufzeichnen müssen, um die Anforderung eines Medizinprodukts und nachfolgende Aktivitäten, die während der Ausführung dieser Anforderung aufgezeichnet werden müssen, widerzuspiegeln. Es ist unvermeidlich, dass es in dieser Zusammenfassung und diesen detaillierten Archetypen einige Überschneidungen geben wird. Alle werden in verschiedenen Situationen benötigt. 
+
+Wenn Kliniker den Prozess der Anforderung und Bereitstellung von Medizinprodukten aufzeichnen, sollte diese Zusammenfassung aus diesen Aufzeichnungen abgeleitet werden, um sicherzustellen, dass es keine Duplikate bei der klinischen Eingabe gibt.">
+            misuse = <"Nicht zur Anforderung eines Medizinproduktes verwenden - verwenden Sie dazu die INSTRUCTION.request Familie.
+
+Nicht zur Aufzeichnung von Aktivitäten, die bei der Planung und Ausstattung des Patienten mit diesem Gerät auftreten - verwenden Sie dazu den Archetyp ACTION.device_fitting.
+
+Nicht zur Aufzeichnung von Aktivitäten, die bei der Planung und Anpassung eines Implantats auftreten - verwenden Sie dazu den Archetyp ACTION.procedure.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere en pågående og persistent oversikt over medisinsk utstyr som er tilpasset eller implantert.">
+            use = <"For å registrere en oversikt over medisinsk utstyr som er tilpasset eller implantert.
+For eksempel:
+- ortoser eller kunstige lemmer.
+- tannpoteser eller tannimplantater.
+- briller eller kontaktlinser.
+
+Denne arketypen er spesifikt utviklet for å bidra til en administrert oversikt over medisinsk utstyr over tid. Den kan benyttes som et sammendrag i meldinger eller mellom ulike kliniske systemer hvor detaljer ikke er påkrevd. Har en benyttet høreapparat tidligere kan man registrere tilgjengelig informasjon om dette for å skape kontekst som kan ha betydning for valg av nåværende eller framtidig utstyr.
+
+I praksis vil noen kliniske systemer måtte registrere spesifikke og detaljerte INSTRUCTION og ACTION arketyper for å gjenspeile en forespørsel for et høreapparat og etterfølgende aktiviteter må registreres etter hvert som forespørselen er utført. Det er uunngåelig at det vil bli overlapp i dette sammendraget og i de detaljerte arketypene. Alle er nødvendige i ulike situasjoner.
+
+Om klinikere registrerer hele prosessen fra en forespørsel og fram til utstyret framskaffes, skal dette sammendraget avledes fra disse registreringene for å sikre at duplisering av kliniske registreringer ikke forekommer.">
+            misuse = <"Brukes ikke for å rekvirere høreapparat - Bruk INSTRUCTION.request arketypene for dette formålet.
+
+Brukes ikke for å rekvirere aktiviteter som forekommer under planlegging og tilbassing av medisinsk utstyr - bruk passende ACTION arketype for dette formålet.
+
+Brukes ikke for å registrere aktiviteter som forekommer under planlegging og tilpassing av et implantat - bruk arketypen ACTION.procedure for dette formålet.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record an ongoing and persistent overview about medical devices that have been fitted or implanted.">
+            use = <"Use to record a summary of medical devices that have been fitted or implanted including, but not limited to:
+- assisted hearing devices, such as hearing aids or auditory implants;
+- orthotics or artificial limbs; 
+- dentures or dental implants; and
+- eyeglasses or contact lenses.
+
+This archetype has been specifically designed to assist in providing an overview of management of medical devices over time. It may be used to share as a summary within messages or between clinical systems, where the detail is not required. If specific devices have been used in the past, as much detail as is available can be added in this archetype to create a context which may influence decisions about current or future devices of the same type.
+
+In practice, some clinical systems will need to record specific and detailed INSTRUCTION and ACTION archetypes to reflect the request for an medical device and subseqent activities that need to be recorded as that request is carried out. It is inevitable that there will be some overlap in this summary and these detailed archetypes. All are neccessary in various situations. 
+
+If clinicians are recording the process of request and provision of medical devices, then this summary should be derived from those recordings, to ensure that there is no duplication of clinical input.">
+            misuse = <"Not to be used to request a medical device - use the INSTRUCTION.request family for this purpose.
+
+Not to be used to record the activities that occur in the planning and fitting of a device - use the ACTION.device_fitting archetype for this purpose.
+
+Not to be used to record the activities that occur in the planning and fitting of an implant - use the ACTION.procedure archetype for this purpose.">
+            copyright = <"© Northern Territory Department of Health, Australia, openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Medical device summary
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Device type
+                        value matches {
+                            DV_TEXT[at9001]
+                        }
+                    }
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Status
+                        value matches {
+                            DV_CODED_TEXT[at9002] matches {
+                                defining_code matches {[ac9000]}    -- Status (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9003]
+                        }
+                    }
+                    CLUSTER[at0022] matches {    -- Device details
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Device name
+                                value matches {
+                                    DV_TEXT[at9004]
+                                }
+                            }
+                            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Start date
+                                value matches {
+                                    DV_DATE_TIME[at9005]
+                                }
+                            }
+                            ELEMENT[at0012] occurrences matches {0..1} matches {    -- Body site
+                                value matches {
+                                    DV_TEXT[at9006]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0013] matches {    -- Structured body site
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                            }
+                            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Description
+                                value matches {
+                                    DV_TEXT[at9007]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0010] matches {    -- Structured detail
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                            }
+                            allow_archetype CLUSTER[at0021] matches {    -- Multimedia
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.multimedia(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                            }
+                            ELEMENT[at0009] occurrences matches {0..1} matches {    -- End date
+                                value matches {
+                                    DV_DATE_TIME[at9008]
+                                }
+                            }
+                            ELEMENT[at0023] occurrences matches {0..1} matches {    -- URI to original data
+                                value matches {
+                                    DV_URI[at9009]
+                                }
+                            }
+                            ELEMENT[at0019] occurrences matches {0..1} matches {    -- Next review due
+                                value matches {
+                                    DV_DATE_TIME[at9010]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0016] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0018] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9011]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Zusammenfassung der Medizinprodukte">
+                description = <"Eine fortlaufende und dauerhafte Übersicht über Medizinprodukte, die angepasst oder implantiert wurden.">
+            >
+            ["at0002"] = <
+                text = <"Status">
+                description = <"Aussage zur Ausstattung des Patienten mit oder zur Implantierung von Medizinprodukten, Stand: \"Letzte Aktualisierung\".">
+            >
+            ["at0003"] = <
+                text = <"Niemals">
+                description = <"Der Gerätetyp wurde niemals angepasst oder implantiert.">
+            >
+            ["at0004"] = <
+                text = <"Derzeit">
+                description = <"Der Gerätetyp wird derzeit angepasst oder implantiert.">
+            >
+            ["at0005"] = <
+                text = <"Zurückliegend">
+                description = <"Der Gerätetyp wurde in der Vergangenheit angepasst oder implantiert.">
+            >
+            ["at0007"] = <
+                text = <"Medizinproduktname">
+                description = <"Namentliche Identifikation des Medizinproduktes.">
+            >
+            ["at0008"] = <
+                text = <"Anfangsdatum">
+                description = <"Datum der Anpassung oder der Implantation.">
+            >
+            ["at0009"] = <
+                text = <"Enddatum">
+                description = <"Datum, an dem das Medizinprodukt nicht mehr verwendet oder entnommen wurde.">
+            >
+            ["at0010"] = <
+                text = <"Strukturierte Details">
+                description = <"Zusätzliche strukturierte Details über das Medizinprodukt.">
+            >
+            ["at0012"] = <
+                text = <"Körperstelle">
+                description = <"Identifikation der anatomischen Lage bzw. Körperstelle, an der das Gerät angepasst bzw. implantiert wird.">
+            >
+            ["at0013"] = <
+                text = <"Bestimmte anatomische Lagebezeichnung">
+                description = <"Eine bestimmte anatomische Lage der Körperstelle, an der das Gerät befestigt/implantiert wird.">
+                comment = <"Gewöhnlich wird dies ein ACTION Archetyp sein, der die Details über die Anpassung oder Implantation enthält.">
+            >
+            ["at0014"] = <
+                text = <"Beschreibung">
+                description = <"Beschreibung des Medizinprodukts.">
+            >
+            ["at0015"] = <
+                text = <"Beschreibung">
+                description = <"Beschreibung über die Verwendung des angepassten oder implantierten Medizinproduktes.">
+            >
+            ["at0017"] = <
+                text = <"Zuletzt aktualisiert">
+                description = <"Datum der letzten Aktualisierung dieser Zusammenfassung.">
+            >
+            ["at0018"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen oder CIMI-Modelle.">
+            >
+            ["at0019"] = <
+                text = <"Fälligkeit der nächsten Überprüfung">
+                description = <"Datum, an dem das Medizinprodukt überprüft werden sollte.">
+            >
+            ["at0020"] = <
+                text = <"Medizinprodukttyp">
+                description = <"Names des Medizinprodukttyps.">
+                comment = <"Zum Beispiel: Hörgeräte, Brillen, Kontaktlinsen, Zahnspangen, Zahnprothesen, Orthesen oder Prothesen.">
+            >
+            ["at0021"] = <
+                text = <"Multimedia">
+                description = <"Digitales Bild, Video oder Diagramm über das Medizinprodukt.">
+            >
+            ["at0022"] = <
+                text = <"Medizinproduktdetails">
+                description = <"Details über jedes Gerät.">
+            >
+            ["at0023"] = <
+                text = <"URI der Originaldaten">
+                description = <"Verknüpfung zu den Originaldaten bzgl. des Anpassens oder der Implantation.">
+                comment = <"Gewöhnlich wird dies ein ACTION Archetyp sein, der die Details über das Einsetzen oder die Implantation enthält.">
+            >
+            ["ac9000"] = <
+                text = <"Status (synthesised)">
+                description = <"Aussage zur Ausstattung des Patienten mit oder zur Implantierung von Medizinprodukten, Stand: \"Letzte Aktualisierung\". (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Sammendrag av medisinsk utstyr">
+                description = <"En pågående og persistent oversikt over medisinsk utstyr som er tilpasset eller implantert.">
+            >
+            ["at0002"] = <
+                text = <"Status">
+                description = <"*Assertion about the fitting or implanting of devices, as at the date 'Last updated'.(en)">
+            >
+            ["at0003"] = <
+                text = <"*Never(en)">
+                description = <"*The device type has never been fitted or implanted.(en)">
+            >
+            ["at0004"] = <
+                text = <"*Current(en)">
+                description = <"*The device type is currently fitted or implanted.(en)">
+            >
+            ["at0005"] = <
+                text = <"*Previous(en)">
+                description = <"*The device type has been fitted or implanted in the past.(en)">
+            >
+            ["at0007"] = <
+                text = <"Navn på medisinsk utstyr">
+                description = <"Identifisering av det medisinske utstyret ved navn.">
+            >
+            ["at0008"] = <
+                text = <"Start dato">
+                description = <"Dato for tilpasning eller implantering av det medisinske utstyret.">
+            >
+            ["at0009"] = <
+                text = <"Stopp dato">
+                description = <"Datoen da bruk av det medisinske utstyret opphørte eller ble fjernet.">
+            >
+            ["at0010"] = <
+                text = <"Strukturerte detaljer">
+                description = <"Ytterligere strukturerte detaljer om det medisinske utstyret.">
+            >
+            ["at0012"] = <
+                text = <"Anatomisk lokalisering">
+                description = <"Identifisering av kroppsstedet hvor det medisinske utstyret er tilpasset/ implantert.">
+            >
+            ["at0013"] = <
+                text = <"Strukturert anatomisk lokalisering">
+                description = <"Strukturert anatomisk lokalisering av stedet på kroppen hvor det medisinske utstyret er tilpasset/implantert.">
+            >
+            ["at0014"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstbeskrivelse om det medisinske utstyret.">
+            >
+            ["at0015"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstbeskrivelse om bruken av det tilpassede eller implanterte utstyret.">
+            >
+            ["at0017"] = <
+                text = <"Sist oppdatert">
+                description = <"Dato da dette sammendraget sist ble oppdatert.">
+            >
+            ["at0018"] = <
+                text = <"Utvidelse">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+            ["at0019"] = <
+                text = <"Dato for neste gjennomgang">
+                description = <"Dato da det medisinske utstyret skal gjennomgås på nytt.">
+            >
+            ["at0020"] = <
+                text = <"Type">
+                description = <"Kategori eller type medisinsk utstyr.">
+                comment = <"For eksempel: Høreapparat, briller, kontaktlinser, tannregulering, tannprotese, ortoser eller kunstige lemmer.">
+            >
+            ["at0021"] = <
+                text = <"Multimedia">
+                description = <"Digitalt bilde, video eller diagram om det medisinske utstyret.">
+            >
+            ["at0022"] = <
+                text = <"Detaljer">
+                description = <"Detaljer om hvert enkelt medisinsk utstyr.">
+            >
+            ["at0023"] = <
+                text = <"URI til original data">
+                description = <"Lenke til opprinnelig data om tilpassing eller implantering.">
+                comment = <"Vanligvis vil en ACTION-arketype inneholde detaljer om tilpasning eller implantering av det medisinske utstyret.">
+            >
+            ["ac9000"] = <
+                text = <"Status (synthesised)">
+                description = <"*Assertion about the fitting or implanting of devices, as at the date 'Last updated'.(en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Medical device summary">
+                description = <"An ongoing and persistent overview about medical devices that have been fitted or implanted.">
+            >
+            ["at0002"] = <
+                text = <"Status">
+                description = <"Assertion about the fitting or implanting of devices, as at the date 'Last updated'.">
+            >
+            ["at0003"] = <
+                text = <"Never">
+                description = <"The device type has never been fitted or implanted.">
+            >
+            ["at0004"] = <
+                text = <"Current">
+                description = <"The device type is currently fitted or implanted.">
+            >
+            ["at0005"] = <
+                text = <"Previous">
+                description = <"The device type has been fitted or implanted in the past.">
+            >
+            ["at0007"] = <
+                text = <"Device name">
+                description = <"Identification of the specific device, by name.">
+            >
+            ["at0008"] = <
+                text = <"Start date">
+                description = <"Date of fitting or implant of the device.">
+            >
+            ["at0009"] = <
+                text = <"End date">
+                description = <"Date when the device stopped being used or was removed.">
+            >
+            ["at0010"] = <
+                text = <"Structured detail">
+                description = <"Additional structured detail about the device.">
+            >
+            ["at0012"] = <
+                text = <"Body site">
+                description = <"Identification of the body site where the device is fitted/implanted.">
+            >
+            ["at0013"] = <
+                text = <"Structured body site">
+                description = <"A structured anatomical location of the body site where the device is fitted/implanted.">
+            >
+            ["at0014"] = <
+                text = <"Description">
+                description = <"Narrative description about the device.">
+            >
+            ["at0015"] = <
+                text = <"Description">
+                description = <"Narrative description about the use of the fitted device type.">
+            >
+            ["at0017"] = <
+                text = <"Last updated">
+                description = <"The date this summary was last updated.">
+            >
+            ["at0018"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0019"] = <
+                text = <"Next review due">
+                description = <"Date on which this device should be reviewed.">
+            >
+            ["at0020"] = <
+                text = <"Device type">
+                description = <"Name of the type of medical device.">
+                comment = <"For example: Assisted hearing devices, eyeglasses, contact lens, dental braces, dentures, orthotics or artificial limbs.">
+            >
+            ["at0021"] = <
+                text = <"Multimedia">
+                description = <"Digital image, video or diagram about the device.">
+            >
+            ["at0022"] = <
+                text = <"Device details">
+                description = <"Details about each device.">
+            >
+            ["at0023"] = <
+                text = <"URI to original data">
+                description = <"Link to the original data about the fitting or insertion.">
+                comment = <"Commonly, this will be an ACTION archetype that contains the details about the fitting or insertion of the device.">
+            >
+            ["ac9000"] = <
+                text = <"Status (synthesised)">
+                description = <"Assertion about the fitting or implanting of devices, as at the date 'Last updated'. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0003", "at0004", "at0005">
+        >
+    >

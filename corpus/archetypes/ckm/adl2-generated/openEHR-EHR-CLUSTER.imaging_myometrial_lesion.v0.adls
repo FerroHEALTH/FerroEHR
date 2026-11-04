@@ -1,0 +1,465 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=75b04774-0c90-4265-8a9a-77606dcd43df; build_uid=f1b21513-fb42-4ee0-b1fa-d27074fa3386)
+    openEHR-EHR-CLUSTER.imaging_myometrial_lesion.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2022-11-15">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Van den Bosch T, Dueholm M, Leone FP, Valentin L, Rasmussen CK, Votino A, Van Schoubroeck D, Landolfo C, Installé AJ, Guerriero S, Exacoustos C, Gordts S, Benacerraf B, D'Hooghe T, De Moor B, Brölmann H, Goldstein S, Epstein E, Bourne T, Timmerman D. Terms, definitions and measurements to describe sonographic features of myometrium and uterine masses: a consensus opinion from the Morphological Uterus Sonographic Assessment (MUSA) group. Ultrasound Obstet Gynecol. 2015 Sep;46(3):284-98. doi: 10.1002/uog.14806. Epub 2015 Aug 10. PMID: 25652685. Available from https://obgyn.onlinelibrary.wiley.com/doi/10.1002/uog.14806.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"CA5F3B1D57660A88A79B9E352E102626">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about a single myometrial lesion found on radiological examination, focused on supporting the differentiation of adenomyosis from fibroids and other uterine smooth muscle tumours.">
+            use = <"Use to record details about a single myometrial lesion found on radiological examination.
+
+This archetype has been designed to be nested in the 'Lesion detail' SLOT within the CLUSTER.imaging_exam-uterus or CLUSTER.imaging_exam-cervix archetypes.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Imaging examination of a myometrial lesion
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Label
+                value matches {
+                    DV_TEXT[at9011]
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Location
+                value matches {
+                    DV_CODED_TEXT[at9012] matches {
+                        defining_code matches {[ac9000]}    -- Location (synthesised)
+                    }
+                    DV_TEXT[at9013]
+                }
+            }
+            ELEMENT[at0009] occurrences matches {0..1} matches {    -- FIGO classification
+                value matches {
+                    DV_CODED_TEXT[at9014] matches {
+                        defining_code matches {[ac9001]}    -- FIGO classification (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0019] occurrences matches {0..1} matches {    -- Dimension
+                value matches {
+                    DV_QUANTITY[at9015] matches {
+                        property matches {[at9002]}    -- Length
+                        magnitude matches {|>=0.0|}
+                        units matches {"mm"}
+                        precision matches {1}
+                    }
+                }
+                name matches {
+                    DV_CODED_TEXT[at9016] matches {
+                        defining_code matches {[ac9003]}    -- Dimension (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0023] occurrences matches {0..1} matches {    -- Volume
+                value matches {
+                    DV_QUANTITY[at9017] matches {
+                        magnitude matches {|>=0.0|}
+                        units matches {"cm3"}
+                    }
+                }
+            }
+            ELEMENT[at0024] occurrences matches {0..1} matches {    -- Outline
+                value matches {
+                    DV_CODED_TEXT[at9018] matches {
+                        defining_code matches {[ac9004]}    -- Outline (synthesised)
+                    }
+                    DV_TEXT[at9019]
+                }
+            }
+            ELEMENT[at0027] occurrences matches {0..1} matches {    -- Shape
+                value matches {
+                    DV_CODED_TEXT[at9020] matches {
+                        defining_code matches {[ac9005]}    -- Shape (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0031] occurrences matches {0..1} matches {    -- Contour
+                value matches {
+                    DV_CODED_TEXT[at9021] matches {
+                        defining_code matches {[ac9006]}    -- Contour (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0034] occurrences matches {0..1} matches {    -- Rim
+                value matches {
+                    DV_CODED_TEXT[at9022] matches {
+                        defining_code matches {[ac9007]}    -- Rim (synthesised)
+                    }
+                }
+            }
+            allow_archetype CLUSTER[at0038] matches {    -- Lesion vascularisation
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.vascularisation_ultrasound(-[a-zA-Z0-9_]+)*\.v0\..*/}
+            }
+            ELEMENT[at0039] occurrences matches {0..1} matches {    -- Shadowing description
+                value matches {
+                    DV_TEXT[at9023]
+                }
+            }
+            CLUSTER[at0040] occurrences matches {0..1} matches {    -- Shadowing details
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0041] occurrences matches {0..1} matches {    -- Shadow type
+                        value matches {
+                            DV_CODED_TEXT[at9024] matches {
+                                defining_code matches {[ac9008]}    -- Shadow type (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0045] occurrences matches {0..1} matches {    -- Presence?
+                        value matches {
+                            DV_CODED_TEXT[at9025] matches {
+                                defining_code matches {[ac9009]}    -- Presence? (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0048] occurrences matches {0..1} matches {    -- Degree
+                        value matches {
+                            DV_CODED_TEXT[at9026] matches {
+                                defining_code matches {[ac9010]}    -- Degree (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0052] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9027]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Imaging examination of a myometrial lesion">
+                description = <"Details about a single myometrial lesion found on radiological examination.">
+                comment = <"Other sites may include: broad ligament">
+            >
+            ["at0001"] = <
+                text = <"Label">
+                description = <"Label used to uniquely identify one myometrial lesion from another.">
+            >
+            ["at0003"] = <
+                text = <"Anterior">
+                description = <"The lesion is located within the myometrium in the anterior aspect of the uterus.">
+            >
+            ["at0004"] = <
+                text = <"Posterior">
+                description = <"The lesion is located within the myometrium in the posterior aspect of the uterus.">
+            >
+            ["at0005"] = <
+                text = <"Fundal">
+                description = <"The lesion is located within the myometrium in the fundus of the uterus.">
+            >
+            ["at0006"] = <
+                text = <"Right lateral">
+                description = <"The lesion is located within the myometrium on the right side of the uterus.">
+            >
+            ["at0007"] = <
+                text = <"Left lateral">
+                description = <"The lesion is located within the myometrium on the left side of the uterus.">
+            >
+            ["at0008"] = <
+                text = <"Global">
+                description = <"The lesions are located within the myometrium and distributed throughout the uterus.">
+            >
+            ["at0002"] = <
+                text = <"Location">
+                description = <"Description about the location of observed myometrial lesion.">
+            >
+            ["at0010"] = <
+                text = <"Pedunculated intracavitary">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Submucosal, < 50% intramural (≥50% submucosal)">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Submucosal, ≥ 50% intramural (<50% submucosal)">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"100% intramural, contacting endometrium">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"100% intramural, no endometrial or subserosal contact">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Subserosal,≥50% intramural">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Subserosal,<50% intramural">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Pedunculated subserosal">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Non-myometrial location">
+                description = <"For example: cervical, broad ligament, parasitic.">
+            >
+            ["at0009"] = <
+                text = <"FIGO classification">
+                description = <"Description of the site of the lesion within the myometrial wall according to the FIGO classification of fibroids.">
+                comment = <"This data element allows up to 2 occurrences to be recorded, to support a hybrid classification using both submucosal and subserosal components - the first number designates the submucosal component and second number designates the subserosal component.">
+            >
+            ["at0020"] = <
+                text = <"Length">
+                description = <"The measured length of the longest edge of the lesion.">
+            >
+            ["at0021"] = <
+                text = <"Width">
+                description = <"The measured length of widest aspect of the lesion, usually perpendicular to the length.">
+            >
+            ["at0022"] = <
+                text = <"Height">
+                description = <"The measured length of the vertical aspect of the lesion.">
+            >
+            ["at0019"] = <
+                text = <"Dimension">
+                description = <"A measured dimension of the myometrial lesion.">
+                comment = <"This data element has unlimited occurrences to allow for measurements in 3 unspecified perpendicular axes, for example 3 x 4 x 5 mm. Use run-time name constraints to specify orientation of length, width and height, if required.">
+            >
+            ["at0023"] = <
+                text = <"Volume">
+                description = <"The calculated volume of the identified lesion.">
+            >
+            ["at0039"] = <
+                text = <"Shadowing description">
+                description = <"Narrative description about associated acoustic shadowing.">
+            >
+            ["at0045"] = <
+                text = <"Presence?">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"Present">
+                description = <"Edge shadowing is observed.">
+            >
+            ["at0047"] = <
+                text = <"Absent">
+                description = <"No edge shadowing is observed.">
+            >
+            ["at0040"] = <
+                text = <"Shadowing details">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"Shadow type">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"Edge shadow">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"Internal shadow">
+                description = <"">
+            >
+            ["at0044"] = <
+                text = <"Fan-shaped shadow">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"Degree">
+                description = <"">
+            >
+            ["at0049"] = <
+                text = <"Slight">
+                description = <"">
+            >
+            ["at0050"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"Strong">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Well-defined">
+                description = <"The lesions observed in the myometrium are well-defined.">
+            >
+            ["at0026"] = <
+                text = <"Ill-defined">
+                description = <"The lesions observed in the myometrium are ill-defined.">
+            >
+            ["at0024"] = <
+                text = <"Outline">
+                description = <"Description of the silhouette of the endometrial lesion.">
+            >
+            ["at0027"] = <
+                text = <"Shape">
+                description = <"The shape of the myometrial lesion.">
+            >
+            ["at0028"] = <
+                text = <"Round">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Oval">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Lobulated">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Contour">
+                description = <"The contour of the myometrial lesion.">
+            >
+            ["at0032"] = <
+                text = <"Smooth">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Irregular">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Rim">
+                description = <"The echogenic rim of the lesion.">
+            >
+            ["at0035"] = <
+                text = <"Hypo-echogenic">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Hyper-echogenic">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"No rim">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the myometrial lesion not captured in other fields.">
+            >
+            ["at0038"] = <
+                text = <"Lesion vascularisation">
+                description = <"">
+            >
+            ["at9002"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["ac9000"] = <
+                text = <"Location (synthesised)">
+                description = <"Description about the location of observed myometrial lesion. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"FIGO classification (synthesised)">
+                description = <"Description of the site of the lesion within the myometrial wall according to the FIGO classification of fibroids. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Dimension (synthesised)">
+                description = <"A measured dimension of the myometrial lesion. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Outline (synthesised)">
+                description = <"Description of the silhouette of the endometrial lesion. (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Shape (synthesised)">
+                description = <"The shape of the myometrial lesion. (synthesised)">
+            >
+            ["ac9006"] = <
+                text = <"Contour (synthesised)">
+                description = <"The contour of the myometrial lesion. (synthesised)">
+            >
+            ["ac9007"] = <
+                text = <"Rim (synthesised)">
+                description = <"The echogenic rim of the lesion. (synthesised)">
+            >
+            ["ac9008"] = <
+                text = <"Shadow type (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"Presence? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"Degree (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9002"] = <http://openehr.org/id/122>
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0010", "at0011", "at0012", "at0013", "at0014", "at0015", "at0016", "at0017", "at0018">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0003", "at0004", "at0005", "at0006", "at0007", "at0008">
+        >
+        ["ac9010"] = <
+            id = <"ac9010">
+            members = <"at0049", "at0050", "at0051">
+        >
+        ["ac9006"] = <
+            id = <"ac9006">
+            members = <"at0032", "at0033">
+        >
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0028", "at0029", "at0030">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0025", "at0026">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0020", "at0021", "at0022">
+        >
+        ["ac9009"] = <
+            id = <"ac9009">
+            members = <"at0046", "at0047">
+        >
+        ["ac9008"] = <
+            id = <"ac9008">
+            members = <"at0042", "at0043", "at0044">
+        >
+        ["ac9007"] = <
+            id = <"ac9007">
+            members = <"at0035", "at0036", "at0037">
+        >
+    >

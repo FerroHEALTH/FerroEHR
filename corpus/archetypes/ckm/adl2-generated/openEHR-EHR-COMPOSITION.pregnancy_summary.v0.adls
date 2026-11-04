@@ -1,0 +1,108 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=ec6d35e9-e25d-4a30-85d4-b7129ea83f4a; build_uid=48091737-bfcb-4d27-945f-34806e408d50)
+    openEHR-EHR-COMPOSITION.pregnancy_summary.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Dr Heather Leslie">
+        ["organisation"] = <"Atomica Informatics, Australia">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2013-06-14">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Heath Frankel, Ocean Informatics, Australia", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Derived from: Pregnancy Summary, Draft archetype [Internet]. Australian Digital Health Agency (NEHTA), ADHA Clinical Knowledge Manager. Authored: 2013 Jun 14. Available at: http://dcm.nehta.org.au/ckm#showArchetype_1013.1.1317_1 (discontinued)">
+    >
+    other_details = <
+        ["current_contact"] = <"Dr Heather Leslie, Atomica Informatics, Australia<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"545BE872FFC24978414237B682F6C597">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a collection of summary or persistent details about a single pregnancy.">
+            use = <"Use to record a collection of summary or persistent details about a single pregnancy. 
+
+For example, this COMPOSITION may contain:
+- a single EVALUATION.pregnancy_summary that can evolve in detail and be updated throughout the pregnancy; and
+- a single instance of the EVALUATION.estimated_date_delivery that can also be updated throughout the pregnancy as more accurate information is available.
+
+
+This COMPOSITION has been designed for use as a persistent episode, however event-based information for Antenatal visits, labour and delivery should be recorded using clinically appropriate EVENT-based COMPOSITIONs.">
+            misuse = <"Not to be used to record a summary of all significant pregnancy outcomes or clinical metrics - use the EVALUATION.obstetric_summary for this purpose.">
+            copyright = <"© Australian Digital Health Agency, openEHR Foundation">
+        >
+    >
+
+definition
+    COMPOSITION[at0000] matches {    -- Pregnancy summary
+        category matches {
+            DV_CODED_TEXT[at9001] matches {
+                defining_code matches {[at9003]}    -- Term binding for at9003, translation not known in ADL 1.4 -> ADL 2 converter
+            }
+        }
+        context matches {
+            EVENT_CONTEXT[at9002] matches {
+                other_context matches {
+                    ITEM_TREE[at0004] matches {
+                        items cardinality matches {0..*; unordered} matches {
+                            allow_archetype CLUSTER[at0006] matches {    -- Extension
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.document_entry_metadata(-[a-zA-Z0-9_]+)*\.v0\..*/}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        content cardinality matches {1..*; unordered} matches {
+            allow_archetype ENTRY[at0003] occurrences matches {0..1} matches {    -- Pregnancy
+                include
+                    archetype_id/value matches {/openEHR-EHR-EVALUATION\.pregnancy_summary(-[a-zA-Z0-9_]+)*\.v0\..*/}
+            }
+            allow_archetype ENTRY[at0007] matches {    -- Other details
+                include
+                    archetype_id/value matches {/openEHR-EHR-EVALUATION\.estimated_date_delivery\.v0\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Pregnancy summary">
+                description = <"Summary or persistent details about a single pregnancy.">
+            >
+            ["at0003"] = <
+                text = <"Pregnancy">
+                description = <"Cumulative overview of a single pregnancy.">
+            >
+            ["at0006"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0007"] = <
+                text = <"Other details">
+                description = <"">
+            >
+            ["at9003"] = <
+                text = <"Term binding for at9003, translation not known in ADL 1.4 -> ADL 2 converter">
+                description = <"Term binding for at9003, translation not known in ADL 1.4 -> ADL 2 converter">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9003"] = <http://openehr.org/id/435>
+        >
+    >

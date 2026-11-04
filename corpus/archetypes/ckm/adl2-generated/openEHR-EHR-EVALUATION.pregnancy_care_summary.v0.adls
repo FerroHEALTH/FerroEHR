@@ -1,0 +1,819 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=ad72c086-4fd9-46c5-91f1-280784f3a5cd; build_uid=1491f297-80ac-4782-be58-578756f5c559)
+    openEHR-EHR-EVALUATION.pregnancy_care_summary.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2022-06-13">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Nicola Ewen, SERHA/Ministry of Health and Wellness, Jamaica", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Yohann White, Ministry of Health and Wellness, Jamaica">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"1FEAC3327BD9A5879D5FD5312361F6A3">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record summary details about the antenatal and postnatal care received during a single pregnancy.">
+            use = <"Use to record summary details about the antenatal and postnatal care received during a single pregnancy, usually as part of an assessment about quality of care or as part of a maternal mortality review.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation, Ministry of Health and Wellness Jamaica">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Pregnancy care summary
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9042]
+                        }
+                    }
+                    ELEMENT[at0076] occurrences matches {0..1} matches {    -- No antenatal care
+                        value matches {
+                            DV_BOOLEAN[at9083]
+                        }
+                    }
+                    ELEMENT[at0095] occurrences matches {0..1} matches {    -- Overall funding type
+                        value matches {
+                            DV_CODED_TEXT[at9111] matches {
+                                defining_code matches {[ac9083]}    -- Overall funding type (synthesised)
+                            }
+                            DV_TEXT[at9112]
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- First antenatal visit
+                        value matches {
+                            DV_DATE_TIME[at9043]
+                        }
+                    }
+                    ELEMENT[at0121] occurrences matches {0..1} matches {    -- Gestation at first visit
+                        value matches {
+                            DV_DURATION[at9113]
+                        }
+                    }
+                    CLUSTER[at0004] matches {    -- Antenatal care
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Provider type
+                                value matches {
+                                    DV_TEXT[at9044]
+                                }
+                            }
+                            ELEMENT[at0099] occurrences matches {0..1} matches {    -- Funding type
+                                value matches {
+                                    DV_TEXT[at9114]
+                                    DV_CODED_TEXT[at9115] matches {
+                                        defining_code matches {[ac9084]}    -- Funding type (synthesised)
+                                    }
+                                }
+                            }
+                            allow_archetype CLUSTER[at0007] matches {    -- Provider details
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.organisation(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                            }
+                            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Description
+                                value matches {
+                                    DV_TEXT[at9046]
+                                }
+                            }
+                            ELEMENT[at0009] occurrences matches {0..1} matches {    -- Date of first visit
+                                value matches {
+                                    DV_DATE_TIME[at9047]
+                                }
+                            }
+                            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Gestation at first visit
+                                value matches {
+                                    DV_DURATION[at9048] matches {
+                                        value matches {PW/|P0D..P350D|}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Date of last visit
+                                value matches {
+                                    DV_DATE_TIME[at9049]
+                                }
+                            }
+                            ELEMENT[at0012] occurrences matches {0..1} matches {    -- Gestation at last visit
+                                value matches {
+                                    DV_DURATION[at9050] matches {
+                                        value matches {PW/|P0D..P350D|}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0013] occurrences matches {0..1} matches {    -- Number of visits
+                                value matches {
+                                    DV_COUNT[at9051]
+                                }
+                            }
+                            ELEMENT[at0014] matches {    -- Conditions managed
+                                value matches {
+                                    DV_TEXT[at9052]
+                                }
+                            }
+                            ELEMENT[at0015] occurrences matches {0..1} matches {    -- Treatment summary
+                                value matches {
+                                    DV_TEXT[at9053]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0016] matches {    -- Additional details
+                                include
+                                    archetype_id/value matches {/.*/}
+                            }
+                            ELEMENT[at0056] occurrences matches {0..1} matches {    -- Scheduled follow up
+                                value matches {
+                                    DV_DATE_TIME[at9054]
+                                }
+                            }
+                            ELEMENT[at0063] occurrences matches {0..1} matches {    -- Comment
+                                value matches {
+                                    DV_DATE_TIME[at9055]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Total number of antenatal visits
+                        value matches {
+                            DV_COUNT[at9056]
+                        }
+                    }
+                    CLUSTER[at0018] matches {    -- Antenatal admission
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0019] occurrences matches {0..1} matches {    -- Gestation at admission
+                                value matches {
+                                    DV_DURATION[at9057] matches {
+                                        value matches {PW/|P0D..P350D|}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0020] occurrences matches {0..1} matches {    -- Description
+                                value matches {
+                                    DV_TEXT[at9058]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0021] matches {    -- Inpatient admission details
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.inpatient_episode_details(-[a-zA-Z0-9_]+)*\.v0\..*/}
+                            }
+                            ELEMENT[at0022] matches {    -- Conditions managed
+                                value matches {
+                                    DV_TEXT[at9059]
+                                }
+                            }
+                            ELEMENT[at0024] occurrences matches {0..1} matches {    -- Treatment summary
+                                value matches {
+                                    DV_TEXT[at9060]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0026] occurrences matches {0..1} matches {    -- Additional details
+                                include
+                                    archetype_id/value matches {/.*/}
+                            }
+                            ELEMENT[at0027] occurrences matches {0..1} matches {    -- Gestation at discharge
+                                value matches {
+                                    DV_DURATION[at9061] matches {
+                                        value matches {PW/|P0D..P350D|}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0023] occurrences matches {0..1} matches {    -- Scheduled follow up
+                                value matches {
+                                    DV_DATE_TIME[at9062]
+                                }
+                            }
+                            ELEMENT[at0030] occurrences matches {0..1} matches {    -- Comment
+                                value matches {
+                                    DV_DATE_TIME[at9063]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- Total number of antenatal admissions
+                        value matches {
+                            DV_COUNT[at9064]
+                        }
+                    }
+                    ELEMENT[at0029] occurrences matches {0..1} matches {    -- Last antenatal visit
+                        value matches {
+                            DV_DATE_TIME[at9065]
+                        }
+                    }
+                    CLUSTER[at0058] occurrences matches {0..1} matches {    -- Delivery admission
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0033] occurrences matches {0..1} matches {    -- Gestation at admission
+                                value matches {
+                                    DV_DURATION[at9066] matches {
+                                        value matches {PW/|>=P0D|}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0031] occurrences matches {0..1} matches {    -- Description
+                                value matches {
+                                    DV_DATE_TIME[at9067]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0059] matches {    -- Inpatient admission details
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.inpatient_episode_details(-[a-zA-Z0-9_]+)*\.v0\..*/}
+                            }
+                            ELEMENT[at0032] occurrences matches {0..1} matches {    -- Scheduled follow up
+                                value matches {
+                                    DV_DATE_TIME[at9082]
+                                }
+                            }
+                            ELEMENT[at0060] occurrences matches {0..1} matches {    -- Comment
+                                value matches {
+                                    DV_DATE_TIME[at9068]
+                                }
+                            }
+                        }
+                    }
+                    CLUSTER[at0103] occurrences matches {0..1} matches {    -- Postnatal care
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0104] occurrences matches {0..1} matches {    -- Provider type
+                                value matches {
+                                    DV_TEXT[at9116]
+                                }
+                            }
+                            ELEMENT[at0105] occurrences matches {0..1} matches {    -- Funding type
+                                value matches {
+                                    DV_TEXT[at9117]
+                                    DV_CODED_TEXT[at9118] matches {
+                                        defining_code matches {[ac9085]}    -- Funding type (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0108] occurrences matches {0..1} matches {    -- Provider name
+                                value matches {
+                                    DV_TEXT[at9119]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0109] matches {    -- Provider details
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.organisation(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                            }
+                            ELEMENT[at0110] occurrences matches {0..1} matches {    -- Description
+                                value matches {
+                                    DV_TEXT[at9120]
+                                }
+                            }
+                            ELEMENT[at0111] occurrences matches {0..1} matches {    -- Date of first visit
+                                value matches {
+                                    DV_DATE_TIME[at9121]
+                                }
+                            }
+                            ELEMENT[at0112] occurrences matches {0..1} matches {    -- Days post partum at first visit
+                                value matches {
+                                    DV_DURATION[at9096] matches {
+                                        value matches {PW/|P0D..P350D|}
+                                    }
+                                }
+                            }
+                            CLUSTER[at0034] matches {    -- Specific postnatal visit
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0035] occurrences matches {0..1} matches {    -- Type of visit
+                                        value matches {
+                                            DV_TEXT[at9097]
+                                        }
+                                    }
+                                    ELEMENT[at0057] occurrences matches {0..1} matches {    -- Date of visit
+                                        value matches {
+                                            DV_DATE_TIME[at9098]
+                                        }
+                                    }
+                                    ELEMENT[at0036] occurrences matches {0..1} matches {    -- Description
+                                        value matches {
+                                            DV_TEXT[at9099]
+                                        }
+                                    }
+                                    ELEMENT[at0037] occurrences matches {0..1} matches {    -- Assessment
+                                        value matches {
+                                            DV_TEXT[at9100]
+                                        }
+                                    }
+                                    ELEMENT[at0038] occurrences matches {0..1} matches {    -- Conditions managed
+                                        value matches {
+                                            DV_TEXT[at9101]
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0039] occurrences matches {0..1} matches {    -- Additional details
+                                        include
+                                            archetype_id/value matches {/.*/}
+                                    }
+                                    ELEMENT[at0040] occurrences matches {0..1} matches {    -- Scheduled follow up
+                                        value matches {
+                                            DV_DATE_TIME[at9102]
+                                        }
+                                    }
+                                    ELEMENT[at0061] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_DATE_TIME[at9103]
+                                        }
+                                    }
+                                }
+                            }
+                            ELEMENT[at0113] occurrences matches {0..1} matches {    -- Date of last visit
+                                value matches {
+                                    DV_DATE_TIME[at9104]
+                                }
+                            }
+                            ELEMENT[at0114] occurrences matches {0..1} matches {    -- Days post partum at last visit
+                                value matches {
+                                    DV_DURATION[at9105] matches {
+                                        value matches {PW/|P0D..P350D|}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0115] occurrences matches {0..1} matches {    -- Number of visits
+                                value matches {
+                                    DV_COUNT[at9106]
+                                }
+                            }
+                            ELEMENT[at0116] matches {    -- Conditions managed
+                                value matches {
+                                    DV_TEXT[at9107]
+                                }
+                            }
+                            ELEMENT[at0117] occurrences matches {0..1} matches {    -- Treatment summary
+                                value matches {
+                                    DV_TEXT[at9108]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0118] matches {    -- Additional details
+                                include
+                                    archetype_id/value matches {/.*/}
+                            }
+                            ELEMENT[at0119] occurrences matches {0..1} matches {    -- Scheduled follow up
+                                value matches {
+                                    DV_DATE_TIME[at9109]
+                                }
+                            }
+                            ELEMENT[at0120] occurrences matches {0..1} matches {    -- Comment
+                                value matches {
+                                    DV_DATE_TIME[at9110]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0041] occurrences matches {0..1} matches {    -- Total number of postnatal visits
+                        value matches {
+                            DV_COUNT[at9077]
+                        }
+                    }
+                    CLUSTER[at0042] matches {    -- Postnatal admission
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0043] occurrences matches {0..1} matches {    -- Description
+                                value matches {
+                                    DV_TEXT[at9078]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0044] occurrences matches {0..1} matches {    -- Inpatient admission details
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.inpatient_episode_details(-[a-zA-Z0-9_]+)*\.v0\..*/}
+                            }
+                            ELEMENT[at0045] matches {    -- Conditions managed
+                                value matches {
+                                    DV_TEXT[at9079]
+                                }
+                            }
+                            ELEMENT[at0046] occurrences matches {0..1} matches {    -- Treatment summary
+                                value matches {
+                                    DV_TEXT[at9080]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0047] occurrences matches {0..1} matches {    -- Additional details
+                                include
+                                    archetype_id/value matches {/.*/}
+                            }
+                            ELEMENT[at0048] occurrences matches {0..1} matches {    -- Scheduled follow up
+                                value matches {
+                                    DV_DATE_TIME[at9038]
+                                }
+                            }
+                            ELEMENT[at0062] occurrences matches {0..1} matches {    -- Comment
+                                value matches {
+                                    DV_DATE_TIME[at9081]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0049] occurrences matches {0..1} matches {    -- Total number of postnatal admissions
+                        value matches {
+                            DV_COUNT[at9039]
+                        }
+                    }
+                    ELEMENT[at0050] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9040]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0051] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0052] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0053] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9041]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Pregnancy care summary">
+                description = <"Summary details about the antenatal and postnatal care received during a single pregnancy.">
+            >
+            ["at0003"] = <
+                text = <"First antenatal visit">
+                description = <"The date of the first antenatal visit for the pregnancy overall.">
+            >
+            ["at0004"] = <
+                text = <"Antenatal care">
+                description = <"Details about an episode of antenatal care from a single healthcare provider or using a single funding type.">
+                comment = <"Use a separate instance of this repeating CLUSTER to record a single episode of care per healthcare provider or funding type.">
+            >
+            ["at0005"] = <
+                text = <"Provider type">
+                description = <"Type of health professional or clinic providing community or outpatient antenatal care.">
+                comment = <"For example: community clinic; specialist obstetrician; or high risk clinic.">
+            >
+            ["at0007"] = <
+                text = <"Provider details">
+                description = <"Details about the healthcare provider.">
+                comment = <"For example: details about an individual or an organisation.">
+            >
+            ["at0009"] = <
+                text = <"Date of first visit">
+                description = <"The date of the first antenatal visit for the identified for healthcare provider or funding model.">
+            >
+            ["at0010"] = <
+                text = <"Gestation at first visit">
+                description = <"Gestation at the first antenatal visit for the identified for healthcare provider or funding model.">
+            >
+            ["at0011"] = <
+                text = <"Date of last visit">
+                description = <"The date of the last antenatal visit for the identified for healthcare provider or funding model.">
+            >
+            ["at0012"] = <
+                text = <"Gestation at last visit">
+                description = <"Gestation at the last antenatal visit for the identified for healthcare provider or funding model.">
+            >
+            ["at0013"] = <
+                text = <"Number of visits">
+                description = <"The number of visits to the identified healthcare provider.">
+            >
+            ["at0016"] = <
+                text = <"Additional details">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Antenatal admission">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Gestation at admission">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Inpatient admission details">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Description">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Description">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Conditions managed">
+                description = <"Significant issues, problems or diagnoses managed by the identified healthcare provider.">
+                comment = <"Coding with an external terminology is recommended, if available.">
+            >
+            ["at0015"] = <
+                text = <"Treatment summary">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Conditions managed">
+                description = <"Significant issues, problems or diagnoses managed by the specified type of care.">
+            >
+            ["at0024"] = <
+                text = <"Treatment summary">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Additional details">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Last antenatal visit">
+                description = <"The date of the last antenatal visit of any type or location, prior to delivery.">
+            >
+            ["at0030"] = <
+                text = <"Comment">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Description">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Gestation at admission">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Specific postnatal visit">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"Type of visit">
+                description = <"Type of health professional or clinic providing community or outpatient postnatal care.">
+            >
+            ["at0036"] = <
+                text = <"Description">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"Assessment">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Additional details">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"Postnatal admission">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"Description">
+                description = <"">
+            >
+            ["at0044"] = <
+                text = <"Inpatient admission details">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"Conditions managed">
+                description = <"Significant issues, problems or diagnoses managed by the specified type of care.">
+            >
+            ["at0046"] = <
+                text = <"Treatment summary">
+                description = <"">
+            >
+            ["at0047"] = <
+                text = <"Additional details">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Total number of antenatal visits">
+                description = <"Total number of antenatal clinic visits of all types and locations for the pregnancy overall.">
+            >
+            ["at0023"] = <
+                text = <"Scheduled follow up">
+                description = <"The scheduled date for antenatal admission followup.">
+            >
+            ["at0040"] = <
+                text = <"Scheduled follow up">
+                description = <"The scheduled date for postnatal care followup.">
+            >
+            ["at0032"] = <
+                text = <"Scheduled follow up">
+                description = <"The scheduled date for routine postnatal followup.">
+            >
+            ["at0028"] = <
+                text = <"Total number of antenatal admissions">
+                description = <"Total number of antenatal hospital admissions.">
+            >
+            ["at0048"] = <
+                text = <"Scheduled follow up">
+                description = <"The scheduled date for postnatal admission followup.">
+            >
+            ["at0038"] = <
+                text = <"Conditions managed">
+                description = <"Significant issues, problems or diagnoses managed by the specified type of care.">
+            >
+            ["at0050"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the care received during a single pregnancy and the related postnatal period, not captured in other data fields.">
+            >
+            ["at0002"] = <
+                text = <"Description">
+                description = <"Narrative description about the care received during a single pregnancy and the related postnatal period.">
+            >
+            ["at0052"] = <
+                text = <"Extension">
+                description = <"">
+            >
+            ["at0049"] = <
+                text = <"Total number of postnatal admissions">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"Total number of postnatal visits">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Gestation at discharge">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"Last updated">
+                description = <"The date when this care summary was last updated.">
+            >
+            ["at0056"] = <
+                text = <"Scheduled follow up">
+                description = <"The scheduled date for antenatal admission followup.">
+            >
+            ["at0057"] = <
+                text = <"Date of visit">
+                description = <"">
+            >
+            ["at0058"] = <
+                text = <"Delivery admission">
+                description = <"">
+            >
+            ["at0059"] = <
+                text = <"Inpatient admission details">
+                description = <"">
+            >
+            ["at0060"] = <
+                text = <"Comment">
+                description = <"">
+            >
+            ["at0061"] = <
+                text = <"Comment">
+                description = <"">
+            >
+            ["at0062"] = <
+                text = <"Comment">
+                description = <"">
+            >
+            ["at0063"] = <
+                text = <"Comment">
+                description = <"">
+            >
+            ["at0076"] = <
+                text = <"No antenatal care">
+                description = <"">
+            >
+            ["at0095"] = <
+                text = <"Overall funding type">
+                description = <"Source of funding for all pregnancy care.">
+            >
+            ["at0096"] = <
+                text = <"Public">
+                description = <"Antenatal care funded from public sources.">
+            >
+            ["at0097"] = <
+                text = <"Private">
+                description = <"Antenatal care funded from a private source.">
+            >
+            ["at0098"] = <
+                text = <"Both">
+                description = <"Antenatal care funded from a mix of public and private sources.">
+            >
+            ["at0099"] = <
+                text = <"Funding type">
+                description = <"Source of funding for this episode of antenatal care.">
+                comment = <"For example: public or private.">
+            >
+            ["at0101"] = <
+                text = <"Public">
+                description = <"Antenatal care funded from public sources.">
+            >
+            ["at0102"] = <
+                text = <"Private">
+                description = <"Antenatal care funded from a private source.">
+            >
+            ["at0103"] = <
+                text = <"Postnatal care">
+                description = <"Details about an episode of postnatal care from a single healthcare provider or using a single funding type.">
+                comment = <"Use a separate instance of this repeating CLUSTER to record a single episode of care per healthcare provider or funding type.">
+            >
+            ["at0104"] = <
+                text = <"Provider type">
+                description = <"Type of health professional or clinic providing community or outpatient postnatal care.">
+                comment = <"For example: community clinic; specialist obstetrician; or high risk clinic.">
+            >
+            ["at0105"] = <
+                text = <"Funding type">
+                description = <"Source of funding for this episode of postnatal care.">
+                comment = <"For example: public or private.">
+            >
+            ["at0106"] = <
+                text = <"Public">
+                description = <"Postnatal care funded from public sources.">
+            >
+            ["at0107"] = <
+                text = <"Private">
+                description = <"Postnatal care funded from a private source.">
+            >
+            ["at0108"] = <
+                text = <"Provider name">
+                description = <"">
+            >
+            ["at0109"] = <
+                text = <"Provider details">
+                description = <"">
+            >
+            ["at0110"] = <
+                text = <"Description">
+                description = <"">
+            >
+            ["at0111"] = <
+                text = <"Date of first visit">
+                description = <"">
+            >
+            ["at0112"] = <
+                text = <"Days post partum at first visit">
+                description = <"">
+            >
+            ["at0113"] = <
+                text = <"Date of last visit">
+                description = <"The date of the last postnatal visit for this healthcare provider or funding model.">
+            >
+            ["at0114"] = <
+                text = <"Days post partum at last visit">
+                description = <"">
+            >
+            ["at0115"] = <
+                text = <"Number of visits">
+                description = <"The number of visits by the identified healthcare provider.">
+            >
+            ["at0116"] = <
+                text = <"Conditions managed">
+                description = <"Significant issues, problems or diagnoses managed by the specified type of care.">
+            >
+            ["at0117"] = <
+                text = <"Treatment summary">
+                description = <"">
+            >
+            ["at0118"] = <
+                text = <"Additional details">
+                description = <"">
+            >
+            ["at0119"] = <
+                text = <"Scheduled follow up">
+                description = <"The scheduled date for postnatal follow-up.">
+            >
+            ["at0120"] = <
+                text = <"Comment">
+                description = <"">
+            >
+            ["at0121"] = <
+                text = <"Gestation at first visit">
+                description = <"Gestation at the first antenatal visit for the pregnancy overall.">
+            >
+            ["ac9083"] = <
+                text = <"Overall funding type (synthesised)">
+                description = <"Source of funding for all pregnancy care. (synthesised)">
+            >
+            ["ac9084"] = <
+                text = <"Funding type (synthesised)">
+                description = <"Source of funding for this episode of antenatal care. (synthesised)">
+            >
+            ["ac9085"] = <
+                text = <"Funding type (synthesised)">
+                description = <"Source of funding for this episode of postnatal care. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9085"] = <
+            id = <"ac9085">
+            members = <"at0106", "at0107">
+        >
+        ["ac9084"] = <
+            id = <"ac9084">
+            members = <"at0101", "at0102">
+        >
+        ["ac9083"] = <
+            id = <"ac9083">
+            members = <"at0096", "at0097", "at0098">
+        >
+    >

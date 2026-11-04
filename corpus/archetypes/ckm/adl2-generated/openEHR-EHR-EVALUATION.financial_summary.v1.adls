@@ -1,0 +1,395 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=8384e246-4f33-4ea4-a52a-994ec70ccfea; build_uid=38f531b0-ec80-403f-a04d-e78ae92e29c4)
+    openEHR-EHR-EVALUATION.financial_summary.v1.0.2
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Vanessa Pereira">
+                ["organisation"] = <"Luxembourg Institute of Health (LIH)">
+                ["email"] = <"vanessapereira@protonmail.com">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke, Vebjørn Arntzen, John Tore Valand, Liv Laugen">
+                ["organisation"] = <"Nasjonal IKT HF, Oslo University Hospital, Helse Bergen, ​Oslo University Hospital, Norway">
+                ["email"] = <"silje.ljosland.bakke@nasjonalikt.no, varntzen@ous-hf.no, john.tore.valand@helse-bergen.no, liv.laugen@ous-hf.no">
+            >
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            author = <
+                ["name"] = <"Vanessa Pereira">
+                ["organisation"] = <"Luxembourg Institute of Health (LIH)">
+                ["email"] = <"vanessapereira@protonmail.com">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Silje Ljosland Bakke">
+        ["organisation"] = <"Nasjonal IKT HF">
+        ["email"] = <"silje.ljosland.bakke@nasjonalikt.no">
+        ["date"] = <"2017-10-09">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Terje Bektesevic Holmlund, UiT Norges arktiske universitet, Norway", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Mikkel Gaup Grønmo, FSE, Helse Nord, Norway", "Heather Grain, Llewelyn Grain Informatics, Australia", "Evelyn Hovenga, EJSH Consulting, Australia", "Gunnar Jårvik, Helse Vest IKT AS, Norway", "Heidi Koikkalainen, United Kingdom (openEHR Editor)", "Nils Kolstrup, Skansen Legekontor og Nasjonalt Senter for samhandling og telemedisin, Norway", "pirkko kortekangas, UNA oy, Finland", "Ronald Krawec, Alberta Health Services, Canada", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Neranga Liyanaarachchi, Ministry of Health, Postgraduate Institute of Medicine, Sri Lanka", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Andrej Orel, Marand d.o.o., Slovenia", "Gro-Hilde Severinsen, Norwegian center for ehealthresearch, Norway", "Tove Stenquist, Helseforetak, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Nyree Taylor, Ocean Informatics, Australia", "Susanne Trønnes, Bergen kommune, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"159C32514DF03A297F44CC141F9EBD8C">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Erfassung zusammenfassender Informationen über die finanzielle Situation einer Person, insbesondere über die Auswirkungen auf die sozialen Determinanten der Gesundheit.">
+            use = <"Zur Erfassung zusammenfassender Informationen über die finanzielle Situation einer Person, insbesondere über die Auswirkungen auf die sozialen Determinanten der Gesundheit.
+
+Mehrere Instanzen des CLUSTER.financial_record, die innerhalb des Finanzdatensatz-SLOTs verwendet werden, ermöglichen die Aggregation einer Historie der vergangenen und aktuellen Finanzen.
+
+Das Datenelement \"Letzte Aktualisierung\" erfasst das letzte Mal, dass die Finanzübersicht als Ganzes, einschließlich einzelner Finanzdatensätze, aktualisiert wurde.
+
+Verwenden Sie das Datenelement \"Beschreibung\", um die narrativen Beschreibungen der finanziellen Historie innerhalb bestehender oder älterer klinischer Systeme in ein archetypisches Format einzubinden.">
+            misuse = <"Nicht für die Aufzeichnung von Informationen über den/die Beruf(e) der Person zu verwenden. Verwenden Sie zu diesem Zweck die Archetypen EVALUATION.occupation_summary oder CLUSTER.occupation_record.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere et sammendrag om den økonomiske situasjonen til et individ, spesielt faktorer som kan ha betydning for helsen, helsedeterminanter.">
+            use = <"Brukes for å registrere et sammendrag om den økonomiske situasjonen for et individ, spesielt faktorer som kan ha betydning for helsen, helsedeterminanter.
+
+Ved å nøste flere instanser av arketypen CLUSTER.financial_record (Økonomi) inn i utbyggingssporet \"Økonomi\", kan man få med seg aggregert informasjon om både tidligere og nåværende finansiell situasjon.
+
+Dataelementet \"Sist oppdatert\" brukes for å registrere når \"Økonomisammendrag\" sist ble oppdatert, inkludert opplysninger som er registrert i SLOTet \"Økonomi\".
+
+Dataelementet \"Beskrivelse\" brukes til å overføre fritekstbeskrivelser fra eksisterende eller tidligere kliniske systemer til arketypeformat.">
+            misuse = <"Skal ikke brukes for å registrere informasjon om individets arbeidsforhold. Bruk arketypen \"Arbeidssammendrag\" (EVALUATION.occupation_summary) eller \"Arbeidsforhold/Rolle\" (CLUSTER.occupation_record) til dette.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record summary information about the financial situation of an individual, particularly the impact on social determinants of health.">
+            use = <"Use to record summary information about the financial situation of an individual, particularly the impact on social determinants of health.
+
+Multiple instances of the CLUSTER.financial_record used within the Financial record SLOT will allow aggregation of a history of both past and present finances.
+
+The 'Last updated' data element will record the last time that the Financial summary as a whole, including individual financial records, was updated.
+
+Use to incorporate the narrative descriptions of financial history within existing or legacy clinical systems into an archetyped format, using the 'Description' data element.">
+            misuse = <"Not to be used to record information about the occupation(s) of the individual. Use the EVALUATION.occupation_summary or CLUSTER.occupation_record archetypes for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            purpose = <"Enregistrer des informations sommaires sur la situation financière d'un individu, en particulier l'impact sur les déterminants sociaux de la santé.">
+            use = <"À utiliser pour enregistrer des informations sommaires sur la situation financière d'une personne, en particulier l'impact sur les déterminants sociaux de la santé.
+
+Plusieurs instances du CLUSTER.financial_record utilisées dans le SLOT de l'enregistrement financier permettront d'agréger un historique des finances passées et présentes.
+
+L'élément de données \"Dernière mise à jour\" indique la date de la dernière mise à jour du résumé financier dans son ensemble, y compris les dossiers financiers individuels.
+
+A utiliser pour incorporer les descriptions narratives de l'historique financier dans les systèmes cliniques existants ou hérités dans un format archétypique, en utilisant l'élément de données \"Description\".">
+            misuse = <"Ne doit pas être utilisé pour enregistrer des informations sur la/les profession(s) de l'individu. Utiliser les archétypes EVALUATION.occupation_summary ou CLUSTER.occupation_record à cette fin.">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Financial summary
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9001]
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Financial security status
+                        value matches {
+                            DV_CODED_TEXT[at9002] matches {
+                                defining_code matches {[ac9000]}    -- Financial security status (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Financial security description
+                        value matches {
+                            DV_TEXT[at9006]
+                        }
+                    }
+                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Main source of income
+                        value matches {
+                            DV_TEXT[at9003]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0008] matches {    -- Financial record
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.financial_record\.v0\..*/}
+                    }
+                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9004]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0010] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9005]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0012] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Finanzielle Zusammenfassung">
+                description = <"Zusammenfassende Informationen über die finanzielle Situation einer Person.">
+            >
+            ["at0002"] = <
+                text = <"Beschreibung">
+                description = <"Narrative Beschreibung der finanziellen Situation der Person.">
+            >
+            ["at0003"] = <
+                text = <"Status der finanziellen Sicherheit">
+                description = <"Kategorie, die beschreibt, wie der Einzelne sein Einkommen einschätzt, das zur Deckung seiner Ausgaben ausreicht.">
+                comment = <"Dieses Datenelement soll dazu dienen, Situationen möglicher finanzieller Belastung zu ermitteln, die sich auf die Gesundheit der Person auswirken können.">
+            >
+            ["at0004"] = <
+                text = <"Sicher">
+                description = <"Der Einzelne hat ein Gefühl der Sicherheit und des Seelenfriedens bezüglich seiner finanziellen Situation - sein Einkommen ist stabil und/oder ausreichend, um seine Ausgaben zu decken.">
+            >
+            ["at0005"] = <
+                text = <"Gefährdet">
+                description = <"Der Einzelne hat ein Gefühl der Unsicherheit über seine finanzielle Situation - sein Einkommen kann schwanken und/oder manchmal nicht ausreichen, um seine Ausgaben zu decken.">
+            >
+            ["at0006"] = <
+                text = <"Unsicher">
+                description = <"Die Person macht sich Sorgen und ist besorgt über eine finanzielle Notlage - ihr Einkommen ist nicht stabil und/oder reicht nicht aus, um ihre Ausgaben zu decken.">
+            >
+            ["at0007"] = <
+                text = <"Haupteinkommensquelle">
+                description = <"Die Haupteinkommensquelle der Person.">
+                comment = <"Zum Beispiel: Erwerbstätigkeit, Familienunterstützung, Studiendarlehen und Rente. Eine Kodierung mit einer Terminologie ist wünschenswert, wenn möglich.">
+            >
+            ["at0008"] = <
+                text = <"Finanzielle Aufzeichnung">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Kommentar">
+                description = <"Zusätzliche Angaben zur Finanzübersicht, die in anderen Feldern nicht erfasst werden.">
+            >
+            ["at0011"] = <
+                text = <"Zuletzt aktualisiert">
+                description = <"Das Datum, an dem diese Finanzübersicht zuletzt aktualisiert wurde.">
+            >
+            ["at0012"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen oder CIMI-Modelle.">
+            >
+            ["at0013"] = <
+                text = <"Beschreibung der finanziellen Sicherheit">
+                description = <"Narrative Beschreibung des finanziellen Sicherheitsstatus der Person.">
+            >
+            ["ac9000"] = <
+                text = <"Status der finanziellen Sicherheit (synthesised)">
+                description = <"Kategorie, die beschreibt, wie der Einzelne sein Einkommen einschätzt, das zur Deckung seiner Ausgaben ausreicht. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Økonomisammendrag">
+                description = <"Sammendrag eller varig (persistent) informasjon om et individs økonomiske situasjon.">
+            >
+            ["at0002"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstbeskrivelse om den økonomiske situasjonen til individet.">
+            >
+            ["at0003"] = <
+                text = <"Økonomisk trygghet">
+                description = <"Kategori som beskriver individets egen oppfatning om inntekten er nok til å dekke utgiftene.">
+                comment = <"Dette dataelementet er ment for å finne ut om mulig økonomisk utrygghet kan påvirke helsen til individet.">
+            >
+            ["at0004"] = <
+                text = <"Trygg">
+                description = <"Individet har en opplevelse av økonomisk sikkerhet/trygghet og er avslappet med hensyn til egen økonomi - inntekten er stabil og/eller nok til å dekke utgifter.">
+            >
+            ["at0005"] = <
+                text = <"Vekslende">
+                description = <"Individet har en opplevelse av økonomisk usikkerhet - inntekten kan variere og/eller noen ganger ikke være nok til å dekke utgifter.">
+            >
+            ["at0006"] = <
+                text = <"Utrygg">
+                description = <"Individet har en opplevelse av økonomisk bekymring - inntekten er ikke stabil og/eller er ikke nok til å dekke utgifter.">
+            >
+            ["at0007"] = <
+                text = <"Hovedinntekstkilde">
+                description = <"Den viktigste inntektskilden til individet.">
+                comment = <"For eksempel: lønnet arbeid, forsørges av familie, studielån, uførepensjon. Koding av inntektskilde med en terminologi er foretrukket, dersom mulig.">
+            >
+            ["at0008"] = <
+                text = <"Økonomi">
+                description = <"Strukturerte detaljer om tidligere og nåværende finansiell situasjon.">
+            >
+            ["at0009"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekstbeskrivelse om økonomisammendraget som ikke er dekket av andre felt.">
+            >
+            ["at0011"] = <
+                text = <"Sist oppdatert">
+                description = <"Dato da dette økonomisammendraget ble oppdatert.">
+            >
+            ["at0012"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0013"] = <
+                text = <"Beskrivelse av økonomisk trygghet">
+                description = <"Friteksbeskrivelse om individets økonomiske trygghet.">
+            >
+            ["ac9000"] = <
+                text = <"Økonomisk trygghet (synthesised)">
+                description = <"Kategori som beskriver individets egen oppfatning om inntekten er nok til å dekke utgiftene. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Financial summary">
+                description = <"Summary information about the financial situation of an individual.">
+            >
+            ["at0007"] = <
+                text = <"Main source of income">
+                description = <"The main source of income for the individual.">
+                comment = <"For example: Paid employment; family support; student loan; and pension. Coding with a terminology is desirable, where possible.">
+            >
+            ["at0002"] = <
+                text = <"Description">
+                description = <"Narrative description about the financial situation of the individual.">
+            >
+            ["at0009"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the Financial summary not captured in other fields.">
+            >
+            ["at0008"] = <
+                text = <"Financial record">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Last updated">
+                description = <"The date this Financial summary was last updated.">
+            >
+            ["at0012"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0003"] = <
+                text = <"Financial security status">
+                description = <"Category describing the individual's perception about their income being adequate to cover their expenses.">
+                comment = <"This data element is intended to screen for situations of possible financial stress which may impact the health of the individual.">
+            >
+            ["at0004"] = <
+                text = <"Secure">
+                description = <"The individual has a sense of certainty and peace of mind about their financial situation - their income is stable and/or adequate to cover their expenses.">
+            >
+            ["at0005"] = <
+                text = <"At risk">
+                description = <"The individual has a sense of uncertainty about their financial situation - their income may vary and/or sometimes may not be adequate to cover their expenses.">
+            >
+            ["at0006"] = <
+                text = <"Insecure">
+                description = <"The individual has a sense of worry and concern about financial hardship - their income is not stable and/or not adequate to cover their expenses.">
+            >
+            ["at0013"] = <
+                text = <"Financial security description">
+                description = <"Narrative description about the financial security status of the individual.">
+            >
+            ["ac9000"] = <
+                text = <"Financial security status (synthesised)">
+                description = <"Category describing the individual's perception about their income being adequate to cover their expenses. (synthesised)">
+            >
+        >
+        ["fr"] = <
+            ["at0000"] = <
+                text = <"Sommaire financier">
+                description = <"Informations sommaires sur la situation financière d'un individu.">
+            >
+            ["at0002"] = <
+                text = <"Description">
+                description = <"Description narrative de la situation financière de l'individu.">
+            >
+            ["at0003"] = <
+                text = <"Niveau de sécurité financière">
+                description = <"Catégorie décrivant la perception de l'individu quant à l'adéquation de ses revenus pour couvrir ses dépenses.">
+                comment = <"Cet élément de données est destiné à dépister les situations de stress financier qui peuvent avoir un impact sur la santé de l'individu.">
+            >
+            ["at0004"] = <
+                text = <"Stable">
+                description = <"La personne a un sentiment de certitude et de tranquillité d'esprit quant à sa situation financière - ses revenus sont stables et/ou suffisants pour couvrir ses dépenses.">
+            >
+            ["at0005"] = <
+                text = <"En péril">
+                description = <"La personne a un sentiment d'incertitude quant à sa situation financière - ses revenus peuvent varier et/ou parfois ne pas être suffisants pour couvrir ses dépenses.">
+            >
+            ["at0006"] = <
+                text = <"Instable">
+                description = <"L'individu est inquiet et préoccupé par ses difficultés financières - ses revenus ne sont pas stables et/ou ne suffisent pas à couvrir ses dépenses.">
+            >
+            ["at0007"] = <
+                text = <"Principale source de revenus">
+                description = <"La principale source de revenus de l'individu.">
+                comment = <"Par exemple : Emploi rémunéré ; aide à la famille ; prêt étudiant ; et pension. Il est souhaitable, dans la mesure du possible, de coder avec une terminologie.">
+            >
+            ["at0008"] = <
+                text = <"Fiche financière">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Commentaire">
+                description = <"Informations supplémentaires sur le résumé financier qui n'ont pas été saisies dans d'autres champs.">
+            >
+            ["at0011"] = <
+                text = <"Dernière mise à jour">
+                description = <"Date de la dernière mise à jour du présent résumé financier.">
+            >
+            ["at0012"] = <
+                text = <"Extension">
+                description = <"Informations supplémentaires nécessaires pour étendre le modèle au contenu local ou pour l'aligner sur d'autres modèles de référence ou formalismes.">
+                comment = <"Par exemple : exigences locales en matière d'information ou métadonnées supplémentaires pour s'aligner sur FHIR.">
+            >
+            ["at0013"] = <
+                text = <"Description de la sécurité financière">
+                description = <"Description narrative de la situation de l'individu en matière de sécurité financière.">
+            >
+            ["ac9000"] = <
+                text = <"Niveau de sécurité financière (synthesised)">
+                description = <"Catégorie décrivant la perception de l'individu quant à l'adéquation de ses revenus pour couvrir ses dépenses. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0004", "at0005", "at0006">
+        >
+    >

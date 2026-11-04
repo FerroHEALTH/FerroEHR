@@ -1,0 +1,691 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=6a279610-5997-4ab3-9031-1ab91ab6e90e; build_uid=6883885a-7ecc-414d-847a-fef72abf19c6)
+    openEHR-EHR-COMPOSITION.report-post_mortem.v0.0.2-alpha
+
+specialize
+    openEHR-EHR-COMPOSITION.report.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Ramona Wellmann, Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Sofia Janstad, Åsa Skagerhult">
+                ["organisation"] = <"SLL, Region Östergötland">
+                ["email"] = <"sofia.lang-janstad@sll.se, asa.skagerhult@regionostergotland.se">
+            >
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            author = <
+                ["name"] = <"Alan March">
+                ["organisation"] = <"Hospital Universitario Austral - Buenos Aires - Argentina">
+                ["email"] = <"alandmarch@gmail.com">
+            >
+            accreditation = <"physician">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand, Liv Laugen, Silje Ljosland Bakke">
+                ["organisation"] = <"Helse Bergen, ​Oslo University Hospital, Norway, Helse Vest IKT AS">
+                ["email"] = <"liv.laugen@ous-hf.no, silje.ljosland.bakke@helse-vest-ikt.no">
+            >
+        >
+        ["ko"] = <
+            language = <[ISO_639-1::ko]>
+            author = <
+                ["name"] = <"Seung-Jong Yu">
+                ["organisation"] = <"InfoClinic Co.,Ltd.">
+                ["email"] = <"seungjong.yu@gmail.com">
+            >
+            accreditation = <"Certified Board of Family Medicine in South Korea">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Adriana Kitajima, Débora Farage, Fernanda Maia, Laíse Figueiredo, Marivan Abrahão">
+                ["organisation"] = <"Core Consulting">
+                ["email"] = <"contato@coreconsulting.com.br">
+            >
+            accreditation = <"Hospital Alemão Oswaldo Cruz (HAOC)">
+        >
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            author = <
+                ["name"] = <"Francesca Frexia">
+                ["organisation"] = <"CRS4 - Center for advanced studies, research and development in Sardinia, Pula (Cagliari), Italy">
+                ["email"] = <"francesca.frexia@crs4.it">
+            >
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            author = <
+                ["name"] = <"Pieter Bos, Jelte Zeilstra">
+                ["organisation"] = <"Nedap Healthcare">
+            >
+        >
+        ["zh"] = <
+            language = <[ISO_639-1::zh]>
+            author = <
+                ["name"] = <"Yexuan Cheng">
+                ["organisation"] = <"浙江大学">
+                ["email"] = <"3160100913@zju.edu.cn">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2010-04-14">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo universitetssykehus HF, Norway (Nasjonal IKT redaktør)", "Koray Atalag, University of Auckland, New Zealand", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Sistine Barretto-Daniels, Ocean Informatics, Australia", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Einar Fosse, National Centre for Integrated Care and Telemedicine, Norway", "Heath Frankel, Ocean Informatics, Australia", "Sam Heard, Ocean Informatics, Australia", "Kristian Heldal, Telemark Hospital Trust, Norway", "Lars Morgan Karlsen, DIPS ASA, Norway", "Shinji Kobayashi, National Institute of Public Health, Japan", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Hugh Leslie, Ocean Informatics, Australia", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Bjoern Naess, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Rune Pedersen, Universitetssykehuset i Nord Norge, Norway", "Line Sæle, Nasjonal IKT HF, Norway", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics, heather.leslie@oceaninformatics.com">
+        ["MD5-CAM-1.0.1"] = <"19613F3D410478BDECA66ECD8843AF83">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"*To carry information about a post mortem or autopsy. (en)">
+            keywords = <"Bericht", "Report">
+            use = <"*Use as a container archetype to carry information about a post mortem or autopsy.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            purpose = <"*To carry information about a post mortem or autopsy. (en)">
+            keywords = <"*report(en)", ...>
+            use = <"*Use as a container archetype to carry information about a post mortem or autopsy.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"*To carry information about a post mortem or autopsy. (en)">
+            keywords = <"rapport", ...>
+            use = <"*Use as a container archetype to carry information about a post mortem or autopsy.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ko"] = <
+            language = <[ISO_639-1::ko]>
+            purpose = <"*To carry information about a post mortem or autopsy. (en)">
+            keywords = <"리포트", ...>
+            use = <"*Use as a container archetype to carry information about a post mortem or autopsy.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"*To carry information about a post mortem or autopsy. (en)">
+            keywords = <"relatório", ...>
+            use = <"*Use as a container archetype to carry information about a post mortem or autopsy.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"*To carry information about a post mortem or autopsy. (en)">
+            keywords = <"تقرير", ...>
+            use = <"*Use as a container archetype to carry information about a post mortem or autopsy.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To carry information about a post mortem or autopsy.">
+            keywords = <"report", ...>
+            use = <"Use as a container archetype to carry information about a post mortem or autopsy.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            purpose = <"*To carry information about a post mortem or autopsy. (en)">
+            keywords = <"rapporto", ...>
+            use = <"*Use as a container archetype to carry information about a post mortem or autopsy.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["zh"] = <
+            language = <[ISO_639-1::zh]>
+            purpose = <"*To carry information about a post mortem or autopsy. (en)">
+            keywords = <"报告", ...>
+            use = <"*Use as a container archetype to carry information about a post mortem or autopsy.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            purpose = <"*To carry information about a post mortem or autopsy. (en)">
+            keywords = <"informe", ...>
+            use = <"*Use as a container archetype to carry information about a post mortem or autopsy.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"*To carry information about a post mortem or autopsy. (en)">
+            keywords = <"rapport", "svar", "svarrapport">
+            use = <"*Use as a container archetype to carry information about a post mortem or autopsy.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            purpose = <"*To carry information about a post mortem or autopsy. (en)">
+            keywords = <"*report(en)", ...>
+            use = <"*Use as a container archetype to carry information about a post mortem or autopsy.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            purpose = <"*To carry information about a post mortem or autopsy. (en)">
+            keywords = <"rapportage", ...>
+            use = <"*Use as a container archetype to carry information about a post mortem or autopsy.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    COMPOSITION[at0000.1] matches {    -- Post mortem report
+        /context[at9002]/other_context[at0001]/items matches {
+            ELEMENT[at0.1] occurrences matches {0..1} matches {    -- Date of autopsy
+                value matches {
+                    DV_DATE_TIME[at0.9000]
+                }
+            }
+            allow_archetype CLUSTER[at0.2] matches {    -- Pathologist
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0.3] occurrences matches {0..1} matches {    -- Pathologist category
+                value matches {
+                    DV_TEXT[at0.9001]
+                }
+            }
+            allow_archetype CLUSTER[at0.4] matches {    -- Investigator
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            ELEMENT[at0.5] occurrences matches {0..1} matches {    -- Date report completed
+                value matches {
+                    DV_DATE_TIME[at0.9002]
+                }
+            }
+            ELEMENT[at0.6] occurrences matches {0..1} matches {    -- Date report submitted
+                value matches {
+                    DV_DATE_TIME[at0.9003]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000.1"] = <
+                text = <"*Post mortem report (en)">
+                description = <"*Container archetype to carry information about a post mortem or autopsy. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Date report completed (en)">
+                description = <"*The date when the post mortem report was completed. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Date report submitted (en)">
+                description = <"*The date when the post mortem report was submitted to the public health authority. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Date of autopsy (en)">
+                description = <"*The date when the autopsy was completed. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Coroner category (en)">
+                description = <"*The category/credentials of the pathologist who carried out the autopsy. (en)">
+                comment = <"*For example: Specialist pathologist; District medical officer. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Coroner (en)">
+                description = <"">
+            >
+            ["at0.4"] = <
+                text = <"*Investigator (en)">
+                description = <"">
+            >
+        >
+        ["fi"] = <
+            ["at0000.1"] = <
+                text = <"*Post mortem report (en)">
+                description = <"*Container archetype to carry information about a post mortem or autopsy. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Date report completed (en)">
+                description = <"*The date when the post mortem report was completed. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Date report submitted (en)">
+                description = <"*The date when the post mortem report was submitted to the public health authority. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Date of autopsy (en)">
+                description = <"*The date when the autopsy was completed. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Coroner category (en)">
+                description = <"*The category/credentials of the pathologist who carried out the autopsy. (en)">
+                comment = <"*For example: Specialist pathologist; District medical officer. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Coroner (en)">
+                description = <"">
+            >
+            ["at0.4"] = <
+                text = <"*Investigator (en)">
+                description = <"">
+            >
+        >
+        ["sv"] = <
+            ["at0000.1"] = <
+                text = <"*Post mortem report (en)">
+                description = <"*Container archetype to carry information about a post mortem or autopsy. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Date report completed (en)">
+                description = <"*The date when the post mortem report was completed. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Date report submitted (en)">
+                description = <"*The date when the post mortem report was submitted to the public health authority. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Date of autopsy (en)">
+                description = <"*The date when the autopsy was completed. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Coroner category (en)">
+                description = <"*The category/credentials of the pathologist who carried out the autopsy. (en)">
+                comment = <"*For example: Specialist pathologist; District medical officer. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Coroner (en)">
+                description = <"">
+            >
+            ["at0.4"] = <
+                text = <"*Investigator (en)">
+                description = <"">
+            >
+        >
+        ["ko"] = <
+            ["at0000.1"] = <
+                text = <"*Post mortem report (en)">
+                description = <"*Container archetype to carry information about a post mortem or autopsy. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Date report completed (en)">
+                description = <"*The date when the post mortem report was completed. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Date report submitted (en)">
+                description = <"*The date when the post mortem report was submitted to the public health authority. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Date of autopsy (en)">
+                description = <"*The date when the autopsy was completed. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Coroner category (en)">
+                description = <"*The category/credentials of the pathologist who carried out the autopsy. (en)">
+                comment = <"*For example: Specialist pathologist; District medical officer. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Coroner (en)">
+                description = <"">
+            >
+            ["at0.4"] = <
+                text = <"*Investigator (en)">
+                description = <"">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000.1"] = <
+                text = <"*Post mortem report (en)">
+                description = <"*Container archetype to carry information about a post mortem or autopsy. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Date report completed (en)">
+                description = <"*The date when the post mortem report was completed. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Date report submitted (en)">
+                description = <"*The date when the post mortem report was submitted to the public health authority. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Date of autopsy (en)">
+                description = <"*The date when the autopsy was completed. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Coroner category (en)">
+                description = <"*The category/credentials of the pathologist who carried out the autopsy. (en)">
+                comment = <"*For example: Specialist pathologist; District medical officer. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Coroner (en)">
+                description = <"">
+            >
+            ["at0.4"] = <
+                text = <"*Investigator (en)">
+                description = <"">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000.1"] = <
+                text = <"*Post mortem report (en)">
+                description = <"*Container archetype to carry information about a post mortem or autopsy. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Date report completed (en)">
+                description = <"*The date when the post mortem report was completed. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Date report submitted (en)">
+                description = <"*The date when the post mortem report was submitted to the public health authority. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Date of autopsy (en)">
+                description = <"*The date when the autopsy was completed. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Coroner category (en)">
+                description = <"*The category/credentials of the pathologist who carried out the autopsy. (en)">
+                comment = <"*For example: Specialist pathologist; District medical officer. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Coroner (en)">
+                description = <"">
+            >
+            ["at0.4"] = <
+                text = <"*Investigator (en)">
+                description = <"">
+            >
+        >
+        ["en"] = <
+            ["at0.1"] = <
+                text = <"Date of autopsy">
+                description = <"The date when the autopsy was completed.">
+            >
+            ["at0.2"] = <
+                text = <"Pathologist">
+                description = <"Identification of the individual(s) who carried out the autopsy.">
+            >
+            ["at0.3"] = <
+                text = <"Pathologist category">
+                description = <"The category/credentials of the individual who carried out the autopsy.">
+                comment = <"For example: Specialist pathologist; District medical officer.">
+            >
+            ["at0.4"] = <
+                text = <"Investigator">
+                description = <"Details about the individual(s) assigned to investigate the disease notification.">
+            >
+            ["at0.5"] = <
+                text = <"Date report completed">
+                description = <"The date when the post mortem report was completed.">
+            >
+            ["at0.6"] = <
+                text = <"Date report submitted">
+                description = <"The date when the post mortem report was submitted to the public health authority.">
+            >
+            ["at0000.1"] = <
+                text = <"Post mortem report">
+                description = <"Container archetype to carry information about a post mortem or autopsy.">
+            >
+        >
+        ["it"] = <
+            ["at0000.1"] = <
+                text = <"*Post mortem report (en)">
+                description = <"*Container archetype to carry information about a post mortem or autopsy. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Date report completed (en)">
+                description = <"*The date when the post mortem report was completed. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Date report submitted (en)">
+                description = <"*The date when the post mortem report was submitted to the public health authority. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Date of autopsy (en)">
+                description = <"*The date when the autopsy was completed. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Coroner category (en)">
+                description = <"*The category/credentials of the pathologist who carried out the autopsy. (en)">
+                comment = <"*For example: Specialist pathologist; District medical officer. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Coroner (en)">
+                description = <"">
+            >
+            ["at0.4"] = <
+                text = <"*Investigator (en)">
+                description = <"">
+            >
+        >
+        ["zh"] = <
+            ["at0000.1"] = <
+                text = <"*Post mortem report (en)">
+                description = <"*Container archetype to carry information about a post mortem or autopsy. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Date report completed (en)">
+                description = <"*The date when the post mortem report was completed. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Date report submitted (en)">
+                description = <"*The date when the post mortem report was submitted to the public health authority. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Date of autopsy (en)">
+                description = <"*The date when the autopsy was completed. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Coroner category (en)">
+                description = <"*The category/credentials of the pathologist who carried out the autopsy. (en)">
+                comment = <"*For example: Specialist pathologist; District medical officer. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Coroner (en)">
+                description = <"">
+            >
+            ["at0.4"] = <
+                text = <"*Investigator (en)">
+                description = <"">
+            >
+        >
+        ["nb"] = <
+            ["at0000.1"] = <
+                text = <"*Post mortem report (en)">
+                description = <"*Container archetype to carry information about a post mortem or autopsy. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Date report completed (en)">
+                description = <"*The date when the post mortem report was completed. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Date report submitted (en)">
+                description = <"*The date when the post mortem report was submitted to the public health authority. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Date of autopsy (en)">
+                description = <"*The date when the autopsy was completed. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Coroner category (en)">
+                description = <"*The category/credentials of the pathologist who carried out the autopsy. (en)">
+                comment = <"*For example: Specialist pathologist; District medical officer. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Coroner (en)">
+                description = <"">
+            >
+            ["at0.4"] = <
+                text = <"*Investigator (en)">
+                description = <"">
+            >
+        >
+        ["es-ar"] = <
+            ["at0000.1"] = <
+                text = <"*Post mortem report (en)">
+                description = <"*Container archetype to carry information about a post mortem or autopsy. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Date report completed (en)">
+                description = <"*The date when the post mortem report was completed. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Date report submitted (en)">
+                description = <"*The date when the post mortem report was submitted to the public health authority. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Date of autopsy (en)">
+                description = <"*The date when the autopsy was completed. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Coroner category (en)">
+                description = <"*The category/credentials of the pathologist who carried out the autopsy. (en)">
+                comment = <"*For example: Specialist pathologist; District medical officer. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Coroner (en)">
+                description = <"">
+            >
+            ["at0.4"] = <
+                text = <"*Investigator (en)">
+                description = <"">
+            >
+        >
+        ["sl"] = <
+            ["at0000.1"] = <
+                text = <"*Post mortem report (en)">
+                description = <"*Container archetype to carry information about a post mortem or autopsy. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Date report completed (en)">
+                description = <"*The date when the post mortem report was completed. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Date report submitted (en)">
+                description = <"*The date when the post mortem report was submitted to the public health authority. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Date of autopsy (en)">
+                description = <"*The date when the autopsy was completed. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Coroner category (en)">
+                description = <"*The category/credentials of the pathologist who carried out the autopsy. (en)">
+                comment = <"*For example: Specialist pathologist; District medical officer. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Coroner (en)">
+                description = <"">
+            >
+            ["at0.4"] = <
+                text = <"*Investigator (en)">
+                description = <"">
+            >
+        >
+        ["nl"] = <
+            ["at0000.1"] = <
+                text = <"*Post mortem report (en)">
+                description = <"*Container archetype to carry information about a post mortem or autopsy. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Date report completed (en)">
+                description = <"*The date when the post mortem report was completed. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Date report submitted (en)">
+                description = <"*The date when the post mortem report was submitted to the public health authority. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Date of autopsy (en)">
+                description = <"*The date when the autopsy was completed. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Coroner category (en)">
+                description = <"*The category/credentials of the pathologist who carried out the autopsy. (en)">
+                comment = <"*For example: Specialist pathologist; District medical officer. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Coroner (en)">
+                description = <"">
+            >
+            ["at0.4"] = <
+                text = <"*Investigator (en)">
+                description = <"">
+            >
+        >
+    >

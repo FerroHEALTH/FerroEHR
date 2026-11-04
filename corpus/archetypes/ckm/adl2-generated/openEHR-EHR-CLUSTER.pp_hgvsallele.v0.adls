@@ -1,0 +1,66 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=4cf665de-e0c4-4261-82ec-e1a8382b6957; build_uid=c37a55b0-d3ee-4101-bf51-6f8edae60f0e)
+    openEHR-EHR-CLUSTER.pp_hgvsallele.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2019-09-25">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"2FFCB28B58400584C875186C26AC9BFA">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"This element is used to describe an allele according to the nomenclature of the Human Geneome Variation Society (HGVS). For instance, NM_000226.3:c.470T>G indicates that a T at position 470 of the sequence represented by version 3 of NM_000226 (which is the mRNA of the human keratin 9 gene KRT9).">
+            use = <"We recommend using a tool such as VariantValidator or Mutalyzer to validate the HGVS string. See the HGVS recommendations for details about the HGVS nomenclature.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Phenopacket HgvsAllele
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- id
+                value matches {
+                    DV_IDENTIFIER[at9000]
+                }
+            }
+            ELEMENT[at0002] occurrences matches {1} matches {    -- hgvs
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Phenopacket HgvsAllele">
+                description = <"*">
+            >
+            ["at0001"] = <
+                text = <"id">
+                description = <"An arbitrary identifier.">
+            >
+            ["at0002"] = <
+                text = <"hgvs">
+                description = <"*">
+                comment = <"For example: NM_000226.3:c.470T>G.">
+            >
+        >
+    >

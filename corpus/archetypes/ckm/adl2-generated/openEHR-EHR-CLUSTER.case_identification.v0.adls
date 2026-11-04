@@ -1,0 +1,314 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=b5bfd7b0-eb33-4b1a-86a4-eedd5b44e41a; build_uid=079baf0b-a6a0-4bce-bb73-bc35c951058b)
+    openEHR-EHR-CLUSTER.case_identification.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Michael Lieser, Alina Rehberg, Vanessa Pereira">
+                ["organisation"] = <"University of Heidelberg - Department of Infectious Diseases, Medizinische Hochschule Hannover, Luxembourg Institute of Health (LIH)">
+                ["email"] = <"michael.lieser@med.uni-heidelberg.de, rehberg.alina@mh-hannover.de, vanessapereira@protonmail.com">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Lars Bitsch-Larsen">
+                ["organisation"] = <"Haukeland University Hospital of Bergen, Norway">
+            >
+            accreditation = <"MD, DEAA, MBA, spec in anesthesia, spec in tropical medicine.">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            author = <
+                ["name"] = <"Jonas Bucher">
+                ["organisation"] = <"Cistec AG">
+                ["email"] = <"jonas.bucher@cistec.com">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Dr Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics, United Kingdom">
+        ["email"] = <"ian.mcnicoll@oceaninformatics.com">
+        ["date"] = <"08/12/2009">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"IHE, Laboratory Technical Framework, Volume 3 Content [Internet]. 2008;Available from: http://www.ihe.net/Technical_Framework/upload/ihe_lab_TF_rel2_1-Vol-3_FT_2008-08-08.pdf">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"1CAB22687979BE179C5A534EEC3A6C19">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Erfassung von Details zur Identifikation eines Falls.">
+            keywords = <"Fall", "Identifikation", "Fallnummer">
+            use = <"">
+            misuse = <"">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For registrering av detaljer om identifikasjon av et case.">
+            keywords = <"case", "offentlige", "helseformål">
+            use = <"">
+            misuse = <"">
+            copyright = <"© copyright (c) 2010 openEHR Foundation, openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about the identification of a case.">
+            use = <"">
+            misuse = <"">
+            copyright = <"© copyright (c) 2010 openEHR Foundation, openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتسجيل التفاصيل حول تعريف إصابة مَرَضية ما">
+            use = <"">
+            misuse = <"">
+            copyright = <"© copyright (c) 2010 openEHR Foundation, openEHR Foundation">
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            purpose = <"Pour enregistrer des détails relatifs à l'identification d'un cas.">
+            use = <"">
+            misuse = <"">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Case identification
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Case identifier
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Case started
+                value matches {
+                    DV_DATE_TIME[at9002]
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Status
+                value matches {
+                    DV_CODED_TEXT[at9003] matches {
+                        defining_code matches {[ac9000]}    -- Status (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Case identified
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Fallidentifikation">
+                description = <"Zur Erfassung von Details zur Identifikation eines Falls im Gesundheitswesen.">
+            >
+            ["at0001"] = <
+                text = <"Fall-Kennung">
+                description = <"Der Bezeichner/die Kennung dieses Falls.">
+            >
+            ["at0002"] = <
+                text = <"Fall-Beginn">
+                description = <"Das Datum, an dem der Fall begann/eröffnet wurde.">
+            >
+            ["at0003"] = <
+                text = <"Status">
+                description = <"Der Status des Falls. 
+Der Status \"abgeschlossen\" bedeutet, dass dem Patienten die entsprechende Fallnummer zugeordnet wurde. 
+Der Status \"abgebrochen\" bedeutet, dass dem Patienten die entsprechende Fallnummer fälschlicherweise zugeordnet wurde.">
+            >
+            ["at0004"] = <
+                text = <"Abgeschlossen">
+                description = <"Dem Patienten wurde die entsprechende Fallkennung zugeordnet.">
+            >
+            ["at0005"] = <
+                text = <"Abgebrochen">
+                description = <"Dem Patienten wurde die entsprechende Fallkennung fälschlicherweise zugeordnet.">
+            >
+            ["at0006"] = <
+                text = <"Identifizierter fall">
+                description = <"Bezeichnung oder kodierter Text zur Bezeichnung des Falls.">
+            >
+            ["ac9000"] = <
+                text = <"Status (synthesised)">
+                description = <"Der Status des Falls. 
+Der Status \"abgeschlossen\" bedeutet, dass dem Patienten die entsprechende Fallnummer zugeordnet wurde. 
+Der Status \"abgebrochen\" bedeutet, dass dem Patienten die entsprechende Fallnummer fälschlicherweise zugeordnet wurde. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Case identifikasjon">
+                description = <"For registrering av case identifikasjons detaljer for offentlige helseformål.">
+            >
+            ["at0001"] = <
+                text = <"Case identifikator">
+                description = <"Case Identifikatoren.i">
+            >
+            ["at0002"] = <
+                text = <"Case påbegynt">
+                description = <"Dato for når casen startet,">
+            >
+            ["at0003"] = <
+                text = <"Status">
+                description = <"Statusen av casen. En status for gjennomført betyr at pasienten er blitt assosiert med den gitte saksnummer. En status som abortert, betyr at pasienten var assosiert med feil case nummer (saksnummer).">
+            >
+            ["at0004"] = <
+                text = <"Ferdig">
+                description = <"Casen er blitt assosiert med en given identifikator.">
+            >
+            ["at0005"] = <
+                text = <"Abortert">
+                description = <"Personen er blitt assosiert med case identifikatoren ved en feil.">
+            >
+            ["at0006"] = <
+                text = <"Case identifisert">
+                description = <"Tekst eller kodet beskrivelse av den identifiserte case .">
+            >
+            ["ac9000"] = <
+                text = <"Status (synthesised)">
+                description = <"Statusen av casen. En status for gjennomført betyr at pasienten er blitt assosiert med den gitte saksnummer. En status som abortert, betyr at pasienten var assosiert med feil case nummer (saksnummer). (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Case identification">
+                description = <"To record case identification details for public health purposes.">
+            >
+            ["at0001"] = <
+                text = <"Case identifier">
+                description = <"The identifier of this case.">
+            >
+            ["at0002"] = <
+                text = <"Case started">
+                description = <"The date that the case was commenced.">
+            >
+            ["at0003"] = <
+                text = <"Status">
+                description = <"The status of the case. A status of completed means the patient has been associated with the given case number.
+A status of aborted means the patient was associated with the case number in error.">
+            >
+            ["at0004"] = <
+                text = <"Completed">
+                description = <"The case has been associated with the given case identifier.">
+            >
+            ["at0005"] = <
+                text = <"Aborted">
+                description = <"The subject was associated with the case identifier in error.">
+            >
+            ["at0006"] = <
+                text = <"Case identified">
+                description = <"Text or coded description of the case identified.">
+            >
+            ["ac9000"] = <
+                text = <"Status (synthesised)">
+                description = <"The status of the case. A status of completed means the patient has been associated with the given case number.
+A status of aborted means the patient was associated with the case number in error. (synthesised)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"تعريف الحالة">
+                description = <"لتسجيل تفاصيل تعريف الحالة لأغراض الصحة العامة">
+            >
+            ["at0001"] = <
+                text = <"العنصر التعريفي الخاص بالإصابة المَرَضية">
+                description = <"العنصر التعريفي الخاص بهذه الإصابة المَرَضية">
+            >
+            ["at0002"] = <
+                text = <"بدء الإصابة المَرَضية">
+                description = <"التاريخ الذي بدأت عنده الإصابة المَرَضية">
+            >
+            ["at0003"] = <
+                text = <"الحالة">
+                description = <"حالة الإصابة المَرَضية. 
+إذا كانت (مكتملة) فإن ذلك يعني أن المريض كان مصحوبا برقم الإصابة المرضية المعطى.
+إذا كانت (توقفت فجأة) فإن ذلك يعني أن المريض كان مصحوبا برقم الإصابة المرضية المعطى حيث حدث خطأ ما">
+            >
+            ["at0004"] = <
+                text = <"مكتمل">
+                description = <"الإصابة المرضية مصحوبة برقم الإصابة المرضية المعطى">
+            >
+            ["at0005"] = <
+                text = <"توقف فجأة">
+                description = <"المريض مصحوب برقم الإصابة المرضية المعطى">
+            >
+            ["at0006"] = <
+                text = <"الإصابة المَرَضية التي يتم تعريفها">
+                description = <"وصف نصي أو مُرمَز للإصابة المرضية التي يتم تعريفها">
+            >
+            ["ac9000"] = <
+                text = <"الحالة (synthesised)">
+                description = <"حالة الإصابة المَرَضية. 
+إذا كانت (مكتملة) فإن ذلك يعني أن المريض كان مصحوبا برقم الإصابة المرضية المعطى.
+إذا كانت (توقفت فجأة) فإن ذلك يعني أن المريض كان مصحوبا برقم الإصابة المرضية المعطى حيث حدث خطأ ما (synthesised)">
+            >
+        >
+        ["fr"] = <
+            ["at0000"] = <
+                text = <"Identification de cas">
+                description = <"Pour enregistrer des détails d'identification d'un cas à des fins de santé publique.">
+            >
+            ["at0001"] = <
+                text = <"Identifiant de cas">
+                description = <"L'identifiant de ce cas.">
+            >
+            ["at0002"] = <
+                text = <"Date de début du cas">
+                description = <"La date de début du cas.">
+            >
+            ["at0003"] = <
+                text = <"Statut">
+                description = <"Le statut du cas. Un statut « complété » signifie que le patient a été associé à l'identifiant de cas indiqué.
+Un statut « annulé » signifie que le patient a été associé par erreur à l'identifiant de cas.">
+            >
+            ["at0004"] = <
+                text = <"Complété">
+                description = <"Le cas a été associé à l'identifiant de cas indiqué.">
+            >
+            ["at0005"] = <
+                text = <"Annulé">
+                description = <"Le sujet a été associé par erreur à l'identifiant de cas.">
+            >
+            ["at0006"] = <
+                text = <"Cas identifié">
+                description = <"Description textuelle ou codée du cas identifié.">
+            >
+            ["ac9000"] = <
+                text = <"Statut (synthesised)">
+                description = <"Le statut du cas. Un statut « complété » signifie que le patient a été associé à l'identifiant de cas indiqué.
+Un statut « annulé » signifie que le patient a été associé par erreur à l'identifiant de cas. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0004", "at0005">
+        >
+    >

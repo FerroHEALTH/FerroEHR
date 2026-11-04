@@ -1,0 +1,118 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=f90c4adc-0b67-4b22-93c2-e43c0024c6f6; build_uid=70da5adf-6b57-42be-8015-46c005252791)
+    openEHR-DEMOGRAPHIC-CLUSTER.person_additional_data_br.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::pt-br]>
+    translations = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            author = <
+                ["name"] = <"Sergio Miranda Freire">
+                ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+                ["email"] = <"sergio@lampada.uerj.br">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sergio Miranda Freire & Rigoleta Dutra Mediano Dias">
+        ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+        ["email"] = <"sergio@lampada.uerj.br">
+        ["date"] = <"2009-05-22">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"2E4CD41132330A5BEC28342786B0748E">
+    >
+    details = <
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Representação de outros dados de uma pessoa além daqueles especificados pela ISO 22220.">
+            keywords = <"serviço demográfico", "dados demográficos de uma pessoa">
+            use = <"Usado em serviço demográficos para coletar os dados de uma pessoa.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Representation of other person's data besides those specified in ISO 22220.">
+            keywords = <"demographic service", "person's demographic data">
+            use = <"Used in demographic service to collect a person's data.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] occurrences matches {0..1} matches {    -- Dados demográficos adicionais da pessoa
+        items matches {
+            ELEMENT[at0001] matches {    -- Estado Civil
+                value matches {
+                    DV_CODED_TEXT[at9000] matches {
+                        defining_code matches {[ac2]}    -- Códigos para Estado Civil
+                    }
+                }
+            }
+            ELEMENT[at0002] matches {    -- Etnia
+                value matches {
+                    DV_CODED_TEXT[at9001] matches {
+                        defining_code matches {[ac3]}    -- Códigos para grupos étnicos
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Dados demográficos adicionais da pessoa">
+                description = <"Dados demográficos adicionais da pessoa além daqueles especificados pela ISO 22220.">
+            >
+            ["at0001"] = <
+                text = <"Estado Civil">
+                description = <"Estado Civil.">
+            >
+            ["at0002"] = <
+                text = <"Etnia">
+                description = <"Grupo étnico ao qual a pessoa pertence.">
+            >
+            ["ac2"] = <
+                text = <"Códigos para Estado Civil">
+                description = <"Códigos válidos para Estado Civil">
+            >
+            ["ac3"] = <
+                text = <"Códigos para grupos étnicos">
+                description = <"códigos válidos para grupos étnicos">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Extended personal demographics">
+                description = <"Personal demographic data extended beyond those specified by ISO 22220.">
+            >
+            ["at0001"] = <
+                text = <"Marital status">
+                description = <"Marital status.">
+            >
+            ["at0002"] = <
+                text = <"Ethnic background">
+                description = <"The person's ethnic background.">
+            >
+            ["ac2"] = <
+                text = <"Marital status codes">
+                description = <"Valid codes for marital status">
+            >
+            ["ac3"] = <
+                text = <"Ethnic background codes">
+                description = <"Valid codes for ethnic background">
+            >
+        >
+    >

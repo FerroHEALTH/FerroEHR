@@ -1,0 +1,715 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=6bce9f1a-8cee-4dfc-89ad-c4c50a526906; build_uid=499194be-296c-4b50-8452-51ca8b9ff491)
+    openEHR-EHR-OBSERVATION.embryo_assessment.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Peter Fedorcsak, Vebjørn Arntzen">
+                ["organisation"] = <"University of Oslo, Oslo University Hospital">
+                ["email"] = <"peterfe@uio.no, varntzen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-10-28">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Gunn Elin Blakkisrud, DIPS ASA, Norway", "Peter Fedorcsak, University of Oslo, Norway (openEHR Editor)", "Rosane Gotardo, Systema Ltda., Brazil", "Heather Grain, Llewelyn Grain Informatics, Australia", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Manisha Mantri, C-DAC, India", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "John Tore Valand, Haukeland Universitetssjukehus, Norway", "Julius Hreinsson, Laboratory Director at Reproductive Medicine, Sahlgrenska University Hospital, Sweden">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Alpha Scientists in Reproductive, M. and E.S.I.G.o. Embryology, The Istanbul consensus workshop on embryo assessment: proceedings of an expert meeting. Human Reproduction, 2011. 26(6): p. 1270-1283.">
+        ["2"] = <"Eshre Working Group on Time-lapse technology, et al., Good practice recommendations for the use of time-lapse technology. Hum Reprod Open, 2020. 2020(2): p. hoaa008.">
+        ["3"] = <"Hardarson, T., L. Van Landuyt, and G. Jones, The blastocyst. Human Reproduction, 2012. 27(suppl_1): p. i72-i91.">
+        ["4"] = <"Papale, L., et al., The zygote. Human Reproduction, 2012. 27(suppl_1): p. i22-i49.">
+        ["5"] = <"Prados, F.J., et al., The cleavage stage embryo. Human Reproduction, 2012. 27(suppl_1): p. i50-i71.">
+        ["6"] = <"Rienzi, L., et al., The oocyte. Human Reproduction, 2012. 27(suppl_1): p. i2-i21.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"582BC252D2D0A957071DDD2E092DAEEE">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For registrering av detaljer ved undersøkelse av morfologi og utvikling av et humant oocytt eller embryo.">
+            keywords = <"morphologi, time-lapse, in vitro, befruktning, IVF, reproduksjon, zygote, fertilisert, befruktet, egg, eggcelle, oocytt, embryo, blastocyst, assistert, ART", ...>
+            use = <"Brukes til å registrere detaljer ved undersøkelse av morfologi og utvikling av et humant oocytt, zygote, embryo i delingsstadium eller en blastocyst, vanligvis som del av assistert befruktning.
+
+Denne OBSERVATION-arketypen støtter i tillegg registrering av morfokinetiske data og annotering ved undersøkelse av embryoutvikling med time-lapse mikroskopi.">
+            misuse = <"Skal ikke brukes til å registrere detaljer av prosedyrer som involverer oocytter eller embryo, slik som inseminasjon, mikroinjeksjon og biopsy - bruk spesifikke ACTION arketyper.
+
+Skal ikke brukes til å registrere detaljer av andre enn morfologiske undersøkelser av oocytt og embryo, f eks genetiske eller metabolske undersøkelser - bruk spesifikke OBSERVATION arketyper.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about the assessment of morphology and development of a single oocyte or embryo.">
+            keywords = <"in vitro, fertilization, IVF, reproductive medicine, zygote, fertilised, fertilized, oocyte, egg, fertilisation, embryo, reproduction, ART, blastocyst, morphology, time-lapse", ...>
+            use = <"Use to record details about assessment of morphology and development of a single oocyte, zygote, cleavage-stage embryo or blastocyst, usually as part of assisted reproduction treatment.
+
+This OBSERVATION archetype also supports recording morphokinetic data and timed annotations obtained during time-lapse microscopy of embryo development.">
+            misuse = <"Not to be used for recording details of procedures involving oocytes and embryos, like insemination, microinjection or biopsy - use specific ACTION archetype for this purpose.
+
+Not to be used for recording non-morphological assessment of single oocyte or embryo, like genetic or metabolic tests - use relevant OBSERVATION archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Oocyte and embryo assessment
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Label
+                                        value matches {
+                                            DV_TEXT[at9004]
+                                        }
+                                    }
+                                    ELEMENT[at0011] matches {    -- ID
+                                        value matches {
+                                            DV_IDENTIFIER[at9005]
+                                            DV_TEXT[at9030]
+                                        }
+                                    }
+                                    ELEMENT[at0034] occurrences matches {0..1} matches {    -- Description
+                                        value matches {
+                                            DV_TEXT[at9006]
+                                        }
+                                    }
+                                    ELEMENT[at0036] occurrences matches {0..1} matches {    -- Developmental stage
+                                        value matches {
+                                            DV_CODED_TEXT[at9007] matches {
+                                                defining_code matches {[ac9000]}    -- Developmental stage (synthesised)
+                                            }
+                                            DV_TEXT[at9008]
+                                        }
+                                    }
+                                    ELEMENT[at0044] occurrences matches {0..1} matches {    -- Developmental event
+                                        value matches {
+                                            DV_TEXT[at9009]
+                                            DV_CODED_TEXT[at9010] matches {
+                                                defining_code matches {[ac9001]}    -- Developmental event (synthesised)
+                                            }
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0013] matches {    -- Morphological findings
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.exam_embryo\.v1\..*|openEHR-EHR-CLUSTER\.exam_blastocyst\.v1\..*|openEHR-EHR-CLUSTER\.exam_oocyte\.v1\..*|openEHR-EHR-CLUSTER\.exam_zygote\.v1\..*/}
+                                    }
+                                    allow_archetype CLUSTER[at0022] matches {    -- Image representation
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.media_file(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                    ELEMENT[at0023] occurrences matches {0..1} matches {    -- Time post-insemination
+                                        value matches {
+                                            DV_DURATION[at9011]
+                                        }
+                                    }
+                                    ELEMENT[at0024] matches {    -- Interpretation
+                                        value matches {
+                                            DV_TEXT[at9013]
+                                        }
+                                    }
+                                    ELEMENT[at0035] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9014]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    POINT_EVENT[at0066] occurrences matches {0..1} matches {    -- Oocyte collection assessment
+                        data matches {
+                            use_node ITEM_TREE[at9029] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                    }
+                    POINT_EVENT[at0027] occurrences matches {0..1} matches {    -- Fertilisation assessment
+                        data matches {
+                            use_node ITEM_TREE[at9015] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                    }
+                    POINT_EVENT[at0028] occurrences matches {0..1} matches {    -- Syngamy assessment
+                        data matches {
+                            use_node ITEM_TREE[at9016] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                    }
+                    POINT_EVENT[at0029] occurrences matches {0..1} matches {    -- Early cleavage assessment
+                        data matches {
+                            use_node ITEM_TREE[at9017] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                    }
+                    POINT_EVENT[at0030] occurrences matches {0..1} matches {    -- Day-2 embryo assessment
+                        data matches {
+                            use_node ITEM_TREE[at9018] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                    }
+                    POINT_EVENT[at0031] occurrences matches {0..1} matches {    -- Day-3 embryo assessment
+                        data matches {
+                            use_node ITEM_TREE[at9019] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                    }
+                    POINT_EVENT[at0032] occurrences matches {0..1} matches {    -- Day-4 embryo assessment
+                        data matches {
+                            use_node ITEM_TREE[at9020] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                    }
+                    POINT_EVENT[at0033] occurrences matches {0..1} matches {    -- Day-5 embryo assessment
+                        data matches {
+                            use_node ITEM_TREE[at9021] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                    }
+                    POINT_EVENT[at0065] occurrences matches {0..1} matches {    -- Day-6 embryo assessment
+                        data matches {
+                            use_node ITEM_TREE[at9028] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                    }
+                    POINT_EVENT[at0062] occurrences matches {0..1} matches {    -- Freezing assessment
+                        data matches {
+                            use_node ITEM_TREE[at9025] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                    }
+                    POINT_EVENT[at0063] occurrences matches {0..1} matches {    -- Thawing assessment
+                        data matches {
+                            use_node ITEM_TREE[at9026] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                    }
+                    POINT_EVENT[at0064] occurrences matches {0..1} matches {    -- Embryo transfer assessment
+                        data matches {
+                            use_node ITEM_TREE[at9027] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0004] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0067] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    allow_archetype CLUSTER[at0005] matches {    -- Device
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Culture dish ID
+                        value matches {
+                            DV_IDENTIFIER[at9022]
+                        }
+                    }
+                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Method
+                        value matches {
+                            DV_CODED_TEXT[at9023] matches {
+                                defining_code matches {[ac9003]}    -- Method (synthesised)
+                            }
+                            DV_TEXT[at9024]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Undersøkelse av oocytt og embryo">
+                description = <"Undersøkelse av morfologi og utvikling av en oocytt eller embryo.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i en template eller i en applikasjon.">
+            >
+            ["at0005"] = <
+                text = <"Medisinsk utstyr">
+                description = <"Detaljer for det medisinske utstyret brukt for vurdering av oocyttens eller embryoets morfologi og utvikling.">
+            >
+            ["at0006"] = <
+                text = <"Dyrkningsskål ID">
+                description = <"Et unikt identifiseringsnummer for dyrkningsskål som inneholder oocytten eller embryoet.">
+            >
+            ["at0007"] = <
+                text = <"Metode">
+                description = <"Metode for vurdering av oocyttens eller embryoets morfologi og utvikling.">
+            >
+            ["at0008"] = <
+                text = <"Manuell">
+                description = <"Morfologi og utvikling ble vurdert ved manuell mikroskopi.">
+            >
+            ["at0009"] = <
+                text = <"Time-lapse">
+                description = <"Morfologi og utvikling ble vurdert med automatisert utstyr.">
+            >
+            ["at0010"] = <
+                text = <"Merking">
+                description = <"Merking eller betegnelse som identifiserer en oocytt eller embryo.">
+            >
+            ["at0011"] = <
+                text = <"ID">
+                description = <"Unik identifiseringsnummer av oocytt eller embryo.">
+                comment = <"Eksempelvis hele eller deler av den felles europeiske SEC koden.">
+            >
+            ["at0013"] = <
+                text = <"Morfologiske funn">
+                description = <"Strukturerte morfologiske funn for det respektive utviklingsstadiet av oocytt eller embryo.">
+            >
+            ["at0022"] = <
+                text = <"Multimediarepresentasjon">
+                description = <"Digitalt bilde, video eller tegning som representerer ooctyttens eller embryoets morfologi og utvikling.">
+            >
+            ["at0023"] = <
+                text = <"Varighet siden inseminering">
+                description = <"Tidsperioden siden inseminering.">
+            >
+            ["at0024"] = <
+                text = <"Tolkning">
+                description = <"Klinisk tolkning av undersøkelse av oocyttens eller embryoets morfologi og utvikling.">
+                comment = <"For eksempel \"Egnet for klinisk bruk\" eller \"Uegnet for klinisk bruk\".">
+            >
+            ["at0027"] = <
+                text = <"Vurdering ved befruktning">
+                description = <"Undersøkelse av den inseminerte oocytten for å vurdere befruktning.">
+            >
+            ["at0028"] = <
+                text = <"Vurdering ved syngami">
+                description = <"Undersøkelse av den inseminerte oocytten for å vurdere syngami.">
+            >
+            ["at0029"] = <
+                text = <"Vurdering ved tidlig celledeling">
+                description = <"Undersøkelse av embryo for å vurdere tidlig første celledeling.">
+            >
+            ["at0030"] = <
+                text = <"Vurdering av dag 2 embryo">
+                description = <"Undersøkelse av embryo på dag 2 etter inseminering.">
+            >
+            ["at0031"] = <
+                text = <"Vurdering av dag 3 embryo">
+                description = <"Undersøkelse av embryo på dag 3 etter inseminering.">
+            >
+            ["at0032"] = <
+                text = <"Vurdering av dag 4 embryo">
+                description = <"Undersøkelse av embryo på dag 4 etter inseminering.">
+            >
+            ["at0033"] = <
+                text = <"Vurdering av dag 5 embryo">
+                description = <"Undersøkelse av embryo på dag 5 etter inseminering.">
+            >
+            ["at0034"] = <
+                text = <"Beskrivelse">
+                description = <"Generell beskrivelse av oocytt eller embryo.">
+            >
+            ["at0035"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om undersøkelse av oocytt eller embryo, som ikke dekkes av andre elementer.">
+                comment = <"For eksempel vanskelig visualisering.">
+            >
+            ["at0036"] = <
+                text = <"Utviklingsstadium">
+                description = <"Oocyttens eller embryoets utviklingsstadium.">
+            >
+            ["at0037"] = <
+                text = <"Zygote">
+                description = <"Zygote stadium.">
+            >
+            ["at0038"] = <
+                text = <"2-celle stadium">
+                description = <"2-celle stadium.">
+            >
+            ["at0039"] = <
+                text = <"4-celle stadium">
+                description = <"4-celle stadium.">
+            >
+            ["at0040"] = <
+                text = <"8-celle stadium">
+                description = <"8-celle stadium.">
+            >
+            ["at0041"] = <
+                text = <"Morula">
+                description = <"Morula stadium.">
+            >
+            ["at0042"] = <
+                text = <"Blastocyst">
+                description = <"Blastocyst stadium.">
+            >
+            ["at0043"] = <
+                text = <"Oocytt">
+                description = <"Oocytt stadium.">
+            >
+            ["at0044"] = <
+                text = <"Hendelse under utvikling">
+                description = <"Registrering av en hendelse under tidlig utvikling av oocytt eller embryo observert under time-lapse mikroskopi.">
+                comment = <"Verdisettet er hentet fra Eshre Working Group's 'Nomenclature of morphokinetic parameters'. For eksempel utstøtning av andre pollegeme, forkjernene blir synlige eller visner, celledeling eller kompaktering.">
+            >
+            ["at0045"] = <
+                text = <"tPB2 utstøtning">
+                description = <"Det andre pollegeme er fullstening løsnet fra oolemma.">
+            >
+            ["at0046"] = <
+                text = <"tPNa">
+                description = <"De enkelte forkjernene blir synlig.">
+            >
+            ["at0047"] = <
+                text = <"tPNf">
+                description = <"Forkjernene visner.">
+            >
+            ["at0048"] = <
+                text = <"t2">
+                description = <"Embryoet består av 2 celler.">
+            >
+            ["at0049"] = <
+                text = <"t3">
+                description = <"Embryoet består av 3 celler.">
+            >
+            ["at0050"] = <
+                text = <"t4">
+                description = <"Embryoet består av 4 celler.">
+            >
+            ["at0051"] = <
+                text = <"t5">
+                description = <"Embryoet består av 5 celler.">
+            >
+            ["at0052"] = <
+                text = <"t6">
+                description = <"Embryoet består av 6 celler.">
+            >
+            ["at0053"] = <
+                text = <"t7">
+                description = <"Embryoet består av 7 celler.">
+            >
+            ["at0054"] = <
+                text = <"t8">
+                description = <"Embryoet består av 8 celler.">
+            >
+            ["at0055"] = <
+                text = <"tSC">
+                description = <"Påbegynt kompaktering.">
+            >
+            ["at0056"] = <
+                text = <"tM">
+                description = <"Kompaktering er fullført.">
+            >
+            ["at0057"] = <
+                text = <"tSB">
+                description = <"Påbegynt blastulering.">
+            >
+            ["at0058"] = <
+                text = <"tB">
+                description = <"Komplett blastocyst.">
+            >
+            ["at0059"] = <
+                text = <"tE">
+                description = <"Påbegynt ekspandering.">
+            >
+            ["at0060"] = <
+                text = <"tHN">
+                description = <"Herniering.">
+            >
+            ["at0061"] = <
+                text = <"tHB">
+                description = <"Fullstendig klekket blastocyst.">
+            >
+            ["at0062"] = <
+                text = <"Vurdering ved nedfrysing">
+                description = <"Undersøkelse av oocytt eller embryo ved nedfrysing.">
+            >
+            ["at0063"] = <
+                text = <"Vurdering ved opptining">
+                description = <"Undersøkelse av oocytt eller embryo ved opptining.">
+            >
+            ["at0064"] = <
+                text = <"Vurdering ved embryo transfer">
+                description = <"Undersøkelse av embryo ved embryo transfer.">
+            >
+            ["at0065"] = <
+                text = <"Vurdering av dag 6 embryo">
+                description = <"Undersøkelse av embryo på dag 6 etter inseminering.">
+            >
+            ["at0066"] = <
+                text = <"Vurdering ved egguttak">
+                description = <"Undersøkelse av oocyte ved egguttak.">
+            >
+            ["at0067"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["ac9000"] = <
+                text = <"Utviklingsstadium (synthesised)">
+                description = <"Oocyttens eller embryoets utviklingsstadium. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Hendelse under utvikling (synthesised)">
+                description = <"Registrering av en hendelse under tidlig utvikling av oocytt eller embryo observert under time-lapse mikroskopi. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Metode (synthesised)">
+                description = <"Metode for vurdering av oocyttens eller embryoets morfologi og utvikling. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Oocyte and embryo assessment">
+                description = <"Assessment of morphological features and development of a single oocyte or embryo.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0005"] = <
+                text = <"Device">
+                description = <"Details of the device used to assess morphology and development of the oocyte or embryo.">
+            >
+            ["at0006"] = <
+                text = <"Culture dish ID">
+                description = <"The unique identifier for the culture dish containing the oocyte or embryo.">
+            >
+            ["at0007"] = <
+                text = <"Method">
+                description = <"Method for assessment of morphology and development of the oocyte or embryo.">
+            >
+            ["at0008"] = <
+                text = <"Manual">
+                description = <"Morphology and development were assessed by manual microscopy.">
+            >
+            ["at0009"] = <
+                text = <"Time-lapse">
+                description = <"Morphology and development were assessed by automated device.">
+            >
+            ["at0010"] = <
+                text = <"Label">
+                description = <"Label or name identifying an oocyte or embryo.">
+            >
+            ["at0011"] = <
+                text = <"ID">
+                description = <"The unique identifier for the oocyte or embryo.">
+                comment = <"For example: the entire or applicable part of the \"Single European Code” or “SEC” identifier.">
+            >
+            ["at0013"] = <
+                text = <"Morphological findings">
+                description = <"Structured morphological findings appropriate for the developmental stage of the oocyte or embryo.">
+            >
+            ["at0022"] = <
+                text = <"Image representation">
+                description = <"Digital image, video or diagram representing morphology and development of the oocyte or embryo.">
+            >
+            ["at0023"] = <
+                text = <"Time post-insemination">
+                description = <"The duration since insemination.">
+            >
+            ["at0024"] = <
+                text = <"Interpretation">
+                description = <"Clinical interpretation of the morphological and developmental assessment of the oocyte or embryo.">
+                comment = <"For example: 'Suitable for clinical use'; or 'Unsuitable for clinical use'.
+">
+            >
+            ["at0027"] = <
+                text = <"Fertilisation assessment">
+                description = <"Observation of the inseminated oocyte to assess fertilization.">
+            >
+            ["at0028"] = <
+                text = <"Syngamy assessment">
+                description = <"Observation of the inseminated oocyte to assess syngamy.">
+            >
+            ["at0029"] = <
+                text = <"Early cleavage assessment">
+                description = <"Observation of the embryo to assess early first cell cleavage.">
+            >
+            ["at0030"] = <
+                text = <"Day-2 embryo assessment">
+                description = <"Embryo observation on Day 2 post insemination.">
+            >
+            ["at0031"] = <
+                text = <"Day-3 embryo assessment">
+                description = <"Embryo observation on Day 3 post insemination.">
+            >
+            ["at0032"] = <
+                text = <"Day-4 embryo assessment">
+                description = <"Embryo observation on Day 4 post insemination.">
+            >
+            ["at0033"] = <
+                text = <"Day-5 embryo assessment">
+                description = <"Embryo observation on Day 5 post insemination.">
+            >
+            ["at0034"] = <
+                text = <"Description">
+                description = <"General description of the oocyte or embryo.">
+            >
+            ["at0035"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the oocyte or embryo assessment, not captured in other fields.">
+                comment = <"For example: difficulties in visualisation.">
+            >
+            ["at0036"] = <
+                text = <"Developmental stage">
+                description = <"Developmental stage of the oocyte or embryo.">
+            >
+            ["at0037"] = <
+                text = <"Pronuclear stage">
+                description = <"Pronuclear zygote stage.">
+            >
+            ["at0038"] = <
+                text = <"2-cell stage">
+                description = <"2-cell stage.">
+            >
+            ["at0039"] = <
+                text = <"4-cell stage">
+                description = <"4-cell stage.">
+            >
+            ["at0040"] = <
+                text = <"8-cell stage">
+                description = <"8-cell stage.">
+            >
+            ["at0041"] = <
+                text = <"Morula">
+                description = <"Morula stage.">
+            >
+            ["at0042"] = <
+                text = <"Blastocyst">
+                description = <"Blastocyst stage.">
+            >
+            ["at0043"] = <
+                text = <"Oocyte">
+                description = <"Oocyte stage.">
+            >
+            ["at0044"] = <
+                text = <"Developmental event">
+                description = <"Recording of a developmental event observed during time-lapse microscopy.">
+                comment = <"Value set drawn from the Eshre Working Group's 'Nomenclature of morphokinetic parameters'. For example: extrusion of second polar body, appearance and fading of pronuclei, cell divisions, or compaction. ">
+            >
+            ["at0045"] = <
+                text = <"tPB2 extrusion">
+                description = <"The second polar body is completely detached from the oolemma.">
+            >
+            ["at0046"] = <
+                text = <"tPNa">
+                description = <"Appearance of individual pronuclei.">
+            >
+            ["at0047"] = <
+                text = <"tPNf">
+                description = <"Fading of pronuclei.">
+            >
+            ["at0048"] = <
+                text = <"t2">
+                description = <"The embryo reaches 2 blastomeres.">
+            >
+            ["at0049"] = <
+                text = <"t3">
+                description = <"The embryo reaches 3 blastomeres.">
+            >
+            ["at0050"] = <
+                text = <"t4">
+                description = <"The embryo reaches 4 blastomeres.">
+            >
+            ["at0051"] = <
+                text = <"t5">
+                description = <"The embryo reaches 5 blastomeres.">
+            >
+            ["at0052"] = <
+                text = <"t6">
+                description = <"The embryo reaches 6 blastomeres.">
+            >
+            ["at0053"] = <
+                text = <"t7">
+                description = <"The embryo reaches 7 blastomeres.">
+            >
+            ["at0054"] = <
+                text = <"t8">
+                description = <"The embryo reaches 8 blastomeres.">
+            >
+            ["at0055"] = <
+                text = <"tSC">
+                description = <"Evidence of compaction.">
+            >
+            ["at0056"] = <
+                text = <"tM">
+                description = <"Completion of compaction process.">
+            >
+            ["at0057"] = <
+                text = <"tSB">
+                description = <"Initiation of blastulation.">
+            >
+            ["at0058"] = <
+                text = <"tB">
+                description = <"Full blastocyst.">
+            >
+            ["at0059"] = <
+                text = <"tE">
+                description = <"Initiation of expansion.">
+            >
+            ["at0060"] = <
+                text = <"tHN">
+                description = <"Herniation.">
+            >
+            ["at0061"] = <
+                text = <"tHB">
+                description = <"Fully hatched blastocyst.">
+            >
+            ["at0062"] = <
+                text = <"Freezing assessment">
+                description = <"Oocyte or embryo observation at cryopreservation.">
+            >
+            ["at0063"] = <
+                text = <"Thawing assessment">
+                description = <"Oocyte or embryo observation at thawing.">
+            >
+            ["at0064"] = <
+                text = <"Embryo transfer assessment">
+                description = <"Embryo observation at embryo transfer.">
+            >
+            ["at0065"] = <
+                text = <"Day-6 embryo assessment">
+                description = <"Embryo observation on Day 6 post insemination.">
+            >
+            ["at0066"] = <
+                text = <"Oocyte collection assessment">
+                description = <"Observation of the oocyte at oocyte collection.">
+            >
+            ["at0067"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["ac9000"] = <
+                text = <"Developmental stage (synthesised)">
+                description = <"Developmental stage of the oocyte or embryo. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Developmental event (synthesised)">
+                description = <"Recording of a developmental event observed during time-lapse microscopy. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Method (synthesised)">
+                description = <"Method for assessment of morphology and development of the oocyte or embryo. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0045", "at0046", "at0047", "at0048", "at0049", "at0050", "at0051", "at0052", "at0053", "at0054", "at0055", "at0056", "at0057", "at0058", "at0059", "at0060", "at0061">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0043", "at0037", "at0038", "at0039", "at0040", "at0041", "at0042">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0008", "at0009">
+        >
+    >

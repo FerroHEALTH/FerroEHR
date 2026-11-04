@@ -1,0 +1,394 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=f20bba3a-880c-4085-bb12-3f61c0a847e7; build_uid=e2fa1c7e-1fc9-4099-9415-33ddb8ca95ce)
+    openEHR-EHR-OBSERVATION.gad_7_score.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Hildegard McNicoll">
+        ["organisation"] = <"freshEHR Clinical Informatics Ltd.">
+        ["email"] = <"hildi@freshehr.com">
+        ["date"] = <"2018-06-12">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Heather Leslie, Atomica Informatics, Australia", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.
+">
+    references = <
+        ["1"] = <"Derived from: GAD-7, Draft archetype [Internet]. Apperta UK, Apperta UK Clinical Knowledge Manager [cited: 2019-03-28]. Available from: https://ckm.apperta.org/ckm/#showArchetype_1051.32.786">
+        ["2"] = <"https://patient.info/doctor/generalised-anxiety-disorder-assessment-gad-7 cited 12-Jun-2018.">
+        ["3"] = <"Spitzer RL, Kroenke K, Williams JB, et al; A brief measure for assessing generalized anxiety disorder: the GAD-7. Arch Intern Med. 2006 May 22;166(10):1092-7.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"AEEE9C5F8EBAD3C466636062A583D4D8">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the results and total score of the GAD-7 scale.">
+            use = <"Use to record the results and total score of the GAD-7 scale.">
+            misuse = <"">
+            copyright = <"© Apperta UK, openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- GAD-7 score
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Feeling nervous, anxious or on edge
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0009]}],    -- Not at all
+                                                    [{1}, {[at0010]}],    -- Several days
+                                                    [{2}, {[at0011]}],    -- More than half the days
+                                                    [{3}, {[at0012]}]    -- Nearly every day
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Not being able to stop or control worrying
+                                        value matches {
+                                            DV_ORDINAL[at9008] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0014]}],    -- Not at all
+                                                    [{1}, {[at0015]}],    -- Several days
+                                                    [{2}, {[at0016]}],    -- More than half the days
+                                                    [{3}, {[at0017]}]    -- Nearly every day
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Worrying too much about different things
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0019]}],    -- Not at all
+                                                    [{1}, {[at0020]}],    -- Several days
+                                                    [{2}, {[at0021]}],    -- More than half the days
+                                                    [{3}, {[at0022]}]    -- Nearly every day
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0023] occurrences matches {0..1} matches {    -- Trouble relaxing
+                                        value matches {
+                                            DV_ORDINAL[at9010] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0024]}],    -- Not at all
+                                                    [{1}, {[at0025]}],    -- Several days
+                                                    [{2}, {[at0026]}],    -- More than half the days
+                                                    [{3}, {[at0027]}]    -- Nearly every day
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- Being so restless it is hard to sit still
+                                        value matches {
+                                            DV_ORDINAL[at9011] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0029]}],    -- Not at all
+                                                    [{1}, {[at0030]}],    -- Several days
+                                                    [{2}, {[at0031]}],    -- More than half the days
+                                                    [{3}, {[at0032]}]    -- Nearly every day
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0033] occurrences matches {0..1} matches {    -- Becoming easily annoyed or irritable
+                                        value matches {
+                                            DV_ORDINAL[at9012] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0034]}],    -- Not at all
+                                                    [{1}, {[at0035]}],    -- Several days
+                                                    [{2}, {[at0036]}],    -- More than half the days
+                                                    [{3}, {[at0037]}]    -- Nearly every day
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0038] occurrences matches {0..1} matches {    -- Feeling afraid as it something awful might happen
+                                        value matches {
+                                            DV_ORDINAL[at9013] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0039]}],    -- Not at all
+                                                    [{1}, {[at0040]}],    -- Several days
+                                                    [{2}, {[at0041]}],    -- More than half the days
+                                                    [{3}, {[at0042]}]    -- Nearly every day
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0043] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9014] matches {
+                                                magnitude matches {|0..21|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0006] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9015]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0004] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0005] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"GAD-7 score">
+                description = <"Generalized Anxiety Disorder 7-item (GAD-7) scale recording the experience of anxiety related symptoms in the previous two weeks.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0005"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"e.g. Local hospital departmental infomation or additional metadata to align with HL7 or CDISC equivalents.">
+            >
+            ["at0007"] = <
+                text = <"Confounding factors">
+                description = <"Record any issues or factors that may impact on the score or it's interpretation.">
+            >
+            ["at0008"] = <
+                text = <"Feeling nervous, anxious or on edge">
+                description = <"Over the last 2 weeks, on how many days have you felt nervous, anxious or on edge?">
+            >
+            ["at0009"] = <
+                text = <"Not at all">
+                description = <"The patient reports that they have not felt nervous, anxious or on edge at all over the last 2 weeks.">
+            >
+            ["at0010"] = <
+                text = <"Several days">
+                description = <"The patient reports that they have felt nervous, anxious or on edge several days over the last 2 weeks.">
+            >
+            ["at0011"] = <
+                text = <"More than half the days">
+                description = <"The patient reports that they have felt nervous, anxious or on edge more than half the days over the last 2 weeks.">
+            >
+            ["at0012"] = <
+                text = <"Nearly every day">
+                description = <"The patient reports that they have felt nervous, anxious or on edge over the last 2 weeks.">
+            >
+            ["at0013"] = <
+                text = <"Not being able to stop or control worrying">
+                description = <"Over the last 2 weeks, on how many days have you not been able to stop or control worrying?">
+            >
+            ["at0014"] = <
+                text = <"Not at all">
+                description = <"The patient reports that they have not at all been affected by not being able to stop or control worrying over the last 2 weeks.">
+            >
+            ["at0015"] = <
+                text = <"Several days">
+                description = <"The patient reports that they have not been able to stop or control worrying several days over the last 2 weeks.">
+            >
+            ["at0016"] = <
+                text = <"More than half the days">
+                description = <"The patient reports that they have not been able to stop or control worrying more than half the days over the last 2 weeks.">
+            >
+            ["at0017"] = <
+                text = <"Nearly every day">
+                description = <"The patient reports that they have not been able to stop or control worrying nearly every day over the last 2 weeks.">
+            >
+            ["at0018"] = <
+                text = <"Worrying too much about different things">
+                description = <"Over the last 2 weeks, on how many days have you been worrying too much about different things?">
+            >
+            ["at0019"] = <
+                text = <"Not at all">
+                description = <"The patient reports that they have not at all been affected by worrying too much about different things over the last 2 weeks.">
+            >
+            ["at0020"] = <
+                text = <"Several days">
+                description = <"The patient reports that they have been worrying too much about different things several days over the last 2 weeks.">
+            >
+            ["at0021"] = <
+                text = <"More than half the days">
+                description = <"The patient reports that they have been worrying too much about different things more than half the days over the last 2 weeks.">
+            >
+            ["at0022"] = <
+                text = <"Nearly every day">
+                description = <"The patient reports that they have been worrying too much about different things nearly every day over the last 2 weeks.">
+            >
+            ["at0023"] = <
+                text = <"Trouble relaxing">
+                description = <"Over the last 2 weeks, on how many days have you had trouble relaxing?">
+            >
+            ["at0024"] = <
+                text = <"Not at all">
+                description = <"The patient reports that they have not at all had trouble relaxing over the last 2 weeks.">
+            >
+            ["at0025"] = <
+                text = <"Several days">
+                description = <"The patient reports that they have had trouble relaxing several days over the last 2 weeks.">
+            >
+            ["at0026"] = <
+                text = <"More than half the days">
+                description = <"The patient reports that they have had trouble relaxing more than half the days over the last 2 weeks.">
+            >
+            ["at0027"] = <
+                text = <"Nearly every day">
+                description = <"The patient reports that they have had trouble relaxing nearly every day over the last 2 weeks.">
+            >
+            ["at0028"] = <
+                text = <"Being so restless it is hard to sit still">
+                description = <"Over the last 2 weeks, on how many days have you been so restless it is hard to sit still?">
+            >
+            ["at0029"] = <
+                text = <"Not at all">
+                description = <"The patient reports that they have not at all been affected by being so restless it is hard to sit still over the last 2 weeks.">
+            >
+            ["at0030"] = <
+                text = <"Several days">
+                description = <"The patient reports that they had been so restless it is hard to sit still several days over the last 2 weeks.">
+            >
+            ["at0031"] = <
+                text = <"More than half the days">
+                description = <"The patient reports that they had been so restless it is hard to sit still more than half the days over the last 2 weeks.">
+            >
+            ["at0032"] = <
+                text = <"Nearly every day">
+                description = <"The patient reports that they had been so restless it is hard to sit still nearly every day over the last 2 weeks.">
+            >
+            ["at0033"] = <
+                text = <"Becoming easily annoyed or irritable">
+                description = <"Over the last 2 weeks, on how many days have you become easily annoyed or irritable?">
+            >
+            ["at0034"] = <
+                text = <"Not at all">
+                description = <"The patient reports that they have not at all been affected by becoming easily annoyed or irritable over the last 2 weeks.">
+            >
+            ["at0035"] = <
+                text = <"Several days">
+                description = <"The patient reports that they have become easily annoyed or irritable several days over the last 2 weeks.">
+            >
+            ["at0036"] = <
+                text = <"More than half the days">
+                description = <"The patient reports that they have become easily annoyed or irritable more than half the days over the last 2 weeks.">
+            >
+            ["at0037"] = <
+                text = <"Nearly every day">
+                description = <"The patient reports that they have become easily annoyed or irritable nearly every day over the last 2 weeks.">
+            >
+            ["at0038"] = <
+                text = <"Feeling afraid as it something awful might happen">
+                description = <"Over the last 2 weeks, on how many days have you felt afraid as if something awful might happen?">
+            >
+            ["at0039"] = <
+                text = <"Not at all">
+                description = <"The patient reports that they have not at all been affected by feeling afraid as if something awful might happen over the last 2 weeks.">
+            >
+            ["at0040"] = <
+                text = <"Several days">
+                description = <"The patient reports that they have felt afraid as if something awful might happen several days over the last 2 weeks.">
+            >
+            ["at0041"] = <
+                text = <"More than half the days">
+                description = <"The patient reports that they have felt afraid as if something awful might happen more than half the days over the last 2 weeks.">
+            >
+            ["at0042"] = <
+                text = <"Nearly every day">
+                description = <"The patient reports that they have felt afraid as if something awful might happen nearly every day over the last 2 weeks.">
+            >
+            ["at0043"] = <
+                text = <"Total score">
+                description = <"Total GAD-7 score calculated from sum of all seven individual responses.">
+            >
+            ["ac9015"] = <
+                text = <"Feeling nervous, anxious or on edge (synthesised)">
+                description = <"Over the last 2 weeks, on how many days have you felt nervous, anxious or on edge? (synthesised)">
+            >
+            ["ac9016"] = <
+                text = <"Not being able to stop or control worrying (synthesised)">
+                description = <"Over the last 2 weeks, on how many days have you not been able to stop or control worrying? (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Worrying too much about different things (synthesised)">
+                description = <"Over the last 2 weeks, on how many days have you been worrying too much about different things? (synthesised)">
+            >
+            ["ac9018"] = <
+                text = <"Trouble relaxing (synthesised)">
+                description = <"Over the last 2 weeks, on how many days have you had trouble relaxing? (synthesised)">
+            >
+            ["ac9019"] = <
+                text = <"Being so restless it is hard to sit still (synthesised)">
+                description = <"Over the last 2 weeks, on how many days have you been so restless it is hard to sit still? (synthesised)">
+            >
+            ["ac9020"] = <
+                text = <"Becoming easily annoyed or irritable (synthesised)">
+                description = <"Over the last 2 weeks, on how many days have you become easily annoyed or irritable? (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"Feeling afraid as it something awful might happen (synthesised)">
+                description = <"Over the last 2 weeks, on how many days have you felt afraid as if something awful might happen? (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9020"] = <
+            id = <"ac9020">
+            members = <"at0034", "at0035", "at0036", "at0037">
+        >
+        ["ac9021"] = <
+            id = <"ac9021">
+            members = <"at0039", "at0040", "at0041", "at0042">
+        >
+        ["ac9017"] = <
+            id = <"ac9017">
+            members = <"at0019", "at0020", "at0021", "at0022">
+        >
+        ["ac9016"] = <
+            id = <"ac9016">
+            members = <"at0014", "at0015", "at0016", "at0017">
+        >
+        ["ac9015"] = <
+            id = <"ac9015">
+            members = <"at0009", "at0010", "at0011", "at0012">
+        >
+        ["ac9019"] = <
+            id = <"ac9019">
+            members = <"at0029", "at0030", "at0031", "at0032">
+        >
+        ["ac9018"] = <
+            id = <"ac9018">
+            members = <"at0024", "at0025", "at0026", "at0027">
+        >
+    >

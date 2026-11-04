@@ -1,0 +1,138 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=63bdc598-c790-4c33-acc3-d95cdb858096; build_uid=0e6c4005-235f-440f-862f-f1e16c1b3268)
+    openEHR-EHR-EVALUATION.sexual_health_summary.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2020-02-13">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjorn Arntzen, Oslo University Hospital, Norway", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"08D8D89B1FF5D82D6D135151426513FA">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record summary or persistent information about an individual's sexual health and history.">
+            use = <"Use to record summary or persistent information about an individual's sexual health and history.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Sexual health summary
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9001]
+                        }
+                    }
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Status
+                        value matches {
+                            DV_CODED_TEXT[at9002] matches {
+                                defining_code matches {[ac9000]}    -- Status (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- First ever sex
+                        value matches {
+                            DV_DURATION[at9003] matches {
+                                value matches {PY/|>=P0D|}
+                            }
+                        }
+                    }
+                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9004]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0013] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9005]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0014] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Sexual health summary">
+                description = <"Summary or persistent information about an individual's sexual health and history.">
+            >
+            ["at0002"] = <
+                text = <"Status">
+                description = <"Is the individual sexually active?">
+            >
+            ["at0003"] = <
+                text = <"First ever sex">
+                description = <"The age when the individual first had sex.">
+            >
+            ["at0004"] = <
+                text = <"Last updated">
+                description = <"The date this summary was last updated.">
+            >
+            ["at0009"] = <
+                text = <"Sexually active, regular partner">
+                description = <"The individual is sexually active with a regular partner.">
+            >
+            ["at0010"] = <
+                text = <"Sexually active, no regular partner">
+                description = <"The individual is sexually active but not with a regular partner, has no current partner or has been sexually active in the past..">
+            >
+            ["at0011"] = <
+                text = <"Never sexually active">
+                description = <"The individual has never been sexually active.">
+            >
+            ["at0012"] = <
+                text = <"Description">
+                description = <"Narrative description about the sexual health history of an individual.">
+            >
+            ["at0014"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0015"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the sexual health history not captured in other fields.">
+            >
+            ["ac9000"] = <
+                text = <"Status (synthesised)">
+                description = <"Is the individual sexually active? (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0009", "at0010", "at0011">
+        >
+    >

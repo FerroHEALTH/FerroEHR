@@ -1,0 +1,612 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=9cf4152b-3fe8-4f5a-9806-999d797a3c55; build_uid=0f813b53-81c4-4d89-bc27-6d9b7b846652)
+    openEHR-EHR-CLUSTER.device_details.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Lars Bitsch-Larsen">
+                ["organisation"] = <"Haukeland University Hospital of Bergen, Norway">
+            >
+            accreditation = <"MD, DEAA, MBA, spec in anesthesia, spec in tropical medicine.">
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            author = <
+                ["name"] = <"Alan March">
+                ["organisation"] = <"Hospital Universitario Austral, Buenos Aires, Argentina">
+            >
+            accreditation = <"MD">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2010-08-16">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Ian McNicoll, freshEHR Consulting, United Kingdom", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Resource Device [Internet]. HL7 International, FHIR Specification first DSTU version (v 0.0.82). Available from: http://www.hl7.org/implement/standards/fhir/device.html [last accessed 25 Feb 2015].">
+        ["2"] = <"Implementation Guide for CDA Release 2.0 Personal Healthcare Monitoring Report (PHMR) (International Realm) Draft Standard for Trial Use Release 1. HL7 International, 2008. Available at: http://wiki.hl7.org/index.php?title=Product_CDA_R2_IG#Product_Name_-_CDA_R2_IG_PHM_Reports [last accessed 05 Mar 2015].">
+        ["3"] = <"Guidelines for 64-bit Global Identifier (EUI-64) [Internet]. IEEE Standards Association [cited: 2015-02-25]. Available from: http://standards.ieee.org/regauth/oui/tutorials/EUI64.html [last accessed 05 Mar 2015].">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics, heather.leslie@oceaninformatics.com">
+        ["MD5-CAM-1.0.1"] = <"51C05A5AF4F709EBFB648E8E6B75EFC4">
+    >
+    details = <
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            purpose = <"Registrar detalles adicionales relativos a especificaciones, mantenimiento, servicio, limpieza y calibración de un dispositivo. ">
+            keywords = <"calibración", "mantenimiento", "esterilización", "limpieza", "servicio", "dispositivo">
+            use = <"Utilizar para registrar detalles adicionales requeridos para suplementar al genérico CLUSTER.device o sus especializaciones. Este arquetipo focaliza en la captura de los detalles relativos al mantenimiento, limpieza, calibración y otros detalles específicos de los componentes de un dispositivo.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"Anvendes for registrering av detaljer relatert til spesifikasjoner, vedlikehold, servicering, renhold og kalibrering av enhver enhet.">
+            keywords = <"Kalibrerning", "vedlikehold", "sterilisasjon", "service", "enhet">
+            use = <"Anvendes for ytterligere registrering av nødvendige detaljer for supplere den generelle CLUSTER.device eller spesialiserte arketyper. Fokus for denne arketype er at fange opp detaljer relatert til vedlikehold, servicering, renhold, kalibrering og andre spesifikke detaljer om enhetens komponenter.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتسجيل التفاصيل الإضافية المتعلقة بالمواصفات, الصيانة, التصليح, التنظيف و التعيير لأي جهيزة">
+            keywords = <"تعيير", "صيانة", "تعقيم", "نظيف", "خدمة", "جهيزة">
+            use = <"يستخدم لتسجيل التفاصيل الإضافية المطلوبة لتزويد النماذج الجنيسة (غير محدودة الملكية) عنقود.جهيزة أو النماذج المخصصة.
+يركز هذا النموذج على التقاط التفاصيل المتعلقة بالصيانة, التصليح, التنظيف, التعيير و تفاصيل محددة حول مكونات الجهيزة">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details that can be used to support asset management for any durable or persisting medical device. For example, information about: the physical location of the device; its network URL; and maintenance, service, cleaning, and calibration details.">
+            keywords = <"calibration", "maintenance", "sterilization", "cleaned", "service", "device">
+            use = <"Use to record details about durable or persisting medical device.
+
+This archetype is designed to be used in the 'Asset Management' SLOT within the CLUSTER.device archetypes and/or any specialisations of this archetype.">
+            misuse = <"Not to be used outside of the CLUSTER.device archetype or its specialisations, unless there is a clear identification of the device about which the information is being recorded.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Medical device details
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Organisation identifier
+                value matches {
+                    DV_TEXT[at9000]
+                    DV_IDENTIFIER[at9001] matches {
+                        issuer matches {/EUI-64/}
+                    }
+                }
+            }
+            ELEMENT[at0023] occurrences matches {0..1} matches {    -- Owner
+                value matches {
+                    DV_TEXT[at9027]
+                }
+            }
+            ELEMENT[at0024] occurrences matches {0..1} matches {    -- Location
+                value matches {
+                    DV_TEXT[at9028]
+                }
+            }
+            ELEMENT[at0025] occurrences matches {0..1} matches {    -- Network address
+                value matches {
+                    DV_URI[at9029]
+                }
+            }
+            allow_archetype CLUSTER[at0026] matches {    -- Contact
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            allow_archetype CLUSTER[at0018] matches {    -- Serviced by
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Part number
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Manufacturer model name
+                value matches {
+                    DV_TEXT[at9005]
+                }
+            }
+            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Hardware revision
+                value matches {
+                    DV_TEXT[at9006]
+                }
+            }
+            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Protocol revision
+                value matches {
+                    DV_TEXT[at9009]
+                }
+            }
+            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Sampling frequency
+                value matches {
+                    DV_TEXT[at9010]
+                    DV_QUANTITY[at9011]
+                }
+            }
+            ELEMENT[at0012] occurrences matches {0..1} matches {    -- Range
+                value matches {
+                    DV_TEXT[at9012]
+                    DV_INTERVAL<DV_QUANTITY>[at9013] matches {
+                        upper matches {
+                            DV_QUANTITY[at9014]
+                        }
+                        lower matches {
+                            DV_QUANTITY[at9015]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0013] occurrences matches {0..1} matches {    -- Accuracy
+                value matches {
+                    DV_TEXT[at9016]
+                    DV_QUANTITY[at9017]
+                }
+            }
+            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Resolution
+                value matches {
+                    DV_TEXT[at9018]
+                    DV_QUANTITY[at9019]
+                }
+            }
+            ELEMENT[at0015] occurrences matches {0..1} matches {    -- Regulatory status
+                value matches {
+                    DV_TEXT[at9020]
+                }
+            }
+            ELEMENT[at0022] occurrences matches {0..1} matches {    -- Date last cleaned/sterilized
+                value matches {
+                    DV_DATE_TIME[at9021]
+                }
+            }
+            ELEMENT[at0017] occurrences matches {0..1} matches {    -- Date last calibrated
+                value matches {
+                    DV_DATE_TIME[at9022]
+                }
+            }
+            ELEMENT[at0016] occurrences matches {0..1} matches {    -- Date last serviced
+                value matches {
+                    DV_DATE_TIME[at9023]
+                }
+            }
+            CLUSTER[at0019] matches {    -- Formulae
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0020] occurrences matches {1} matches {    -- Formula name
+                        value matches {
+                            DV_TEXT[at9025]
+                        }
+                    }
+                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Formula
+                        value matches {
+                            DV_TEXT[at9026]
+                        }
+                    }
+                }
+            }
+            allow_archetype CLUSTER[at0027] matches {    -- Extension
+                include
+                    archetype_id/value matches {/.*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["es-ar"] = <
+            ["at0000"] = <
+                text = <"*Medical device details(en)">
+                description = <"*Specific details that relate to asset management for any medical device that is designed for more than a single use.(en)">
+            >
+            ["at0001"] = <
+                text = <"*Organisation identifier(en)">
+                description = <"*Organisation identifier for device.(en)">
+                comment = <"*May be a text string or an IEEE EUI-64 identifier.(en)">
+            >
+            ["at0002"] = <
+                text = <"*Manufacturer model name(en)">
+                description = <"*HL7 CDA compatible representation of device manufacture details.(en)">
+                comment = <"*May be a simple string or contain simple markup e.g. for Continua PHMR reports:
+\"Pulse Master 2000||584216|69854|2.1|1.1|1.0|\"
+repesenting Model, Unspecified, SerialNumber, PartNumber, HardwareRevision, SoftwareRevision, ProtocolRevision, and ProdSpecGMDN.(en)">
+            >
+            ["at0007"] = <
+                text = <"Número de parte">
+                description = <"El número de parte del dispositivo.">
+            >
+            ["at0008"] = <
+                text = <"Revisión de hardware">
+                description = <"El número de revisión de hardware.">
+            >
+            ["at0010"] = <
+                text = <"Revisión de protocolo">
+                description = <"El número de revisión de protocolo.">
+            >
+            ["at0011"] = <
+                text = <"Frecuencia de muestreo">
+                description = <"Los límites de frecuencia de muestreo del dispositivo.">
+            >
+            ["at0012"] = <
+                text = <"Rango">
+                description = <"Los límites de rango del dispositivo.">
+            >
+            ["at0013"] = <
+                text = <"Precisión">
+                description = <"Los límites de precisión del dispositivo.">
+            >
+            ["at0014"] = <
+                text = <"Resolución">
+                description = <"Los límites de resolución del dispositivo.">
+            >
+            ["at0015"] = <
+                text = <"Estado regulatorio.">
+                description = <"Si se trata de un dispositivo regulado o no.">
+            >
+            ["at0016"] = <
+                text = <"Fecha del último mantenimiento">
+                description = <"Fecha del último mantenimiento del dispositivo.">
+            >
+            ["at0017"] = <
+                text = <"Fecha de la última calibración">
+                description = <"Fecha de la última calibración del dispositivo.">
+            >
+            ["at0018"] = <
+                text = <"Mantenimiento efectuado por">
+                description = <"Detalles del agente que realizó el mantenimiento.">
+            >
+            ["at0019"] = <
+                text = <"Fórmulas">
+                description = <"Detalles acerca de las fórmulas o algoritmos utilizados por el equipo para generar resultados/salidas.">
+            >
+            ["at0020"] = <
+                text = <"Nombre de la fórmula">
+                description = <"El elemento de dato que es calculado o derivado.">
+            >
+            ["at0021"] = <
+                text = <"Fórmula">
+                description = <"Fórmula utilizada para calcular o derivar el campo calculado.">
+            >
+            ["at0022"] = <
+                text = <"Fecha de la última limpieza/esterilización">
+                description = <"Fecha de la última limpieza o esterilización del dispositivo.">
+            >
+            ["at0023"] = <
+                text = <"*Owner(en)">
+                description = <"*Organisation responsible for the medical device.(en)">
+            >
+            ["at0024"] = <
+                text = <"*Location(en)">
+                description = <"*Physical location where device is kept.(en)">
+            >
+            ["at0025"] = <
+                text = <"*Network address(en)">
+                description = <"*Network address to contact the device.(en)">
+            >
+            ["at0026"] = <
+                text = <"*Contact(en)">
+                description = <"*Details for human/organisation support for the medical device.(en)">
+            >
+            ["at0027"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local context or to align with other reference models/formalisms.(en)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"*Medical device details(en)">
+                description = <"*Specific details that relate to asset management for any medical device that is designed for more than a single use.(en)">
+            >
+            ["at0001"] = <
+                text = <"*Organisation identifier(en)">
+                description = <"*Organisation identifier for device.(en)">
+                comment = <"*May be a text string or an IEEE EUI-64 identifier.(en)">
+            >
+            ["at0002"] = <
+                text = <"*Manufacturer model name(en)">
+                description = <"*HL7 CDA compatible representation of device manufacture details.(en)">
+                comment = <"*May be a simple string or contain simple markup e.g. for Continua PHMR reports:
+\"Pulse Master 2000||584216|69854|2.1|1.1|1.0|\"
+repesenting Model, Unspecified, SerialNumber, PartNumber, HardwareRevision, SoftwareRevision, ProtocolRevision, and ProdSpecGMDN.(en)">
+            >
+            ["at0007"] = <
+                text = <"Del nummer">
+                description = <"Del nummeret til enheten.">
+            >
+            ["at0008"] = <
+                text = <"Hardware versjon">
+                description = <"Hardware versjons nummer.">
+            >
+            ["at0010"] = <
+                text = <"Protokol versjon">
+                description = <"Protokol versjons nummer.">
+            >
+            ["at0011"] = <
+                text = <"Samplingsfrekvens">
+                description = <"Samplingsfrekvens grensen for enheten.">
+            >
+            ["at0012"] = <
+                text = <"Intervall">
+                description = <"Intervallet for enheden.">
+            >
+            ["at0013"] = <
+                text = <"Nøyaktighet">
+                description = <"Nøyaktighets grense for enheten.">
+            >
+            ["at0014"] = <
+                text = <"Oppløsningen">
+                description = <"Oppløsnings grensene for enheten.">
+            >
+            ["at0015"] = <
+                text = <"Lovgivningsmæssige status">
+                description = <"Om bruken av enheten er regulert ved lov eller ei.">
+            >
+            ["at0016"] = <
+                text = <"Dato for siste service">
+                description = <"Dato for siste gang enheten ble servicert.">
+            >
+            ["at0017"] = <
+                text = <"Dato for siste kalibrering">
+                description = <"Dato for siste gang enheten ble kalibrert.">
+            >
+            ["at0018"] = <
+                text = <"Servicert av....">
+                description = <"Detaljer om den organisasjon eller agent som utførte serviceringen.">
+            >
+            ["at0019"] = <
+                text = <"Formler">
+                description = <"Detaljer om formler eller algoritmer som anvendes av enheten for at oppnå resultater.">
+            >
+            ["at0020"] = <
+                text = <"Formel navn">
+                description = <"Data elementer som beregnes eller avledes.">
+            >
+            ["at0021"] = <
+                text = <"Formler">
+                description = <"Formelen som anvendes eller avledes i beregnings feltet.">
+            >
+            ["at0022"] = <
+                text = <"Dato for siste renhold/sterilisering">
+                description = <"Dato for siste renhold eller sterilisering.">
+            >
+            ["at0023"] = <
+                text = <"*Owner(en)">
+                description = <"*Organisation responsible for the medical device.(en)">
+            >
+            ["at0024"] = <
+                text = <"*Location(en)">
+                description = <"*Physical location where device is kept.(en)">
+            >
+            ["at0025"] = <
+                text = <"*Network address(en)">
+                description = <"*Network address to contact the device.(en)">
+            >
+            ["at0026"] = <
+                text = <"*Contact(en)">
+                description = <"*Details for human/organisation support for the medical device.(en)">
+            >
+            ["at0027"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local context or to align with other reference models/formalisms.(en)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"*Medical device details(en)">
+                description = <"*Specific details that relate to asset management for any medical device that is designed for more than a single use.(en)">
+            >
+            ["at0001"] = <
+                text = <"*Organisation identifier(en)">
+                description = <"*Organisation identifier for device.(en)">
+                comment = <"*May be a text string or an IEEE EUI-64 identifier.(en)">
+            >
+            ["at0002"] = <
+                text = <"*Manufacturer model name(en)">
+                description = <"*HL7 CDA compatible representation of device manufacture details.(en)">
+                comment = <"*May be a simple string or contain simple markup e.g. for Continua PHMR reports:
+\"Pulse Master 2000||584216|69854|2.1|1.1|1.0|\"
+repesenting Model, Unspecified, SerialNumber, PartNumber, HardwareRevision, SoftwareRevision, ProtocolRevision, and ProdSpecGMDN.(en)">
+            >
+            ["at0007"] = <
+                text = <"رقم الجزء">
+                description = <"رقم الجزء الخاص بالجهيزة">
+            >
+            ["at0008"] = <
+                text = <"مراجعة الأجزاء الصلبة">
+                description = <"رقم مراجعة الأجزاء الصلبة">
+            >
+            ["at0010"] = <
+                text = <"رقم البروتوكول">
+                description = <"رقم مراجعة البروتوكول">
+            >
+            ["at0011"] = <
+                text = <"تكرار أخذ العينة">
+                description = <"حدود تكرار أخذ العينة للجهيزة">
+            >
+            ["at0012"] = <
+                text = <"المدى">
+                description = <"حدود مدى الجهيزة">
+            >
+            ["at0013"] = <
+                text = <"الدقة">
+                description = <"حدود دقة الجهيزة">
+            >
+            ["at0014"] = <
+                text = <"المَيْز">
+                description = <"حدود المَيْز لدى الجهيزة">
+            >
+            ["at0015"] = <
+                text = <"الحالة التنظيمية">
+                description = <"ما إذا كانت الجهيزة منظمة أو غير ذلك">
+            >
+            ["at0016"] = <
+                text = <"تاريخ آخر مرة للاستخدام">
+                description = <"التاريخ الذي تم فيه آخر مرة من الاستخدام">
+            >
+            ["at0017"] = <
+                text = <"تاريخ آخر مرة للتعيير">
+                description = <"التاريخ الذي تم فيه آخر مرة من التعيير">
+            >
+            ["at0018"] = <
+                text = <"تم الاستخدام بواسطة...">
+                description = <"تفاصيل الوكيل الذي قام بإجراء الاستخدام">
+            >
+            ["at0019"] = <
+                text = <"المعادلات">
+                description = <"تفاصيل حول المعادلات الرياضية أو الخُوارزميات التي تم استخدامها بواسطة الجهيزة من أجل توليد النتائج أو المُخْرَجات">
+            >
+            ["at0020"] = <
+                text = <"اسم المعادلة الرياضية">
+                description = <"عنصر البيانات الذي يتم حسابه أو اشتقاقه">
+            >
+            ["at0021"] = <
+                text = <"المعادلة الرياضية">
+                description = <"المعادلة الريضاية التي يتم استخدامها لحساب أو اشتقاق المجال المحسوب">
+            >
+            ["at0022"] = <
+                text = <"تاريخ آخر مرة للتنظيف/التعقيم">
+                description = <"التاريخ الذي تم فيه آخر مرة للتنظيف أو التعقيم">
+            >
+            ["at0023"] = <
+                text = <"*Owner(en)">
+                description = <"*Organisation responsible for the medical device.(en)">
+            >
+            ["at0024"] = <
+                text = <"*Location(en)">
+                description = <"*Physical location where device is kept.(en)">
+            >
+            ["at0025"] = <
+                text = <"*Network address(en)">
+                description = <"*Network address to contact the device.(en)">
+            >
+            ["at0026"] = <
+                text = <"*Contact(en)">
+                description = <"*Details for human/organisation support for the medical device.(en)">
+            >
+            ["at0027"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local context or to align with other reference models/formalisms.(en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Medical device details">
+                description = <"Specific details that relate to asset management for any medical device that is designed for more than a single use.">
+            >
+            ["at0001"] = <
+                text = <"Organisation identifier">
+                description = <"Organisation identifier for device.">
+                comment = <"May be a text string or an IEEE EUI-64 identifier.">
+            >
+            ["at0002"] = <
+                text = <"Manufacturer model name">
+                description = <"HL7 CDA compatible representation of device manufacture details.">
+                comment = <"May be a simple string or contain simple markup e.g. for Continua PHMR reports:
+\"Pulse Master 2000||584216|69854|2.1|1.1|1.0|\"
+repesenting Model, Unspecified, SerialNumber, PartNumber, HardwareRevision, SoftwareRevision, ProtocolRevision, and ProdSpecGMDN.">
+            >
+            ["at0007"] = <
+                text = <"Part number">
+                description = <"The part number of the device.">
+            >
+            ["at0008"] = <
+                text = <"Hardware revision">
+                description = <"The hardware revision name or information.">
+            >
+            ["at0010"] = <
+                text = <"Protocol revision">
+                description = <"The protocol revision name or information.">
+            >
+            ["at0011"] = <
+                text = <"Sampling frequency">
+                description = <"The sampling frequency limits of the device.">
+            >
+            ["at0012"] = <
+                text = <"Range">
+                description = <"The range limits of the device.">
+            >
+            ["at0013"] = <
+                text = <"Accuracy">
+                description = <"The accuracy limits of the device.">
+            >
+            ["at0014"] = <
+                text = <"Resolution">
+                description = <"The resolution limits of the device.">
+            >
+            ["at0015"] = <
+                text = <"Regulatory status">
+                description = <"Whether device is regulated or otherwise.">
+            >
+            ["at0016"] = <
+                text = <"Date last serviced">
+                description = <"The date the device was last serviced.">
+            >
+            ["at0017"] = <
+                text = <"Date last calibrated">
+                description = <"Date the device was last calibrated.">
+            >
+            ["at0018"] = <
+                text = <"Serviced by">
+                description = <"Details of agent who performed the servicing.">
+            >
+            ["at0019"] = <
+                text = <"Formulae">
+                description = <"Details about formulae or algorithms used by the device in order to generate results/output.">
+            >
+            ["at0020"] = <
+                text = <"Formula name">
+                description = <"Data element which is calculated or derived.">
+            >
+            ["at0021"] = <
+                text = <"Formula">
+                description = <"Formula used to calculate or derive the Calculated field.">
+            >
+            ["at0022"] = <
+                text = <"Date last cleaned/sterilized">
+                description = <"Date the device was last cleaned or sterilized.">
+            >
+            ["at0023"] = <
+                text = <"Owner">
+                description = <"Organisation responsible for the medical device.">
+            >
+            ["at0024"] = <
+                text = <"Location">
+                description = <"Physical location where device is kept.">
+            >
+            ["at0025"] = <
+                text = <"Network address">
+                description = <"Network address to contact the device.">
+            >
+            ["at0026"] = <
+                text = <"Contact">
+                description = <"Details for human/organisation support for the medical device.">
+            >
+            ["at0027"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+            >
+        >
+    >

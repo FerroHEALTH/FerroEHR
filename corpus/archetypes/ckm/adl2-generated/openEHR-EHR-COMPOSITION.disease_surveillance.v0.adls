@@ -1,0 +1,104 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=582717f9-3ffc-4a5a-a298-a76ef2f3a557; build_uid=bbb10f8a-17a0-4e31-8fbf-f97347b903a0)
+    openEHR-EHR-COMPOSITION.disease_surveillance.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-07-29">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"9F2E5D736A3531CEA26558278B8EE694">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    COMPOSITION[at0000] matches {    -- Disease surveillance
+        category matches {
+            DV_CODED_TEXT[at0001] matches {    -- Coded text
+                defining_code matches {[at9000]}    -- event
+            }
+        }
+        context matches {
+            EVENT_CONTEXT[at0002] matches {    -- Event Context
+                other_context matches {
+                    ITEM_TREE[at0003] matches {
+                        items cardinality matches {0..*; unordered} matches {
+                            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Disease
+                                value matches {
+                                    DV_TEXT[at9001]
+                                }
+                            }
+                            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Report type
+                                value matches {
+                                    DV_TEXT[at9002]
+                                }
+                            }
+                            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Report date
+                                value matches {
+                                    DV_DATE_TIME[at9003]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Disease surveillance">
+                description = <"Disease surveillance.">
+            >
+            ["at0001"] = <
+                text = <"Coded text">
+                description = <"">
+            >
+            ["at0002"] = <
+                text = <"Event Context">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Disease">
+                description = <"The name of the disease that has been diagnosed.">
+            >
+            ["at0006"] = <
+                text = <"Report type">
+                description = <"The type of submission or report submitted.">
+            >
+            ["at0007"] = <
+                text = <"Report date">
+                description = <"">
+            >
+            ["at9000"] = <
+                text = <"event">
+                description = <"event">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/433>
+        >
+    >

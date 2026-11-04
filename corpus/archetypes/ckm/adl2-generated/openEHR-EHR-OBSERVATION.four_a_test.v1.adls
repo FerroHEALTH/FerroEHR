@@ -1,0 +1,349 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=5fe8da4a-28be-46e9-b33d-f8739a71fcee; build_uid=0da22555-8b72-48cc-a532-d9ad4aef3aac)
+    openEHR-EHR-OBSERVATION.four_a_test.v1.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand, Mikkel Johan Gaup Grønmo">
+                ["organisation"] = <"Haukeland Universitetssjukehus, Regional forvaltning EPJ, Helse Nord">
+                ["email"] = <"john.tore.valand@helse-bergen.no, mikkel.johan.gaup.gronmo@helse-nord.no">
+            >
+            accreditation = <"Nasjonal IKT">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"John Tore Valand">
+        ["organisation"] = <"Helse Bergen HF">
+        ["date"] = <"2019-02-18">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Aleocidio Balzanelo, UHG Brasil, Brazil", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Hugo Claudio Briceño García, Catsalut, Spain", "Hanne Marte Bårholm, Helse Vest IKT, Norway (openEHR Editor)", "Kirvil Flygel, UNN, Helse Nord, Norway", "Heather Grain, Llewelyn Grain Informatics, Australia", "Mikkel Johan Gaup Grønmo, Regional forvaltning EPJ, Helse Nord, Norway (openEHR Editor)", "Nina Hauge, Helse Fonna, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Kanika Kuwelker, Helse Vest IKT, Norway (openEHR Editor)", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Ieva Martinaityte, UNN Tromsø, Norway", "Christine Mikalsen, Regional forvaltning EPJ, Norway", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Vilde Richardsen, Universitetssykehuset Nord-Norge, Norway", "Marte Rime Bø, Direktoratet for e-helse, Norway", "Terje Sagmyr, Helse Vest IKT, Norway (openEHR Editor)", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"4AT Rapid Clinical Test For Delirium [Internet]. 2014 [cited 2021 Feb 11]. Available from: https://www.the4at.com/.">
+        ["2"] = <"Bellelli G, Morandi A, Davis DH, Mazzola P, Turco R, Gentile S, Ryan T, Cash H, Guerini F, Torpilliesi T, Del Santo F, Trabucchi M, Annoni G, MacLullich AM. Validation of the 4AT, a new instrument for rapid delirium screening: a study in 234 hospitalised older people. Age Ageing. 2014 Jul;43(4):496-502. doi: 10.1093/ageing/afu021. Epub 2014 Mar 2. Erratum in: Age Ageing. 2015 Jan;44(1):175. PMID: 24590568; PMCID: PMC4066613.">
+    >
+    other_details = <
+        ["current_contact"] = <"John Tore Valand, john.tore.valand@helse-bergen.no">
+        ["MD5-CAM-1.0.1"] = <"57504ABDCA34D6AD1E14E25AA88C7634">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere resultatet av hver enkelt parameter som kombinert gir en 4AT skår.">
+            keywords = <"forvirring", "akutt forvirring", "delir", "delirium", "kognitiv svikt", "vurdering", "screening">
+            use = <"Brukes for å registrere resultatet av hver enkelt parameter som kombinert gir en 4AT skår.
+
+Denne arketypen er ment å representere versjon 1.2 av 4AT.">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the results for each component parameter and their sum for the 4AT test.">
+            keywords = <"delirium", "assessment", "alertness", "cognitive", "screening", "screening tool", "cognitive impairment", "confused">
+            use = <"Use to record the results for each component parameter and their sum for the 4AT test.
+
+This archetype is intended to represent version 1.2 of 4AT test.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation, Nasjonal IKT HF">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- 4AT
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Alertness
+                                        value matches {
+                                            DV_ORDINAL[at9004] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0005]}],    -- Normal (fully alert, but not agitated, throughout assessment)
+                                                    [{0}, {[at0006]}],    -- Mild sleepiness for <10 seconds after waking, then normal
+                                                    [{4}, {[at0007]}]    -- Clearly abnormal
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Abbreviated Mental Test 4 (AMT-4) score
+                                        value matches {
+                                            DV_ORDINAL[at9005] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0009]}],    -- No mistakes
+                                                    [{1}, {[at0010]}],    -- 1 mistake
+                                                    [{2}, {[at0011]}]    -- 2 or more mistakes/untestable
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Attention
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0013]}],    -- Achieves 7 months or more correctly
+                                                    [{1}, {[at0014]}],    -- Starts but scores <7 months / refuses to start
+                                                    [{2}, {[at0015]}]    -- Untestable (cannot start because unwell, drowsy, inattentive)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Acute change or fluctuating course
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- No
+                                                    [{4}, {[at0018]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9008] matches {
+                                                magnitude matches {|0..12|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0020] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0021] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"4AT">
+                description = <"Et screeningsverktøy for å oppdage delirium og kognitiv svikt.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard uspesifisert tidspunkt- eller intervallhendelse som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Årvåkenhet (forholder seg normalt til omgivelsene)">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Normal (helt årvåken, ikke urolig ved undersøkelse)">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Lett søvnig <10 sekunder etter oppvåkning, deretter normal">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Tydelig unormal(t)">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"AMT4 (forkortet mental vurdering)">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Ingen feil">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"1 feil">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"2 feil eller flere/ikke testbar">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Oppmerksomhet">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Oppgir 7 måneder eller flere korrekt">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Begynner, men klarer <7 måneder/avslår å begynne">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Ikke testbar (er uvel, døsig, uoppmerksom)">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Akutt endring eller fluktuasjon i tilstand">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Totalskår">
+                description = <"Summen av hvert parameter i 4AT.">
+            >
+            ["at0021"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["ac9008"] = <
+                text = <"Årvåkenhet (forholder seg normalt til omgivelsene) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"AMT4 (forkortet mental vurdering) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"Oppmerksomhet (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Akutt endring eller fluktuasjon i tilstand (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"4AT">
+                description = <"A screening tool used for rapid initial assessment of delirium and cognitive impairment.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Alertness">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Normal (fully alert, but not agitated, throughout assessment)">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Mild sleepiness for <10 seconds after waking, then normal">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Clearly abnormal">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Abbreviated Mental Test 4 (AMT-4) score">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"No mistakes">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"1 mistake">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"2 or more mistakes/untestable">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Attention">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Achieves 7 months or more correctly">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Starts but scores <7 months / refuses to start">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Untestable (cannot start because unwell, drowsy, inattentive)">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Acute change or fluctuating course">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Total score">
+                description = <"The sum of each component parameter in 4AT.">
+            >
+            ["at0021"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["ac9008"] = <
+                text = <"Alertness (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"Abbreviated Mental Test 4 (AMT-4) score (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"Attention (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Acute change or fluctuating course (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9011"] = <
+            id = <"ac9011">
+            members = <"at0017", "at0018">
+        >
+        ["ac9010"] = <
+            id = <"ac9010">
+            members = <"at0013", "at0014", "at0015">
+        >
+        ["ac9009"] = <
+            id = <"ac9009">
+            members = <"at0009", "at0010", "at0011">
+        >
+        ["ac9008"] = <
+            id = <"ac9008">
+            members = <"at0005", "at0006", "at0007">
+        >
+    >

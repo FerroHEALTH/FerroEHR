@@ -1,0 +1,215 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=233b47e5-1295-4157-96b0-fe50f4055def; build_uid=83487956-5030-4c28-9158-931f79a2453e)
+    openEHR-EHR-CLUSTER.auscultation_bowel.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Keisha Barwise">
+        ["organisation"] = <"openEHR Foundation">
+        ["email"] = <"keisha.barwise@openehr.org">
+        ["date"] = <"2025-05-14">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Heather Leslie", "CIO", "openEHR Foundation", "heather.leslie@openehr.org">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"3BCE9CF7D8ECF76F66684EA5255473CB">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a narrative description and clinical interpretation of the findings observed during the auscultation of bowel sounds in the abdomen or chest.">
+            keywords = <"bowel sounds, auscultation", ...>
+            use = <"Use to record a description and clinical interpretation of findings observed during auscultation of bowel sounds in the abdomen or, in rare and abnormal circumstances, in the chest.
+ 
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the CLUSTER.exam-abdomen, CLUSTER.exam-lung or OBSERVATION.exam archetypes, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element.">
+            misuse = <"Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom_sign.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Auscultation of bowel sounds
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Body site
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            allow_archetype CLUSTER[at0015] matches {    -- Structured body site
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location_relative\.v2\..*|openEHR-EHR-CLUSTER\.anatomical_location\.v1\..*|openEHR-EHR-CLUSTER\.anatomical_location_circle\.v1\..*/}
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Clinical description
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Presence
+                value matches {
+                    DV_CODED_TEXT[at9005] matches {
+                        defining_code matches {[ac9000]}    -- Presence (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0017] occurrences matches {1} matches {    -- Intensity
+                value matches {
+                    DV_CODED_TEXT[at9006] matches {
+                        defining_code matches {[ac9001]}    -- Intensity (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0025] occurrences matches {0..1} matches {    -- Type
+                value matches {
+                    DV_CODED_TEXT[at9007]
+                }
+            }
+            ELEMENT[at0026] occurrences matches {0..1} matches {    -- Frequency
+                value matches {
+                    DV_CODED_TEXT[at9008] matches {
+                        defining_code matches {[ac9010]}    -- Frequency (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0012] occurrences matches {0..1} matches {    -- Clinical interpretation
+                value matches {
+                    DV_TEXT[at9009]
+                }
+            }
+            allow_archetype CLUSTER[at0013] matches {    -- Examination not done
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.exclusion_exam\.v1\..*/}
+            }
+            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9010]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Auscultation of bowel sounds">
+                description = <"Findings observed during the auscultation of bowel sounds.">
+            >
+            ["at0001"] = <
+                text = <"Body site">
+                description = <"Identification of the area of the body under examination.">
+                comment = <"For example: right lower quadrant or left lower chest. If the body site has been fully identified in the parent archetype in which this archetype is nested, this data element becomes redundant.">
+            >
+            ["at0003"] = <
+                text = <"Clinical description">
+                description = <"Narrative description of the auscultation findings.">
+            >
+            ["at0004"] = <
+                text = <"Presence">
+                description = <"The presence or absence of any bowel sounds heard on auscultation.">
+            >
+            ["at0012"] = <
+                text = <"Clinical interpretation">
+                description = <"Single word, phrase or brief description that represents the clinical meaning and significance of the auscultation  findings at the body site.">
+                comment = <"For example: 'No abnormality detected' or 'Decreased intestinal motility'. Coding of the 'Clinical interpretation' with a terminology is preferred, where possible.">
+            >
+            ["at0013"] = <
+                text = <"Examination not done">
+                description = <"Details to explicitly record that this examination was not performed.">
+            >
+            ["at0014"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the auscultation findings at the body site, not captured in other fields.">
+            >
+            ["at0015"] = <
+                text = <"Structured body site">
+                description = <"A structured description of the area of the body under examination.">
+                comment = <"If the body site has been fully identified in the parent archetype in which this archetype is nested or in the 'Body site' data element, this SLOT becomes redundant.">
+            >
+            ["at0017"] = <
+                text = <"Intensity">
+                description = <"The relative volume or loudness of all bowel sounds compared to what is expected.">
+            >
+            ["at0018"] = <
+                text = <"Increased">
+                description = <"The bowel sound is louder than expected over the area of abdomen being auscultated.">
+            >
+            ["at0019"] = <
+                text = <"Normal">
+                description = <"The bowel sound is heard at the expected intensity over the area of abdomen being auscultated.">
+            >
+            ["at0020"] = <
+                text = <"Decreased">
+                description = <"The bowel sound is less intense than expected over the area of abdomen being auscultated.">
+            >
+            ["at0021"] = <
+                text = <"Absent">
+                description = <"The bowel sound is not heard over the area of abdomen being auscultated.">
+            >
+            ["at0022"] = <
+                text = <"Present">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Absent">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Type">
+                description = <"The type or character of bowel sounds heard on auscultation.">
+                comment = <"For example: Tinkling.">
+            >
+            ["at0026"] = <
+                text = <"Frequency">
+                description = <"The assessment of the relative frequency of bowel sounds heard on auscultation.">
+            >
+            ["at0027"] = <
+                text = <"Hypoactive">
+                description = <"The bowel sounds heard are less frequent than expected.">
+            >
+            ["at0028"] = <
+                text = <"Normal">
+                description = <"The bowel sounds heard are as expected.">
+            >
+            ["at0029"] = <
+                text = <"Hyperactive">
+                description = <"The bowel sounds heard are more frequent than expected.">
+            >
+            ["ac9000"] = <
+                text = <"Presence (synthesised)">
+                description = <"The presence or absence of any bowel sounds heard on auscultation. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Intensity (synthesised)">
+                description = <"The relative volume or loudness of all bowel sounds compared to what is expected. (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"Frequency (synthesised)">
+                description = <"The assessment of the relative frequency of bowel sounds heard on auscultation. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0018", "at0019", "at0020", "at0021">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0022", "at0023">
+        >
+        ["ac9010"] = <
+            id = <"ac9010">
+            members = <"at0027", "at0028", "at0029">
+        >
+    >

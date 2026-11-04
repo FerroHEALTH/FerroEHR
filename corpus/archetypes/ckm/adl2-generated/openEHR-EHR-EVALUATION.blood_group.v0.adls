@@ -1,0 +1,356 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=1b2f42dd-0683-406c-9c2a-35336f771cee; build_uid=35e6c3a6-c48c-40b9-bdd7-6c720439084e)
+    openEHR-EHR-EVALUATION.blood_group.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Manna Vosta">
+                ["organisation"] = <"Karolinska University Hospital">
+                ["email"] = <"manna.vosta@regionstockholm.se">
+            >
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            author = <
+                ["name"] = <"Julio de Sosa">
+                ["organisation"] = <"Servei Català de la Salut">
+                ["email"] = <"juliodesosa@catsalut.cat">
+            >
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Julio de Sosa">
+                ["organisation"] = <"Servei Català de la Salut">
+                ["email"] = <"juliodesosa@catsalut.cat">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2022-06-27">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"98A7F096D2E7B294925CA810958050ED">
+    >
+    details = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att registrera en individs blodgrupp och RhD-status.">
+            keywords = <"blod", "blodgrupp", "blodgruppering", "blodgruppsbestämning", "ABO", "rhesus", "Rh", "RhD">
+            use = <"Används för att registrera en individs blodgrupp och RhD-status.
+
+Eftersom en individs blodgrupp och RhD-status vanligtvis är stabila under hela livet har denna arketyp modellerats som en EVALUATION.">
+            misuse = <"Ska inte användas för att registrera resultat från blodgrupps- och antigentester som kan behöva utföras vid olika tillfällen under en individs liv, exempelvis för att bekräfta blodgrupp och antigenstatus inför transfusion eller organtransplantation, under graviditet eller vid utredning av vissa tillstånd hos nyfödda. Använd CLUSTER.laboratory_test_analyte som nästlas i OBSERVATION.laboratory_test_result för att registrera resultatet från varje enskilt test.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the blood group and rhesus status of an individual.">
+            keywords = <"blood", "grouping", "rhesus">
+            use = <"Use to record the blood group and rhesus status of an individual.
+
+As the blood group and rhesus status of an individual is usually stable over the life of an individual, this archetype has been modelled as an EVALUATION.">
+            misuse = <"Not to be used to record the result of blood group and antigen test results which may need to be performed at various times over an individual's life - for example, to confirm their blood group and antigen status prior to transfusion, organ transplantation, in pregnancy and investigating certain neonatal conditions. Use the CLUSTER.laboratory_test_analyte nested within the OBSERVATION.laboratory_test_result archetype to record the result of each individual test.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            purpose = <"Registrar el grup sanguini i el factor Rh d'un individu.">
+            keywords = <"sang", "agrupació", "Rh">
+            use = <"Es fa servir per registrar el grup sanguini i el factor Rh d'un individu.
+
+Atès que el grup sanguini i el factor Rh d'un individu solen ser estables al llarg de la vida, aquest arquetip s'ha modelat com una EVALUATION.">
+            misuse = <"No s'ha d'utilitzar per registrar el resultat de les proves de grup sanguini i antígens, les quals pot ser necessari realitzar diverses vegades al llarg de la vida d'un individu, per exemple, per confirmar el seu estat de grup sanguini i antígens abans d'una transfusió, un trasplantament d'òrgans, a l'embaràs i per investigar determinades afeccions neonatals. Utilitzeu l'arquetip CLUSTER.laboratory_test_analyte imbricat dins de l'arquetip OBSERVATION.laboratory_test_result per registrar el resultat de cada prova individual.">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registrar el grupo sanguíneo y el factor Rh de un individuo.">
+            keywords = <"sangre", "agrupación", "Rh">
+            use = <"Se utiliza para registrar el grupo sanguíneo y el factor Rh de un individuo.
+
+Dado que el grupo sanguíneo y el factor Rh de un individuo suelen ser estables a lo largo de su vida, este arquetipo se ha modelado como una EVALUATION.">
+            misuse = <"No debe utilizarse para registrar el resultado de las pruebas de grupo sanguíneo y antígenos, las cuales puede ser necesario realizar en varias ocasiones a lo largo de la vida de un individuo, por ejemplo, para confirmar su estado de grupo sanguíneo y antígenos antes de una transfusión, un trasplante de órganos, en el embarazo y para investigar determinadas afecciones neonatales. Utilice el arquetipo CLUSTER.laboratory_test_analyte anidado dentro del arquetipo OBSERVATION.laboratory_test_result para registrar el resultado de cada prueba individual.">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Blood group
+        data matches {
+            ITEM_TREE[at0002] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- ABO blood group
+                        value matches {
+                            DV_CODED_TEXT[at9002] matches {
+                                defining_code matches {[ac9000]}    -- ABO blood group (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Rh(D) antigen status
+                        value matches {
+                            DV_CODED_TEXT[at9003] matches {
+                                defining_code matches {[ac9001]}    -- Rh(D) antigen status (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9004]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0006] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Blodgrupp">
+                description = <"Identifiering av en individs bestående blodgrupp och RhD-status.">
+            >
+            ["at0003"] = <
+                text = <"ABO-blodgrupp">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"RhD-antigen status">
+                description = <"Angivelse av förekomst eller avsaknad av RhD-antigen.">
+            >
+            ["at0005"] = <
+                text = <"Senast uppdaterad">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Extension">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"O">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"A">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"B">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"AB">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Positiv">
+                description = <"RhD-antigen har påvisats.">
+            >
+            ["at0012"] = <
+                text = <"Negativ">
+                description = <"RhD-antigen har inte påvisats.">
+            >
+            ["ac9000"] = <
+                text = <"ABO-blodgrupp (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"RhD-antigen status (synthesised)">
+                description = <"Angivelse av förekomst eller avsaknad av RhD-antigen. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Blood group">
+                description = <"Identification of the persistent blood group and rhesus status of an individual.">
+            >
+            ["at0003"] = <
+                text = <"ABO blood group">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"Rh(D) antigen status">
+                description = <"The presence or absence the Rh(D) antigen.">
+            >
+            ["at0005"] = <
+                text = <"Last updated">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Extension">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"O">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"A">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"B">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"AB">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Positive">
+                description = <"Rh(D) antigen is detected.">
+            >
+            ["at0012"] = <
+                text = <"Negative">
+                description = <"Rh(D) antigen is not detected.">
+            >
+            ["ac9000"] = <
+                text = <"ABO blood group (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Rh(D) antigen status (synthesised)">
+                description = <"The presence or absence the Rh(D) antigen. (synthesised)">
+            >
+        >
+        ["ca"] = <
+            ["at0000"] = <
+                text = <"Grup sanguini">
+                description = <"Identificació del grup sanguini i del factor Rh d'un individu.">
+            >
+            ["at0003"] = <
+                text = <"Grup sanguini ABO">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"Factor Rh (antigen Rh [D])">
+                description = <"Presència o absència de l'antigen Rh(D).">
+            >
+            ["at0005"] = <
+                text = <"Última actualització">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Extensió">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"O">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"A">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"B">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"AB">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Positiu">
+                description = <"Es detecta l'antigen Rh(D).">
+            >
+            ["at0012"] = <
+                text = <"Negatiu">
+                description = <"No es detecta l'antigen Rh(D).">
+            >
+            ["ac9000"] = <
+                text = <"Grup sanguini ABO (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Factor Rh (antigen Rh [D]) (synthesised)">
+                description = <"Presència o absència de l'antigen Rh(D). (synthesised)">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Grupo sanguíneo">
+                description = <"Identificación del grupo sanguíneo y del factor Rh de un individuo.">
+            >
+            ["at0003"] = <
+                text = <"Grupo sanguíneo ABO">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"Factor Rh (antígeno Rh [D])">
+                description = <"Presencia o ausencia del antígeno Rh(D).">
+            >
+            ["at0005"] = <
+                text = <"Última actualización">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Extensión">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"O">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"A">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"B">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"AB">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Positivo">
+                description = <"Se detecta el antígeno Rh(D).">
+            >
+            ["at0012"] = <
+                text = <"Negativo">
+                description = <"No se detecta el antígeno Rh(D).">
+            >
+            ["ac9000"] = <
+                text = <"Grupo sanguíneo ABO (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Factor Rh (antígeno Rh [D]) (synthesised)">
+                description = <"Presencia o ausencia del antígeno Rh(D). (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0011", "at0012">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0007", "at0008", "at0009", "at0010">
+        >
+    >

@@ -1,0 +1,90 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=2d37542d-1e0a-40d3-a767-26ff9a370488; build_uid=6609430a-ec50-4c4e-b5ad-546920103253)
+    openEHR-EHR-CLUSTER.person_identifier_slovenia_parent.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Samuel Frade">
+        ["organisation"] = <"Marand,SI">
+        ["date"] = <"2015-03-24">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    other_details = <
+        ["original_"] = <"Marand d.o.o. Slovenia">
+        ["MD5-CAM-1.0.1"] = <"8DA1F749D3EA5E1DC8500D0958BC3B07">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Identifiers of a person.">
+            use = <"">
+            misuse = <"">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Person identifier slovenia (PARENT)
+        items cardinality matches {1..3; unordered} matches {
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- KZZ
+                value matches {
+                    DV_TEXT[at9000]
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- EMŠO
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- MI
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Person identifier slovenia (PARENT)">
+                description = <"Identifiers of a person compliant with Slovenia requirements.">
+            >
+            ["at0002"] = <
+                text = <"KZZ">
+                description = <"Health Insurance Number.">
+            >
+            ["at0003"] = <
+                text = <"EMŠO">
+                description = <"Unique Master Citizen Number.">
+            >
+            ["at0006"] = <
+                text = <"MI">
+                description = <"Hospital's Internal Patient identifier.">
+            >
+        >
+        ["sl"] = <
+            ["at0000"] = <
+                text = <"*Person identifier slovenia (PARENT)(en)">
+                description = <"*Identifiers of a person compliant with Slovenia requirements(en)">
+            >
+            ["at0002"] = <
+                text = <"*KZZ(en)">
+                description = <"*Health Insurance Number(en)">
+            >
+            ["at0003"] = <
+                text = <"*EMŠO(en)">
+                description = <"*Unique Master Citizen Number(en)">
+            >
+            ["at0006"] = <
+                text = <"*MI(en)">
+                description = <"*Hospital's Internal Patient identifier(en)">
+            >
+        >
+    >

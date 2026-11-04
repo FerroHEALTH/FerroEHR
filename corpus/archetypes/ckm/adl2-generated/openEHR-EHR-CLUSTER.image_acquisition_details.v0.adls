@@ -1,0 +1,171 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=f6c7ba7a-a9a6-407f-8899-e00447a49117; build_uid=8852be89-cdcf-4a6e-a43c-756fee5ed7bb)
+    openEHR-EHR-CLUSTER.image_acquisition_details.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::zh]>
+
+description
+    original_author = <
+        ["name"] = <"">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"FF02513C6090BFB605AE36C5999D8EE8">
+    >
+    details = <
+        ["zh"] = <
+            language = <[ISO_639-1::zh]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Image acquisition details
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Scan mode
+                value matches {
+                    DV_TEXT[at9005]
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- ECG-synchronization
+                value matches {
+                    DV_TEXT[at9006]
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Use of duel energy?
+                value matches {
+                    DV_BOOLEAN[at9007] matches {
+                        value matches {True, False}
+                    }
+                }
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Scan range
+                value matches {
+                    DV_QUANTITY[at9008] matches {
+                        property matches {[at9000]}    -- * Length (en)
+                        units matches {"cm"}
+                    }
+                }
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Pitch
+                value matches {
+                    DV_QUANTITY[at9009] matches {
+                        property matches {[at9001]}    -- * Qualified real (en)
+                        units matches {"1"}
+                    }
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Tube voltage
+                value matches {
+                    DV_QUANTITY[at9010] matches {
+                        property matches {[at9002]}    -- * Voltage, electrical (en)
+                        units matches {"mV"}
+                    }
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Tube current
+                value matches {
+                    DV_QUANTITY[at9011] matches {
+                        property matches {[at9003]}    -- * Electric current (en)
+                        units matches {"A"}
+                    }
+                }
+            }
+            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Dose-length product (DLP)
+                value matches {
+                    DV_TEXT[at9012]
+                }
+            }
+            ELEMENT[at0009] occurrences matches {0..1} matches {    -- CT dose index (CTDI)
+                value matches {
+                    DV_QUANTITY[at9013] matches {
+                        property matches {[at9004]}    -- * Energy dose (en)
+                        units matches {"Gy"}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["zh"] = <
+            ["at0000"] = <
+                text = <"Image acquisition details">
+                description = <"unknown">
+            >
+            ["at0001"] = <
+                text = <"Scan mode">
+                description = <"*">
+            >
+            ["at0002"] = <
+                text = <"ECG-synchronization">
+                description = <"*">
+            >
+            ["at0003"] = <
+                text = <"Use of duel energy?">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"Scan range">
+                description = <"*">
+            >
+            ["at0005"] = <
+                text = <"Pitch">
+                description = <"*">
+            >
+            ["at0006"] = <
+                text = <"Tube voltage">
+                description = <"*">
+            >
+            ["at0007"] = <
+                text = <"Tube current">
+                description = <"*">
+            >
+            ["at0009"] = <
+                text = <"CT dose index (CTDI)">
+                description = <"*">
+            >
+            ["at0010"] = <
+                text = <"Dose-length product (DLP)">
+                description = <"*">
+            >
+            ["at9000"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["at9001"] = <
+                text = <"* Qualified real (en)">
+                description = <"* Qualified real (en)">
+            >
+            ["at9002"] = <
+                text = <"* Voltage, electrical (en)">
+                description = <"* Voltage, electrical (en)">
+            >
+            ["at9003"] = <
+                text = <"* Electric current (en)">
+                description = <"* Electric current (en)">
+            >
+            ["at9004"] = <
+                text = <"* Energy dose (en)">
+                description = <"* Energy dose (en)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/122>
+            ["at9001"] = <http://openehr.org/id/380>
+            ["at9002"] = <http://openehr.org/id/374>
+            ["at9003"] = <http://openehr.org/id/334>
+            ["at9004"] = <http://openehr.org/id/508>
+        >
+    >

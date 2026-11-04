@@ -1,0 +1,256 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=b0fd63dc-83cd-4cf8-b2a0-a953c8b70630; build_uid=c9e38bd8-91a3-4bf8-8772-1372171bfb2a)
+    openEHR-EHR-OBSERVATION.cormack_lehane.v1.0.2
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            author = <
+                ["name"] = <"Vesa Peltola">
+                ["organisation"] = <"Tieto Finland">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand / Silje Ljosland Bakke">
+                ["organisation"] = <"Helse Bergen HF / Nasjonal IKT HF">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"John Tore Valand">
+        ["organisation"] = <"Helse Bergen HF">
+        ["email"] = <"john.tore.valand@helse-bergen.no">
+        ["date"] = <"2016-01-06">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Anne Pauline Anderssen, Helse Nord RHF, Norway", "Vebjørn Arntzen, Oslo universitetssykehus HF, Norway (Nasjonal IKT redaktør)", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (Nasjonal IKT redaktør)", "Marcus Baw, openGPSoC / BawMedical Ltd, United Kingdom", "Kristian Berg, Vestvågøy kommune - Fagutviklingsavdelingen, Norway", "Bjørn Christensen, Helse Bergen HF, Norway", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Mikkel Gaup Grønmo, FSE, Helse Nord, Norway (Nasjonal IKT redaktør)", "Karl Trygve Kalleberg, Oslo Universitetssykehus, Norway", "Lars Morgan Karlsen, DIPS ASA, Norway", "Heather Leslie, Ocean Informatics, Australia (openEHR Editor)", "Hallvard Lærum, Direktoratet for e-helse, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Bjørn Næss, DIPS ASA, Norway", "Vladimir Pizzo, Hospital Sírio Libanês, Brazil", "Tanja Riise, Nasjonal IKT HF, Norway", "Rowan Thomas, St. Vincent's Hospital Melbourne, Australia", "Jon Tysdahl, Furst medlab AS, Norway", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)", "Nils Widnes, Helse-Bergen, Norway", "Thomas Wilson, Finnmarkssykehuset HF Klinikk Hammerfest, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Derived from: Cormack-Lehane classification, Published archetype [Internet]. openEHR Foundation, openEHR Clinical Knowledge Manager [cited: 2017-12-11]. Available from: http://openehr.org/ckm/#showArchetype_1013.1.2411">
+        ["2"] = <"Cormack RS, Lehane J. Difficult tracheal intubation in obstetrics. Anaesthesia 1984; 39: 1105–11.">
+        ["3"] = <"Bjerkelund CE, Christensen P, Dragsund S, Aadahl P. [How to secure free airway?]. Tidsskrift for den Norske laegeforening : tidsskrift for praktisk medicin, ny raekke 2010; 130(5): 507-10.">
+        ["4"] = <"Yentis SM, Lee DJH. Evaluation of an improved scoring system for the grading of direct laryngoscopy. Anaesthesia 1998; 53(11): 1041-4.">
+        ["5"] = <"OpenAirway. Department of Anaesthesia, University of Cape Town. [internet] Accessed 2016-03-31. http://openairway.org/tag/cormack-lehane/">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"6E128842427D617B9B54CCDD56090C01">
+    >
+    details = <
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            purpose = <"Käytetään kuvaamaan suorien laryngoskopioiden aikana näkyviä rakenteita ja epäsuorasti osoittamaan kurkunpään intuboinnin todennäköistä vaikeutta.">
+            keywords = <"intubaatio, laryngoskopia, luokittelu, hengitystiet, glottis, epiglottis, vaikeat hengitystiet", ...>
+            use = <"Käytä kuvaamaan rakenteita, jotka ovat näkyvissä suoran laryngoskopian aikana ja epäsuorasti osoittamaan kurkunpään intuboinnin todennäköistä vaikeutta.
+
+Pään sijainti ja muu asiaankuuluva tieto kuljetetaan muissa asiaankuuluvissa ENTRY-arkkityypeissä.">
+            misuse = <"Ei saa käyttää Modified Cormack-Lehane-luokittelun tallentamiseen (Yentis & Lee, 1998). Käytä tätä varten spesifistä arkkityyppiä.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å beskrive synlige strukturer under direkte laryngoskopi, og indirekte for å indikere en sannsynlig vanskelig intubasjon.">
+            keywords = <"intubasjon", "laryngoskopi", "larynx", "luftvei", "innsyn", "epiglottis", "glottis", "vanskelig intubasjon">
+            use = <"Brukes for å beskrive synlige strukturer under direkte laryngoskopi, og indirekte for å indikere en sannsynlig vanskelig intubasjon.
+
+Hodets posisjon og annen relevant informasjon registreres i andre relevante ENTRY-arketyper.">
+            misuse = <"Brukes ikke til å registrere Modifisert Cormack/Lehane-klassifikasjon (Yentis & Lee, 1998). Bruk en spesifikk arketype til dette.">
+            copyright = <"© Nasjonal IKT HF, openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To describe the structures visible during direct laryngoscopy and indirectly to indicate the likely difficulty of laryngeal intubation.">
+            keywords = <"intubation", "laryngoscopy", "grading", "airway", "glottis", "epiglottis", "difficult airway">
+            use = <"Use to describe the structures visible during direct laryngoscopy and indirectly to indicate the likely difficulty of laryngeal intubation.
+
+The position of the head and other relevant information will be carried in other relevant ENTRY archetypes.">
+            misuse = <"Not to be used for recording Modified Cormack-Lehane grading (Yentis & Lee, 1998). Use a specific archetype for this purpose.">
+            copyright = <"© Nasjonal IKT HF, openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Cormack-Lehane classification
+        data matches {
+            HISTORY[at0007] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0008] matches {    -- Any point in time event
+                        data matches {
+                            ITEM_TREE[at0009] matches {
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0001] occurrences matches {0..1} matches {    -- Grading
+                                        value matches {
+                                            DV_CODED_TEXT[at9001] matches {
+                                                defining_code matches {[ac9000]}    -- Grading (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9002]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0010] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0011] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["fi"] = <
+            ["at0000"] = <
+                text = <"Cormack-Lehane-luokitus">
+                description = <"Cormack-Lehane järjestelmällä luokitellaan suoralla laryngoskopialla tehdyt havainnot niissä nähtyjen rakenteiden mukaisesti.">
+            >
+            ["at0001"] = <
+                text = <"Luokitus">
+                description = <"Kurkunpään anatomian näkyvyyden luokitus.">
+            >
+            ["at0002"] = <
+                text = <"Luokka 1: Äänirako näkyy kokonaan.">
+                description = <"Äänirako näkyy kokonaan.">
+            >
+            ["at0003"] = <
+                text = <"Luokka 2: Äänirako tai kannurustot näkyvät osittain.">
+                description = <"Äänirako tai kannurustot näkyvät osittain.">
+            >
+            ["at0004"] = <
+                text = <"Luokka 3: Vain kurkunkansi näkyy">
+                description = <"Vain kurkunkansi näkyy.">
+            >
+            ["at0005"] = <
+                text = <"Luokka 4: Äänirako ja kurkunkansi eivät näy">
+                description = <"Äänirako ja kurkunkansi eivät näy.">
+            >
+            ["at0006"] = <
+                text = <"Kommentti">
+                description = <"Kertomusmuodossa oleva kommentti Cormack-Lehane-luokittelusta.">
+            >
+            ["at0008"] = <
+                text = <"Tapahtuma minä tahansa ajankohtana">
+                description = <"Määrittämättömänä ajanhetkenä ilmenevä tapahtuma, joka voi olla määritetty tarkasti jossakin mallissa tai suorituksen aikana.">
+            >
+            ["at0011"] = <
+                text = <"Laajennus">
+                description = <"Lisätiedot, joita tarvitaan paikallisen asiayhteyden kirjaamiseksi tai yhtenäistämiseksi muiden viitemallien tai formalismien kanssa.">
+                comment = <"Esimerkki: Paikallisen sairaalan osastotiedot tai muu metadata, joilla saadaan aikaan vastaavuus vastaavien FHIR- tai CIMI-tietojen kanssa.">
+            >
+            ["ac9000"] = <
+                text = <"Luokitus (synthesised)">
+                description = <"Kurkunpään anatomian näkyvyyden luokitus. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Cormack/Lehane-klassifikasjon">
+                description = <"Cormack/Lehane-systemet klassifiserer innsynsforhold til larynx ved direkte laryngoskopi, basert på hvilke strukturer som kan ses.">
+            >
+            ["at0001"] = <
+                text = <"Gradering">
+                description = <"Gradering av anatomisk synlighet i larynx.">
+            >
+            ["at0002"] = <
+                text = <"Grad 1: Hele larynx synlig">
+                description = <"Hele larynx synlig.">
+            >
+            ["at0003"] = <
+                text = <"Grad 2: Epiglottis og aryregionen synlig">
+                description = <"Epiglottis og aryregionen synlig.">
+            >
+            ["at0004"] = <
+                text = <"Grad 3: Bare epiglottis synlig">
+                description = <"Bare epiglottis synlig.">
+            >
+            ["at0005"] = <
+                text = <"Grad 4: Epiglottis ikke synlig">
+                description = <"Epiglottis ikke synlig.">
+            >
+            ["at0006"] = <
+                text = <"Kommentar">
+                description = <"Fritekstkommentar til graderingen.">
+            >
+            ["at0008"] = <
+                text = <"Uspesifisert tidspunkthendelse">
+                description = <"Uspesifisert tidspunkt som kan defineres mer eksplisitt i en templat eller i en applikasjon.">
+            >
+            ["at0011"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+            ["ac9000"] = <
+                text = <"Gradering (synthesised)">
+                description = <"Gradering av anatomisk synlighet i larynx. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Cormack-Lehane classification">
+                description = <"The Cormack-Lehane system classifies views obtained by direct laryngoscopy based on the structures seen.">
+            >
+            ["at0001"] = <
+                text = <"Grading">
+                description = <"A grading of the laryngeal anatomical visibility.">
+            >
+            ["at0002"] = <
+                text = <"Grade 1: Full view of the glottis">
+                description = <"Full view of the glottis.">
+            >
+            ["at0003"] = <
+                text = <"Grade 2: Partial view of the glottis or arytenoids">
+                description = <"Partial view of the glottis or arytenoids.">
+            >
+            ["at0004"] = <
+                text = <"Grade 3: Only epiglottis visible">
+                description = <"Only epiglottis visible.">
+            >
+            ["at0005"] = <
+                text = <"Grade 4: Neither glottis nor epiglottis visible">
+                description = <"Neither glottis nor epiglottis visible.">
+            >
+            ["at0006"] = <
+                text = <"Comment">
+                description = <"Narrative comment about the Cormack-Lehane grading.">
+            >
+            ["at0008"] = <
+                text = <"Any point in time event">
+                description = <"Unspecified point in time event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0011"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"For example: Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["ac9000"] = <
+                text = <"Grading (synthesised)">
+                description = <"A grading of the laryngeal anatomical visibility. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0002", "at0003", "at0004", "at0005">
+        >
+    >

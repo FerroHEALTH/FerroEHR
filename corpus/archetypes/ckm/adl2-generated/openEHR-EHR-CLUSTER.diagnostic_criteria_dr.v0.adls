@@ -1,0 +1,293 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=a11c81e6-a2c2-4bdc-9c53-3e1584c87f01; build_uid=8428eae8-ab75-4cac-b68a-b4ed1f286b86)
+    openEHR-EHR-CLUSTER.diagnostic_criteria_dr.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Aitor Eguzkitza">
+        ["organisation"] = <"Universidad Pública de Navarra - Complejo Hospitalario de Navarra">
+        ["email"] = <"aitor.eguzkiza@unavarra.es">
+        ["date"] = <"2016-07-25">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"José Andonegui, Hospital de Navarra, jose.andonegui.navarro@cfnavarra.es", "Luis Serrano, Universidad Pública de Navarra (UPNA), lserrano@unavarra.es", "Jesús D. Trigo, Universidad Pública de Navarra (UPNA), jesusdaniel.trigo@unavarra.es">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"B3C9DEFCF4C51DF03638B3307B83475A">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the clinical findings on examination of the eye fundus in which diagnostic decision is based.">
+            keywords = <"eye", "posterior chamber", "examination">
+            use = <"It can be attached to EVALUATION type archetypes related to the diagnose of DR. This CLUSTER fits perfectly into the \"Problem/diagnosis\" archetype.
+This archetype is applied to key findings supporting the diagnostic decision.">
+            misuse = <"Do not get confused with \"examination_findings\" archetypes, since these are similar in the use case of DR's diagnose.
+While \"examination_findings\" include objectively all findings within eye fundus, this archetype about diagnostic criterion focuses on the specific findings in which diagnosis is grounded.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registrar detalles clínicos observados en el estudio del fondo de ojo en los que se ha basado la decisión diagnóstica.">
+            keywords = <"ojo", "cámara posterior">
+            use = <"Se utiliza anidado a arquetipos de tipo EVALUATION relacionados con el diagnóstico de la RD. Encaja perfectamente en el arquetipo \"Problem/diagnosis\". 
+
+Este arquetipo se aplica a los hallazgos que han sido clave en la decisión diagnóstica.">
+            misuse = <"No debe confundirse con los arquetipos \"examination_findings\", ya que en el caso de la RD es muy similar. Mientras \"examination_findings\" recoge todos los hallazgos de forma objetiva y sin tener en cuenta ninguna afección, este arquetipo de criterio diagnóstico se centra en los hallazgos concretos que han fundamentado el diagnóstico.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Diagnostic criteria DR
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0052] occurrences matches {0..1} matches {    -- Patterns of leakage
+                value matches {
+                    DV_CODED_TEXT[at9003] matches {
+                        defining_code matches {[ac9000]}    -- Patterns of leakage (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0045] occurrences matches {0..1} matches {    -- Patterns of macular ischaemia
+                value matches {
+                    DV_CODED_TEXT[at9004] matches {
+                        defining_code matches {[ac9001]}    -- Patterns of macular ischaemia (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0036] occurrences matches {0..1} matches {    -- Patterns of retinopathy
+                value matches {
+                    DV_CODED_TEXT[at9005] matches {
+                        defining_code matches {[ac9002]}    -- Patterns of retinopathy (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0053] occurrences matches {0..1} matches {    -- Patterns of retinal ischaemia
+                value matches {
+                    DV_BOOLEAN[at9006] matches {
+                        value matches {True, False}
+                    }
+                }
+            }
+            ELEMENT[at0060] occurrences matches {0..1} matches {    -- Clinical findings diabetic retinopathy
+                value matches {
+                    DV_CODED_TEXT[at9007] matches {
+                        defining_code matches {[ac2]}    -- Findings on the posterior chamber of the eye
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Diagnostic criteria DR">
+                description = <"Findings concerning directly the diagnose of diabetic retinopathy identified during eye fundus study.">
+            >
+            ["at0036"] = <
+                text = <"Patterns of retinopathy">
+                description = <"Identifies disorders within the retina from an overall perspective.">
+            >
+            ["at0038"] = <
+                text = <"Stable diabetic retinopathy">
+                description = <"Patient presenting a stable state of dianetic retinopathy.">
+            >
+            ["at0039"] = <
+                text = <"Proliferative diabetic retinopathy">
+                description = <"Patient presenting a proliferative state of diabetic retinopathy.">
+            >
+            ["at0045"] = <
+                text = <"Patterns of macular ischaemia">
+                description = <"Patterns of ischaemia, related to the diagnosis of DR, identified in the patient's macula.">
+            >
+            ["at0048"] = <
+                text = <"Diffuse diabetic macular edema">
+                description = <"Patient presenting a diffuse diabetic macular edema.">
+            >
+            ["at0049"] = <
+                text = <"Focal diabetic macular edema">
+                description = <"Patient presenting a focal diabetic macular edema.">
+            >
+            ["at0050"] = <
+                text = <"No macular edema">
+                description = <"Patient not presenting macular edema.">
+            >
+            ["at0052"] = <
+                text = <"Patterns of leakage">
+                description = <"Patterns of leakage, related to the diagnosis of DR, identified in the patient's posterior pole of eye.">
+            >
+            ["at0053"] = <
+                text = <"Patterns of retinal ischaemia">
+                description = <"Every sign of narrowing, deformation or anomaly regarding to blood vessels corresponds to this classification (blot haemorrhage, venous beading, intra-retinal microvascular anomalies).">
+            >
+            ["at0054"] = <
+                text = <"Neovascular leakage">
+                description = <"Due to breaking of new vessels created as a result of diabetic retinopathy.">
+            >
+            ["at0055"] = <
+                text = <"Macular leakage">
+                description = <"Refers to any loss of fluid located in the macula.">
+            >
+            ["at0056"] = <
+                text = <"Focal leakage">
+                description = <"In diabetic macular oedema, some patients may show progressive leakages in discrete locations (focal) rising from \"culprit\" microaneurysms.">
+            >
+            ["at0057"] = <
+                text = <"Indeterminate leakage">
+                description = <"In many patients with diffuse diabetic macular oedema, an“indeterminate” leakage similar to focal ones appears, with little or no correlation to the presence of microaneurysms.">
+            >
+            ["at0058"] = <
+                text = <"Mixed leakage">
+                description = <"Many patients, with diabetic macular oedema have a mixed pattern of leakage, which may further include ischemic maculopathy.">
+            >
+            ["at0059"] = <
+                text = <"No leakage">
+                description = <"There is not any type of leakage.">
+            >
+            ["at0060"] = <
+                text = <"Clinical findings diabetic retinopathy">
+                description = <"Findings from the posterior chamber of the eye that have been decisive in obtaining a diagnosis for diabetic retinopathy.">
+            >
+            ["ac2"] = <
+                text = <"Findings on the posterior chamber of the eye">
+                description = <"List of possible clinical findings on posterior chamber of the eye.">
+            >
+            ["ac9000"] = <
+                text = <"Patterns of leakage (synthesised)">
+                description = <"Patterns of leakage, related to the diagnosis of DR, identified in the patient's posterior pole of eye. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Patterns of macular ischaemia (synthesised)">
+                description = <"Patterns of ischaemia, related to the diagnosis of DR, identified in the patient's macula. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Patterns of retinopathy (synthesised)">
+                description = <"Identifies disorders within the retina from an overall perspective. (synthesised)">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Criterio diagnóstico RD">
+                description = <"Hallazgos directamente relacionados con el diagnóstico de la retinopatía diabética identificados durante el estudio del fondo de ojo.">
+            >
+            ["at0036"] = <
+                text = <"Patrones de retinopatía">
+                description = <"Identifica los trastornos en la retina desde una perspectiva global.">
+            >
+            ["at0038"] = <
+                text = <"Retinopatía diabética estable">
+                description = <"*">
+            >
+            ["at0039"] = <
+                text = <"Retinopatía diabética proliferativa">
+                description = <"*">
+            >
+            ["at0045"] = <
+                text = <"Patrones de isquemia macular">
+                description = <"*">
+            >
+            ["at0048"] = <
+                text = <"Edema macular diabético difuso">
+                description = <"*">
+            >
+            ["at0049"] = <
+                text = <"Edema macular diabético focal">
+                description = <"*">
+            >
+            ["at0050"] = <
+                text = <"Sin edema macular">
+                description = <"*">
+            >
+            ["at0052"] = <
+                text = <"Patrones de secreción">
+                description = <"*">
+            >
+            ["at0053"] = <
+                text = <"Patrones de isquemia retiniana">
+                description = <"Todo signo de estrechamiento y deformación capilar entra en esta clasificación (hemorragias macrovasculares, arrosariamientos venosos, anomalias microvasculares intraretinianas).">
+            >
+            ["at0054"] = <
+                text = <"Exudación neovascular">
+                description = <"Se debe a roturas en los nuevos vasos creados a consecuencia de la retinopatía diabética proliferativa.">
+            >
+            ["at0055"] = <
+                text = <"Exudación macular">
+                description = <"Se refiere a cualquier pérdida de fluído situada en la mácula.">
+            >
+            ["at0056"] = <
+                text = <"Exudación focal">
+                description = <"En el edema macular diabético, algunos pacientes pueden presentar exudaciones progresivas situadas discretamente (focal) y que nacen a partir de microaneurismas.">
+            >
+            ["at0057"] = <
+                text = <"Exudación indeterminada">
+                description = <"Habitualmente en pacientes con edema macular diabético difuso, aparecen exudados \"indeterminados\" similares a los focales, pero con poca o ninguna correlación con la presencia de microaneurismas.">
+            >
+            ["at0058"] = <
+                text = <"Exudación mixta">
+                description = <"Pacientes con edema macular diabético combinan varios patrónes de exudación, que además pueden incluir maculopatía isquémica.">
+            >
+            ["at0059"] = <
+                text = <"Sin exudación">
+                description = <"No hay ningún tipo de exudación.">
+            >
+            ["at0060"] = <
+                text = <"Hallazgos clínicos">
+                description = <"Hallazgos en la cámara posterior del ojo que han resultado relevantes en la obtención de un diagnóstico para la retinopatía diabética.">
+            >
+            ["ac2"] = <
+                text = <"Hallazgos cámara posterior del ojo">
+                description = <"Lista de los posibles hallazogs clínicos en la cámara posterior del ojo.">
+            >
+            ["ac9000"] = <
+                text = <"Patrones de secreción (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Patrones de isquemia macular (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Patrones de retinopatía (synthesised)">
+                description = <"Identifica los trastornos en la retina desde una perspectiva global. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0036"] = <http://snomed.info/id/4855003>
+            ["at0038"] = <http://snomed.info/id/390834004>
+            ["at0039"] = <http://snomed.info/id/59276001>
+            ["at0048"] = <http://snomed.info/id/314010006>
+            ["at0060"] = <http://snomed.info/id/29555009>
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0038", "at0039">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0050", "at0048", "at0049">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0059", "at0054", "at0055", "at0056", "at0057", "at0058">
+        >
+    >

@@ -1,0 +1,464 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=32381533-91bf-45ce-b2f9-49645f4b5cb4; build_uid=5b54332a-f9e1-4325-94f5-541c7f2a9736)
+    openEHR-EHR-OBSERVATION.critical_pain_observation_tool.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            author = <
+                ["name"] = <"Alan D. March">
+                ["organisation"] = <"Hospital Universitario Austral, Pilar, Buenos Aires, Argentina">
+                ["email"] = <"alandmarch@gmail.com">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Alan D. March">
+        ["organisation"] = <"Hospital Universitario Austral, Pilar, Buenos Aires, Argentina">
+        ["email"] = <"alandmarch@gmail.com">
+        ["date"] = <"2016-07-21">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Payen JF, Bru O, Bosson JL, Lagrasta A, Novel E, Deschaux I, Lavagne P, Jacquot C. Assessing pain in critically ill sedated patients by using a behavioral pain scale. Crit Care Med 2001;29:2258-63. ">
+        ["2"] = <"Gélinas C, Fillion L, Puntillo KA, Viens C, Fortier M. Validation of the critical-care pain observation tool in adult patients. Am J Crit Care 2006;15:420-7.">
+        ["3"] = <"Pudas-Tähkä SM, Axelin A, Aantaa R, Lund V, Salanterä S. Pain assessment tools for unconscious or sedated intensive care patients: a systematic review. J Adv Nurs. 2009 May;65(5):946-56.">
+    >
+    other_details = <
+        ["current_contact"] = <"Alan D. March <alandmarch@gmail.com>">
+        ["MD5-CAM-1.0.1"] = <"6FF6C80EF4B60576C5BF3D828E94AC7A">
+    >
+    details = <
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            purpose = <"Una escala de dolor para pacientes no comunicativos y sedados en una unidad de cuidados intesivos (UCI), basada en observaciones clínicas.">
+            keywords = <"dolor", "puntaje", "escala", "expresión facial", "movimientos corporales", "tensión muscular", "ventilación", "asistencia respiratoria", "intubación", "vocalización">
+            use = <"La escala consiste de cuatro parametros de comportamiento: expresión facial, movimientos corporales, tensión muscular, y adattación al ventilador (para pacientes intubados) o vocalización (para pacientes extubados). Se asigna un puntaje entre 0 y 2 según el comportamiento de cada paciente para cada uno de los parametros. El rango del puntaje total va de 0 (ausencia de dolor) a 8 (máximo dolor).">
+            misuse = <"No utilizar en pacientes fuera del alcance (no comunicativos y sedados en unidada de cuidados intensivos).">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"A pain assessment scale for uncommunicative and sedated intensive care unit (ICU) patients based on clinical observation.">
+            keywords = <"pain", "score", "facial expression", "body movements", "muscle tension", "ventilation", "intubation", "vocalization">
+            use = <"The scale consists of four behavioral parameters: facial expression, body movements, muscle tension and compliance with the ventilation for intubated patients or vocalization for extubated patients. Patient’s behavior for each of the parameters is scored between 0 and 2. Possible total score ranges from 0 (no pain) to 8 (maximum pain).">
+            misuse = <"Not to be used outside the scope of uncommunicative or sedated intesive care patients.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Critical care pain observation tool (CPOT)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] occurrences matches {0..1} matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {4..*} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Ventilator compliance
+                                        value matches {
+                                            DV_ORDINAL[at9005] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0005]}],    -- Tolerating ventilator or movement
+                                                    [{1}, {[at0006]}],    -- Coughing but tolerating
+                                                    [{2}, {[at0007]}]    -- Fighting ventilator
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Vocalization
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0009]}],    -- Talking in normal tone or no sound
+                                                    [{1}, {[at0010]}],    -- Sighing, moaning
+                                                    [{2}, {[at0011]}]    -- Crying out, sobbing
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0012] occurrences matches {1} matches {    -- Facial expression
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0013]}],    -- Relaxed, neutral
+                                                    [{1}, {[at0014]}],    -- Tense
+                                                    [{2}, {[at0015]}]    -- Grimacing
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0016] occurrences matches {1} matches {    -- Body movements
+                                        value matches {
+                                            DV_ORDINAL[at9008] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- Absence of movements
+                                                    [{1}, {[at0018]}],    -- Protection
+                                                    [{2}, {[at0019]}]    -- Restlessness
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0020] occurrences matches {1} matches {    -- Muscle tension
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0021]}],    -- Relaxed
+                                                    [{1}, {[at0022]}],    -- Tense, rigid
+                                                    [{2}, {[at0023]}]    -- Very tense or rigid
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0025] occurrences matches {1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9010] matches {
+                                                magnitude matches {|0..8|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0026] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9011]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0032] matches {
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0024] occurrences matches {1} matches {    -- Intubated?
+                                        value matches {
+                                            DV_BOOLEAN[at9012] matches {
+                                                value matches {True, False}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0033] occurrences matches {0..1} matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9013]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0027] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0034] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["es-ar"] = <
+            ["at0000"] = <
+                text = <"Escala de valoración del dolor mediante la observación del paciente crítico(CPOT)">
+                description = <"Escala de dolor para pacientes no comunicativos y sedados en una unidad de cuidados intesivos (UCI), basada en observaciones clínicas.">
+            >
+            ["at0002"] = <
+                text = <"*Any event(en)">
+                description = <"*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.(en)">
+            >
+            ["at0004"] = <
+                text = <"Adaptación al respirador">
+                description = <"Utilizado en pacientes bajo asistencia resporatoria mecánica. Para pacientes no ventilados debe utilizarse el parametro Vocalización.">
+            >
+            ["at0005"] = <
+                text = <"Bien adaptado al respirador">
+                description = <"No se activan las alarmas. Facil ventilación.">
+            >
+            ["at0006"] = <
+                text = <"Tose pero tolera">
+                description = <"Las alarmas de detienen en forma espontanea.">
+            >
+            ["at0007"] = <
+                text = <"Lucha con el respirador">
+                description = <"La ventilación de detiene. Las alarmas se activan con frecuencia.">
+            >
+            ["at0008"] = <
+                text = <"Vocalización">
+                description = <"Utilizado en pacientes no ventilados. Para pacientes bajo asistencia resporatoria mecánica debe utilizarse el parametro Adaptación al respirador.">
+            >
+            ["at0009"] = <
+                text = <"Habla en tono normal o en silencio">
+                description = <"Habla en tono normal o esta en silencio.">
+            >
+            ["at0010"] = <
+                text = <"Suspiros, gemidos">
+                description = <"Suspiros y/o gemidos.">
+            >
+            ["at0011"] = <
+                text = <"Gritos, sollozos">
+                description = <"Gritos y/o sollozos.">
+            >
+            ["at0012"] = <
+                text = <"Expresión facial">
+                description = <"El estado y los cambios en las gestos faciales del paciente. La expresión facial es uno de los mejores indicadores conductuales para la evaluación del dolor.">
+            >
+            ["at0013"] = <
+                text = <"Relajado, neutro">
+                description = <"No se observa tensión muscular.">
+            >
+            ["at0014"] = <
+                text = <"Tenso">
+                description = <"Presencia de ceño fruncido, cejas bajas, ojos entrecerrados.">
+            >
+            ["at0015"] = <
+                text = <"Muecas">
+                description = <"Todos los movimientos faciales anteriores, con los párpados fuertemente cerrados.">
+            >
+            ["at0016"] = <
+                text = <"Movimientos corporales">
+                description = <"El patrón de movimientos del paciente. Los movimientos corporales son comportamientos menos específicos en relación al dolor pero pueden proveer información relevante.">
+            >
+            ["at0017"] = <
+                text = <"Ausencia de movimientos">
+                description = <"No se observan movimiento. Esto no necesariamente indica ausencia de dolor.">
+            >
+            ["at0018"] = <
+                text = <"Protección">
+                description = <"Movimientos lentos y cautelosos. Se toca o frota el sitio del dolor. Busca atención mediante movimientos.">
+            >
+            ["at0019"] = <
+                text = <"Agitado">
+                description = <"Empuja el tubo. Intenta sentarse. Mueve los labios. No obedece órdenes. Molesta al personal. Trata de salir de la cama.">
+            >
+            ["at0020"] = <
+                text = <"Tensión muscular">
+                description = <"Generalmente evaluada realizando flexión y extensión pasiva del brazo del paciente.">
+            >
+            ["at0021"] = <
+                text = <"Relajado">
+                description = <"No se resiste a movimientos pasivos.">
+            >
+            ["at0022"] = <
+                text = <"Tenso, rígido">
+                description = <"Se resiste a movimientos pasivos.">
+            >
+            ["at0023"] = <
+                text = <"Muy tenso o muy rígido">
+                description = <"Fuerte resistencia a movimientos pasivos, incapacidad para finalizarlos.">
+            >
+            ["at0024"] = <
+                text = <"Intubado?">
+                description = <"Verdadero si el paciente se encuentra intubado.">
+            >
+            ["at0025"] = <
+                text = <"Puntaje total">
+                description = <"El valor resultante de la suma de las cinco variables evaluadas.">
+            >
+            ["at0026"] = <
+                text = <"Comentario">
+                description = <"Información adicional acerca del dolor que no pudo capturarse en las variables estructuradas pero que podría ser de interés en la evaluación de un paciente individual.">
+            >
+            ["at0033"] = <
+                text = <"Factores de confusión">
+                description = <"Todo factor incidental relacionado con el estado del sujeto y que pueda afectar la interpretación clínica de la medición. measurement. Por ejemplo, el delirio es una complicación común en las Unidades de Cuidados Intensivos y puede afectar los valores medidos.">
+            >
+            ["at0034"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local context or to align with other reference models/formalisms.(en)">
+                comment = <"*For example: Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.(en)">
+            >
+            ["ac9013"] = <
+                text = <"Adaptación al respirador (synthesised)">
+                description = <"Utilizado en pacientes bajo asistencia resporatoria mecánica. Para pacientes no ventilados debe utilizarse el parametro Vocalización. (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Vocalización (synthesised)">
+                description = <"Utilizado en pacientes no ventilados. Para pacientes bajo asistencia resporatoria mecánica debe utilizarse el parametro Adaptación al respirador. (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Expresión facial (synthesised)">
+                description = <"El estado y los cambios en las gestos faciales del paciente. La expresión facial es uno de los mejores indicadores conductuales para la evaluación del dolor. (synthesised)">
+            >
+            ["ac9016"] = <
+                text = <"Movimientos corporales (synthesised)">
+                description = <"El patrón de movimientos del paciente. Los movimientos corporales son comportamientos menos específicos en relación al dolor pero pueden proveer información relevante. (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Tensión muscular (synthesised)">
+                description = <"Generalmente evaluada realizando flexión y extensión pasiva del brazo del paciente. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Critical care pain observation tool (CPOT)">
+                description = <"A pain scale for uncommunicative and sedated intensive care unit (ICU) patients based on clinical observation.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Ventilator compliance">
+                description = <"Used in mechanically ventilated patients.">
+                comment = <"Please note: for non-ventilated patients, the Vocalization parameter must be used.">
+            >
+            ["at0005"] = <
+                text = <"Tolerating ventilator or movement">
+                description = <"Alarms not activated, easy ventilation.">
+            >
+            ["at0006"] = <
+                text = <"Coughing but tolerating">
+                description = <"Alarms stop spontaneously.">
+            >
+            ["at0007"] = <
+                text = <"Fighting ventilator">
+                description = <"Asynchrony: blocking ventilation, alarms frequently activated.">
+            >
+            ["at0008"] = <
+                text = <"Vocalization">
+                description = <"Used in non-ventilated patients.">
+                comment = <"Please note: for mechanically ventilated patients, the Ventilator compliance parameter must be used.">
+            >
+            ["at0009"] = <
+                text = <"Talking in normal tone or no sound">
+                description = <"Talking in normal tone or no sound.">
+            >
+            ["at0010"] = <
+                text = <"Sighing, moaning">
+                description = <"Sighing, moaning.">
+            >
+            ["at0011"] = <
+                text = <"Crying out, sobbing">
+                description = <"Crying out, sobbing.">
+            >
+            ["at0012"] = <
+                text = <"Facial expression">
+                description = <"The state and changes in the patient's facial gestures.">
+                comment = <"Facial expression is one of the best behavioral indicators for pain
+assessment.">
+            >
+            ["at0013"] = <
+                text = <"Relaxed, neutral">
+                description = <"No muscular tension observed.">
+            >
+            ["at0014"] = <
+                text = <"Tense">
+                description = <"Presence of frowning, brow lowering, orbit tightening, and levator contraction.">
+            >
+            ["at0015"] = <
+                text = <"Grimacing">
+                description = <"All of the above facial movements plus eyelid tightly closed.">
+            >
+            ["at0016"] = <
+                text = <"Body movements">
+                description = <"The patient's pattern of movements.">
+                comment = <"Body movements are the less specific behaviors in relation with pain but may convey important insight.">
+            >
+            ["at0017"] = <
+                text = <"Absence of movements">
+                description = <"Does not move at all (does not necessarily mean absence of pain).">
+            >
+            ["at0018"] = <
+                text = <"Protection">
+                description = <"Slow, cautious movements, touching or rubbing the pain site, seeking attention through movements.">
+            >
+            ["at0019"] = <
+                text = <"Restlessness">
+                description = <"Pulling tube, attempting to sit up, moving limbs/thrashing, not following commands, striking at staff, trying to climb out of bed.">
+            >
+            ["at0020"] = <
+                text = <"Muscle tension">
+                description = <"Generally evaluated by performing a passive flexion and extension of the patient’s arm.">
+            >
+            ["at0021"] = <
+                text = <"Relaxed">
+                description = <"No resistance to passive movements.">
+            >
+            ["at0022"] = <
+                text = <"Tense, rigid">
+                description = <"Resistance to passive movements.">
+            >
+            ["at0023"] = <
+                text = <"Very tense or rigid">
+                description = <"Strong resistance to passive movements, inability to complete them.">
+            >
+            ["at0024"] = <
+                text = <"Intubated?">
+                description = <"True if the patient is intubated.">
+            >
+            ["at0025"] = <
+                text = <"Total score">
+                description = <"The value which results from adding up the four variables measured.">
+                comment = <"While there are five ordinal data elements represented in this archetype, only one result from either 'Ventilator compliance' or 'Vocalization' may be used to calculate the total score.">
+            >
+            ["at0026"] = <
+                text = <"Comment">
+                description = <"Additional information regarding pain which were not captured by the structured variables but which might be of interest in the individual patient's assessment.">
+            >
+            ["at0033"] = <
+                text = <"Confounding factors">
+                description = <"Any incidental factors related to the state of the subject which may affect clinical interpretation of the measurement.">
+                comment = <"For example, delirium is a common complication in ICU and may affect measurement values.">
+            >
+            ["at0034"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"For example: Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["ac9013"] = <
+                text = <"Ventilator compliance (synthesised)">
+                description = <"Used in mechanically ventilated patients. (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Vocalization (synthesised)">
+                description = <"Used in non-ventilated patients. (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Facial expression (synthesised)">
+                description = <"The state and changes in the patient's facial gestures. (synthesised)">
+            >
+            ["ac9016"] = <
+                text = <"Body movements (synthesised)">
+                description = <"The patient's pattern of movements. (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Muscle tension (synthesised)">
+                description = <"Generally evaluated by performing a passive flexion and extension of the patient’s arm. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9013"] = <
+            id = <"ac9013">
+            members = <"at0005", "at0006", "at0007">
+        >
+        ["ac9017"] = <
+            id = <"ac9017">
+            members = <"at0021", "at0022", "at0023">
+        >
+        ["ac9016"] = <
+            id = <"ac9016">
+            members = <"at0017", "at0018", "at0019">
+        >
+        ["ac9015"] = <
+            id = <"ac9015">
+            members = <"at0013", "at0014", "at0015">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0009", "at0010", "at0011">
+        >
+    >

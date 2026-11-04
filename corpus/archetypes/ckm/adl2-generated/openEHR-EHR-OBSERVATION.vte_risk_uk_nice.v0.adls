@@ -1,0 +1,713 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=ef15a6d3-c52b-4b19-874a-986e286c49d7; build_uid=41bc27d7-0f46-4eb2-a442-7cb26b3e7dbe)
+    openEHR-EHR-OBSERVATION.vte_risk_uk_nice.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Anca Heyd">
+        ["organisation"] = <"DIPS AS">
+        ["email"] = <"ahe@dips.no">
+        ["date"] = <"2019-05-02">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Kjetil Jørgensen, DIPS AS, Norway", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway", "Heather Leslie, Atomica Informatics, Australia">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"https://www.nice.org.uk/guidance/ng89/resources/department-of-health-vte-risk-assessment-tool-pdf-4787149213">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"4C71C23F6AAE6380FC1441D8177AD801">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"Brukes for å gjøre en vurdering av tromboserisiko for pasienter som er innlagt på sykehuset.">
+            keywords = <"profylakse", "trombose", "bldning", "risiko", "screening">
+            use = <"Brukes når tromboserisiko skal vurderes hos pasienter som er innlagt på sykehuset. Arketypen brukes for å kartlegge risiko for å utvikle venøs trombose på et gitt tidspunkt. Typiske tidspunkt vil være ved innleggelse, etter en operasjon eller når pasientens tilstand forandrer seg. Arketypen brukes som et screeningsverktøy.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- VTE risk (UK NICE)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] occurrences matches {0..1} matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    CLUSTER[at0007] occurrences matches {0..1} matches {    -- Initial screening
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Type of patient
+                                                value matches {
+                                                    DV_CODED_TEXT[at9001] matches {
+                                                        defining_code matches {[ac9000]}    -- Type of patient (synthesised)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0010] occurrences matches {0..1} matches {    -- *Tromboserisiko (nb)
+                                        items cardinality matches {1..*; unordered} matches {
+                                            CLUSTER[at0091] occurrences matches {0..1} matches {    -- *Pasientrelatert (nb)
+                                                items cardinality matches {1..*; unordered} matches {
+                                                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- *Alder > 60 (nb)
+                                                        value matches {
+                                                            DV_BOOLEAN[at9002] matches {
+                                                                value matches {True}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- *Aktiv kreft eller pågående kreftbehandling (nb)
+                                                        value matches {
+                                                            DV_BOOLEAN[at9003] matches {
+                                                                value matches {True}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- *Dehydrert (nb)
+                                                        value matches {
+                                                            DV_BOOLEAN[at9004] matches {
+                                                                value matches {True}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- *Kjent trombofili (nb)
+                                                        value matches {
+                                                            DV_BOOLEAN[at9005] matches {
+                                                                value matches {True}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- *Sykelig overvekt (nb)
+                                                        value matches {
+                                                            DV_BOOLEAN[at9006] matches {
+                                                                value matches {True}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- *En eller flere medisinsk relevante komorbiditeter (nb)
+                                                        value matches {
+                                                            DV_BOOLEAN[at9007] matches {
+                                                                value matches {True}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- *Førstegradsslektning med tidligere venøs trombose (nb)
+                                                        value matches {
+                                                            DV_BOOLEAN[at9008] matches {
+                                                                value matches {True}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- *Bruker hormontilskudd (HRT) (nb)
+                                                        value matches {
+                                                            DV_BOOLEAN[at9009] matches {
+                                                                value matches {True}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- *Bruker antikonsepsjonsmiddel som inneholder østrogen (nb)
+                                                        value matches {
+                                                            DV_BOOLEAN[at9010] matches {
+                                                                value matches {True}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- *Varicer med thrombophlebitt (nb)
+                                                        value matches {
+                                                            DV_BOOLEAN[at9011] matches {
+                                                                value matches {True}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0023] occurrences matches {0..1} matches {    -- *Gravid eller < 6 uker post partum (nb)
+                                                        value matches {
+                                                            DV_BOOLEAN[at9012] matches {
+                                                                value matches {True}
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            CLUSTER[at0092] occurrences matches {0..1} matches {    -- *Innleggelsesrelatert (nb)
+                                                items cardinality matches {1..*; unordered} matches {
+                                                    ELEMENT[at0026] occurrences matches {0..1} matches {    -- *Betydelig redusert mobilitet > 3 dager (nb)
+                                                        value matches {
+                                                            DV_BOOLEAN[at9013] matches {
+                                                                value matches {True}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0027] occurrences matches {0..1} matches {    -- *Hofte eller kneoperasjon (nb)
+                                                        value matches {
+                                                            DV_BOOLEAN[at9014] matches {
+                                                                value matches {True}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- *Hoftebrudd (nb)
+                                                        value matches {
+                                                            DV_BOOLEAN[at9015] matches {
+                                                                value matches {True}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0029] occurrences matches {0..1} matches {    -- *Total operasjonstid (anestesi + kirurgi) > 90 min (nb)
+                                                        value matches {
+                                                            DV_BOOLEAN[at9016] matches {
+                                                                value matches {True}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0030] occurrences matches {0..1} matches {    -- *Kirurgi på nedre ekstremitet med operasjonstid (anestesi + kirurgi) >60 min (nb)
+                                                        value matches {
+                                                            DV_BOOLEAN[at9017] matches {
+                                                                value matches {True}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0031] occurrences matches {0..1} matches {    -- *Akutt kirurgisk innleggelse med betennelsestilstand eller intra-abdominell tilstand (nb)
+                                                        value matches {
+                                                            DV_BOOLEAN[at9018] matches {
+                                                                value matches {True}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0032] occurrences matches {0..1} matches {    -- *Innleggelse på intensivavdelingen (nb)
+                                                        value matches {
+                                                            DV_BOOLEAN[at9019] matches {
+                                                                value matches {True}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0033] occurrences matches {0..1} matches {    -- *Kirurgi som medfører betydelig reduksjon i mobilitet (nb)
+                                                        value matches {
+                                                            DV_BOOLEAN[at9020] matches {
+                                                                value matches {True}
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0112] occurrences matches {0..1} matches {    -- *Tromboserisiko (nb)
+                                                value matches {
+                                                    DV_BOOLEAN[at9021]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0097] occurrences matches {0..1} matches {    -- *Blødningsrisiko (nb)
+                                        items cardinality matches {1..*; unordered} matches {
+                                            CLUSTER[at0106] occurrences matches {0..1} matches {    -- *Pasientrelatert (nb)
+                                                items cardinality matches {1..*; unordered} matches {
+                                                    ELEMENT[at0098] occurrences matches {0..1} matches {    -- *Aktiv blødning (nb)
+                                                        value matches {
+                                                            DV_BOOLEAN[at9022] matches {
+                                                                value matches {True}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0099] occurrences matches {0..1} matches {    -- *Ervervet blødningsforstyrrelse (nb)
+                                                        value matches {
+                                                            DV_BOOLEAN[at9023] matches {
+                                                                value matches {True}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0100] occurrences matches {0..1} matches {    -- *Bruk av antikoagulantia med kjent økt risiko for blødning (nb)
+                                                        value matches {
+                                                            DV_BOOLEAN[at9024] matches {
+                                                                value matches {True}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0102] occurrences matches {0..1} matches {    -- *Akutt slaganfall (nb)
+                                                        value matches {
+                                                            DV_BOOLEAN[at9025] matches {
+                                                                value matches {True}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0103] occurrences matches {0..1} matches {    -- *Trombocytopeni (nb)
+                                                        value matches {
+                                                            DV_BOOLEAN[at9026] matches {
+                                                                value matches {True}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0104] occurrences matches {0..1} matches {    -- *Ukontrollert systolisk hypertensjon (nb)
+                                                        value matches {
+                                                            DV_BOOLEAN[at9027] matches {
+                                                                value matches {True}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0105] occurrences matches {0..1} matches {    -- *Ubehandlete arvelige blødningssykdommer (nb)
+                                                        value matches {
+                                                            DV_BOOLEAN[at9028] matches {
+                                                                value matches {True}
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            CLUSTER[at0107] occurrences matches {0..1} matches {    -- *Innleggelsesrelatert (nb)
+                                                items cardinality matches {1..*; unordered} matches {
+                                                    ELEMENT[at0108] occurrences matches {0..1} matches {    -- *Nevrokirurgi, spinalkirurgi eller øyekirurgi (nb)
+                                                        value matches {
+                                                            DV_BOOLEAN[at9029]
+                                                        }
+                                                    }
+                                                    ELEMENT[at0109] occurrences matches {0..1} matches {    -- *Annen prosedyre med høy blødningsrisiko (nb)
+                                                        value matches {
+                                                            DV_BOOLEAN[at9030]
+                                                        }
+                                                    }
+                                                    ELEMENT[at0110] occurrences matches {0..1} matches {    -- *Forventet lumbal/spinal/epiduralanestesi innen de neste 12 timene (nb)
+                                                        value matches {
+                                                            DV_BOOLEAN[at9031]
+                                                        }
+                                                    }
+                                                    ELEMENT[at0111] occurrences matches {0..1} matches {    -- *Lumbal/Spinal/epiduralanestesi de siste 4 timene (nb)
+                                                        value matches {
+                                                            DV_BOOLEAN[at9032]
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0115] occurrences matches {0..1} matches {    -- *Blødningsrisiko (nb)
+                                                value matches {
+                                                    DV_BOOLEAN[at9033]
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0116] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0117] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"VTE risk (UK NICE)">
+                description = <"Vurdering av risiko for venøs tromboembolisme.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"Type pasient">
+                description = <"Beskriver pasienttype mtp på type problemstilling og mobilitet f.eks. kirurgisk pasient, nedsatt mobilitet osv.">
+            >
+            ["at0007"] = <
+                text = <"Innledende screening">
+                description = <"Dersom svaret er \"Ja\" på et av de første to punktene, gjennomføres hovedscreeningen.
+">
+            >
+            ["at0010"] = <
+                text = <"Tromboserisiko">
+                description = <"Screening for tromboserisiko.">
+                comment = <"Sett et kryss for hver faktor som er tilstede. Hvis et av feltene er krysset av skal pasienten få tromboseprofylakse jf. nasjonale retningslinjer.">
+            >
+            ["at0012"] = <
+                text = <"Aktiv kreft eller pågående kreftbehandling">
+                description = <"Har pasienten aktiv kreft eller pågående kreftbehandling?">
+            >
+            ["at0013"] = <
+                text = <"Alder > 60">
+                description = <"Er pasienten eldre enn 60 år?">
+            >
+            ["at0014"] = <
+                text = <"Dehydrert">
+                description = <"Er pasienten er dehydrert?">
+            >
+            ["at0016"] = <
+                text = <"Kjent trombofili">
+                description = <"Har pasienten kjent trombofili?">
+            >
+            ["at0017"] = <
+                text = <"Sykelig overvekt">
+                description = <"Har pasienten sykelig overvekt med en BMI >30 kg/m2?">
+            >
+            ["at0018"] = <
+                text = <"En eller flere medisinsk relevante komorbiditeter">
+                description = <"Har pasienten en eller flere medisinsk relevante komorbiditeter f.eks. hjertesykdom, metabolisk, hormonelle eller respiratrisk sykdom?">
+            >
+            ["at0019"] = <
+                text = <"Førstegradsslektning med tidligere venøs trombose">
+                description = <"Har pasienten førstegradsslektning med tidligere venøs trombose? ">
+            >
+            ["at0020"] = <
+                text = <"Bruker hormontilskudd (HRT)">
+                description = <"Bruker pasienten hormontilskudd (HRT)?">
+            >
+            ["at0021"] = <
+                text = <"Bruker antikonsepsjonsmiddel som inneholder østrogen">
+                description = <"Bruker pasienten antikonsepsjonsmiddel som inneholder østrogen?">
+            >
+            ["at0022"] = <
+                text = <"Varicer med thrombophlebitt">
+                description = <"Har pasienten varicer med thrombophlebitt?">
+            >
+            ["at0023"] = <
+                text = <"Gravid eller < 6 uker post partum">
+                description = <"Er pasienten gravid eller < 6 uker post partum?">
+            >
+            ["at0026"] = <
+                text = <"Betydelig redusert mobilitet > 3 dager">
+                description = <"Har pasienten betydelig redusert mobilitet > 3 dager?">
+            >
+            ["at0027"] = <
+                text = <"Hofte eller kneoperasjon">
+                description = <"Er pasienten innlagt for hofte eller kneoperasjon?">
+            >
+            ["at0028"] = <
+                text = <"Hoftebrudd">
+                description = <"Har pasienten hoftebrudd?">
+            >
+            ["at0029"] = <
+                text = <"Total operasjonstid (anestesi + kirurgi) > 90 min">
+                description = <"Er den totale operasjonstiden (anestesi + kirurgi) lengre enn 90 min?">
+            >
+            ["at0030"] = <
+                text = <"Kirurgi på nedre ekstremitet med operasjonstid (anestesi + kirurgi) >60 min">
+                description = <"Har pasienten hatt kirurgi på nedre ekstremitet med operasjonstid (anestesi + kirurgi) > 60 min? ">
+            >
+            ["at0031"] = <
+                text = <"Akutt kirurgisk innleggelse med betennelsestilstand eller intra-abdominell tilstand">
+                description = <"Ble pasienten akutt innlagt på kirurgisk avdeling med en betennelsestilstand eller en  intra-abdominal tilstand?">
+            >
+            ["at0032"] = <
+                text = <"Innleggelse på intensivavdelingen">
+                description = <"Er pasienten innlagt på intensivavdelingen?">
+            >
+            ["at0033"] = <
+                text = <"Kirurgi som medfører betydelig reduksjon i mobilitet">
+                description = <"Har/skal pasienten ha kirurgi som medfører betydelig reduksjon i mobilitet?">
+            >
+            ["at0091"] = <
+                text = <"Pasientrelatert">
+                description = <"Pasientrelatert informasjon vedrørende tromboserisiko.">
+            >
+            ["at0092"] = <
+                text = <"Innleggelsesrelatert">
+                description = <"Informasjon relatert til innleggelse vedrørende tromboserisiko.">
+            >
+            ["at0094"] = <
+                text = <"Kirurgisk pasient">
+                description = <"Pasient som er innlagt for kirurgisk prosedyre">
+            >
+            ["at0095"] = <
+                text = <"Pasient med forventet nedsatt mobilitet">
+                description = <"Ikke kirurgisk pasient med forventet nedsatt mobilitet">
+            >
+            ["at0096"] = <
+                text = <"Pasient uten forventet nedsatt mobilitet">
+                description = <"Ikke kirurgisk pasient uten forventet nedsatt mobilitet">
+            >
+            ["at0097"] = <
+                text = <"Blødningsrisiko">
+                description = <"Screening for blødningsrisiko">
+                comment = <"Sett et kryss for hver faktor som er tilstede. Hvis ett av feltene er krysset av skal klinisk personell avgjøre om det er behov for medikamentell intervensjon.">
+            >
+            ["at0098"] = <
+                text = <"Aktiv blødning">
+                description = <"Har pasienten aktiv blødning?">
+            >
+            ["at0099"] = <
+                text = <"Ervervet blødningsforstyrrelse">
+                description = <"Har pasienten ervervet blødningsforstyrrelse som f.eks. akutt leversvikt?">
+            >
+            ["at0100"] = <
+                text = <"Bruk av antikoagulantia med kjent økt risiko for blødning">
+                description = <"Har pasienten bruk av antikoagulantia med kjent økt risiko for blødning f.eks. Warfaring med INR >2">
+            >
+            ["at0102"] = <
+                text = <"Akutt slaganfall">
+                description = <"*">
+            >
+            ["at0103"] = <
+                text = <"Trombocytopeni">
+                description = <"Har pasienten trombocytopeni (trombocytter <75 x 10 -9/l)">
+            >
+            ["at0104"] = <
+                text = <"Ukontrollert systolisk hypertensjon">
+                description = <"Har pasienten ukontrollert systolisk hypertensjon (230/120 mmHg eller høyere.">
+            >
+            ["at0105"] = <
+                text = <"Ubehandlete arvelige blødningssykdommer">
+                description = <"Har pasienten ubehandlete arvelige blødningssykdommer?">
+            >
+            ["at0106"] = <
+                text = <"Pasientrelatert">
+                description = <"Pasientrelatert informasjon vedrørende blødningsrisiko.">
+            >
+            ["at0107"] = <
+                text = <"Innleggelsesrelatert">
+                description = <"Informasjon relatert til innleggelse vedrørende blødningsrisiko.">
+            >
+            ["at0108"] = <
+                text = <"Nevrokirurgi, spinalkirurgi eller øyekirurgi">
+                description = <"Skal pasienten/har pasienten hatt nevrokirurgi, spinalkirurgi eller øyekirurgi?">
+            >
+            ["at0109"] = <
+                text = <"Annen prosedyre med høy blødningsrisiko">
+                description = <"Skal pasienten/har pasienten hatt annen prosedyre med høy blødningsrisiko?">
+            >
+            ["at0110"] = <
+                text = <"Forventet lumbal/spinal/epiduralanestesi innen de neste 12 timene">
+                description = <"Skal pasienten ha forventet lumbal/spinal/epiduralanestesi innen de neste 12 timene?">
+            >
+            ["at0111"] = <
+                text = <"Lumbal/Spinal/epiduralanestesi de siste 4 timene">
+                description = <"Har pasienten hatt lumbal/Spinal/epiduralanestesi de siste 4 timene?">
+            >
+            ["at0112"] = <
+                text = <"Tromboserisiko">
+                description = <"Samlet tromboserisiko. \"Ja\" indikerer at pasienten har tromboserisiko. \"Nei\" indikerer at pasienten ikke har tromboserisiko.">
+            >
+            ["at0115"] = <
+                text = <"Blødningsrisiko">
+                description = <"Samlet blødningsrisiko. \"Ja\" indikerer at pasienten har blødningsrisiko. \"Nei\" indikerer at pasienten ikke har blødningsrisiko.">
+            >
+            ["at0117"] = <
+                text = <"CLUSTER_SLOT">
+                description = <"*">
+            >
+            ["ac9000"] = <
+                text = <"Type pasient (synthesised)">
+                description = <"Beskriver pasienttype mtp på type problemstilling og mobilitet f.eks. kirurgisk pasient, nedsatt mobilitet osv. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"VTE risk (UK NICE)">
+                description = <"*Vurdering av risiko for venøs tromboembolisme. (nb)">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"Type of patient">
+                description = <"*Beskriver pasienttype mtp på type problemstilling og mobilitet f.eks. kirurgisk pasient, nedsatt mobilitet osv. (nb)">
+            >
+            ["at0007"] = <
+                text = <"Initial screening">
+                description = <"If the answer to any of the two first questions is \"yes\", the main screening is performed.">
+            >
+            ["at0010"] = <
+                text = <"*Tromboserisiko (nb)">
+                description = <"*Screening for tromboserisiko. (nb)">
+                comment = <"*Sett et kryss for hver faktor som er tilstede. Hvis et av feltene er krysset av skal pasienten få tromboseprofylakse jf. nasjonale retningslinjer. (nb)">
+            >
+            ["at0012"] = <
+                text = <"*Aktiv kreft eller pågående kreftbehandling (nb)">
+                description = <"*Har pasienten aktiv kreft eller pågående kreftbehandling? (nb)">
+            >
+            ["at0013"] = <
+                text = <"*Alder > 60 (nb)">
+                description = <"*Er pasienten eldre enn 60 år? (nb)">
+            >
+            ["at0014"] = <
+                text = <"*Dehydrert (nb)">
+                description = <"*Er pasienten er dehydrert? (nb)">
+            >
+            ["at0016"] = <
+                text = <"*Kjent trombofili (nb)">
+                description = <"*Har pasienten kjent trombofili? (nb)">
+            >
+            ["at0017"] = <
+                text = <"*Sykelig overvekt (nb)">
+                description = <"*Har pasienten sykelig overvekt med en BMI >30 kg/m2? (nb)">
+            >
+            ["at0018"] = <
+                text = <"*En eller flere medisinsk relevante komorbiditeter (nb)">
+                description = <"*Har pasienten en eller flere medisinsk relevante komorbiditeter f.eks. hjertesykdom, metabolisk, hormonelle eller respiratrisk sykdom? (nb)">
+            >
+            ["at0019"] = <
+                text = <"*Førstegradsslektning med tidligere venøs trombose (nb)">
+                description = <"*Har pasienten førstegradsslektning med tidligere venøs trombose?  (nb)">
+            >
+            ["at0020"] = <
+                text = <"*Bruker hormontilskudd (HRT) (nb)">
+                description = <"*Bruker pasienten hormontilskudd (HRT)? (nb)">
+            >
+            ["at0021"] = <
+                text = <"*Bruker antikonsepsjonsmiddel som inneholder østrogen (nb)">
+                description = <"*Bruker pasienten antikonsepsjonsmiddel som inneholder østrogen? (nb)">
+            >
+            ["at0022"] = <
+                text = <"*Varicer med thrombophlebitt (nb)">
+                description = <"*Har pasienten varicer med thrombophlebitt? (nb)">
+            >
+            ["at0023"] = <
+                text = <"*Gravid eller < 6 uker post partum (nb)">
+                description = <"*Er pasienten gravid eller < 6 uker post partum? (nb)">
+            >
+            ["at0026"] = <
+                text = <"*Betydelig redusert mobilitet > 3 dager (nb)">
+                description = <"*Har pasienten betydelig redusert mobilitet > 3 dager? (nb)">
+            >
+            ["at0027"] = <
+                text = <"*Hofte eller kneoperasjon (nb)">
+                description = <"*Er pasienten innlagt for hofte eller kneoperasjon? (nb)">
+            >
+            ["at0028"] = <
+                text = <"*Hoftebrudd (nb)">
+                description = <"*Har pasienten hoftebrudd? (nb)">
+            >
+            ["at0029"] = <
+                text = <"*Total operasjonstid (anestesi + kirurgi) > 90 min (nb)">
+                description = <"*Er den totale operasjonstiden (anestesi + kirurgi) lengre enn 90 min? (nb)">
+            >
+            ["at0030"] = <
+                text = <"*Kirurgi på nedre ekstremitet med operasjonstid (anestesi + kirurgi) >60 min (nb)">
+                description = <"*Har pasienten hatt kirurgi på nedre ekstremitet med operasjonstid (anestesi + kirurgi) > 60 min?  (nb)">
+            >
+            ["at0031"] = <
+                text = <"*Akutt kirurgisk innleggelse med betennelsestilstand eller intra-abdominell tilstand (nb)">
+                description = <"*Ble pasienten akutt innlagt på kirurgisk avdeling med en betennelsestilstand eller en  intra-abdominal tilstand? (nb)">
+            >
+            ["at0032"] = <
+                text = <"*Innleggelse på intensivavdelingen (nb)">
+                description = <"*Er pasienten innlagt på intensivavdelingen? (nb)">
+            >
+            ["at0033"] = <
+                text = <"*Kirurgi som medfører betydelig reduksjon i mobilitet (nb)">
+                description = <"*Har/skal pasienten ha kirurgi som medfører betydelig reduksjon i mobilitet? (nb)">
+            >
+            ["at0091"] = <
+                text = <"*Pasientrelatert (nb)">
+                description = <"*Pasientrelatert informasjon vedrørende tromboserisiko. (nb)">
+            >
+            ["at0092"] = <
+                text = <"*Innleggelsesrelatert (nb)">
+                description = <"*Informasjon relatert til innleggelse vedrørende tromboserisiko. (nb)">
+            >
+            ["at0094"] = <
+                text = <"*Kirurgisk pasient (nb)">
+                description = <"*Pasient som er innlagt for kirurgisk prosedyre (nb)">
+            >
+            ["at0095"] = <
+                text = <"*Pasient med forventet nedsatt mobilitet (nb)">
+                description = <"*Ikke kirurgisk pasient med forventet nedsatt mobilitet (nb)">
+            >
+            ["at0096"] = <
+                text = <"*Pasient uten forventet nedsatt mobilitet (nb)">
+                description = <"*Ikke kirurgisk pasient uten forventet nedsatt mobilitet (nb)">
+            >
+            ["at0097"] = <
+                text = <"*Blødningsrisiko (nb)">
+                description = <"*Screening for blødningsrisiko (nb)">
+                comment = <"*Sett et kryss for hver faktor som er tilstede. Hvis ett av feltene er krysset av skal klinisk personell avgjøre om det er behov for medikamentell intervensjon. (nb)">
+            >
+            ["at0098"] = <
+                text = <"*Aktiv blødning (nb)">
+                description = <"*Har pasienten aktiv blødning? (nb)">
+            >
+            ["at0099"] = <
+                text = <"*Ervervet blødningsforstyrrelse (nb)">
+                description = <"*Har pasienten ervervet blødningsforstyrrelse som f.eks. akutt leversvikt? (nb)">
+            >
+            ["at0100"] = <
+                text = <"*Bruk av antikoagulantia med kjent økt risiko for blødning (nb)">
+                description = <"*Har pasienten bruk av antikoagulantia med kjent økt risiko for blødning f.eks. Warfaring med INR >2 (nb)">
+            >
+            ["at0102"] = <
+                text = <"*Akutt slaganfall (nb)">
+                description = <"*">
+            >
+            ["at0103"] = <
+                text = <"*Trombocytopeni (nb)">
+                description = <"*Har pasienten trombocytopeni (trombocytter <75 x 10 -9/l) (nb)">
+            >
+            ["at0104"] = <
+                text = <"*Ukontrollert systolisk hypertensjon (nb)">
+                description = <"*Har pasienten ukontrollert systolisk hypertensjon (230/120 mmHg eller høyere. (nb)">
+            >
+            ["at0105"] = <
+                text = <"*Ubehandlete arvelige blødningssykdommer (nb)">
+                description = <"*Har pasienten ubehandlete arvelige blødningssykdommer? (nb)">
+            >
+            ["at0106"] = <
+                text = <"*Pasientrelatert (nb)">
+                description = <"*Pasientrelatert informasjon vedrørende blødningsrisiko. (nb)">
+            >
+            ["at0107"] = <
+                text = <"*Innleggelsesrelatert (nb)">
+                description = <"*Informasjon relatert til innleggelse vedrørende blødningsrisiko. (nb)">
+            >
+            ["at0108"] = <
+                text = <"*Nevrokirurgi, spinalkirurgi eller øyekirurgi (nb)">
+                description = <"*Skal pasienten/har pasienten hatt nevrokirurgi, spinalkirurgi eller øyekirurgi? (nb)">
+            >
+            ["at0109"] = <
+                text = <"*Annen prosedyre med høy blødningsrisiko (nb)">
+                description = <"*Skal pasienten/har pasienten hatt annen prosedyre med høy blødningsrisiko? (nb)">
+            >
+            ["at0110"] = <
+                text = <"*Forventet lumbal/spinal/epiduralanestesi innen de neste 12 timene (nb)">
+                description = <"*Skal pasienten ha forventet lumbal/spinal/epiduralanestesi innen de neste 12 timene? (nb)">
+            >
+            ["at0111"] = <
+                text = <"*Lumbal/Spinal/epiduralanestesi de siste 4 timene (nb)">
+                description = <"*Har pasienten hatt lumbal/Spinal/epiduralanestesi de siste 4 timene? (nb)">
+            >
+            ["at0112"] = <
+                text = <"*Tromboserisiko (nb)">
+                description = <"*Samlet tromboserisiko. \"Ja\" indikerer at pasienten har tromboserisiko. \"Nei\" indikerer at pasienten ikke har tromboserisiko. (nb)">
+            >
+            ["at0115"] = <
+                text = <"*Blødningsrisiko (nb)">
+                description = <"*Samlet blødningsrisiko. \"Ja\" indikerer at pasienten har blødningsrisiko. \"Nei\" indikerer at pasienten ikke har blødningsrisiko. (nb)">
+            >
+            ["at0117"] = <
+                text = <"Extension">
+                description = <"*">
+            >
+            ["ac9000"] = <
+                text = <"Type of patient (synthesised)">
+                description = <"*Beskriver pasienttype mtp på type problemstilling og mobilitet f.eks. kirurgisk pasient, nedsatt mobilitet osv. (nb) (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0094", "at0095", "at0096">
+        >
+    >

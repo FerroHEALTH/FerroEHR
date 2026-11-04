@@ -1,0 +1,151 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=3686f608-50cb-4cee-969d-458e63697320; build_uid=96e732cb-d240-4d9f-9833-ccd1ecc04b83)
+    openEHR-EHR-CLUSTER.exam_burn.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2015-06-25">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Silje Ljosland Bakke, Bergen Hospital Trust, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "John Tore Valand, Haukeland Universitetssjukehus, Norway", "Heather Leslie, Ocean Informatics, Australia">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics<heather.leslie@oceaninformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"99575EF249EB2BE525EA2E40B53E3A2A">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For recording a narrative description and clinical interpretation of the findings observed during the physical examination of an identified burn.">
+            use = <"Use to record a narrative description of the overall findings observed during the physical examination of an identified burn. This initial draft archetype consists only of the core examination pattern data elements (as per CLUSTER.exam_pattern) and will likely be expanded further over time as specific clinical requirements are identified.
+
+This archetype has been specifically designed to be used in the 'Examination findings' SLOT within the CLUSTER.exam_skin archetype or the OBSERVATION.exam, but can also be used within any other OBSERVATION or CLUSTER archetypes, where clinically appropriate - for example, CLUSTER.exam_breast.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings. 
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element.">
+            misuse = <"Not to be used for recording data not related to the physical examination of an identified burn.
+
+Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom.
+
+Not to be used to record stand-alone clinical observations or measurements or test results - use specific OBSERVATION archetypes. For example OBSERVATION.blood_pressure or OBSERVATION.imaging_exam.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Examination of a burn
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Burn type
+                value matches {
+                    DV_TEXT[at9000]
+                }
+            }
+            ELEMENT[at0012] occurrences matches {0..1} matches {    -- Alias
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Clinical description
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Body site
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            allow_archetype CLUSTER[at0011] matches {    -- Structured body site
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.anatomical_location_relative(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.anatomical_location_clock(-[a-zA-Z0-9_]+)*\.v0\..*/}
+            }
+            allow_archetype CLUSTER[at0004] matches {    -- Examination findings
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.dimensions(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            allow_archetype CLUSTER[at0005] matches {    -- Multimedia representation
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.multimedia(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0006] matches {    -- Clinical interpretation
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9005]
+                }
+            }
+            allow_archetype CLUSTER[at0008] matches {    -- Examination not done
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.exclusion_exam(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Examination of a burn">
+                description = <"Findings observed during the physical examination of an identified burn.">
+            >
+            ["at0001"] = <
+                text = <"Body site">
+                description = <"Identification of the body site under examination.">
+                comment = <"The body site could be on an area of skin or a mucous membrane, for example the right knee, palate or duodenum. If the body site has previously been identified in another archetype in which this archetype is nested, this data element becomes redundant.">
+            >
+            ["at0002"] = <
+                text = <"Burn type">
+                description = <"Identification of the type of burn found on physical examination.">
+                comment = <"'Burn type' should be coded with a terminology, where possible. For example, superficial or full thickness. ">
+            >
+            ["at0003"] = <
+                text = <"Clinical description">
+                description = <"Narrative description of the overall findings observed during the physical examination of the burn.">
+            >
+            ["at0004"] = <
+                text = <"Examination findings">
+                description = <"Structured details about the physical examination findings.">
+            >
+            ["at0005"] = <
+                text = <"Multimedia representation">
+                description = <"Digital image, video or diagram representing the burn findings.">
+            >
+            ["at0006"] = <
+                text = <"Clinical interpretation">
+                description = <"Single word, phrase or brief description that represents the clinical meaning and significance of the physical examination findings.">
+            >
+            ["at0007"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the physical examination findings, not captured in other fields.">
+            >
+            ["at0008"] = <
+                text = <"Examination not done">
+                description = <"Details to explicitly record that this examination was not performed.">
+            >
+            ["at0011"] = <
+                text = <"Structured body site">
+                description = <"A structured anatomical location of the finding.">
+                comment = <"If the body site has previously been identified in another archetype in which this archetype is then nested, this SLOT becomes redundant.">
+            >
+            ["at0012"] = <
+                text = <"Alias">
+                description = <"Identification, by using a alias name, of the burn to distinguish one burn from similar burns at the same body site.">
+                comment = <"For example, 'Burn #1' as marked on a diagram of the body site.">
+            >
+        >
+    >

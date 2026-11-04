@@ -1,0 +1,276 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=f47d79bc-e33c-41f0-9c3d-88d5e641d60a; build_uid=7b1a61e8-a015-4c83-ac8d-0b0f67a52478)
+    openEHR-EHR-OBSERVATION.reach_b.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Maryam Razavi">
+        ["organisation"] = <"Cambio CDS">
+        ["email"] = <"maryam.razavi@cambio.se">
+        ["date"] = <"2020-12-15">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"1. Yang HI, Yuen MF, Chan HL, Han KH, Chen PJ, Kim DY, Ahn SH, Chen CJ, Wong VW, Seto WK; REACH-B Working Group. Risk estimation for hepatocellular carcinoma in chronic hepatitis B (REACH-B): development and validation of a predictive score. Lancet Oncol. 2011 Jun;12(6):568-74. doi: 10.1016/S1470-2045(11)70077-8. Epub 2011 Apr 14. PMID: 21497551.">
+    >
+    other_details = <
+        ["current_contact"] = <"maryam.razavi@cambio.se">
+        ["MD5-CAM-1.0.1"] = <"949E232088D2F83CC417F71212782AF1">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the results for each component parameter and their total sum for the REACH-B score.">
+            keywords = <"HCC", "hepatitis", "HBeAg", "ALT", "carcinoma", "hepatocellular">
+            use = <"Use to record the results for each component parameter and their total sum for the REACH-B score.">
+            misuse = <"">
+            copyright = <"© Cambio CDS, openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- REACH-B score
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] occurrences matches {0..1} matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Sex
+                                        value matches {
+                                            DV_ORDINAL[at9005] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0005]}],    -- Female
+                                                    [{2}, {[at0006]}]    -- Male
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Age (years)
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0008]}],    -- 30–34
+                                                    [{1}, {[at0009]}],    -- 35–39
+                                                    [{2}, {[at0010]}],    -- 40–44
+                                                    [{3}, {[at0011]}],    -- 45–49
+                                                    [{4}, {[at0012]}],    -- 50–54
+                                                    [{5}, {[at0013]}],    -- 55–59
+                                                    [{6}, {[at0014]}]    -- 60–65
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- ALT (U/L)
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0016]}],    -- <15
+                                                    [{1}, {[at0017]}],    -- 15-44
+                                                    [{2}, {[at0018]}]    -- ≥45
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- HBeAg
+                                        value matches {
+                                            DV_ORDINAL[at9008] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0020]}],    -- Negative
+                                                    [{2}, {[at0021]}]    -- Positive
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Hepatitis B virus DNA level (copies/mL)
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0023]}],    -- <300 (undetectable)
+                                                    [{0}, {[at0024]}],    -- 300–9,999
+                                                    [{3}, {[at0025]}],    -- 10,000–99,999
+                                                    [{4}, {[at0027]}],    -- ≥10⁶
+                                                    [{5}, {[at0026]}]    -- 100,000–999,999
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9010] matches {
+                                                magnitude matches {|0..17|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"REACH-B score">
+                description = <"An assessment score used to estimate risk of hepatocellular carcinoma (HCC) in patients with chronic hepatitis B.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"Sex">
+                description = <"*">
+            >
+            ["at0005"] = <
+                text = <"Female">
+                description = <"*">
+            >
+            ["at0006"] = <
+                text = <"Male">
+                description = <"*">
+            >
+            ["at0007"] = <
+                text = <"Age (years)">
+                description = <"*">
+            >
+            ["at0008"] = <
+                text = <"30–34">
+                description = <"*">
+            >
+            ["at0009"] = <
+                text = <"35–39">
+                description = <"*">
+            >
+            ["at0010"] = <
+                text = <"40–44">
+                description = <"*">
+            >
+            ["at0011"] = <
+                text = <"45–49">
+                description = <"*">
+            >
+            ["at0012"] = <
+                text = <"50–54">
+                description = <"*">
+            >
+            ["at0013"] = <
+                text = <"55–59">
+                description = <"*">
+            >
+            ["at0014"] = <
+                text = <"60–65">
+                description = <"*">
+            >
+            ["at0015"] = <
+                text = <"ALT (U/L)">
+                description = <"Alanine aminotransferase (ALT) ">
+            >
+            ["at0016"] = <
+                text = <"<15">
+                description = <"*">
+            >
+            ["at0017"] = <
+                text = <"15-44">
+                description = <"*">
+            >
+            ["at0018"] = <
+                text = <"≥45">
+                description = <"*">
+            >
+            ["at0019"] = <
+                text = <"HBeAg">
+                description = <"hepatitis B e-antigen">
+            >
+            ["at0020"] = <
+                text = <"Negative">
+                description = <"*">
+            >
+            ["at0021"] = <
+                text = <"Positive">
+                description = <"*">
+            >
+            ["at0022"] = <
+                text = <"Hepatitis B virus DNA level (copies/mL)">
+                description = <"*">
+            >
+            ["at0023"] = <
+                text = <"<300 (undetectable)">
+                description = <"*">
+            >
+            ["at0024"] = <
+                text = <"300–9,999">
+                description = <"*">
+            >
+            ["at0025"] = <
+                text = <"10,000–99,999">
+                description = <"*">
+            >
+            ["at0026"] = <
+                text = <"100,000–999,999">
+                description = <"*">
+            >
+            ["at0027"] = <
+                text = <"≥10⁶">
+                description = <"*">
+            >
+            ["at0028"] = <
+                text = <"Total score">
+                description = <"*">
+            >
+            ["ac9010"] = <
+                text = <"Sex (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Age (years) (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"ALT (U/L) (synthesised)">
+                description = <"Alanine aminotransferase (ALT)  (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"HBeAg (synthesised)">
+                description = <"hepatitis B e-antigen (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Hepatitis B virus DNA level (copies/mL) (synthesised)">
+                description = <"* (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9013"] = <
+            id = <"ac9013">
+            members = <"at0020", "at0021">
+        >
+        ["ac9012"] = <
+            id = <"ac9012">
+            members = <"at0016", "at0017", "at0018">
+        >
+        ["ac9011"] = <
+            id = <"ac9011">
+            members = <"at0008", "at0009", "at0010", "at0011", "at0012", "at0013", "at0014">
+        >
+        ["ac9010"] = <
+            id = <"ac9010">
+            members = <"at0005", "at0006">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0023", "at0024", "at0025", "at0027", "at0026">
+        >
+    >

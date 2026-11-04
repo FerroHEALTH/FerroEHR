@@ -1,0 +1,211 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=6c9ede6d-923b-4b22-9005-3fdf4e853a0c; build_uid=a4632f85-f88d-4ea0-921e-f027d79ce0f6)
+    openEHR-EHR-CLUSTER.exclusion_exam.v1.1.2
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Ramona Wellmann">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"wellmann.ramona@mh-hannover.de">
+            >
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            author = <
+                ["name"] = <"Riikka Lahtela">
+                ["organisation"] = <"Istekki">
+                ["email"] = <"riikka.lahtela@istekki.fi">
+            >
+            other_details = <
+                ["other_contributors"] = <"Henri Huttunen, UNA Oy, Finland; Heidi Koikkalainen, FreshEHR">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Therese Lindberg">
+                ["organisation"] = <"Cambio CDS">
+                ["email"] = <"therese.lindberg@cambio.se">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2015-01-14">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjoern Arntzen, Oslo university hospital, Norway", "Koray Atalag, University of Auckland, New Zealand", "Silje Ljosland Bakke, National ICT Norway, Norway (openEHR Editor)", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Heather Grain, Llewelyn Grain Informatics, Australia", "Evelyn Hovenga, EJSH Consulting, Australia", "Lars Karlsen, DIPS ASA, Norway", "Heather Leslie, Ocean Informatics, Australia (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Bjoern Naess, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Exclusion of examination, Draft Archetype [Internet]. Australian Digital Health Agency, Australian Digital Health Agency Clinical Knowledge Manager [cited: 2017-06-22]. Available from: http://dcm.nehta.org.au/ckm/#showArchetype_1013.1.1383">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics, heather.leslie@oceaninformatics.com">
+        ["MD5-CAM-1.0.1"] = <"11722D1648956DB241F8FD1043ECBEA8">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Dokumentation einer nicht durchgeführten körperlichen Untersuchung oder eines nicht durchgeführten klinischen Tests.">
+            keywords = <"Ausschluss", "Behandlung", "Untersuchung", "durchgeführt", "abgeschlossen">
+            use = <"Um zu dokumentieren, dass eine körperliche Untersuchung oder ein klinischer Test nicht durchgeführt wurde. Optional kann der Grund angegeben werden.
+
+Zur Dokumentation einer Untersuchung oder einzelner Komponenten einer Untersuchung die nicht durchgeführt wurde(n). Der Archetyp kann nicht als eigenständiger Archetyp verwendet werden. Er kann innerhalb eines EXAMINATION-Archetyps, der den Kontext für die durchzuführende Untersuchung liefert, verwendet werden. Beispielsweise ermöglicht das Einfügen dieses Archetyps in den EXAMINATION-Detail SLOT innerhalb der OBSERVATION.exam-Klasse, die Dokumentation, dass keine körperliche Untersuchung durchgeführt wurde. Das Einfügen dieses Archetyps in den Details-SLOT eines untersuchungsbezogenen CLUSTER-Archetyps, wie z.B. CLUSTER.exam_eye_pupil, ermöglicht die Dokumentation, dass nur die Untersuchung einer Pupille stattgefunden hat. Die zweite Pupille konnte, z.B. durch eine Gesichtsverletzung, nicht untersucht werden.
+
+Dieser Archetyp kann auch in anderen OBSERVATION- oder CLUSTER-Archetypen verwendet werden, um nicht durchführbare Tests oder Messungen zu dokumentieren. Zum Beispiel OBSERVATION.audiogram oder OBSERVATION.cgas.
+
+Durch den Einsatz dieses Archetyps kann insbesondere auf die Verwendung von Markierungen oder Terminologien, um eine Negation im Rahmen einer körperlichen Untersuchung auszudrücken, verzichtet werden. 
+
+Es kann davon ausgegangen werden, dass bei unvollständigen Untersuchungen oder klinischen Beurteilungen nur Daten von erfolgreich durchgeführten Maßnahmen dokumentiert werden. 
+">
+            misuse = <"Nicht zur Dokumentation von klinischen Befunden, die während der körperlichen Untersuchung oder eines klinischen Tests beobachtet wurden. Für diese Zwecke bitte die vorgesehenen Archetypen verwenden.
+
+Nicht zur Dokumentation von nicht aufgetretenden oder nicht vorhandenen Nebenwirkungen, Familienanamnesen, Medikamenteneinnahmen, Verfahren, Problemen oder Diagnosen - hierfür sollten die Archetypen EVALUATION.exclusion_global oder EVALUATION.exclusion_specific verwendet werden.">
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            purpose = <"*To record that a physical examination or clinical test was not performed.(en)">
+            use = <"*Use to record that a physical examination or clinical test was not performed, with an optional statement about the reason for the non-performance.
+
+This archetype has been designed to be used to allow recording of 'no examination was done' at multiple levels of the examination process. It will never be used as a stand-alone archetype but always inside an examination archetype that provides the context for the examination being performed. For example, insertion of this archetype into the Examination Detail' SLOT within OBSERVATION.exam allows for recording that no physical examination was performed. Similarly, insertion of this archetype into the Details SLOT of any examination-related CLUSTER archetype, such as CLUSTER.exam_eye_pupil, allows recording that no physical examination was performed only for examination of a specified pupil, perhaps because a facial injury prevented the pupil being visualised.
+
+This archetype may also be used within other OBSERVATION, or relevent CLUSTER, archetypes to allow recording of the inability to test or measure other clinical findings. For example: OBSERVATION.audiogram or OBSERVATION.cgas.
+
+In particular, this archetype has specifically been designed to avoid the need to use flags or terminology to express negation about a record of physical examination or clinical findings within the health record.
+
+It is reasonable to assume that if the examination or clinical assessment was partially performed, then only data about the component successfully performed will be recorded.(en)">
+            misuse = <"*Not to be used to record the details about clinical findings observed on physical examination or during clinical testing. Use specific archetypes for these purposes.
+
+Not to be used to record the exclusion or absence of adverse reactions, family history, medication use, procedures, problems or diagnoses - use EVALUATION.exclusion_global or EVALUATION.exclusion_specific for this purpose.(en)">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Registrera att en fysisk undersökning eller kliniskt test inte utfördes.">
+            keywords = <"uteslutning", "examen", "undersökning", "klar", "genomförde">
+            use = <"Används för att registrera att en fysisk undersökning eller ett kliniskt test inte har utförts, med ett valfritt uttalande om orsaken till bristen på prestanda.
+
+Denna arketyp har utformats för att användas för att möjliggöra registrering av \"ingen undersökning gjordes\" på flera nivåer av undersökningsprocessen. Den kommer aldrig att användas som en fristående arketyp utan alltid i en undersökningsarketyp som ger sammanhanget för den undersökning som utförs. Till exempel kan infogning av denna arketyp i undersökningsdetaljens SLOT i OBSERVATION.exam möjliggöra registrering av att ingen fysisk undersökning utfördes. På samma sätt möjliggör införandet av denna arketyp i Detaljer-SLOTEN av någon undersökningsrelaterad CLUSTER-arketyp, såsom CLUSTER.exam_eye_pupil, registrering att ingen fysisk undersökning utfördes endast för undersökning av en specifik elev, kanske för att en ansiktsskada förhindrade att eleven kunde visualiseras .
+
+Denna arketyp kan också användas inom andra OBSERVATIONER eller relevanta CLUSTER-arketyper för att möjliggöra registrering av oförmågan att testa eller mäta andra kliniska resultat. Till exempel: OBSERVATION.audiogram eller OBSERVATION.cgas.
+
+I synnerhet har denna arketyp specifikt utformats för att undvika behovet av att använda flaggor eller terminologi för att uttrycka negation om ett register över fysisk undersökning eller kliniska fynd inom hälsojournalen.
+
+Det är rimligt att anta att om undersökningen eller den kliniska bedömningen delvis utfördes, registreras endast data om den framgångsrika komponenten.">
+            misuse = <"Är inte utformad för att registrera detaljer om kliniska fynd som observerats vid fysisk undersökning eller under klinisk testning. Använd specifika arketyper för dessa ändamål.
+
+Är inte utformad för att registrera uteslutning eller frånvaro av biverkningar, familjehistoria, läkemedelsanvändning, procedurer, problem eller diagnoser - använd EVALUATION.exclusion_global eller EVALUATION.exclusion_specific för detta ändamål.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record that a physical examination or clinical test was not performed.">
+            keywords = <"exclusion", "exam", "examination", "done", "performed">
+            use = <"Use to record that a physical examination or clinical test was not performed, with an optional statement about the reason for the non-performance.
+
+This archetype has been designed to be used to allow recording of 'no examination was done' at multiple levels of the examination process. It will never be used as a stand-alone archetype but always inside an examination archetype that provides the context for the examination being performed. For example, insertion of this archetype into the Examination Detail' SLOT within OBSERVATION.exam allows for recording that no physical examination was performed. Similarly, insertion of this archetype into the Details SLOT of any examination-related CLUSTER archetype, such as CLUSTER.exam_eye_pupil, allows recording that no physical examination was performed only for examination of a specified pupil, perhaps because a facial injury prevented the pupil being visualised.
+
+This archetype may also be used within other OBSERVATION, or relevent CLUSTER, archetypes to allow recording of the inability to test or measure other clinical findings. For example: OBSERVATION.audiogram or OBSERVATION.cgas.
+
+In particular, this archetype has specifically been designed to avoid the need to use flags or terminology to express negation about a record of physical examination or clinical findings within the health record.
+
+It is reasonable to assume that if the examination or clinical assessment was partially performed, then only data about the component successfully performed will be recorded.">
+            misuse = <"Not to be used to record the details about clinical findings observed on physical examination or during clinical testing. Use specific archetypes for these purposes.
+
+Not to be used to record the exclusion or absence of adverse reactions, family history, medication use, procedures, problems or diagnoses - use EVALUATION.exclusion_global or EVALUATION.exclusion_specific for this purpose.">
+            copyright = <"© Australian Digital Health Agency, openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Exclusion of examination
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {1} matches {    -- Examination not done
+                value matches {
+                    DV_BOOLEAN[at9000] matches {
+                        value matches {True}
+                    }
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Reason
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Ausschluss einer Untersuchung">
+                description = <"Eine Aussage, dass eine körperliche Untersuchung oder ein klinischer Test nicht durchgeführt wurde.">
+            >
+            ["at0001"] = <
+                text = <"Nicht durchgeführte Untersuchung">
+                description = <"Eine Aussage die ausdrücklich erfasst, dass die Untersuchung nicht durchgeführt wurde.">
+                comment = <"Die Aussage wird als \"wahr\" erfasst, wenn die Untersuchung nicht durchgeführt wurde.">
+            >
+            ["at0002"] = <
+                text = <"Grund">
+                description = <"Begründung der Aussage \"nicht durchgeführt\".">
+                comment = <"Zum Beispiel: patientenbezogene Gründe, Ausstattungsgründe, zeitliche Beschränkungen.">
+            >
+        >
+        ["fi"] = <
+            ["at0000"] = <
+                text = <"Tutkimuksen pois jättäminen">
+                description = <"*Positive statement to record that a physical examination or clinical test was not performed.(en)">
+            >
+            ["at0001"] = <
+                text = <"Tutkimusta ei tehty">
+                description = <"*Statement to explicity record that the examination was not performed.(en)">
+            >
+            ["at0002"] = <
+                text = <"*Reason(en)">
+                description = <"*Reason for the 'not done' statement.(en)">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Uteslutning av undersökning">
+                description = <"Positivt uttalande för att registrera att en fysisk undersökning eller kliniskt test inte utfördes.">
+            >
+            ["at0001"] = <
+                text = <"Undersökningen är inte klar">
+                description = <"Uttalande för att uttryckligen registrera att undersökningen inte utfördes.">
+                comment = <"Record as True if the examination was not performed.">
+            >
+            ["at0002"] = <
+                text = <"Anledning">
+                description = <"Anledningen till uttalandet \"inte klar\".">
+                comment = <"Till exempel: patientfaktorer, utrustningsfaktorer, tidsbegränsningar.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Exclusion of examination">
+                description = <"Positive statement to record that a physical examination or clinical test was not performed.">
+            >
+            ["at0001"] = <
+                text = <"Examination not done">
+                description = <"Statement to explicity record that the examination was not performed.">
+                comment = <"Record as True if the examination was not performed.">
+            >
+            ["at0002"] = <
+                text = <"Reason">
+                description = <"Reason for the 'not done' statement.">
+                comment = <"For example: patient factors, equipment factors, time constraints.">
+            >
+        >
+    >

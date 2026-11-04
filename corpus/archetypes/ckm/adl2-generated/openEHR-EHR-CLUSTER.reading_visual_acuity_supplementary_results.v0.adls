@@ -1,0 +1,216 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=4aeaaf87-3bf3-427b-811f-f73a4722b235; build_uid=ae1afc61-919c-4ce2-9bd7-c0b09271b4e9)
+    openEHR-EHR-CLUSTER.reading_visual_acuity_supplementary_results.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Lars Fuhrmann">
+        ["organisation"] = <"Deutsche ophthalmologische Gesellschaft">
+        ["email"] = <"lars.fuhrmann@dog.org">
+        ["date"] = <"2026-06-20">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Radner W. Toward an internationally accepted standard for reading charts. Prog Retin Eye Res. 2024 Jul;101:101262. doi: 10.1016/j.preteyeres.2024.101262. Epub 2024 Apr 2. PMID: 38574851.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"FA35E29A714C9B46AF3FD09C4853E297">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record additional results produced by a standardised reading visual acuity test beyond the primary reading acuity , which is recorded as the logMAR (logRAD) result in the parent visual acuity archetype.">
+            keywords = <"reading acuity", "reading speed", "logRAD", "critical print size", "RADNER", "MNread", "reading chart", "near vision", "functional vision">
+            use = <"Use as an extension of the OBSERVATION.visual_acuity archetype, nested in the 'Supplementary results' SLOT, when a reading chart has been used and structured results beyond LogMAR (LogRAD) are required. 
+
+The reading acuity itself (logRAD threshold) is assumed to be recorded as the logMAR result in the parent archetype and is not repeated here.
+
+Use the 'Critical print size' cluster to record the smallest print size at which normal reading speed is maintained, using whichever determination method was applied.
+
+All reading speed elements are calculated in words per minute (wpm). Record only the sub-parameters applicable to the chart and protocol used.">
+            misuse = <"Not to be used to record the primary reading acuity threshold (logRAD). Record this value as the logMAR result in the parent OBSERVATION.visual_acuity archetype.
+
+Not to be used for distance visual acuity assessments using single optotypes (e.g. Snellen chart, ETDRS chart). Use only for reading chart tests involving continuous text, words, or sentence optotypes.
+
+Not to be used to record contrast sensitivity, colour vision, or other non-reading visual function parameters.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Reading visual acuity supplementary results
+        items cardinality matches {1..*; unordered} matches {
+            CLUSTER[at0006] occurrences matches {0..1} matches {    -- Reading speed
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Mean reading speed (all sentences)
+                        value matches {
+                            DV_QUANTITY[at9001] matches {
+                                magnitude matches {|>=0.0|}
+                                units matches {"{words}/min"}
+                                precision matches {1}
+                            }
+                        }
+                    }
+                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Mean reading speed (above CPS)
+                        value matches {
+                            DV_QUANTITY[at9002] matches {
+                                magnitude matches {|>=0.0|}
+                                units matches {"{words}/min"}
+                                precision matches {1}
+                            }
+                        }
+                    }
+                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Maximum reading speed
+                        value matches {
+                            DV_QUANTITY[at9003] matches {
+                                magnitude matches {|>=0.0|}
+                                units matches {"{words}/min"}
+                                precision matches {1}
+                            }
+                        }
+                    }
+                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Reading speed score
+                        value matches {
+                            DV_QUANTITY[at9004] matches {
+                                magnitude matches {|>=0.0|}
+                                units matches {"{words}/min"}
+                                precision matches {2}
+                            }
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0003] matches {    -- Critical print size
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Critical print size
+                        value matches {
+                            DV_QUANTITY[at9005] matches {
+                                magnitude matches {|-1.0..2.0|}
+                                units matches {"1{logRAD}"}
+                                precision matches {1}
+                            }
+                        }
+                    }
+                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Definition
+                        value matches {
+                            DV_CODED_TEXT[at9006] matches {
+                                defining_code matches {[ac9000]}    -- Definition (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Reading acuity score
+                value matches {
+                    DV_QUANTITY[at9007] matches {
+                        magnitude matches {|-1.0..2.0|}
+                        units matches {"1{logRAD}"}
+                        precision matches {3}
+                    }
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- logMAR/logRAD ratio
+                value matches {
+                    DV_PROPORTION[at9008] matches {
+                        numerator matches {|0.0..200.0|}
+                        type matches {2}
+                    }
+                }
+            }
+            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Reading errors
+                value matches {
+                    DV_COUNT[at9009] matches {
+                        magnitude matches {|>=0|}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Reading visual acuity supplementary results">
+                description = <"Additional results produced by a reading visual acuity test, complementing the primary reading acuity threshold which is recorded in the parent visual acuity archetype.">
+            >
+            ["at0001"] = <
+                text = <"Reading acuity score">
+                description = <"An error-weighted reading acuity value that incorporates reading errors into the reading acuity threshold.">
+                comment = <"Applicable to reading charts that support syllable-based error scoring, notably the RADNER Reading Charts. The score is calculated as: (sum of syllables of all misread words in the smallest sentence read × 0.005) + logRAD of that sentence. ">
+            >
+            ["at0002"] = <
+                text = <"logMAR/logRAD ratio">
+                description = <"Reading acuity expressed as a percentage of distance visual acuity.">
+                comment = <"Calculated as: 100 × (10^logMAR / 10^logRAD).">
+            >
+            ["at0003"] = <
+                text = <"Critical print size">
+                description = <"The smallest print size at which reading speed is still within the normal range, i.e. the plateau of the reading speed versus print size curve.">
+                comment = <"The critical print size can be determined by two different methods (CPS-1 and CPS-2). Where both methods are applied, this cluster may be used twice. Print sizes are expressed in logRAD, the reading chart equivalent of logMAR.">
+            >
+            ["at0004"] = <
+                text = <"Critical print size">
+                description = <"The logRAD value of the critical print size.">
+            >
+            ["at0005"] = <
+                text = <"Definition">
+                description = <"The method used to determine the critical print size.">
+            >
+            ["at0006"] = <
+                text = <"Reading speed">
+                description = <"A grouping of reading speed parameters obtained from the reading chart assessment.">
+                comment = <"Reading speed is expressed in words per minute (wpm). The method for counting words (all words vs. correctly read words only) should be documented in the parent archetype's 'Comment' element, as this affects comparability between studies and chart systems.">
+            >
+            ["at0007"] = <
+                text = <"Mean reading speed (all sentences)">
+                description = <"The average reading speed calculated across all sentences or test items presented on the chart, regardless of print size or whether reading speed had already declined.">
+                comment = <"Referred to as MEAN-RS-ALL in the literature. Includes sentences read at print sizes below the critical print size where reading speed is reduced. Allows comparison of overall performance but may underestimate the individual's comfortable reading speed.">
+            >
+            ["at0008"] = <
+                text = <"Mean reading speed (above CPS)">
+                description = <"The average reading speed calculated from only those sentences or test items read at or above the critical print size, i.e. within the range of normal reading performance.">
+                comment = <"Referred to as MEAN-RS in the literature. Excludes sentences at print sizes below the critical print size where reading speed begins to decline. Provides a better estimate of the individual's comfortable reading speed in everyday life.">
+            >
+            ["at0009"] = <
+                text = <"Maximum reading speed">
+                description = <"The highest reading speed achieved across any single sentence or test item on the reading chart.">
+                comment = <"Referred to as MAX-RS in the literature. Usually achieved at one of the larger print sizes on the chart, making it relatively independent of the quality of near optical correction or the depth of focus. Useful as a measure of the ceiling reading performance the individual can achieve under optimal print size conditions.">
+            >
+            ["at0010"] = <
+                text = <"Reading speed score">
+                description = <"A composite reading speed score that incorporates a reading time limit into the calculation, enabling comparison of reading performance at the smallest print sizes even when not all participants can read them within the time limit.">
+                comment = <"Calculated as: [(log |x - y|) / log y] × 100, where x = measured reading time and y = reading length limit + 1. Reduces the impact on the mean and standard deviation when only a small number of participants can read the smallest print sizes within the time limit. Defined by Dunavoelgyi (2006). Expressed in words per minute. Not universally applied across all chart systems.">
+            >
+            ["at0011"] = <
+                text = <"Reading errors">
+                description = <"The total number of words read incorrectly across all sentences or test items attempted on the reading chart.">
+                comment = <"Some research groups calculate reading speed from correctly read words only; others use the full word count. Recording the number of errors allows recalculation using either method. For the RADNER Reading Acuity Score, the syllable count of the misread words in the smallest sentence read is required rather than the total error count across the chart.">
+            >
+            ["at0012"] = <
+                text = <"CPS-1">
+                description = <"The smallest print size read with normal reading speed, defined as the point before a notable decrease in reading speed becomes apparent on the reading speed versus print size curve.">
+            >
+            ["at0013"] = <
+                text = <"CPS-2">
+                description = <"The smallest print size that yields at least 90% of the mean reading speed obtained across all preceding (larger) sentences, as defined by Virgili et al. (2004).">
+            >
+            ["ac9000"] = <
+                text = <"Definition (synthesised)">
+                description = <"The method used to determine the critical print size. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0012", "at0013">
+        >
+    >

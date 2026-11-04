@@ -1,0 +1,326 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=894b1c58-29eb-4ce5-8ab5-0af0ffc3ad8d; build_uid=9b7b75b2-5937-4aa6-98c2-75689af305e9)
+    openEHR-DEMOGRAPHIC-PERSON.person-patient.v0.0.1-alpha
+
+specialize
+    openEHR-DEMOGRAPHIC-PERSON.person.v0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["ko"] = <
+            language = <[ISO_639-1::ko]>
+            author = <
+                ["name"] = <"Seung-Jong Yu">
+                ["organisation"] = <"NOUSCO Co.,Ltd.">
+                ["email"] = <"seungjong.yu@gmail.com">
+            >
+            accreditation = <"Certified Board of Family Medicine in South Korea">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Sergio Miranda Freire">
+                ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+                ["email"] = <"sergio@lampada.uerj.br">
+            >
+        >
+        ["es-py"] = <
+            language = <[ISO_639-1::es-py]>
+            author = <
+                ["name"] = <"Ellen Mendez">
+                ["organisation"] = <"Facultad Politecnica - UNA">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sergio Miranda Freire & Rigoleta Dutra Mediano Dias">
+        ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+        ["email"] = <"sergio@lampada.uerj.br">
+        ["date"] = <"2009-05-22">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Rigoleta Dutra, Ministry of Defense, Brazil (openEHR Editor)", "Sergio Freire, State University of Rio de Janeiro, Brazil (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"ISO/TS 22220:2008(E) - Identification of Subject of Care - Technical Specification - International Organization for Standardization.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"6ED6B618C5805EC0F1B2172B3506190C">
+    >
+    details = <
+        ["ko"] = <
+            language = <[ISO_639-1::ko]>
+            purpose = <"환자 인적 데이터의 표현.">
+            keywords = <"*인적정보 서비스(ko)", "*환자 데이터(ko)">
+            use = <"환자 데이터를 수집하는 인적정보 서비스에서 사용됨.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Representação dos dados demográficos de um paciente.">
+            keywords = <"serviço demográfico", "dados de um paciente">
+            use = <"Usado em serviço demográficos para coletar os dados de um paciente.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Representation of a patient's demographic data.">
+            keywords = <"demographic service", "patient's data">
+            use = <"Used in demographic service to collect a patient's data.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es-py"] = <
+            language = <[ISO_639-1::es-py]>
+            purpose = <"Representación de los datos demográficos de un paciente.">
+            keywords = <"servicio demográfico", "datos de un paciente">
+            use = <"Utilizado en servicios demográficos para recolectar los datos de un paciente.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    PERSON[at0000.1] matches {    -- Patient
+        contacts matches {
+            CONTACT[at0003.1]    -- Contacts
+        }
+        relationships matches {
+            PARTY_RELATIONSHIP[at0004.1] matches {    -- Relationships
+                details matches {
+                    ITEM_TREE[at0.40] matches {    -- Personal relationship
+                        items matches {
+                            ELEMENT[at0040] occurrences matches {1} matches {
+                                value matches {
+                                    DV_TEXT[at0.9000]
+                                    DV_CODED_TEXT[at0.9001] matches {
+                                        defining_code matches {[ac1]}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            PARTY_RELATIONSHIP[at0.2] occurrences matches {1} matches {    -- Third party payer
+                details matches {
+                    ITEM_TREE[at0.20] matches {    -- Patient identifiers
+                        items matches {
+                            allow_archetype CLUSTER[at0.21] occurrences matches {1} matches {    -- Healthcare consumer identifier.
+                                include
+                                    archetype_id/value matches {/openEHR-DEMOGRAPHIC-CLUSTER\.person_identifier[a-zA-Z0-9_-]*\.v0\..*/}
+                            }
+                        }
+                    }
+                }
+            }
+            PARTY_RELATIONSHIP[at0.3] occurrences matches {1} matches {    -- Healthcare provider/Health professional
+                details matches {
+                    ITEM_TREE[at0.30] matches {    -- Patient identifiers
+                        items matches {
+                            allow_archetype CLUSTER[at0.31] occurrences matches {1} matches {    -- Patient identifier
+                                include
+                                    archetype_id/value matches {/openEHR-DEMOGRAPHIC-CLUSTER\.person_identifier[a-zA-Z0-9_-]*\.v0\..*/}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["ko"] = <
+            ["at0.2"] = <
+                text = <"보험지불자">
+                description = <"환자와 보험지불자 간의 관계">
+            >
+            ["at0.20"] = <
+                text = <"환자식별자">
+                description = <"보험지불자의 환자의 식별자">
+            >
+            ["at0.21"] = <
+                text = <"수급자 식별자">
+                description = <"보험지불자의 수급자의 식별자">
+            >
+            ["at0.3"] = <
+                text = <"진료기관/의료인">
+                description = <"환자와 진료기관/의료인 간의 관계">
+            >
+            ["at0.30"] = <
+                text = <"환자식별자">
+                description = <"관련된 진료기관의 환자식별자">
+            >
+            ["at0.31"] = <
+                text = <"환자식별자">
+                description = <"관련된 의료기관의 환자식별자">
+            >
+            ["at0.40"] = <
+                text = <"개인관계">
+                description = <"개인관계">
+            >
+            ["at0000.1"] = <
+                text = <"환자">
+                description = <"환자 인적 데이터">
+            >
+            ["at0002.1"] = <
+                text = <"이름">
+                description = <"환자이름">
+            >
+            ["at0003.1"] = <
+                text = <"연락처">
+                description = <"환자의 연락처">
+            >
+            ["at0004.1"] = <
+                text = <"관계">
+                description = <"환자의 관계, 특히 가족관계">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000.1"] = <
+                text = <"Dados do paciente">
+                description = <"Dados do paciente.">
+            >
+            ["at0002.1"] = <
+                text = <"Nome">
+                description = <"Conjunto de dados que especificam o nome do paciente.">
+            >
+            ["at0003.1"] = <
+                text = <"Contatos">
+                description = <"Contatos da pessoa.">
+            >
+            ["at0004.1"] = <
+                text = <"Relacionamentos">
+                description = <"Relacionamentos de um paciente, especialmente laços familiares.">
+            >
+            ["at0.2"] = <
+                text = <"Fonte pagadora">
+                description = <"Beneficiário: Relacionamento do paciente com uma Fonte Pagadora.">
+            >
+            ["at0.3"] = <
+                text = <"Serviço de saúde/Profissional de saúde">
+                description = <"Relacionamento do paciente com uma organização prestadora de serviço de saúde/profissional de saúde.">
+            >
+            ["at0.40"] = <
+                text = <"Personal relationships">
+                description = <"Personal relationship.">
+            >
+            ["at0.20"] = <
+                text = <"Identificações do beneficiário">
+                description = <"Identificações do beneficiário junto à fonte pagadora.">
+            >
+            ["at0.21"] = <
+                text = <"Identificação do beneficiário">
+                description = <"Documento de identificação do beneficiário junto à fonte pagadora.">
+            >
+            ["at0.30"] = <
+                text = <"Identificações no prestador">
+                description = <"Identificações do paciente junto ao prestador.">
+            >
+            ["at0.31"] = <
+                text = <"Identificação no prestador">
+                description = <"Documento de identificação do paciente junto ao prestador.">
+            >
+        >
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Patient">
+                description = <"Patient demographic data.">
+            >
+            ["at0002.1"] = <
+                text = <"Name">
+                description = <"A patient's name.">
+            >
+            ["at0003.1"] = <
+                text = <"Contacts">
+                description = <"A patient's contacts.">
+            >
+            ["at0004.1"] = <
+                text = <"Relationships">
+                description = <"A patient's relationships, especially family ties.">
+            >
+            ["at0.2"] = <
+                text = <"Third party payer">
+                description = <"Relationship between the patient and a third-party payer.">
+            >
+            ["at0.3"] = <
+                text = <"Healthcare provider/Health professional">
+                description = <"Patient: relationship between the patient and a healthcare provider organisation/health professional.">
+            >
+            ["at0.40"] = <
+                text = <"Personal relationship">
+                description = <"Personal relationship.">
+            >
+            ["at0.20"] = <
+                text = <"Patient identifiers">
+                description = <"Identifiers of the patient at the third-party payer.">
+            >
+            ["at0.21"] = <
+                text = <"Healthcare consumer identifier.">
+                description = <"An identifier of the patient at the third-party payer.">
+            >
+            ["at0.30"] = <
+                text = <"Patient identifiers">
+                description = <"Patient identifiers at the related healthcare provider.">
+            >
+            ["at0.31"] = <
+                text = <"Patient identifier">
+                description = <"A patient identifier at the related healthcare provider.">
+            >
+        >
+        ["es-py"] = <
+            ["at0.2"] = <
+                text = <"Fuente de Financiación">
+                description = <"Beneficiario: Relacionamiento del paciente con la Fuente de Financiación">
+            >
+            ["at0.20"] = <
+                text = <"Identificaciones del beneficiario">
+                description = <"Identificaciones del beneficiario junto a la fuente de financiación.">
+            >
+            ["at0.21"] = <
+                text = <"Identificación del beneficiario">
+                description = <"Documento de identificación del beneficiario junto a la fuente de financiación">
+            >
+            ["at0.3"] = <
+                text = <"Servicio de salud/Profesional de la salud">
+                description = <"Relacionamiento del paciente con una organización proveedora del servicio de salud/profesional de la salud.">
+            >
+            ["at0.30"] = <
+                text = <"Identificaciones del proveedor">
+                description = <"Identificación del paciente junto al proveedor.">
+            >
+            ["at0.31"] = <
+                text = <"Identificación del proveedor">
+                description = <"Documento de identificación del paciente junto al proveedor.">
+            >
+            ["at0.40"] = <
+                text = <"Relaciones personales">
+                description = <"Relaciones personales">
+            >
+            ["at0000.1"] = <
+                text = <"Datos del paciente">
+                description = <"Datos del paciente.">
+            >
+            ["at0002.1"] = <
+                text = <"Nombre">
+                description = <"Conjunto de datos que especifican el nombre del paciente.">
+            >
+            ["at0003.1"] = <
+                text = <"Contactos">
+                description = <"Contactos de la persona.">
+            >
+            ["at0004.1"] = <
+                text = <"Relacionamiento">
+                description = <"Relacionamientos de un paciente, especialmente lazos familiares.">
+            >
+        >
+    >

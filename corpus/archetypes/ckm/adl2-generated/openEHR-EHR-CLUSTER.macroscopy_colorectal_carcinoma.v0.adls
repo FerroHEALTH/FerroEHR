@@ -1,0 +1,435 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=9fb9b927-40ce-4424-b2f5-79e56cd12076; build_uid=67c9713d-86c9-481e-95bd-df83c6a42fbf)
+    openEHR-EHR-CLUSTER.macroscopy_colorectal_carcinoma.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Dr Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics, UK">
+        ["email"] = <"ian.mcnicoll@oceaninformatics.com">
+        ["date"] = <"17/06/2009">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Koray Atalag, University of Auckland, New Zealand", "Matt Cordell, NEHTA, Australia", "Heather Leslie,Ocean Informatics,Australia", "David McKillop, NEHTA, Australia", "Cathy Richardson, NEHTA, Australia", "David Rowed, Ocean Informatics, Australia">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"College of American Pathologists. Protocol for the Examination of Specimens from Patients with Primary Carcinomas of the Colon and Rectum [Internet]. 2009 Mar ;[cited 2009 Jul 28 ]">
+        ["2"] = <"Available from: http://www.cap.org/apps/docs/committees/cancer/cancer_protocols/2008/colonrectum08_pw.pdf">
+        ["3"] = <"Royal College of Pathologists. Dataset for colorectal cancer (2nd edition) [Internet]. 2007 Dec 4;[cited 2009 Jul 29 ]">
+        ["4"] = <"Available from: http://www.rcpath.org/index.asp?PageID=1153">
+        ["5"] = <"Royal College of Pathologists of Australasia. Colorectal Cancer Structured Reporting Protocol (1st Edition 2010). [Internet]. 2010;[cited 2010 Mar 21 ]">
+        ["6"] = <"Available from: http://www.rcpa.edu.au//static/File/Asset%20library/public%20documents/Publications/StructuredReporting/COLORECTAL%20CANCER%20STRUCTURED%20REPORTING%20PROTOCOL%20for%20web.pdf">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"731B1E8E708D666D5BA1EFE5FFDD3E98">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record detailed findings about colorectal cancer found on macroscopic histopathological examination.">
+            keywords = <"histopathology", "cancer", "laboratory", "lab", "malignancy", "pathology", "colonic", "rectal", "anal", "GI", "gastrointestinal", "bowel">
+            use = <"To record detailed findings about macroscopic examination of tissue related to colo-rectal cancer.
+Use as a component archetype in the context of a suite of archetypes that make up a histopathology report ie OBSERVATION.lab_test.histopathology and CLUSTER.microscopy_colorectal_carcinoma.">
+            misuse = <"Not designed to be used within any other archetype other than OBSERVATION.lab_test.histopathology.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتسجيل الموجودات التفصيلية حول سرطان القولون و المستقيم التي يتم اكتشافها عند الفحص الهيستوباثولوجي العياني">
+            keywords = <"الهيستوباثولوجيا", "السرطان", "المعمل/المختبر", "المعمل/المختبر", "الخباثة", "الباثولوجيا/المَرَضية", "متعلق بالقولون", "متعلق بالمستقيم", "متعلق بالشرج", "معديّ معويّ", "معديّ معويّ", "الأمعاء">
+            use = <"لتسجيل الموجودات التفصيلية حول الفحص العياني حول النسيج المتعلق بسرطان القولون و المستقيم.
+يستخدم هذا النموذج في سياق مجموعة من النماذج التي يتكون منها تقرير الهيستوباثولوجيا, يعني (ملاحظة. اختبار معملي. الهيستوباثولوجيا) و (عنقود. الفحص المجهري- سرطانة القولون و المستقيم)">
+            misuse = <"لم يتم تصميم هذا النموذج ليتسخدم في داخل أي نموذج غير (ملاحظة. اختبار معملي. الهيستوباثولوجيا)">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Macroscopic findings - Colorectal cancer
+        items cardinality matches {1..*; unordered} matches {
+            allow_archetype CLUSTER[at0347] occurrences matches {0..1} matches {    -- Tumour dimensions
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.physical_properties(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0330] occurrences matches {0..1} matches {    -- Maximum extramuscular extension
+                value matches {
+                    DV_QUANTITY[at9005] matches {
+                        property matches {[at9000]}    -- Length
+                        magnitude matches {|>=0.0|}
+                        units matches {"mm"}
+                    }
+                }
+            }
+            ELEMENT[at0331] occurrences matches {0..1} matches {    -- Distance of tumour to nearest cut-end
+                value matches {
+                    DV_QUANTITY[at9006] matches {
+                        property matches {[at9000]}    -- Length
+                        magnitude matches {|>=0.0|}
+                        units matches {"mm"}
+                    }
+                }
+            }
+            ELEMENT[at0332] occurrences matches {0..1} matches {    -- Distance of tumour to circumferential margin
+                value matches {
+                    DV_QUANTITY[at9007] matches {
+                        property matches {[at9000]}    -- Length
+                        magnitude matches {|>=0.0|}
+                        units matches {"mm"}
+                    }
+                }
+            }
+            ELEMENT[at0353] occurrences matches {0..1} matches {    -- Distance of tumour from dentate line
+                value matches {
+                    DV_QUANTITY[at9008] matches {
+                        property matches {[at9000]}    -- Length
+                        magnitude matches {|>=0.0|}
+                        units matches {"mm"}
+                    }
+                }
+            }
+            ELEMENT[at0333] occurrences matches {0..1} matches {    -- Anastomotic doughnuts submitted
+                value matches {
+                    DV_BOOLEAN[at9009] matches {
+                        value matches {True, False}
+                    }
+                }
+            }
+            CLUSTER[at0349] occurrences matches {0..1} matches {    -- Tumour perforation
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0334] occurrences matches {0..1} matches {    -- Tumour perforation
+                        value matches {
+                            DV_CODED_TEXT[at9010] matches {
+                                defining_code matches {[ac9001]}    -- Tumour perforation (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0350] occurrences matches {0..1} matches {    -- Perforation location
+                        value matches {
+                            DV_CODED_TEXT[at9011] matches {
+                                defining_code matches {[ac9002]}    -- Perforation location (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0354] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9014]
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0335] occurrences matches {0..1} matches {    -- For rectal tumours
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0336] occurrences matches {0..1} matches {    -- Relationship to anterior peritoneal reflection
+                        value matches {
+                            DV_CODED_TEXT[at9012] matches {
+                                defining_code matches {[ac9003]}    -- Relationship to anterior peritoneal reflection (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0337] occurrences matches {0..1} matches {    -- Intactness of the mesorectum
+                        value matches {
+                            DV_CODED_TEXT[at9013] matches {
+                                defining_code matches {[ac9004]}    -- Intactness of the mesorectum (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Macroscopic findings - Colorectal cancer">
+                description = <"Macroscopic anatomical pathology findings related to colorectal cancer.">
+            >
+            ["at0330"] = <
+                text = <"Maximum extramuscular extension">
+                description = <"The maximum extramuscular extension of the tumour.">
+            >
+            ["at0331"] = <
+                text = <"Distance of tumour to nearest cut-end">
+                description = <"The distance of the tumour to the nearest cut-end (i.e. proximal or distal margin). It is the measurement from the nearest cut end of the specimen and not the non-peritonealised (i.e. circumferential or radial) margin.">
+            >
+            ["at0332"] = <
+                text = <"Distance of tumour to circumferential margin">
+                description = <"The distance of the tumour to the circumferential or radial margin. It is the measurement to the non-peritonealised margin and not to the nearest cut-end (i.e. proximal,distal).">
+            >
+            ["at0333"] = <
+                text = <"Anastomotic doughnuts submitted">
+                description = <"Have anastomotic doughnuts been submitted for analysis?">
+            >
+            ["at0334"] = <
+                text = <"Tumour perforation">
+                description = <"Finding of tumour perforation.">
+            >
+            ["at0335"] = <
+                text = <"For rectal tumours">
+                description = <"Findings related solely to rectal tumours.">
+            >
+            ["at0336"] = <
+                text = <"Relationship to anterior peritoneal reflection">
+                description = <"The relationship of rectal tumour to the anterior peritoneal reflection.">
+            >
+            ["at0337"] = <
+                text = <"Intactness of the mesorectum">
+                description = <"An assessment of the intactness of the mesorectum.">
+            >
+            ["at0338"] = <
+                text = <"Incomplete">
+                description = <"The mesorectum is incompletely intact.">
+            >
+            ["at0339"] = <
+                text = <"Nearly complete">
+                description = <"The mesorectum is nearly completely intact.">
+            >
+            ["at0340"] = <
+                text = <"Complete">
+                description = <"The mesorectum is completely intact.">
+            >
+            ["at0341"] = <
+                text = <"Entirely above">
+                description = <"The tumour is entirely above the level of the peritoneal reflection anteriorly.">
+            >
+            ["at0342"] = <
+                text = <"Astride">
+                description = <"The tumour is astride (or at)  the level of the peritoneal reflection anteriorly.">
+            >
+            ["at0343"] = <
+                text = <"Entirely below">
+                description = <"The tumour is entirely below the level of the peritoneal reflection anteriorly.">
+            >
+            ["at0344"] = <
+                text = <"Present">
+                description = <"Tumour perforation is present.">
+            >
+            ["at0345"] = <
+                text = <"Absent">
+                description = <"Tumour perforation is absent.">
+            >
+            ["at0346"] = <
+                text = <"Indeterminate">
+                description = <"Presence of tumour perforation has not been determined.">
+            >
+            ["at0347"] = <
+                text = <"Tumour dimensions">
+                description = <"Details of maximum dimensions of the tumour.">
+            >
+            ["at0348"] = <
+                text = <"Indeterminate">
+                description = <"Intactness of the mesorectum has not been determined.">
+            >
+            ["at0349"] = <
+                text = <"Tumour perforation">
+                description = <"Findings related to tumour perforation.">
+            >
+            ["at0350"] = <
+                text = <"Perforation location">
+                description = <"The location of a perforation, if present.">
+            >
+            ["at0351"] = <
+                text = <"Serosal">
+                description = <"The perforation is serosal.">
+            >
+            ["at0352"] = <
+                text = <"Retro/infra peritoneal">
+                description = <"The perforation is retro/infra peritoneal.">
+            >
+            ["at0353"] = <
+                text = <"Distance of tumour from dentate line">
+                description = <"For abdominoperineal resection specimens, distance of tumour from the dentate line.">
+            >
+            ["at0354"] = <
+                text = <"Comment">
+                description = <"Furrher text comment on the perforation.">
+            >
+            ["at9000"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["ac9001"] = <
+                text = <"Tumour perforation (synthesised)">
+                description = <"Finding of tumour perforation. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Perforation location (synthesised)">
+                description = <"The location of a perforation, if present. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Relationship to anterior peritoneal reflection (synthesised)">
+                description = <"The relationship of rectal tumour to the anterior peritoneal reflection. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Intactness of the mesorectum (synthesised)">
+                description = <"An assessment of the intactness of the mesorectum. (synthesised)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"الموجودات العيانية - سرطان القولون و المستقيم">
+                description = <"الموجودات الباثولوجية التشريحية العيانية المتعلقة بسرطان القولون و المستقيم">
+            >
+            ["at0330"] = <
+                text = <"الحد الأقصى للامتداد خارج النسيج العضلي">
+                description = <"الحد الأقصى لامتداد الورم خارج النسيج العضلي">
+            >
+            ["at0331"] = <
+                text = <"المسافة بين الورم و أقرب نهاية قاطعة">
+                description = <"المسافة بين الورم و أقرب نهاية قاطعة ( بمعنى الحافة/الهامش القاصي أو الداني.
+و هو قياس لأقرب نهاية قاطعة للعينة, و ليس الحافة/الهامش غير الصفاقيّ - يعني الحافة/الهامش الكفافي أو الشعاعي.">
+            >
+            ["at0332"] = <
+                text = <"المسافة بين الورم و الحافة/الهامش الكفافي">
+                description = <"المسافة بين الورم و الحافة/الهامش الكفافي أو الشعاعي.
+و هو قياس إلى الحافة/الهامش غير الصفاقي, و ليس أقرب نهاية قاطعة (قاصية أو دانية).">
+            >
+            ["at0333"] = <
+                text = <"العجائن التفاغرية التي تم تقديمها">
+                description = <"هل تم تقديم العجائن التفاغرية للتحليل">
+            >
+            ["at0334"] = <
+                text = <"انثقاب الورم">
+                description = <"الموجودات المتعلقة بانثقاب الورم">
+            >
+            ["at0335"] = <
+                text = <"فيما يتعلق بأورام المستقيم">
+                description = <"الموجودات المتعلقة بأورام المستقيم فقط">
+            >
+            ["at0336"] = <
+                text = <"العلاقة مع الانعكاس الصفاقي الأمامي">
+                description = <"علاقة ورم المستقيم مع الانعكاس الصفاقي الأمامي">
+            >
+            ["at0337"] = <
+                text = <"سلامة مسراق المستقيم">
+                description = <"تقييم لسلامة مسراق المستقيم">
+            >
+            ["at0338"] = <
+                text = <"غير مكتمل">
+                description = <"مسراق المستقيم غير سالم بشكل كامل">
+            >
+            ["at0339"] = <
+                text = <"مكتمل تقريبا">
+                description = <"مسراق المستقيم سالم بشكل مكتمل تقريبا">
+            >
+            ["at0340"] = <
+                text = <"مكتمل">
+                description = <"مسراق المستقيم سالم بشكل مكتمل">
+            >
+            ["at0341"] = <
+                text = <"أعلى بشكل كامل">
+                description = <"الورم فوق مستوى الانعكاس الصفاقي الأمامي بشكل كلي">
+            >
+            ["at0342"] = <
+                text = <"على نفس المستوى">
+                description = <"الورم على نفس مستوى الانعكاس الصفاقي الأمامي">
+            >
+            ["at0343"] = <
+                text = <"أسفل بشكل كامل">
+                description = <"الورم أسفل مستوى الانعكاس الصفاقي الأمامي بشكل كلي">
+            >
+            ["at0344"] = <
+                text = <"موجود">
+                description = <"يوجد انثقاب للورم">
+            >
+            ["at0345"] = <
+                text = <"غائب">
+                description = <"لا يوجد انثقاب للورم">
+            >
+            ["at0346"] = <
+                text = <"غير محدد">
+                description = <"لم يتم تحديد وجود انثقاب للورم">
+            >
+            ["at0347"] = <
+                text = <"أبعاد الورم">
+                description = <"تفاصيل الحد الأدنى لأبعاد الورم">
+            >
+            ["at0348"] = <
+                text = <"غير محدد">
+                description = <"لم يتم تحديد سلامة مسراق المستقيم">
+            >
+            ["at0349"] = <
+                text = <"انثقاب الورم">
+                description = <"الموجودات المتعلقة بانثقاب الورم">
+            >
+            ["at0350"] = <
+                text = <"مكان الانثقاب">
+                description = <"مكان الانثقاب, إن وجد">
+            >
+            ["at0351"] = <
+                text = <"مصلوي/مشيمائي">
+                description = <"الانثقاب مصلوي/مشيمائي">
+            >
+            ["at0352"] = <
+                text = <"خلف/أسفل الصفاق">
+                description = <"الانثقاب يوجد خلف/أسفل الصفاق">
+            >
+            ["at0353"] = <
+                text = <"المسافة بين الورم و الخط المسنن">
+                description = <"لعينات القطع البطني العجاني, المسافة بين الورم و الخط المسنن">
+            >
+            ["at0354"] = <
+                text = <"تعليق">
+                description = <"تعليق نصي إضافي حول الانثقاب
+">
+            >
+            ["at9000"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac9001"] = <
+                text = <"انثقاب الورم (synthesised)">
+                description = <"الموجودات المتعلقة بانثقاب الورم (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"مكان الانثقاب (synthesised)">
+                description = <"مكان الانثقاب, إن وجد (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"العلاقة مع الانعكاس الصفاقي الأمامي (synthesised)">
+                description = <"علاقة ورم المستقيم مع الانعكاس الصفاقي الأمامي (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"سلامة مسراق المستقيم (synthesised)">
+                description = <"تقييم لسلامة مسراق المستقيم (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/122>
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0351", "at0352">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0344", "at0345", "at0346">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0338", "at0339", "at0340", "at0348">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0341", "at0342", "at0343">
+        >
+    >

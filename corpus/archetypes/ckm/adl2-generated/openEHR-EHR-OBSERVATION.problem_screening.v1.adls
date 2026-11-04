@@ -1,0 +1,1128 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=0b3c1c52-b958-452c-aa36-a7ab17d309a2; build_uid=557e192f-550a-4d2f-af4c-37d5116c3cad)
+    openEHR-EHR-OBSERVATION.problem_screening.v1.0.8
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch, Darin Leonhardt">
+                ["organisation"] = <"Medizinische Hochschule Hannover, PLRI für medizinische Informatik/ Medizinische Hochschule">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de, leonhardt.darin@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Marit Alice Venheim, Silje Ljosland Bakke, John Tore Valand">
+                ["organisation"] = <"Helse Vest IKT, Helse Vest IKT AS, Helse Bergen">
+                ["email"] = <"marit.alice.venheim@helse-vest-ikt.no, silje.ljosland.bakke@helse-vest-ikt.no, john.tore.valand@helse-bergen.no, john.tore.valand@helse-vest-ikt.no">
+            >
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            author = <
+                ["name"] = <"Vanessa Pereira">
+                ["organisation"] = <"Luxembourg Institute of Health (LIH)">
+                ["email"] = <"vanessapereira@protonmail.com">
+            >
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            author = <
+                ["name"] = <"Martijn van Eenennaam">
+                ["organisation"] = <"Nedap Healthcare">
+                ["email"] = <"martijn.vaneenennaam@nedap.com">
+            >
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            author = <
+                ["name"] = <"Manuel José Zafra Doménech">
+                ["organisation"] = <"TRADCREA, S.L.">
+                ["email"] = <"mzafra@tradcrea.com">
+            >
+            other_details = <
+                ["other_contributors"] = <"Servei Català de la Salut">
+            >
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Laura Moral Lopez">
+                ["organisation"] = <"Sistema de Salut de Catalunya">
+                ["email"] = <"lauramoral@catsalut.cat">
+            >
+            other_details = <
+                ["other_contributors"] = <"Tradcrea">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2020-03-13">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Dag Aarhus, Vestre Viken HF, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Astrid Askeland, Dips AS, Norway", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Yexuan Cheng, 浙江大学, China", "Are Edvardsen, SKDE, Helse Nord RHF, Norway", "Alexander Eikrem-Lüthi, Lovisenberg Diakonale Sykehus, Norway", "Kåre Flø, DIPS ASA, Norway", "Grant Forrest, Lunaria Ltd, United Kingdom", "Heather Grain, Llewelyn Grain Informatics, Australia", "Anca Heyd, DIPS ASA, Norway", "Joost Holslag, Nedap, Netherlands", "Evelyn Hovenga, EJSH Consulting, Australia", "Mikkel Johan Gaup Grønmo, Regional forvaltning EPJ, Helse Nord, Norway", "Gunnar Jårvik, Helse Vest IKT AS, Norway", "Susanna Jönsson, Region Värmland, Sweden", "Anjali Kulkarni, Karkinos, India", "Kanika Kuwelker, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Liv Laugen, ​Oslo University Hospital, Norway, Norway", "Øygunn Leite Kallevik, Helse Bergen, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, UK", "Per Meinich, Helse Sør-Øst RHF, Norway", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Vanessa Pereira, Luxembourg Institute of Health (LIH), Portugal", "Jussara Rotzsch, Hospital Alemão Oswaldo Cruz, Brazil", "Andre Smitt-Ingebretsen, Sørlandet sykehus HF, Norway", "Natalia Strauch, Medizinische Hochschule Hannover, Germany", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Martijn van Eenennaam, Nedap Healthcare, Netherlands", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)", "Ina Wille, Helse-Vest RHF, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"Avgrenet fra: Problem/Diagnosis screening questionnaire, Published archetype [Internet]. openEHR Foundation, openEHR Clinical Knowledge Manager [cited: 2023-07-12]. Available from: https://ckm.openehr.org/ckm/archetypes/1013.1.4442">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"9F1B95B53D81FF86EF3DF128A51108E9">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Schaffung von Rahmenbedingungen für die Darstellung von Antworten auf vordefinierte Screening-Fragen zu Beschwerden, Problemen oder Diagnosen.">
+            keywords = <"Erkrankung, Zustand, Krankheit, Syndrom, Fragebogen, Befragung, Screening, Problem", ...>
+            use = <"Verwendung als Rahmenbedingung für die Darstellung von Antworten auf vordefinierte Screening-Fragen zu Beschwerden, Problemen oder Diagnosen.
+
+Häufige Anwendungsfälle umfassen, sind aber nicht beschränkt auf:
+Systematische Befragung in jedem Beratungsgespräch, zum Beispiel:
+--- Wurde eine Krebserkrankung diagnostiziert? Ja, Nein, Unbekannt.
+--- Wurde COVID 19 oder Influenza in den vergangenen zwölf Monaten diagnostiziert? Ja, Nein, Unbekannt.
+--- Haben Sie irgendwelche Sorgen oder Problemen? Ja, Nein, Unbekannt.
+- Spezifische Befragungen in Bezug auf Krankheitsüberwachung.
+
+Die Semantiken dieses Archetyps sind mit Absicht vage und diesen Archetyp abzufragen würde üblicherweise nur sinnvoll und sicher im Kontext vom einzelnen spezifischen Template sein. In einem Template würde jedes Daten Element in eine der spezifisch gestellten Fragen umbenannt werden. Wenn Gruppen an Werten für übliche Anwendungsfälle bereits vorgeschlagen wurden, können diese für den lokalen Gebrauch mit Hilfe der \"Text\"- Auswahl an den jeweiligen spezifischen Anwendungsfall angepasst werden.
+
+Über die EVENT-Struktur aus dem Referenzmodell kann festgelegt werden, ob sich die Fragen auf einen Zeitpunkt oder einen Zeitraum beziehen. Verwenden Sie eine separate Instanz dieses Archetyps, um zwischen einer Befragung zu unterscheiden, der Informationen über eine Diagnose enthält, die zu einem beliebigen Zeitpunkt in der Vergangenheit aufgetreten war, und Informationen über eine Diagnose, die innerhalb eines bestimmten Zeitintervalls auftrat - zum Beispiel den Unterschied zwischen \"Hatten Sie Influenza?\" und \"Hatten Sie in den vergangenen 4 Wochen Influenza?\".
+
+Die Quelle der Informationen in einer Fragebogenantwort kann in verschiedenen Kontexten variieren, kann jedoch mithilfe des Elements „Information provider“ im Referenzmodell spezifisch identifiziert werden.
+
+Dieser Archetyp wurde entwickelt, um als Screening-Tool oder zur Darstellung einfacher Daten im Fragebogenformat zur Verwendung in Situationen wie einem Krankheitsregister verwendet zu werden. Wenn der Screening-Fragebogen das Vorhandensein eines Problems oder einer Diagnose identifiziert, wird empfohlen, dass das klinische System die spezifischen Details über das Problem oder die Diagnose (wie z. B. das Datum der klinischen Feststellung) unter Verwendung des Archetyps EVALUATION.problem_diagnosis darstellt und beibehält.">
+            misuse = <"Darf nicht verwendet werden, um Details zum Vorhanden oder Nicht-Vorhanden eines Problems oder einer Diagnose außerhalb eines Screening-Kontexts darzustellen. Dafür EVALUATION.problem_diagnosis oder EVALUATION.exclusion_specific benutzen.
+
+Darf nicht verwendet werden, um ein Framework für die Darstellung von Antworten auf vordefinierte Screening-Fragen zu Prozeduren, die in der Vergangenheit durchgeführt wurden, zu erstellen. Dafür OBSERVATION.procedure_screening benutzen.
+
+Darf nicht verwendet werden, um ein Framework für die Darstellung von Antworten auf vordefinierte Screening-Fragen zu Nebenwirkungen (Adverse Reactions) zu erstellen. Dafür einen angemessenen Archetyp benutzen.
+
+Darf nicht verwendet werden, um Details zu einer einfachen Auswahlliste darzustellen, in der eine Frage entweder als \"vorhanden\" oder \"unbestimmt\" aufgezeichnet werden kann. Verwenden Sie dazu OBSERVATION.selection_list.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å lage et rammeverk for registrering av svar på forhåndsdefinerte spørsmål om bekymringer, plager, problemer eller diagnoser.">
+            keywords = <"tilstand, sykdom, syndrom, spørreskjema, kartlegging, bekymring, plage", ...>
+            use = <"Brukes for å lage et rammeverk for registrering av svar på forhåndsdefinerte spørsmål om bekymringer, plager, problemer eller diagnoser.
+Arketypen er løst modellert for å inkludere det bredeste spekteret av bekymringer, plager og problemer, samt diagnoser.
+
+Vanlige bruksområder inkluderer, men er ikke begrenset til:
+- Systematiske spørsmål ved konsultasjoner, for eksempel:
+--- Diagnostisert med kreft? Ja, Nei, Ukjent.
+--- Diagnostisert med Covid 19 eller influensa de siste tolv månedene? Ja, Nei, Ukjent.
+- Spesifikke spørsmål relatert til overvåkning av sykdommer.
+
+Semantikken til denne arketypen er med vilje løst definert, og spørringer etter data i denne arketypen vil normalt bare være hensiktsmessig eller sikkert i konteksten av det spesifikke templatet. I et templat vil hvert dataelement vanligvis døpes om til det (spesifikke) spørsmålet man ønsker svar på. Flere steder er det foreslått verdisett som passer til de vanligste bruksområder, men det er allikevel mulig å tilpasse/endre verdisett for lokal bruk ved å benytte de alternative datatypene DV_TEXT eller DV_BOOLEAN for å harmonere verdisettet til hvert enkelt brukstilfelle.
+
+EVENT-strukturen fra arketypens referansemodell kan brukes for å spesifisere om spørsmålene relateres til et tidspunkt eller til et tidsintervall.
+Bruk egne instanser av denne arketypen for å skille mellom spørsmål om prosedyrer som er gjennomførte på et hvilket som helst tidspunkt og spørsmål om prosedyrer som er gjennomført i et tidsintervall. For eksempel; \"Har du influensa?\" sammenlignet med \"Har du hatt influensa de siste 4 ukene?\".
+
+Kilden til informasjonen i et spørreskjema kan variere i ulike kontekster, men kan identifiseres spesifikt ved å benytte \"Information provider\" elementet i openEHR referansemodellen.
+
+Denne arketypen er laget for å bli brukt i et spørreskjema eller for å registrere enkle strukturerte data til for eksempel et sykdomsregister. Dersom det i kartleggingen identifiseres at et problem eller en diagnose er tilstede, anbefales det at spesifikke detaljer om problemet eller diagnosen (som for eksempel diagnosedato) registreres og lagres i pasientjournalen i arketypen EVALUATION.problem_diagnosis (Problem/diagnose).">
+            misuse = <"Brukes ikke for å registrere detaljer om tilstedeværelse eller fravær av et problem eller en diagnose utenfor konteksten av kartleggingen. Bruk arketypen EVALUATION.problem_diagnosis eller EVALUATION.exclusion_specific for dette formålet.
+
+Brukes ikke for å lage et rammeverk for registrering av svar på forhåndsdefinerte spørsmål om gjennomførte prosedyrer, bruk arketypen OBSERVATION.procedure_screening for dette formålet.
+
+Brukes ikke for å lage et rammeverk for registrering av svar på forhåndsdefinerte spørsmål om overfølsomhetsreaksjoner, bruk arketypen OBSERVATION.adverse_reaction_screening for dette formålet.
+
+Brukes ikke for å registrere detaljer om en enkel utvalgsliste der et spørsmål kan registreres som enten \"Tilstede\" eller \"Ubestemt\". Bruk arketypen OBSERVATION.selection_list for dette formålet.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To create a framework for recording answers to pre-defined screening questions about issues, problems or diagnoses.">
+            keywords = <"Condition, state, illness, syndrome, questionnaire, screening, issue", ...>
+            use = <"Use to create a framework for recording answers to pre-defined screening questions about issues, problems or diagnoses. 
+This archeype has deliberately been loosely modelled to be inclusive of the broadest range of issues and problems, as well as diagnoses.
+
+Common use cases include, but are not limited to:
+- Systematic questioning in any consultation, for example:
+--- Diagnosed with cancer? Yes, No, Unknown.
+--- Diagnosed with COVID 19 or Influenza in the past twelve months? Yes, No, Unknown.
+--- Do you have any worries or concerns? Yes, No, Unknown.
+- Specific questioning related to disease surveillance.
+
+The semantics of this archetype are intentionally loose, and querying this archetype would normally only be useful or safe within the context of each specific template. In a template, each data element would usually be renamed to the specific question asked. Where value sets have been proposed for common use cases, these can be adapted for local use by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case.
+
+The EVENT structure from the reference model can be used to specify whether the questions relate to point in time or over a period of time. Use a separate instance of this archetype to distinguish between a questionnaire recording information about a procedure that has been performed at any time in the past and information about a procedure performed within a specified time interval - for example the difference between \"Do you have influenza?\" compared to \"Have you had influenza in the past 4 weeks?\"
+
+The source of the information in a questionnaire response may vary in different contexts but can be specifically identified using the 'Information provider' element in the Reference Model.
+
+This archetype has been designed to be used as a screening tool or to record simple questionnaire-format data for use in situations such as a disease registry. If the screening questionnaire identifies the presence of a problem or diagnosis, it is recommended that clinical system record and persist the specific details about the problem or diagnosis (such as the date of clinical recognition) using the EVALUATION.problem_diagnosis archetype.">
+            misuse = <"Not to be used to record details about the presence or absence of a problem or diagnosis, outside of a screening context. Use EVALUATION.problem_diagnosis or EVALUATION.exclusion_specific for these purposes.
+
+Not to be used to to create a framework for recording answers to pre-defined screening questions about procedures that has been carried out in the past. Use the OBSERVATION.procedure_screening for this purpose.
+
+Not to be used to to create a framework for recording answers to pre-defined screening questions about adverse reactions, use an appropriate archetype for this purpose.
+
+Not to be used to record details about a simple selection list where a question may be recorded as either \"present\" or \"indeterminate\". Use OBSERVATION.selection_list for this purpose.">
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            purpose = <"Créer un cadre pour l'enregistrement des réponses à des questions de dépistage prédéfinies concernant des questions, des problèmes ou des diagnostics.">
+            keywords = <"Condition", "état", "maladie", "syndrome", "questionnaire", "dépistage", "problème">
+            use = <"À utiliser pour créer un cadre permettant d'enregistrer les réponses à des questions prédéfinies sur les enjeux, les problèmes ou les diagnostics. 
+Cet archétype a été délibérément modélisé de manière souple afin d'englober le plus large éventail possible de questions et de problèmes, ainsi que de diagnostics.
+
+Les cas d'utilisation les plus courants sont, entre autres, les suivants
+- L'interrogation systématique lors d'une consultation, par exemple :
+--- Diagnostic de cancer ? Oui, Non, Inconnu.
+--- Diagnostic de COVID 19 ou de grippe au cours des douze derniers mois ? Oui, Non, Inconnu.
+--- Avez-vous des inquiétudes ou des préoccupations ? Oui, Non, Inconnu.
+- Questions spécifiques liées à la surveillance des maladies.
+
+La sémantique de cet archétype est volontairement floue, et l'interrogation de cet archétype ne serait normalement utile ou sûre que dans le contexte de chaque modèle spécifique. Dans un modèle, chaque élément de données est généralement renommé en fonction de la question spécifique posée. Lorsque des ensembles de valeurs ont été proposés pour des cas d'utilisation courants, ils peuvent être adaptés à un usage local en utilisant les types de données DV_TEXT ou DV_BOOLEAN pour correspondre à chaque cas d'utilisation spécifique.
+
+La structure EVENT du modèle de référence peut être utilisée pour spécifier si les questions se rapportent à un moment donné ou à une période de temps. Utilisez une instance distincte de cet archétype pour faire la distinction entre un questionnaire enregistrant des informations sur une procédure effectuée à tout moment dans le passé et des informations sur une procédure effectuée dans un intervalle de temps spécifié - par exemple la différence entre \"Avez-vous la grippe ?\" et \"Avez-vous eu la grippe au cours des 4 dernières semaines ?\"
+
+La source des informations contenues dans une réponse à un questionnaire peut varier selon le contexte, mais elle peut être spécifiquement identifiée à l'aide de l'élément \"Fournisseur d'informations\" du modèle de référence.
+
+Cet archétype a été conçu pour être utilisé comme outil de dépistage ou pour enregistrer des données simples sous forme de questionnaire en vue d'une utilisation dans des situations telles qu'un registre des maladies. Si le questionnaire de dépistage identifie la présence d'un problème ou d'un diagnostic, il est recommandé que le système clinique enregistre et conserve les détails spécifiques du problème ou du diagnostic (tels que la date de reconnaissance clinique) en utilisant l'archétype EVALUATION.problem_diagnosis.">
+            misuse = <"Ne doit pas être utilisé pour créer un cadre permettant d'enregistrer des réponses à des questions de dépistage prédéfinies concernant des procédures qui ont été effectuées dans le passé. Utilisez OBSERVATION.procedure_screening à cette fin.
+
+Ne pas utiliser pour créer un cadre permettant d'enregistrer des réponses à des questions de sélection prédéfinies sur les effets indésirables, utiliser un archétype approprié à cet effet.
+
+Ne pas utiliser pour enregistrer les détails d'une simple liste de sélection où une question peut être enregistrée comme \"présente\" ou \"indéterminée\". Utilisez OBSERVATION.selection_list à cette fin.">
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            purpose = <"Crear una infraestructura per a registrar respostes a les preguntes de detecció predefinides sobre qüestions, problemes o diagnòstics.">
+            keywords = <"Condició", "estat", "malaltia", "síndrome", "sondeig", "detecció", "qüestió">
+            use = <"Utilitzar per a crear una infraestructura per a registrar respostes a les preguntes de detecció predefinides sobre qüestions, problemes o diagnòstics. 
+
+Aquest arquetip s'ha modelat deliberadament amb poca exactitud perquè incloure un rang el més ampli possible de qüestions i preguntes, així com de diagnòstics. 
+
+Els casos d’ús més freqüents, però no limitats a: 
+
+-Preguntar sistemàticament en qualsevol consulta. Per exemple: 
+
+---Diagnosticat amb càncer? Sí, No, Desconegut. 
+
+---Diagnosticat amb COVID 19o grip en els últims dotze mesos? Sí, No, Desconegut. 
+
+---Té alguna preocupació? Sí, No, Desconegut. 
+
+-Sondeig específic relacionat amb la vigilància de malalties. 
+
+La semàntica d’aquest arquetip és intencionalment laxa, i consultar aquest arquetip només serà útil o segur dins del context de cada plantilla específica. En una plantilla, cada element de dades normalment es tornarà a nomenar en una pregunta específica. Quan s’hagi proposat els conjunts de valors per casos d’ús comú, aquests poden adaptar-se per al seu ús local utilitzant DV_TEXT o DV_BOOLEAN per ajustar-se a cada cas d’ús específic. 
+
+L'estructura EVENT del model de referència es pot utilitzar per especificar si les preguntes estan relacionades a un moment donat o a un període de temps. Utilitzar una instància separada d’aquest arquetip per a distingir entre un sondeig que registra informació sobre un procediment que s’ha realitzat en qualsevol moment del passat i la informació sobre un procediment dins d’un interval de temps específic. Per exemple, la diferència entre “Vostè té grip?” comparat amb “Vostè ha tingut grip en les últimes 4 setmanes?” 
+
+La font d’informació en una resposta al sondeig pot variar en diferents contexts, però es pot identificar utilitzant l’element “Proveïdor d’informació” del Model de Referència. 
+
+Aquest arquetip s’ha dissenyat per a utilitzar-lo com ferramenta de detecció o per a registrar dades senzilles en format de sondeig per al seu ús en situacions com un registre de malalties. Si el sondeig de detecció identifica la presència d’un problema o diagnòstic, es recomana que es registri el sistema clínic i continuï els detalls específics sobre el problema o diagnòstic (com la data de reconeixement clínic), utilitzant l’arquetip EVALUATION.problem_diagnosis.">
+            misuse = <"No utilitzar per a registrar detalls sobre la presència o absència d'un problema o diagnòstic fora del context de l'objectiu de detecció. Utilitzar EVALUATION.problem_diagnosis o EVALUATION.exclusion_specific per aquest propòsit. 
+
+No utilitzar per a crear una infraestructura per a registrar respostes a les preguntes de detecció predefinides sobre els procediments que s'han realitzat en el passat. Utilitzar OBSERVATION.procedure_screening per aquest propòsit. 
+
+No utilitzar per a crear una infraestructura per a registrar respostes a les preguntes de detecció predefinides sobre reaccions adverses. Utilitzar un arquetip apropiat per aquest propòsit. 
+
+No utilitzar per a registrar dades sobre una llista de selecció simple on una pregunta es pot enregistrar tant com \"\"present\"\" o \"\"indeterminada\"\". Utilitzar OBSERVATION.selection_list per aquest propòsit.">
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            purpose = <"*To create a framework for recording answers to pre-defined screening questions about problems or diagnoses.(en)">
+            keywords = <"*Condition, state, illness, syndrome, questionnaire, screening, issue (en)", ...>
+            use = <"*Use to create a framework for recording answers to pre-defined screening questions about issues, problems or diagnoses. 
+This archeype has deliberately been loosely modelled to be inclusive of the broadest range of issues and problems, as well as diagnoses.
+
+Common use cases include, but are not limited to:
+- Systematic questioning in any consultation, for example:
+--- Diagnosed with cancer? Yes, No, Unknown.
+--- Diagnosed with COVID 19 or Influenza in the past twelve months? Yes, No, Unknown.
+--- Do you have any worries or concerns? Yes, No, Unknown.
+- Specific questioning related to disease surveillance.
+
+The semantics of this archetype are intentionally loose, and querying this archetype would normally only be useful or safe within the context of each specific template. In a template, each data element would usually be renamed to the specific question asked. Where value sets have been proposed for common use cases, these can be adapted for local use by using the 'text' choice to match each specific use case.
+
+The EVENT structure from the reference model can be used to specify whether the questions relate to point in time or over a period of time. Use a separate instance of this archetype to distinguish between a questionnaire recording information about a procedure that has been performed at any time in the past and information about a procedure performed within a specified time interval - for example the difference between \"Do you have influenza?\" compared to \"Have you had influenza in the past 4 weeks?\"
+
+The source of the information in a questionnaire response may vary in different contexts but can be specifically identified using the 'Information provider' element in the Reference Model.
+
+This archetype has been designed to be used as a screening tool or to record simple questionnaire-format data for use in situations such as a disease registry. If the screening questionnaire identifies the presence of a problem or diagnosis, it is recommended that clinical system record and persist the specific details about the problem or diagnosis (such as the date of clinical recognition) using the EVALUATION.problem_diagnosis archetype. (en)">
+            misuse = <"*Not to be used to record details about the presence or absence of a problem or diagnosis, outside of a screening context. Use EVALUATION.problem_diagnosis or EVALUATION.exclusion_specific for these purposes.
+
+Not to be used to to create a framework for recording answers to pre-defined screening questions about procedures that has been carried out in the past. Use the OBSERVATION.procedure_screening for this purpose.
+
+Not to be used to to create a framework for recording answers to pre-defined screening questions about adverse reactions, use an appropriate archetype for this purpose.
+
+Not to be used to record details about a simple selection list where a question may be recorded as either \"present\" or \"indeterminate\". Use OBSERVATION.selection_list for this purpose. (en)">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Crear una infraestructura para registrar respuestas a las preguntas de detección predefinidas sobre cuestiones, problemas o diagnósticos.">
+            keywords = <"Condición, estado, enfermedad, síndrome, cuestionario, cribaje, detección, cuestión", ...>
+            use = <"Utilizar para crear una infraestructura para registrar respuestas en las preguntas de detección predefinidas sobre cuestiones, problemas o diagnósticos. Este arquetipo se ha moldeado deliberadamente de forma flexible para poder incluir un rango lo más amplio posible de cuestiones y preguntas, así como de diagnósticos.
+
+Los casos de uso más frecuentes, pero no limitados, a:
+
+-Preguntar sistemáticamente en cualquier consulta. Por ejemplo:
+
+---¿Diagnosticado con cáncer? Sí, No, Desconocido.
+
+---¿Diagnosticado con COVID-19 o gripe en los últimos doce meses? Sí, No, Desconocido.
+
+---¿Tiene alguna preocupación? Sí, No, Desconocido.
+
+-Cuestionario específico relacionado con la vigilancia de enfermedades.
+
+La semántica de este arquetipo es intencionalmente laxa, y consultar este arquetipo solo será útil o seguro dentro del contexto de cada plantilla específica. En una plantilla, cada elemento de datos normalmente se volverá a nombrar con una pregunta específica. Cuando se haya propuesto los conjuntos de valores por casos de uso común, estos pueden adaptarse para su uso local utilizando DV_TEXT o DV_BOOLEAN para ajustarse a cada caso de uso específico.
+
+La estructura EVENT del modelo de referencia se puede utilizar para especificar si las preguntas están relacionadas con un momento dado o a un período de tiempo. Utilizar una instancia separada de este arquetipo para distinguir entre un cuestionario que registra información sobre un procedimiento realizado en cualquier momento del pasado y la información sobre un procedimiento dentro de un intervalo de tiempo específico. Por ejemplo, la diferencia entre “¿Usted tiene gripe?”, comparado con “¿Usted ha tenido gripe en las últimas 4 semanas?”
+
+La fuente de información en una respuesta del cuestionario puede variar en diferentes contextos, pero puede identificarse utilizando el elemento 'Information provider' (Proveedor de información) del Modelo de Referencia.
+
+Este arquetipo se ha diseñado para utilizarlo como herramienta de detección o para registrar datos sencillos en formato de cuestionario para su uso en situaciones como un registro de enfermedades. Si el cuestionario de detección identifica la presencia de un problema o diagnóstico, se recomienda que se registre el sistema clínico y continúe los detalles específicos sobre el problema o diagnóstico (como la fecha de reconocimiento clínico), utilizando el arquetipo EVALUATION.problem_diagnosis.">
+            misuse = <"No utilizar para registrar detalles sobre la presencia o ausencia de un problema o diagnóstico, fuera de un contexto de cribado. Para estos fines, utilizar EVALUATION.problem_diagnosis o EVALUATION.exclusion_specific.
+
+No utilizar para crear un marco para registrar respuestas a preguntas de cribado predefinidas sobre procedimientos realizados en el pasado. Para este propósito, utilizar OBSERVATION.procedure_screening.
+
+No utilizar para crear un marco para registrar respuestas a preguntas de cribado predefinidas sobre reacciones adversas; utilizar un arquetipo apropiado para este propósito.
+
+No utilizar para registrar detalles sobre una lista de selección simple en la que una pregunta pueda registrarse como \"presente\" o \"indeterminada\". Para ello, utilice OBSERVATION.selection_list.">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Problem/Diagnosis screening questionnaire
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0034] occurrences matches {0..1} matches {    -- Screening purpose
+                                        value matches {
+                                            DV_TEXT[at9002]
+                                        }
+                                    }
+                                    ELEMENT[at0028] matches {    -- Any problems or diagnoses?
+                                        value matches {
+                                            DV_CODED_TEXT[at9003] matches {
+                                                defining_code matches {[ac9016]}    -- Any problems or diagnoses? (synthesised)
+                                            }
+                                            DV_TEXT[at9004]
+                                            DV_BOOLEAN[at9005]
+                                        }
+                                    }
+                                    ELEMENT[at0043] occurrences matches {0..1} matches {    -- Description
+                                        value matches {
+                                            DV_TEXT[at9006]
+                                        }
+                                    }
+                                    CLUSTER[at0022] matches {    -- Specific problem or diagnosis
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0004] occurrences matches {1} matches {    -- Problem/diagnosis name
+                                                value matches {
+                                                    DV_TEXT[at9007]
+                                                }
+                                            }
+                                            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Presence?
+                                                value matches {
+                                                    DV_CODED_TEXT[at9008] matches {
+                                                        defining_code matches {[ac9017]}    -- Presence? (synthesised)
+                                                    }
+                                                    DV_TEXT[at9009]
+                                                    DV_BOOLEAN[at9010]
+                                                }
+                                            }
+                                            ELEMENT[at0040] matches {    -- Timing
+                                                value matches {
+                                                    DV_TEXT[at9011]
+                                                    DV_INTERVAL<DV_DURATION>[at9012]
+                                                    DV_DURATION[at9013]
+                                                    DV_DATE_TIME[at9014]
+                                                    DV_INTERVAL<DV_DATE_TIME>[at9015]
+                                                }
+                                            }
+                                            allow_archetype CLUSTER[at0039] matches {    -- Additional details
+                                                include
+                                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.organisation\.v1\..*/}
+                                            }
+                                            ELEMENT[at0025] occurrences matches {0..1} matches {    -- Comment
+                                                value matches {
+                                                    DV_TEXT[at9016]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0042] matches {    -- Additional details
+                                        include
+                                            archetype_id/value matches {/.*/}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0007] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0021] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Screening-Fragebogen zum Problem/zur Diagnose">
+                description = <"Eine Reihe von Fragen und zugehörigen Antworten, die zum Screening auf Vorhandensein von Beschwerden, Problemen oder Diagnosen verwendet werden.">
+                comment = <"Die Antworten können selbst berichtet werden.">
+            >
+            ["at0002"] = <
+                text = <"Beliebiges Ereignis">
+                description = <"Standardwert, ein undefinierter/s Zeitpunkt oder Intervallereignis, das explizit im Template oder zur Laufzeit der Anwendung definiert werden kann.">
+            >
+            ["at0004"] = <
+                text = <"Name des Problems/ der Diagnose">
+                description = <"Identifizierung einer Beschwerde, eines Problems, einer Diagnose oder einer Gruppe von Beschwerden, Problemen, Beschwerden, namentlich.">
+                comment = <"Kodierung von \"Name des Problems/ der Diagnose\" mit einer Terminologie wird nach Möglichkeit bevorzugt.">
+            >
+            ["at0005"] = <
+                text = <"Vorhanden?">
+                description = <"Gibt es eine Vorgeschichte zu dem spezifischen Problem oder der Diagnose?">
+                comment = <"In einem Template würde das Datenelement normalerweise in die spezifische gestellte Frage umbenannt. Der vorgeschlagene Wertesatz kann für die lokale Verwendung angepasst werden, indem die Datentypauswahl DV_TEXT oder DV_BOOLEAN verwendet wird, um jedem spezifischen Anwendungsfall zu entsprechen.">
+            >
+            ["at0021"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen.">
+            >
+            ["at0022"] = <
+                text = <"Bestimmter Zustand">
+                description = <"Details zu einer spezifischen Beschwerde, Diagnose oder zu einem bestimmten Problem oder einer Gruppe an Beschwerden, Problemen oder Diagnosen, die für das Screening relevant sind.">
+            >
+            ["at0023"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Nein">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Kommentar">
+                description = <"Zusätzliche Beschreibung zur zu konkretem Problem, konkreter Beschwerde oder Diagnose, die nicht in den übrigen Feldern abgedeckt wurde.">
+            >
+            ["at0027"] = <
+                text = <"Unbekannt">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Irgendwelche Probleme oder Diagnosen?">
+                description = <"Gibt es eine Vorgeschichte an Beschwerden, Problemen oder Diagnosen im Zusammenhang mit dem Screening-Zweck?">
+                comment = <"In einem Template würde das Datenelement normalerweise in die spezifische gestellte Frage umbenannt. Der vorgeschlagene Wertesatz kann für die lokale Verwendung angepasst werden, indem die Datentypauswahl DV_TEXT oder DV_BOOLEAN verwendet wird, um jedem spezifischen Anwendungsfall zu entsprechen.">
+            >
+            ["at0031"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Nein">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Unbekannt">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Zweck des Screenings">
+                description = <"Der Kontext oder Grund für das Screening.">
+                comment = <"Dieses Datenelement soll bei einer späteren Abfrage den Erhebungskontext für die Frage/Antwort-Gruppen bereitstellen. Es wird nicht erwartet, dass dieses Datenelement der Person belichtet wird, sondern nur in Daten gespeichert wird. 
+Zum Beispiel: Screening vor der Aufnahme oder der Name des eigentlichen Fragebogens.">
+            >
+            ["at0039"] = <
+                text = <"Zusätzliche Angaben">
+                description = <"Strukturierte Angaben oder Fragen zu konkretem Problem, konkreter Beschwerde oder Diagnose.">
+                comment = <"Zum Beispiel: Krankenhaus, bei dem die Behandlung durchgeführt wurde.">
+            >
+            ["at0040"] = <
+                text = <"Zeitpunkt">
+                description = <"Angabe des Zeitpunkts im Zusammenhang mit der Frage, dem Problem oder der Diagnose.">
+                comment = <"Das Datenelement \"Zeitpunkt\" wurde bewusst locker modelliert, um die unzähligen Möglichkeiten zu unterstützen, mit denen es in Fragebögen verwendet werden kann, um zu erfassen, wann eine Frage, ein Problem oder eine Diagnose aufgetreten ist. Die spezifische und beabsichtigte Semantik kann in einer Vorlage weiter geklärt werden. Zum Beispiel: das tatsächliche Datum und/oder die Uhrzeit; die Start- und Endzeit, zu der das Problem oder die Diagnose auftrat; der Zeitraum, in dem das Problem oder die Diagnose auftrat; die Dauer des Problems oder der Diagnose; das Alter der Person zum Zeitpunkt des Problems oder der Diagnose; oder die Zeitdauer seit dem Auftreten des Problems. Unter Verwendung des Datentyps DV_DATE_TIME ist ein Teildatum zulässig, um nur ein Jahr zu erfassen.">
+            >
+            ["at0042"] = <
+                text = <"Zusätzliche Angaben">
+                description = <"Strukturierte Angaben oder Fragen zum Problem/Diagnose-Screening.">
+            >
+            ["at0043"] = <
+                text = <"Beschreibung">
+                description = <"Beschreibung der Geschichte von Beschwerden, Problemen oder Diagnosen, die für das Screening relevant sind.">
+            >
+            ["at0044"] = <
+                text = <"*Unsure (en)">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"*Unsure (en)">
+                description = <"">
+            >
+            ["ac9016"] = <
+                text = <"Irgendwelche Probleme oder Diagnosen? (synthesised)">
+                description = <"Gibt es eine Vorgeschichte an Beschwerden, Problemen oder Diagnosen im Zusammenhang mit dem Screening-Zweck? (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Vorhanden? (synthesised)">
+                description = <"Gibt es eine Vorgeschichte zu dem spezifischen Problem oder der Diagnose? (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Kartleggingsspørsmål om problemer eller diagnoser">
+                description = <"Spørsmål og tilhørende svar som brukes til å kartlegge bekymringer, plager, problemer eller diagnoser.">
+                comment = <"Svarene kan være selvrapporterte.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Problem/diagnosenavn">
+                description = <"Navnet på en bekymring, plage, problem eller diagnose, eller grupper av bekymringer, plager, problemer eller diagnoser.">
+                comment = <"Koding av problem/diagnosenavnet med en terminologi foretrekkes, der det er mulig.">
+            >
+            ["at0005"] = <
+                text = <"Tilstede?">
+                description = <"Har den spesifikke bekymring, plage, problem eller diagnose noen gang vært til stede?">
+                comment = <"Navnet på dataelementet kan omformuleres til det spesifikke spørsmålet i et templat eller brukergrensesnitt. Det foreslåtte verdisettet kan tilpasses/endres i det enkelte bruksområde ved å benytte de alternative datatypene DV_TEXT eller DV_BOOLEAN.">
+            >
+            ["at0021"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0022"] = <
+                text = <"Spesifikt problem eller diagnose">
+                description = <"Detaljer om en spesifikt bekymring, plage, problem eller diagnose eller gruppe av bekymringer, plager, problemer eller diagnoser som er innenfor kartleggingsformålet.">
+            >
+            ["at0023"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om det spesifikke problem- eller diagnosespørsmålet som ikke er omfattet av andre felt.">
+            >
+            ["at0027"] = <
+                text = <"Ukjent">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Problemer eller diagnoser?">
+                description = <"Finnes det noen bekymringer, plager, problemer eller diagnoser. som er innenfor kartleggingsformålet?">
+                comment = <"Navnet på dataelementet kan omformuleres til det spesifikke spørsmålet i et templat eller brukergrensesnitt. Det foreslåtte verdisettet kan tilpasses/endres i det enkelte bruksområde ved å benytte de alternative datatypene DV_TEXT eller DV_BOOLEAN.">
+            >
+            ["at0031"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Ukjent">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Kartleggingsformål">
+                description = <"Konteksten eller årsaken for kartleggingen.">
+                comment = <"Dette dataelementet er ment for å sette en kontekst for spørsmålene, dersom man senere ønsker å gjøre spørringer på dataene. Det er ikke forventet at dette dataelementet skal være synlig for en bruker av skjemaet, men kun tilgjengelig i de lagrede dataene. For eksempel: \"Preoperativ screening\" eller navnet på det faktiske spørreskjemaet.">
+            >
+            ["at0039"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Strukturerte detaljer eller spørsmål om det spesifikke problemet eller diagnosen.">
+                comment = <"For eksempel: Behandlende sykehus.">
+            >
+            ["at0040"] = <
+                text = <"Tidsangivelse">
+                description = <"Tidsangivelsen for bekymringen, plagen, problemet eller diagnosen.">
+                comment = <"Dataelementet \"Tidsangivelse\" er med hensikt løst modellert for å støtte ulike måter å angi tidsangivelser for bekymringen, plagen, problemet eller diagnosen i et spørreskjema. Den konkrete semantikken defineres i templatet. For eksempel: Bekymringen, plagen, problemet eller diagnosen faktiske dato og/eller klokkeslett, start- og slutttid for bekymringen, plagen, problemet eller diagnosen, et tidsintervall for når bekymringen, plagen, problemet eller diagnosen oppstod, varigheten av bekymringen, plagen, problemet eller diagnosen, individets alder på tidspunktet for bekymringen, plagen, problemet eller diagnosen, eller hvor lenge det siden det oppstod. Kan være en deldato, for eksempel bare år, ved å bruke datatypen DV_DATE_TIME.">
+            >
+            ["at0042"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Strukturerte detaljer eller spørsmål om kartleggingen av problemer eller diagnoser.">
+            >
+            ["at0043"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstbeskrivelse om bekymringer, plager, problemer eller diagnoser som er innenfor kartleggingsformålet.">
+            >
+            ["at0044"] = <
+                text = <"Usikker">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"Usikker">
+                description = <"">
+            >
+            ["ac9016"] = <
+                text = <"Problemer eller diagnoser? (synthesised)">
+                description = <"Finnes det noen bekymringer, plager, problemer eller diagnoser. som er innenfor kartleggingsformålet? (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Tilstede? (synthesised)">
+                description = <"Har den spesifikke bekymring, plage, problem eller diagnose noen gang vært til stede? (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Problem/Diagnosis screening questionnaire">
+                description = <"Series of questions and associated answers used to screen for issues, problems or diagnoses.">
+                comment = <"The answers may be self-reported.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Problem/diagnosis name">
+                description = <"Identification of an issue, problem or diagnosis, or grouping of issues, problems or diagnoses, by name.">
+                comment = <"Coding of the 'Problem/diagnosis name' with a terminology is preferred, where possible.">
+            >
+            ["at0005"] = <
+                text = <"Presence?">
+                description = <"Is there a history of the specific issue, problem or diagnosis?">
+                comment = <"In a template, the data element would usually be renamed to the specific question asked. The proposed value set can be adapted for local use by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case.">
+            >
+            ["at0021"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0022"] = <
+                text = <"Specific problem or diagnosis">
+                description = <"Details about a specific issue, problem or diagnosis or grouping of problems or diagnoses relevant for the screening purpose.">
+            >
+            ["at0023"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the specific issue, problem or diagnosis question, not captured in other fields.">
+            >
+            ["at0027"] = <
+                text = <"Unknown">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Any problems or diagnoses?">
+                description = <"Is there a history of any issues, problems or diagnoses relevant for the screening purpose?">
+                comment = <"In a template, the data element would usually be renamed to the specific question asked. The proposed value set can be adapted for local use by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case.">
+            >
+            ["at0031"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Unknown">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Screening purpose">
+                description = <"The context or reason for screening.">
+                comment = <"This data element is intended to provide collection context for the question/answer groups when queried at a later date. It is not expected that this data element will be exposed to the individual, but only stored in data.
+For example: pre-admission screening or the name of the actual questionnaire.">
+            >
+            ["at0039"] = <
+                text = <"Additional details">
+                description = <"Structured details or questions about the specific issue, problem or diagnosis.">
+                comment = <"For example; hospital where treated.">
+            >
+            ["at0040"] = <
+                text = <"Timing">
+                description = <"Indication of timing related to the issue, problem or diagnosis.">
+                comment = <"The 'Timing' data element has deliberately been loosely modelled to support the myriad of ways that it can be used in questionnaires to capture when an issue, problem or diagnosis occured. The specific and intended semantics can be further clarified in a template. For example: the actual date and/or time; the start and stop time for when the issue, problem or diagnosis occured; the interval of time during which the issue, problem or diagnosis occured; the duration of the issue, problem or diagnosis; the age of the individual at the time of the issue, problem or diagnosis; or the duration of time since it occurred. A partial date is valid, using the DV_DATE_TIME data type, to record only a year.">
+            >
+            ["at0042"] = <
+                text = <"Additional details">
+                description = <"Structured details or questions about screening for issues, problems or diagnoses.">
+            >
+            ["at0043"] = <
+                text = <"Description">
+                description = <"Narrative description about the history of any issues, problems or diagnoses relevant for the screening purpose.">
+            >
+            ["at0044"] = <
+                text = <"Unsure">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"Unsure">
+                description = <"">
+            >
+            ["ac9016"] = <
+                text = <"Any problems or diagnoses? (synthesised)">
+                description = <"Is there a history of any issues, problems or diagnoses relevant for the screening purpose? (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Presence? (synthesised)">
+                description = <"Is there a history of the specific issue, problem or diagnosis? (synthesised)">
+            >
+        >
+        ["fr"] = <
+            ["at0000"] = <
+                text = <"Questionnaire de dépistage des problèmes/diagnostics">
+                description = <"Série de questions et de réponses associées utilisées pour dépister des questions, des problèmes ou des diagnostics.">
+                comment = <"Les réponses peuvent être autodéclarées.">
+            >
+            ["at0002"] = <
+                text = <"Tout événement">
+                description = <"Par défaut, point dans le temps non spécifié ou événement d'intervalle qui peut être explicitement défini dans un modèle ou au moment de l'exécution.">
+            >
+            ["at0004"] = <
+                text = <"Nom du problème/diagnostic">
+                description = <"Identification d'une question, d'un problème ou d'un diagnostic, ou d'un groupe de questions, de problèmes ou de diagnostics, par leur nom.">
+                comment = <"Le codage du \"nom du problème/diagnostic\" à l'aide d'une terminologie est préférable, dans la mesure du possible.">
+            >
+            ["at0005"] = <
+                text = <"Présence ?">
+                description = <"Existe-t-il des antécédents concernant la question, le problème ou le diagnostic en question ?">
+                comment = <"Dans un modèle, l'élément de données est généralement renommé en fonction de la question spécifique posée. L'ensemble de valeurs proposé peut être adapté à un usage local en utilisant les types de données DV_TEXT ou DV_BOOLEAN pour répondre à chaque cas d'utilisation spécifique.">
+            >
+            ["at0021"] = <
+                text = <"Extension">
+                description = <"Informations supplémentaires nécessaires pour étendre le modèle au contenu local ou pour l'aligner sur d'autres modèles de référence ou formalismes.">
+                comment = <"Par exemple : exigences locales en matière d'information ou métadonnées supplémentaires pour s'aligner sur FHIR.">
+            >
+            ["at0022"] = <
+                text = <"Problème ou diagnostic spécifique">
+                description = <"Détails sur une question, un problème ou un diagnostic spécifique ou un groupe de problèmes ou de diagnostics pertinents pour l'objectif du dépistage.">
+            >
+            ["at0023"] = <
+                text = <"Oui">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Non">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Commentaire">
+                description = <"Description supplémentaire de la question spécifique, du problème ou de la question de diagnostic, qui n'a pas été saisie dans d'autres champs.">
+            >
+            ["at0027"] = <
+                text = <"Inconnu">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Des problèmes ou des diagnostics ?">
+                description = <"Existe-t-il des antécédents de questions, de problèmes ou de diagnostics en rapport avec l'objectif du dépistage ?">
+                comment = <"Dans un modèle, l'élément de données est généralement renommé en fonction de la question spécifique posée. L'ensemble de valeurs proposé peut être adapté à un usage local en utilisant les types de données DV_TEXT ou DV_BOOLEAN pour répondre à chaque cas d'utilisation spécifique.">
+            >
+            ["at0031"] = <
+                text = <"Oui">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Non">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Inconnu">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Objectif du dépistage">
+                description = <"Le contexte ou la raison du dépistage.">
+                comment = <"Cet élément de données est destiné à fournir un contexte de collecte pour les groupes de questions/réponses lors d'une interrogation ultérieure. Il n'est pas prévu que cet élément de données soit exposé à l'individu, mais seulement stocké dans les données.
+Par exemple : la sélection préalable à l'admission ou le nom du questionnaire proprement dit.">
+            >
+            ["at0039"] = <
+                text = <"Détails supplémentaires">
+                description = <"Détails ou questions structurés sur la question, le problème ou le diagnostic spécifique.">
+                comment = <"Par exemple, l'hôpital où le patient a été traité.">
+            >
+            ["at0040"] = <
+                text = <"Timing">
+                description = <"Indication du moment où la question, le problème ou le diagnostic se pose.">
+                comment = <"L'élément de données \"Moment\" a été délibérément modélisé de manière lâche afin de prendre en charge la myriade de façons dont il peut être utilisé dans les questionnaires pour saisir le moment où une question, un problème ou un diagnostic s'est produit. La sémantique spécifique et prévue peut être précisée dans un modèle. Par exemple : la date et/ou l'heure réelle ; l'heure de début et de fin de la question, du problème ou du diagnostic ; l'intervalle de temps pendant lequel la question, le problème ou le diagnostic s'est produit ; la durée de la question, du problème ou du diagnostic ; l'âge de la personne au moment de la question, du problème ou du diagnostic ; ou la durée écoulée depuis la survenue de la question, du problème ou du diagnostic. Une date partielle est valable, en utilisant le type de données DV_DATE_TIME, pour enregistrer seulement une année.">
+            >
+            ["at0042"] = <
+                text = <"Détails supplémentaires">
+                description = <"Détails ou questions structurées sur le dépistage de problèmes ou de diagnostics.">
+            >
+            ["at0043"] = <
+                text = <"Description">
+                description = <"Description narrative de l'historique des questions, problèmes ou diagnostics pertinents pour l'objectif du dépistage.">
+            >
+            ["at0044"] = <
+                text = <"*Unsure (en)">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"*Unsure (en)">
+                description = <"">
+            >
+            ["ac9016"] = <
+                text = <"Des problèmes ou des diagnostics ? (synthesised)">
+                description = <"Existe-t-il des antécédents de questions, de problèmes ou de diagnostics en rapport avec l'objectif du dépistage ? (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Présence ? (synthesised)">
+                description = <"Existe-t-il des antécédents concernant la question, le problème ou le diagnostic en question ? (synthesised)">
+            >
+        >
+        ["nl"] = <
+            ["at0000"] = <
+                text = <"*Problem/Diagnosis screening questionnaire (en)">
+                description = <"*Series of questions and associated answers used to screen for issues, problems or diagnoses. (en)">
+                comment = <"*The answers may be self-reported.(en)">
+            >
+            ["at0002"] = <
+                text = <"Gebeurtenis">
+                description = <"Standaard, ongespecificeerd moment in tijd of een interval dat expliciet gedefiniëerd kan worden in een template of tijdens run-time.">
+            >
+            ["at0004"] = <
+                text = <"*Problem/diagnosis name (en)">
+                description = <"Name of a problem or diagnosis; or grouping of problems or diagnoses.(en)">
+                comment = <"*Coding of the Problem/Diagnosis name with a terminology is preferred, where possible.(en)">
+            >
+            ["at0005"] = <
+                text = <"*Aanwezig?">
+                description = <"*Is there a history of the specific issue, problem or diagnosis? (en)">
+                comment = <"*In a template, the data element would usually be renamed to the specific question asked. The proposed value set can be adapted for local use by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case. (en)">
+            >
+            ["at0021"] = <
+                text = <"Uitbreiding">
+                description = <"Aanvullende informatie benodigd voor het vastleggen van lokale inhoud of om aan te sluiten bij referenctie modellen/formalismen.">
+                comment = <"Bijvoorbeeld: lokale informatie eisen of aanvullende metadata om aan te sluiten bij FHIR of CIMI equivalenten.">
+            >
+            ["at0022"] = <
+                text = <"*Specifieke aandoening">
+                description = <"*Details about a specific issue, problem or diagnosis or grouping of problems or diagnoses relevant for the screening purpose. (en)">
+            >
+            ["at0023"] = <
+                text = <"*Ja">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"*Nee">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"*Opmerking">
+                description = <"Additional narrative about the specified problem or diagnosis, not captured in other fields.(en)">
+            >
+            ["at0027"] = <
+                text = <"*Onbekend">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"*Aanwezig?">
+                description = <"*Is there a history of any issues, problems or diagnoses relevant for the screening purpose? (en)">
+                comment = <"*In a template, the data element would usually be renamed to the specific question asked. The proposed value set can be adapted for local use by using the 'text' choice to match each specific use case. (en)">
+            >
+            ["at0031"] = <
+                text = <"*Ja">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"*Nee">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"*Onbekend">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"*Doel van vragenlijst">
+                description = <"*The context or reason for screening. (en)">
+                comment = <"This data element is intended to provide collection context for the question/answer groups when queried at a later date. It is not expected that this data element will be exposed to the individual, but only stored in data.
+For example: pre-admission screening or the name of the actual questionnaire.(en)">
+            >
+            ["at0039"] = <
+                text = <"*Additional details(en)">
+                description = <"Structured details or questions about the specific problem or diagnosis.(en)">
+                comment = <"Bijvoorbeeld: ziekenhuis waar behandeling plaatsvond.">
+            >
+            ["at0040"] = <
+                text = <"*Timing (en)">
+                description = <"*Indication of timing related to the issue, problem or diagnosis. (en)">
+                comment = <"*The 'Timing' data element has deliberately been loosely modelled to support the myriad of ways that it can be used in questionnaires to capture when an issue, problem or diagnosis occured. The specific and intended semantics can be further clarified in a template. For example: the actual date and/or time; the start and stop time for when the issue, problem or diagnosis occured; the interval of time during which the issue, problem or diagnosis occured; the duration of the issue, problem or diagnosis; the age of the individual at the time of the issue, problem or diagnosis; or the duration of time since it occurred. A partial date is valid, using the DV_DATE_TIME data type, to record only a year. (en)">
+            >
+            ["at0042"] = <
+                text = <"*Additional details (en)">
+                description = <"*Structured details or questions about the overall problems or diagnoses.(en)">
+            >
+            ["at0043"] = <
+                text = <"*Description(en)">
+                description = <"*Narrative description about the history of any issues, problems or diagnoses relevant for the screening purpose. (en)">
+            >
+            ["at0044"] = <
+                text = <"*Unsure (en)">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"*Unsure (en)">
+                description = <"">
+            >
+            ["ac9016"] = <
+                text = <"*Aanwezig? (synthesised)">
+                description = <"*Is there a history of any issues, problems or diagnoses relevant for the screening purpose? (en) (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"*Aanwezig? (synthesised)">
+                description = <"*Is there a history of the specific issue, problem or diagnosis? (en) (synthesised)">
+            >
+        >
+        ["ca"] = <
+            ["at0000"] = <
+                text = <"Sondeig de detecció d'un problema/diagnòstic">
+                description = <"Sèrie de preguntes i respostes relacionades, utilitzades per a detectar qüestions, problemes o diagnòstics.">
+                comment = <"Les respostes poden ser autodiagnosticades.">
+            >
+            ["at0002"] = <
+                text = <"Qualsevol esdeveniment">
+                description = <"Esdeveniment predeterminat i no especificat d’un moment específic o interval que es pot definir clarament en una plantilla o en temps d’execució.">
+            >
+            ["at0004"] = <
+                text = <"Nom del problema/diagnòstic">
+                description = <"Identificació d'una qüestió, problema o diagnòstic, o grup de qüestions, problemes o diagnòstics, pel seu nom.">
+                comment = <"Es recomana programar el \"Nom del problema/diagnòstic\" amb una terminologia, sempre que sigui possible.">
+            >
+            ["at0005"] = <
+                text = <"Presència?">
+                description = <"Existeix un historial de la qüestió, problema o diagnòstic específic?">
+                comment = <"En una plantilla, l'element de dades normalment es tornaria a nomenar a la pregunta específica formulada. El conjunt de valors proposats es poden adaptar per a l'ús local utilitzant l'elecció del tipus de dades DV_TEXT o DV_BOOLEAN per ajustar-se a cada cas d'ús específic.">
+            >
+            ["at0021"] = <
+                text = <"Extensió">
+                description = <"Informació addicional necessària per a expandir el model amb el contingut local o per alinear-se amb altres models/formalismes de referència.">
+                comment = <"Per exemple: requisits locals d'informació o metadades addicionals per alinear-se amb equivalents de FHIR.">
+            >
+            ["at0022"] = <
+                text = <"Problema o diagnòstic específic">
+                description = <"Dades sobre una qüestió, problema o diagnòstic específic, o grup de problemes o diagnòstics rellevants per a un objectiu de detecció.">
+            >
+            ["at0023"] = <
+                text = <"Sí">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Observacions">
+                description = <"Informació addicional sobre una qüestió específica, problema o pregunta de diagnòstic, no recollida en altres caselles.">
+            >
+            ["at0027"] = <
+                text = <"Desconegut">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Cap problema o diagnòstic?">
+                description = <"Hi ha un historial amb qualsevol qüestió, problema o diagnòstic rellevant per a un objectiu de detecció?">
+                comment = <"En una plantilla, l'element de dades normalment es tornaria a nomenar a la pregunta específica formulada. El conjunt de valors proposats es poden adaptar per a l'ús local utilitzant l'elecció del tipus de dades DV_TEXT o DV_BOOLEAN per ajustar-se a cada cas d'ús específic.">
+            >
+            ["at0031"] = <
+                text = <"Sí">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Desconegut">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Propòsit de la detecció">
+                description = <"Context o raó de la detecció.">
+                comment = <"Aquest element de dades està destinat a aportar un context per als grups de preguntes/respostes quan es consulti posteriorment. No s'espera que aquest element de dades es mostri al pacient, sinó que es guardi en dades. 
+Per exemple: detecció de preadmissió o el nom del sondeig actual.">
+            >
+            ["at0039"] = <
+                text = <"Dades addicionals">
+                description = <"Dades estructurades o preguntes sobre la qüestió, problema o diagnòstic específic.">
+                comment = <"Per exemple, l'hospital on es va tractar.">
+            >
+            ["at0040"] = <
+                text = <"Data/hora">
+                description = <"Indicació de la data/hora relacionada amb la qüestió, problema o diagnòstic.">
+                comment = <"L'element de dades \"Moment\" s'ha modelat deliberadament de manera imprecisa per donar suport a diverses formes en què els sondejos poden utilitzar-se per a registrar quan va ocórrer una qüestió, problema o diagnòstic. La semàntica específica i prevista es pot aclarir en una plantilla. Per exemple: la data/hora actual; la data d'inici i fi de quan va ocórrer la qüestió, problema o diagnòstic; la duració de la qüestió, problema o diagnòstic; l'interval de temps durant el qual es va produir la qüestió, problema o diagnòstic; l'edat de la persona en el moment de la qüestió, problema o diagnòstic; o la duració de temps des que va ocórrer. Una dada parcial és vàlida, utilitzant el tipus de dada DV_DATA_TIME per registrar només un any.">
+            >
+            ["at0042"] = <
+                text = <"Dades addicionals">
+                description = <"Dades estructurades o preguntes sobre la detecció de qüestions, problemes o diagnòstics.">
+            >
+            ["at0043"] = <
+                text = <"Descripció">
+                description = <"Informació addicional sobre l'historial de qualsevol qüestió, problema o diagnòstic revelant per a un objectiu de detecció.">
+            >
+            ["at0044"] = <
+                text = <"*Unsure (en)">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"*Unsure (en)">
+                description = <"">
+            >
+            ["ac9016"] = <
+                text = <"Cap problema o diagnòstic? (synthesised)">
+                description = <"Hi ha un historial amb qualsevol qüestió, problema o diagnòstic rellevant per a un objectiu de detecció? (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Presència? (synthesised)">
+                description = <"Existeix un historial de la qüestió, problema o diagnòstic específic? (synthesised)">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Cuestionario de detección de Problema/Diagnóstico">
+                description = <"Serie de preguntas y respuestas relacionadas, utilizadas para detectar cuestiones, problemas o diagnósticos.">
+                comment = <"Las respuestas pueden ser autorreportadas">
+            >
+            ["at0002"] = <
+                text = <"Cualquier evento">
+                description = <"Evento predeterminado y no especificado de un momento específico o intervalo que se puede definir claramente en una plantilla o en un tiempo de ejecución.">
+            >
+            ["at0004"] = <
+                text = <"Nombre del problema/diagnóstico">
+                description = <"Identificación de una cuestión, problema o diagnóstico, o grupo de cuestiones, problemas o diagnósticos, por nombre.">
+                comment = <"Se recomienda codificar el \"Nombre del problema/diagnóstico\" con una terminologia, siempre que sea posible.">
+            >
+            ["at0005"] = <
+                text = <"Presencia?">
+                description = <"Existe un historial de la cuestión, problema o diagnóstico específico?">
+                comment = <"En una plantilla, el elemento de datos normalmente se renombraría con la pregunta específica formulada. El conjunto de valores propuestos se pueden adaptar para uso local utilizando la elección del tipo de dato DV_TEXT o DV_BOOLEAN para ajustarse a cada caso de uso específico.">
+            >
+            ["at0021"] = <
+                text = <"Extensión">
+                description = <"Información adicional necesaria para ampliar el modelo con contenido local o para alinearse con otros modelos o formalismos de referencia.">
+                comment = <"Por ejemplo: requisitos locales de información o metadatos adicionales para alinearse con equivalentes de FHIR.">
+            >
+            ["at0022"] = <
+                text = <"Nombre del problema o diagnóstico">
+                description = <"Detalles sobre la cuestión, problema o diagnóstico o grupo de problemas o diagnósticos relevantes para el propósito de la detección.">
+            >
+            ["at0023"] = <
+                text = <"Si">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Comentario">
+                description = <"Información adicional sobre una cuestión específica, problema o pregunta de diagnóstico, no especificada en otros campos.">
+            >
+            ["at0027"] = <
+                text = <"Desconocido">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Algún problema o diagnóstico?">
+                description = <"Hay un historial con cualquier cuestión, problema, o diagnóstico relevante para el objetivo de detección?">
+                comment = <"En una plantilla, el elemento de datos normalmente se volvería a nombrar a la pregunta específica formulada. El conjunto de valores propuestos se puede adaptar para uso local utilizando la elección del tipo de datos DV_TEXT o DV_BOOLEAN para ajustarse a cada caso de uso específico.">
+            >
+            ["at0031"] = <
+                text = <"Si">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Desconocido">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Propósito de la detección/cribaje">
+                description = <"El contexto o razón para el cribaje/detección">
+                comment = <"Este elemento de datos está destinado a aportar un contexto para los grupos de preguntas y respuestas cuando se consulte posteriormente. No se espera que este elemento de datos se muestre al paciente, sino que se guarda en datos.
+Por ejemplo: detección de pre admisión o nombre del cuestionario actual.">
+            >
+            ["at0039"] = <
+                text = <"Detalles adicionales">
+                description = <"Detalles estructurados o cuestiones sobre una cuestión, problema o diagnóstico específico.">
+                comment = <"Por ejemplo; hospital donde fue tratado.">
+            >
+            ["at0040"] = <
+                text = <"Momento">
+                description = <"Indicación del momento relacionado con la cuestión, problema o diagnóstico.">
+                comment = <"El elemento de datos \"Momento\" se ha modelado deliberadamente de manera flexible para dar soporte a varias formas en que las detecciones/cribajes pueden ser utilizados para registrar cuando ocurrió la cuestión, problema o diagnóstico. La semántica específica y prevista se puede definir en la plantilla. Por ejemplo: la fecha/hora actual; la fecha de inicio y fin de cuando ocurrió la cuestión, problema o diagnóstico; la duración de la cuestión, problema o diagnóstico; el intervalo de tiempo durante el cual se produjo la cuestión, problema o diagnóstico; la edad de la persona en el momento de la cuestión, problema o diagnóstico; o la duración de tiempo desde que ocurrió. Un dato parcial es válido, utilizando el tipo de dato DV_DATA_TIME para registrar únicamente un año.">
+            >
+            ["at0042"] = <
+                text = <"Detalles adicionales">
+                description = <"Datos estructurados o preguntas sobre la detección de cuestiones, problemas o diagnósticos.">
+            >
+            ["at0043"] = <
+                text = <"Descripción">
+                description = <"Información adicional sobre el historial de cualquier cuestión, problema o diagnóstico relevante para un objetivo de detección.">
+            >
+            ["at0044"] = <
+                text = <"Dudoso">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"Dudoso">
+                description = <"">
+            >
+            ["ac9016"] = <
+                text = <"Algún problema o diagnóstico? (synthesised)">
+                description = <"Hay un historial con cualquier cuestión, problema, o diagnóstico relevante para el objetivo de detección? (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Presencia? (synthesised)">
+                description = <"Existe un historial de la cuestión, problema o diagnóstico específico? (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0023"] = <http://snomed.info/id/373066001>
+            ["at0024"] = <http://snomed.info/id/373067005>
+            ["at0031"] = <http://snomed.info/id/373066001>
+            ["at0032"] = <http://snomed.info/id/373067005>
+            ["at0027"] = <http://snomed.info/id/261665006>
+            ["at0033"] = <http://snomed.info/id/261665006>
+        >
+    >
+    value_sets = <
+        ["ac9017"] = <
+            id = <"ac9017">
+            members = <"at0023", "at0024", "at0027", "at0045">
+        >
+        ["ac9016"] = <
+            id = <"ac9016">
+            members = <"at0031", "at0032", "at0033", "at0044">
+        >
+    >

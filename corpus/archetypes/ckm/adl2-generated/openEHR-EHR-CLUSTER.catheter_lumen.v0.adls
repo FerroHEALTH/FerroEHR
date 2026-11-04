@@ -1,0 +1,286 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=3452a121-3b59-4f4d-ad6d-581f1a607ecd; build_uid=682402c6-fcb6-41d9-bcc0-ccdf5404bb19)
+    openEHR-EHR-CLUSTER.catheter_lumen.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-05-04">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"624491A86B8058E11B74B058CE22A80B">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere fysiske og funksjonelle egenskaper til et lumen i et kateter eller tubulært medisinsk utstyr.">
+            use = <"Brukes for å registrere detaljer om et lumen i et kateter eller rør, enten det er enkeltlumens eller flerlumens.
+
+For enkeltlumensutstyr brukes denne arketypen én gang for å fange lumenets egenskaper. For flerlumensutstyr brukes denne arketypen flere ganger, én gang for hvert lumen. Denne arketypen er designet for å brukes i CLUSTER.device_catheter-arketypen eller lignende arketyper for utstyrsegenskaper.">
+            misuse = <"Brukes ikke for å dokumentere innsettingsteknikker eller prosedyretrinn; bruk ACTION.procedure i stedet.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the physical and functional properties of a lumen within a catheter or tubular medical device.">
+            use = <"Use to record details about a lumen within a catheter or tube, whether single-lumen or multi-lumen.
+
+For single-lumen devices, use this archetype once to capture the lumen properties. For multi-lumen devices, use this archetype multiple times, once for each lumen. This archetype is designed to be nested within the CLUSTER.device_catheter archetype or similar device property archetypes.">
+            misuse = <"Not to be used to document insertion techniques or procedural steps; use ACTION.procedure instead.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Catheter lumen
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0012] occurrences matches {0..1} matches {    -- Label
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            ELEMENT[at0013] occurrences matches {0..1} matches {    -- Internal diameter
+                value matches {
+                    DV_QUANTITY[at9004] matches {
+                        property matches {[at9000]}    -- Length
+                        magnitude matches {|>=0.0|}
+                        units matches {"mm"}
+                    }
+                }
+            }
+            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Length
+                value matches {
+                    DV_QUANTITY[at9005] matches {
+                        property matches {[at9000]}    -- Length
+                        magnitude matches {|>=0.0|}
+                        units matches {"cm"}
+                    }
+                }
+            }
+            ELEMENT[at0015] occurrences matches {0..1} matches {    -- Purpose
+                value matches {
+                    DV_CODED_TEXT[at9006] matches {
+                        defining_code matches {[ac9001]}    -- Purpose (synthesised)
+                    }
+                }
+            }
+            CLUSTER[at0022] matches {    -- Connector
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0023] occurrences matches {0..1} matches {    -- Type
+                        value matches {
+                            DV_CODED_TEXT[at9007] matches {
+                                defining_code matches {[ac9002]}    -- Type (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- Size
+                        value matches {
+                            DV_QUANTITY[at9008] matches {
+                                property matches {[at9000]}    -- Length
+                                magnitude matches {|>=0.0|}
+                                units matches {"mm"}
+                            }
+                            DV_CODED_TEXT[at9009]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Kateterlumen">
+                description = <"Detaljer om et lumen av et kateter eller tubulært medisinsk utstyr.">
+            >
+            ["at0012"] = <
+                text = <"Navn">
+                description = <"Et navn eller identifikator for dette lumenet.">
+                comment = <"For eksempel 'hoved', 'distal', 'proksimal', 'ventil' eller 'sug'.">
+            >
+            ["at0013"] = <
+                text = <"Indre diameter">
+                description = <"Den indre diameter av dette lumenet.">
+            >
+            ["at0014"] = <
+                text = <"Lengde">
+                description = <"Lengden eller dybden på dette lumenet.">
+            >
+            ["at0015"] = <
+                text = <"Formål">
+                description = <"Den primære funksjonen eller formålet med dette lumenet.">
+            >
+            ["at0016"] = <
+                text = <"Luftvei">
+                description = <"Lumenet brukes til luftveisbehandling.">
+            >
+            ["at0017"] = <
+                text = <"Legemiddellevering">
+                description = <"Lumenet brukes til administrering av legemidler.">
+            >
+            ["at0018"] = <
+                text = <"Væskeadministrasjon">
+                description = <"Lumenet brukes til administrering av væsker.">
+            >
+            ["at0019"] = <
+                text = <"Overvåking/trykk">
+                description = <"Lumenet brukes til overvåking eller trykkmåling.">
+            >
+            ["at0020"] = <
+                text = <"Dren">
+                description = <"Lumenet brukes til drenering av væsker.">
+            >
+            ["at0022"] = <
+                text = <"Kobling">
+                description = <"Detaljer om koblingen for dette lumenet.">
+                comment = <"Mer enn én kobling kan være relevant når ett lumen har både en primær kobling og ett eller flere ekstra tilgangspunkter, for eksempel en forlengelseskobling, prøvetakingsport eller nålefri tilgangskobling.">
+            >
+            ["at0023"] = <
+                text = <"Type">
+                description = <"Typen kobling som brukes for dette lumenet.">
+            >
+            ["at0024"] = <
+                text = <"Push-fit">
+                description = <"En push-fit kobling.">
+            >
+            ["at0025"] = <
+                text = <"Luer-lock">
+                description = <"En Luer-lock kobling.">
+            >
+            ["at0026"] = <
+                text = <"Slip-fit">
+                description = <"En slip-fit kobling.">
+            >
+            ["at0028"] = <
+                text = <"Størrelse">
+                description = <"Størrelsen på koblingen for dette lumenet.">
+            >
+            ["at9000"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac9001"] = <
+                text = <"Formål (synthesised)">
+                description = <"Den primære funksjonen eller formålet med dette lumenet. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Type (synthesised)">
+                description = <"Typen kobling som brukes for dette lumenet. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Catheter lumen">
+                description = <"Details about a lumen of a catheter or tubular medical device.">
+            >
+            ["at0012"] = <
+                text = <"Label">
+                description = <"A label or identifier for this lumen.">
+                comment = <"For example: 'main', 'distal', 'proximal', 'vent', or 'suction'.">
+            >
+            ["at0013"] = <
+                text = <"Internal diameter">
+                description = <"The internal diameter of this lumen.">
+            >
+            ["at0014"] = <
+                text = <"Length">
+                description = <"The length or depth of this lumen.">
+            >
+            ["at0015"] = <
+                text = <"Purpose">
+                description = <"The primary function or purpose of this lumen.">
+            >
+            ["at0016"] = <
+                text = <"Airway">
+                description = <"The lumen is used for airway management.">
+            >
+            ["at0017"] = <
+                text = <"Medication delivery">
+                description = <"The lumen is used for delivery of medications.">
+            >
+            ["at0018"] = <
+                text = <"Fluid administration">
+                description = <"The lumen is used for administration of fluids.">
+            >
+            ["at0019"] = <
+                text = <"Monitoring/pressure">
+                description = <"The lumen is used for monitoring or pressure measurement.">
+            >
+            ["at0020"] = <
+                text = <"Drainage">
+                description = <"The lumen is used for drainage of fluids.">
+            >
+            ["at0022"] = <
+                text = <"Connector">
+                description = <"Details about the connector for this lumen.">
+                comment = <"More than one connector may be relevant when a single lumen has both a primary hub and one or more additional access points, such as an extension connector, sampling port, or needleless access connector.">
+            >
+            ["at0023"] = <
+                text = <"Type">
+                description = <"The type of connector used for this lumen.">
+            >
+            ["at0024"] = <
+                text = <"Push-fit">
+                description = <"A push-fit connector.">
+            >
+            ["at0025"] = <
+                text = <"Luer-lock">
+                description = <"A Luer-lock connector.">
+            >
+            ["at0026"] = <
+                text = <"Slip-fit">
+                description = <"A slip-fit connector.">
+            >
+            ["at0028"] = <
+                text = <"Size">
+                description = <"The size of the connector for this lumen.">
+            >
+            ["at9000"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["ac9001"] = <
+                text = <"Purpose (synthesised)">
+                description = <"The primary function or purpose of this lumen. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Type (synthesised)">
+                description = <"The type of connector used for this lumen. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/122>
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0024", "at0025", "at0026">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0016", "at0017", "at0018", "at0019", "at0020">
+        >
+    >

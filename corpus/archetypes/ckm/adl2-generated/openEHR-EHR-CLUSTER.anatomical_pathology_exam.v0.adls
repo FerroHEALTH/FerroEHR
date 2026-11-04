@@ -1,0 +1,348 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=107f9f4e-b278-4be8-a5f4-21cdf19985e7; build_uid=c8a22f97-a622-4f8b-aa5c-178d2bcc37bb)
+    openEHR-EHR-CLUSTER.anatomical_pathology_exam.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Aurelie Tomczak">
+                ["organisation"] = <"Institute of Pathology, University Hospital Heidelberg">
+                ["email"] = <"au.tomczak@yahoo.com ">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke">
+                ["organisation"] = <"Nasjonal IKT HF">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Silje Ljosland Bakke">
+        ["organisation"] = <"Nasjonal IKT HF">
+        ["email"] = <"silje.ljosland.bakke@nasjonalikt.no">
+        ["date"] = <"2016-11-23">
+    >
+    original_namespace = <"no.nasjonalikt">
+    original_publisher = <"Nasjonal IKT">
+    other_contributors = <"Vebjørn Arntzen, Oslo universitetssykehus, Norway", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (Nasjonal IKT redaktør)", "Kristin Eik, Kreftregisteret, Norway", "Anca Heyd, DIPS ASA, Norway", "Sabine Leh, Helse-Bergen, Norway (Nasjonal IKT redaktør)", "Heather Leslie, Ocean Informatics, Australia (Nasjonal IKT redaktør)", "Jan-Arne Ludvigsen, DIPS ASA, Norway", "Ole Martin Sand, DIPS ASA, Norway", "Ian McNicoll, Ocean Informatics, United Kingdom (Nasjonal IKT redaktør)", "Bjørn Næss, DIPS ASA, Norway", "Sveinung Sørbye, UNN HF, Norway", "John Tore Valand, Helse Bergen HF, Norway", "Torleif Trydal, Fürst AS, Norway", "Johan Bjerner, Fürst AS, Norway", "Nils Petter Tveranger, Helse Vest IKT AS, Norway">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"no.nasjonalikt">
+    custodian_organisation = <"Nasjonal IKT">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Derived from Histopathology test, Draft Archetype [Internet]. openEHR Foundation, openEHR Clinical Knowledge Manager [cited: 2016-11-29]. Available from: http://openehr.org/ckm/#showArchetype_1013.1.2195">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"F537F96BF4102BD332807BA2111BDBD8">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung von Befunden und Interpretationen der pathologisch-anatomischen Begutachtung (Histopathologie) an Gewebe und Körperflüssigkeiten.">
+            keywords = <"Histopathologie, Zytologie, Pathologie, anatomische Pathologie, intraoperative Untersuchung, mikroskopische Untersuchung, makroskopische Untersuchung, Immunhistochemie", ...>
+            use = <"Zur Darstellung der pathologisch-anatomischen Begutachtungsergebnisse (Histopathologie), einschließlich intraoperativer, mikroskopischer und makroskopischer Gewebeuntersuchungen. An einigen Stellen können die Ausdrücke \"Histopathologie\" und \"Zytologie\" anstelle von \"anatomischer Pathologie\" verwendet werden.
+
+Dieser Archetyp wurde speziell für den SLOT \"Befunde\" innerhalb des Archetyps OBSERVATION.Laborergebnis angelegt. Gegebenenfalls kann dieser auch innerhalb anderer ENTRY Archetypklassen angewendet werden.
+
+Detallierte strukturierte Befunde werden in Child Cluster Archetypen erfasst.">
+            misuse = <"Nicht geeignet zur Darstellung von nichthistopathologischen Untersuchungsergebnissen, wie zum Beispiel biochemischen oder hämatologischen Untersuchungen. 
+
+Nicht zur Darstellung eines Autopsieberichts zu verwenden, auch wenn die durchgeführten Untersuchungen an einigen Proben bei der Autopsie anhand dieses Archetypen abbildbar wären.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere funn og tolkninger ved patologiundersøkelser utført på vev, celler og kroppsvæsker.">
+            keywords = <"histopatologi, anatomisk patologi, cytologi", ...>
+            use = <"Brukes til å registrere alle patologifunn, mikroskopiske og makroskopiske undersøkelser av vev.
+
+Arketypen er laget spesifikt for å brukes i SLOTet \"Undersøkelsesresultat\" i arketypen OBSERVATION.laboratory_test_result, men kan også brukes innen andre ENTRY-arketyper der det er passende.
+
+Detaljerte strukturerte funn kan registreres i spesifikke CLUSTER-arketyper som nøstes under denne.">
+            misuse = <"Brukes ikke til å registrere funn som ikke kommer fra patologiundersøkelser, f.eks. klinisk biokjemi eller mikrobiologi.
+
+Brukes ikke for å registrere en obduksjon, selv om funn ved undersøkelser av spesifikke prøver som tas under en obduksjon kan representeres ved hjelp av denne arketypen.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the findings and interpretation of anatomical pathology tests performed on tissues, cells and body fluids.">
+            keywords = <"histopathology, cytology, pathology", ...>
+            use = <"Use to record any anatomical pathology test result, including microscopic and macroscopic examinations of tissues, cells or body fluids. In some locations the terms \"histopathology\" and \"cytology\" may be used in place of \"anatomical pathology\".
+
+This archetype is designed specifically to be used in the \"Test result\" SLOT within the OBSERVATION.laboratory_test_result archetype, but may also be used within other ENTRY class archetypes where appropriate.">
+            misuse = <"Not to be used for reporting other types of laboratory test results, for example biochemistry or haematology.
+
+Not to be used to record an autopsy report, although tests on some specimens that are collected during an autopsy may be represented using this archetype.">
+            copyright = <"© openEHR Foundation, Nasjonal IKT HF">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Anatomical pathology examination
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0019] occurrences matches {0..1} matches {    -- Examination type
+                value matches {
+                    DV_CODED_TEXT[at9001] matches {
+                        defining_code matches {[ac9000]}    -- Examination type (synthesised)
+                    }
+                    DV_TEXT[at9002]
+                }
+            }
+            CLUSTER[at0005] matches {    -- Anatomical pathology finding
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0023] occurrences matches {0..1} matches {    -- Finding label
+                        value matches {
+                            DV_TEXT[at9003]
+                        }
+                    }
+                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Finding description
+                        value matches {
+                            DV_TEXT[at9004]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0009] matches {    -- Structured findings
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0010] matches {    -- Pathology interpretation
+                        value matches {
+                            DV_TEXT[at9005]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0022] matches {    -- Multimedia representation
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.multimedia(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-CLUSTER\.multimedia\.v1\..*/}
+                    }
+                    ELEMENT[at0017] matches {    -- Specimen container ID
+                        value matches {
+                            DV_IDENTIFIER[at9006]
+                            DV_URI[at9007]
+                            DV_TEXT[at9008]
+                        }
+                    }
+                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Tissue available
+                        value matches {
+                            DV_BOOLEAN[at9009]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Examination description
+                value matches {
+                    DV_TEXT[at9010]
+                }
+            }
+            ELEMENT[at0018] matches {    -- Specimen container ID
+                value matches {
+                    DV_IDENTIFIER[at9011]
+                    DV_URI[at9012]
+                    DV_TEXT[at9013]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Pathologisch-anatomische Begutachtung">
+                description = <"Befunde und Interpretationen von pathologisch-anatomischen Begutachtungen (Histopathologie) an Gewebe und Körperflüssigkeiten.">
+            >
+            ["at0005"] = <
+                text = <"Pathologisch-anatomischer Befund">
+                description = <"Details zu einem einzelnen pathologisch-anatomischen Befund, oft im Bezug zu einer spezifischen anatomischen Lokalisation oder Probe.">
+            >
+            ["at0006"] = <
+                text = <"Gewebe vorhanden">
+                description = <"Ist \"wahr\", wenn das Gewebe für die Untersuchung zur Verfügung steht.">
+            >
+            ["at0008"] = <
+                text = <"Befundbeschreibung">
+                description = <"Eine Beschreibung des pathologisch-anatomischen Befunds.">
+            >
+            ["at0009"] = <
+                text = <"Strukturierte Befunde">
+                description = <"Detaillierte strukturierte Befunde.">
+            >
+            ["at0010"] = <
+                text = <"Pathologische Interpretation">
+                description = <"Ein Wort oder ein kurzer Satz, der eine Interpretation des pathologisch-anatomischen Befundes beschreibt. Eine kodierte Erfassung wird bevorzugt.">
+            >
+            ["at0011"] = <
+                text = <"Untersuchungsbefund">
+                description = <"Eine Beschreibung der gesamten anatomisch-pathologischen Begutachtung.">
+            >
+            ["at0017"] = <
+                text = <"Probenbehälter ID">
+                description = <"Referenz-ID, URI oder Text der Probe für diesen Befund.  ">
+            >
+            ["at0018"] = <
+                text = <"Probenbehälter ID">
+                description = <"Referenz-ID, URI oder Text der Probe für diesen Befund.  ">
+            >
+            ["at0019"] = <
+                text = <"Art der Untersuchung">
+                description = <"Identifizierung der Art der durchgeführten anatomisch-pathologischen Untersuchung.">
+            >
+            ["at0020"] = <
+                text = <"Makroskopische Untersuchung">
+                description = <"Befunde aus einer makroskopischen Gewebeprobe.">
+            >
+            ["at0021"] = <
+                text = <"Mikroskopische Untersuchung">
+                description = <"Befunde aus einer mikroskopischen Gewebeuntersuchung.">
+            >
+            ["at0022"] = <
+                text = <"Testrepräsentation">
+                description = <"Rich Text oder eine andere multimediale Darstellung eines speziellen Ergebnisses, ermittelt durch einen Diagnosedienst.">
+                comment = <"Es sind mehrere Formatangaben erlaubt, diese müssen aber semantisch äquivalent sein.">
+            >
+            ["at0023"] = <
+                text = <"Befundbezeichnung">
+                description = <"Bezeichnung für den konkreten Befund.
+">
+            >
+            ["ac9000"] = <
+                text = <"Art der Untersuchung (synthesised)">
+                description = <"Identifizierung der Art der durchgeführten anatomisch-pathologischen Untersuchung. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Patologiundersøkelse">
+                description = <"Funn og tolkninger av patologiundersøkelser utført på vev, celler og kroppsvæsker.">
+            >
+            ["at0005"] = <
+                text = <"Patologifunn">
+                description = <"Detaljer om et individuelt patologifunn, ofte relatert til en spesifikk anatomisk lokalisering eller prøvemateriale.">
+            >
+            ["at0006"] = <
+                text = <"Vev tilgjengelig">
+                description = <"Sann dersom vevet er tilgjengelig for undersøkelse.">
+            >
+            ["at0008"] = <
+                text = <"Funnbeskrivelse">
+                description = <"Fritekstbeskrivelse av patologifunnet.">
+            >
+            ["at0009"] = <
+                text = <"Strukturerte funn">
+                description = <"Detaljerte strukturerte funn.">
+            >
+            ["at0010"] = <
+                text = <"Tolkning">
+                description = <"Enkeltord, frase eller kort beskrivelse som representerer tolkningen av patologifunnet. Koding med en terminologi foretrekkes.">
+            >
+            ["at0011"] = <
+                text = <"Undersøkelsesbeskrivelse">
+                description = <"Fritekstbeskrivelse av patologiundersøkelsen.">
+            >
+            ["at0017"] = <
+                text = <"Prøvebeholder-ID">
+                description = <"Referanse ID, URI eller tekst til en prøvebeholder relatert til dette funnet.">
+            >
+            ["at0018"] = <
+                text = <"Prøvebeholder-ID">
+                description = <"Referanse ID, URI eller tekst til en prøvebeholder relatert til denne undersøkelsen.">
+            >
+            ["at0019"] = <
+                text = <"Undersøkelsestype">
+                description = <"Spesifisering av hvilken type patologiundersøkelse som er utført.">
+            >
+            ["at0020"] = <
+                text = <"Makroskopisk undersøkelse">
+                description = <"Funn er basert på en makroskopisk undersøkelse.">
+            >
+            ["at0021"] = <
+                text = <"Mikroskopisk undersøkelse">
+                description = <"Funn er basert på en mikroskopisk undersøkelse.">
+            >
+            ["at0022"] = <
+                text = <"Multimediarepresentasjon">
+                description = <"Digitalt bilde, video eller diagram som representerer undersøkelsen.">
+                comment = <"Flere formater tillates, men innholdet i de forskjellige formatene må representere det samme innholdet.">
+            >
+            ["at0023"] = <
+                text = <"Funnavn">
+                description = <"Tekstlig navn på det spesifikke funnet.">
+            >
+            ["ac9000"] = <
+                text = <"Undersøkelsestype (synthesised)">
+                description = <"Spesifisering av hvilken type patologiundersøkelse som er utført. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Anatomical pathology examination">
+                description = <"Findings and interpretation of an anatomical pathology examination performed on tissues and body fluids.">
+            >
+            ["at0005"] = <
+                text = <"Anatomical pathology finding">
+                description = <"Details of an individual anatomical pathology finding, often related to a specific anatomical location or specimen.">
+            >
+            ["at0006"] = <
+                text = <"Tissue available">
+                description = <"True if the tissue is available for examination.">
+            >
+            ["at0008"] = <
+                text = <"Finding description">
+                description = <"A narrative description of the anatomical pathology finding.">
+            >
+            ["at0009"] = <
+                text = <"Structured findings">
+                description = <"Detailed structured findings.">
+            >
+            ["at0010"] = <
+                text = <"Pathology interpretation">
+                description = <"Single word, phrase of brief description representing the interpretation of the anatomical pathology finding. A coded term is preferred.">
+            >
+            ["at0011"] = <
+                text = <"Examination description">
+                description = <"A narrative description of the entire anatomical pathology examination.">
+            >
+            ["at0017"] = <
+                text = <"Specimen container ID">
+                description = <"Reference ID, URI or text for a specimen container related to this finding.">
+            >
+            ["at0018"] = <
+                text = <"Specimen container ID">
+                description = <"Reference ID, URI or text for a specimen containera related to this finding.">
+            >
+            ["at0019"] = <
+                text = <"Examination type">
+                description = <"Identification of the type of anatomical pathology examination performed.">
+            >
+            ["at0020"] = <
+                text = <"Macroscopic examination">
+                description = <"Findings recorded on examination of a gross specimen.">
+            >
+            ["at0021"] = <
+                text = <"Microscopic examination">
+                description = <"Findings recorded after microsopic examination.">
+            >
+            ["at0022"] = <
+                text = <"Multimedia representation">
+                description = <"Digital image, video or diagram representing the examination.">
+                comment = <"Multiple formats are allowed but they should represent equivalent clinical content.">
+            >
+            ["at0023"] = <
+                text = <"Finding label">
+                description = <"A text label for the specific finding.">
+            >
+            ["ac9000"] = <
+                text = <"Examination type (synthesised)">
+                description = <"Identification of the type of anatomical pathology examination performed. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0020", "at0021">
+        >
+    >

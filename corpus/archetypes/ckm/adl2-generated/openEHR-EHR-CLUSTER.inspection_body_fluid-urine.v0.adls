@@ -1,0 +1,346 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=0fcb36df-75c6-4b52-87c5-ecd6f7c6e9a9; build_uid=d2ab31c7-c451-480a-9e68-820832897c23)
+    openEHR-EHR-CLUSTER.inspection_body_fluid-urine.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-CLUSTER.inspection_body_fluid.v0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Kristian Berg, John Tore Valand">
+                ["organisation"] = <"Helse Nord, Helse Vest">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2015-06-25">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Morten Aas, Oslo Universitetssykehus, Norway", "Kerstin Adolfsson, Sweden", "Stine Nyheim Andreassen, DIPS ASA, Norway", "Vebjørn Arntzen, Oslo universitetssykehus HF, Norway (Nasjonal IKT redaktør)", "Koray Atalag, University of Auckland, New Zealand", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (Nasjonal IKT redaktør)", "Kristian Berg, Universitetssykehuset Nord Norge, Norway", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Kate Bryan, Stalis Ltd, United Kingdom", "David Burns, East Kent Hospitals University Foundation NHS Trust, United Kingdom", "B Christensen, HUS, Norway", "Peter Coates, NHS England, United Kingdom", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Heather Grain, Llewelyn Grain Informatics, Australia", "Kristian Heldal, Telemark Hospital Trust, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Tom Jarl Jakobsen, Helse Bergen, Norway", "Lars Karlsen, DIPS ASA, Norway", "Dave Kilroy, Application Insight Ltd, United Kingdom", "Shinji Kobayashi, Kyoto University, Japan", "Nils Kolstrup, Skansen Legekontor og Nasjonalt Senter for samhandling og telemedisin, Norway", "Sabine Leh, Haukeland University Hospital, Department of Pathology, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Siv Marie Lien, DIPS ASA, Norway", "Kelvin Lok, Stalis Ltd, United Kingdom", "Ole Kristian Losvik, Losol AS, Norway", "Mark McEvoy, SITS International, Sweden", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Lars Ivar Mehlum, Helse Bergen HF, Norway", "Colin Newell, OpusVL, United Kingdom", "Andrej Orel, Marand d.o.o., Slovenia", "Rob Organ, Yeovil District Hospital NHS Foundation Trust, United Kingdom", "Petra Palm, Region Östergötland, Sweden", "Mike Pargeter, Across Health Ltd, United Kingdom", "Martin Paulson, Sykehuset i Vestfold, Norway", "Rune Pedersen, Universitetssykehuset i Nord Norge, Norway", "John Pyle, self, United Kingdom", "Navin Ramachandran, NHS, United Kingdom", "Cecilia Revelj, Landstinget i Kalmar län, Sweden", "Ingela Sammeli, Landstinget i Värmland, Sweden", "Elin Tell, Region Ostergotland, Sweden", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Lina Öfverström, Region Östergötland, Sweden">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"8F04028B59F32E5C517699ED8A3EA50D">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For registrering av funn observert under undersøkelse av en kroppsvæske på et kroppssted eller fra en navngitt kroppskilde. Undersøkelsen gjøres vanligvis som en del av en fysisk undersøkelse utført av en kliniker.">
+            keywords = <"kroppsvæske", "fostervann", "blod", "plasma", "cerebrospinal", "væske", "utflod", "urin", "puss", "spytt", "ekspektorat", "leddvæske", "svette", "oppkast", "mage", "diare", "slim", "spinalvæske", "galle", "ekskret", "morsmelk", "mucus", "magesyre", "sæd", "sekret", "ascites", "serøs", "intraokulærvæske", "dialysat", "pericardvæske", "pleuravæske", "tårevæske">
+            use = <"Brukes for å registrere en fritekstbeskrivelse, strukturerte detaljer og klinisk fortolkning av funn observert under en undersøkelse av en kroppsvæske på et navngitt kroppssted eller fra en nanvgitt kroppskilde. Undersøkelsen gjøres vanligvis som en del av en fysisk undersøkelse utført av en kliniker.
+
+Arketypen er utviklet spesifikt for å benyttes som et rammeverk for registrering av detaljer om en undersøkelse av en hvilken som helst kroppsvæske. For å registrere funn for:
+
+- For visse typer væske med spesielle egenskaper som man vil registrere strukturert, er det meningen å nøste spesifikke CLUSTER-arketyper i SLOT'et \"Spesifikke funn\". For eksempel vil ytterligere detaljer knyttet til klare væsker registreres i en egen CLUSTER-arketype for dette formålet. 
+
+- Kroppsvæsker som består av flere komponenter som for eksempel fostervann registrerer man en instans av arketypen for å beskrive fostervannet, ytterligere instanser av den samme arketypen nøstes i dataelementet \"Spesifikke detaljer\" for å representere blod, mekonium og puss.
+
+Kroppsvæsker referer vanligvis til væsker som er utskilt eller sekrert fra menneskekroppen og arketypen støtter detaljert registrering av:
+- Vanlige fysiologiske væsker.
+- Fysiologiske væsker som forandrer seg som følge av en patologisk prosess.
+- Væsker som genereres som en del av en patologisk prosess i kroppen.
+
+Eksempler på kroppsvæsker kan være:
+- Fostervann
+- Blod eller plasma
+- Cerebrospinalvæske
+- Utflod
+- Urin
+- Puss
+- Spytt
+- Ekspektorat
+- Leddvæske
+- Svette
+- Oppkast
+
+Arketypen er vil i de fleste tilfeller brukes i hos levende individer, men den kan også benyttes for registrering av funn ved obduksjon.
+
+Kroppsted eller kroppskilde vil vanligvis identifiseres i konteksten arketypen nøstes i, eksempler på kontekst kan være, men ikke begrenset til:
+- I SLOT'et \"Funn ved undersøkelse\" i mange av de spesifikke undersøkelsesarketypene og relaterterte inspeksjons- og palpasjonsarketypene.
+- i SLOT'et for \"Physical properties\" i arketypen CLUSTER.specimen 
+- I SLOTet \"Tilleggsinformasjon\" i arketypene OBSERVATION.urinanalysis og OBSERVATION.fluid_output
+- I andre OBSERVATION eller CLUSTER arketyper der dette er klinisk formålstjenlig.
+
+Arketypen CLUSTER.exclusion_exam arketypen kan nøstes i SLOTet \"Undersøkelse ikke utført\" for å gi mulighet for en eksplisitt registrering av at en undersøkelse ikke er utført.
+
+Bruk for å innlemme fritekstbeskrivelser av kliniske funn fra eksisterende eller tidligere kliniske systemer i et arketypeformat ved å bruke dataelementet \"Klinisk beskrivelse\".">
+            misuse = <"Brukes ikke for å registrere målinger av væskevolum - bruk OBSERVATION-arketyper for dette formålet. For eksempel OBSERVATION.fluid_output.
+
+Brukes ikke for å registrere detaljer om ikke-fysiologiske væsker som er tilført kroppen eksternt fra, f.eks. kontrastvæske.
+
+Brukes ikke for å registrere en klinisk anamnese. Bruk spesifikke OBSERVATION eller CLUSTER arketyper for dette formålet. For eksempel OBSERVATION.story og CLUSTER.symptom_sign.
+
+Brukes ikke for å registrere resultat av en urinanalyse - bruk OBSERVATION.urinalysis. Denne arketypen kan legges til i SLOT'et \"Ytterliger detaljer\" for å gi ytterligere kontekst til prøveresultatet.
+
+Brukes ikke for å registrere andre detaljer om en prøve for bruk i laboratorier. Bruk CLUSTER.specimen for dette formålet. NB: På tross av dette unntaket, er det hensiktsmessig å benytte denne arketypen i SLOT'et \"Physical properties\" i CLUSTER.specimen for å beskrive de fysiske egenskapene til kroppsvæsken.
+
+Brukes ikke til å registrere detaljer om undersøkelse av fæces - bruk CLUSTER.examination_faeces.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the findings observed during the macroscopic inspection (including odour) of urine.">
+            keywords = <"urine", ...>
+            use = <"Use to record a narrative description, structured details and clinical interpretation about findings observed during the inspection (including odour) of urine.
+
+This archetype has been specifically designed to be used as the framework for recording details about examination of urine, with the context of the anatomical site or source of the urine will be carried in the archetypes in which it is nested, including but not limited to:
+- in the 'Examination findings' SLOT within many of the CLUSTER.exam family of archetypes and related inspection archetypes;
+- in the 'Physical properties' SLOT within the CLUSTER.specimen archetype;
+- in the 'Additional details' SLOT within the OBSERVATION.urinalysis, the OBSERVATION.fluid_output archetypes; and
+- within other OBSERVATION or CLUSTER archetypes, where clinically appropriate.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+While this archetype will most likely be used in the context of a living subject, it is also appropriate to use in recording autopsy findings.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical description' data element.">
+            misuse = <"Not to be used to record the inspection of body fluids other than urine - use the parent CLUSTER.inspection_body_fluid or other appropriate specialisations for this purpose.
+
+Not to be used to record the inspection of blood or blood clots, but only to record the presence of blood or blood clots within urine.
+
+Not to be used for recording measurements of urine output - use OBSERVATION archetypes for this purpose. For example: OBSERVATION.fluid_output.
+
+Not to be used to record details about a non-physiological fluid.
+
+Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example: OBSERVATION.story and CLUSTER.symptom_sign.
+
+Not to be used to record the results of a urinalysis test - use OBSERVATION.urinalysis for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Inspection of urine
+        items matches {
+            ELEMENT[at0003.1] matches {    -- Description
+                value matches {
+                    DV_TEXT[at0.9002]
+                }
+            }
+            ELEMENT[at0018.1] matches {    -- Colour
+                value matches {
+                    DV_CODED_TEXT[at0.9003] matches {
+                        defining_code matches {[ac0.9000]}    -- Colour (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0021.1] matches {    -- Blood clots
+                value matches {
+                    DV_CODED_TEXT[at0.9005] matches {
+                        defining_code matches {[ac9012]}
+                    }
+                }
+            }
+            after [at0017]
+            ELEMENT[at0.11] occurrences matches {0..1} matches {    -- Clarity
+                value matches {
+                    DV_CODED_TEXT[at0.9004] matches {
+                        defining_code matches {[ac0.9001]}    -- Clarity (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0022]
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000.1"] = <
+                text = <"*Inspection of urine (en)">
+                description = <"Funn observert under undersøkelse av en kroppsvæske på et kroppssted eller fra en identifisert kroppskilde. Undersøkelsen gjøres vanligvis som en del av en fysisk undersøkelse utført av en kliniker.">
+            >
+            ["at0003.1"] = <
+                text = <"*Description (en)">
+                description = <"Fritekstbeskrivelse av kroppsvæsken.">
+                comment = <"*For example: the presence of sediments; renal stones; or foaminess. (en)">
+            >
+            ["at0018.1"] = <
+                text = <"Farge">
+                description = <"*The colour of the body fluid. (en)">
+                comment = <"*The intent of this data element is to record either a narrative description of the colour or to code with a value set, appropriate to the body fluid, in a template. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Transparent/colourless (en)">
+                description = <"*">
+            >
+            ["at0.2"] = <
+                text = <"*Pale straw (en)">
+                description = <"*">
+            >
+            ["at0.3"] = <
+                text = <"*Transparent yellow (en)">
+                description = <"*">
+            >
+            ["at0.4"] = <
+                text = <"*Darke yellow (en)">
+                description = <"*">
+            >
+            ["at0.5"] = <
+                text = <"*Amber/honey (en)">
+                description = <"*">
+            >
+            ["at0.6"] = <
+                text = <"*Brown (en)">
+                description = <"*">
+            >
+            ["at0.7"] = <
+                text = <"*Orange (en)">
+                description = <"*">
+            >
+            ["at0.8"] = <
+                text = <"*Pink/red (en)">
+                description = <"*">
+            >
+            ["at0.9"] = <
+                text = <"*Blue/green (en)">
+                description = <"*">
+            >
+            ["at0.10"] = <
+                text = <"*Black (en)">
+                description = <"*">
+            >
+            ["at0.11"] = <
+                text = <"*Clarity (en)">
+                description = <"*The amount of transparency of the urine. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Clear (en)">
+                description = <"*">
+            >
+            ["at0.13"] = <
+                text = <"*Hazy (en)">
+                description = <"*">
+            >
+            ["at0.14"] = <
+                text = <"*Cloudy (en)">
+                description = <"*">
+            >
+            ["at0.15"] = <
+                text = <"*Turbid (en)">
+                description = <"*">
+            >
+            ["at0021.1"] = <
+                text = <"*Blood clots (en)">
+                description = <"*Blood clots are observed within or associated with the body fluid. (en)">
+            >
+            ["ac0.9000"] = <
+                text = <"Farge (synthesised)">
+                description = <"*The colour of the body fluid. (en) (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"*Clarity (en) (synthesised)">
+                description = <"*The amount of transparency of the urine. (en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Inspection of urine">
+                description = <"Findings observed during the macroscopic inspection of urine.">
+            >
+            ["at0003.1"] = <
+                text = <"Description">
+                description = <"Narrative description about the fluid.">
+                comment = <"For example: the presence of sediments; renal stones; or foaminess.">
+            >
+            ["at0018.1"] = <
+                text = <"Colour">
+                description = <"The colour of the body fluid.">
+                comment = <"The intent of this data element is to record either a narrative description of the colour or to code with a value set, appropriate to the body fluid, in a template.">
+            >
+            ["at0.1"] = <
+                text = <"Transparent/colourless">
+                description = <"*">
+            >
+            ["at0.2"] = <
+                text = <"Pale straw">
+                description = <"*">
+            >
+            ["at0.3"] = <
+                text = <"Transparent yellow">
+                description = <"*">
+            >
+            ["at0.4"] = <
+                text = <"Darke yellow">
+                description = <"*">
+            >
+            ["at0.5"] = <
+                text = <"Amber/honey">
+                description = <"*">
+            >
+            ["at0.6"] = <
+                text = <"Brown">
+                description = <"*">
+            >
+            ["at0.7"] = <
+                text = <"Orange">
+                description = <"*">
+            >
+            ["at0.8"] = <
+                text = <"Pink/red">
+                description = <"*">
+            >
+            ["at0.9"] = <
+                text = <"Blue/green">
+                description = <"*">
+            >
+            ["at0.10"] = <
+                text = <"Black">
+                description = <"*">
+            >
+            ["at0.11"] = <
+                text = <"Clarity">
+                description = <"The amount of transparency of the urine.">
+            >
+            ["at0.12"] = <
+                text = <"Clear">
+                description = <"*">
+            >
+            ["at0.13"] = <
+                text = <"Hazy">
+                description = <"*">
+            >
+            ["at0.14"] = <
+                text = <"Cloudy">
+                description = <"*">
+            >
+            ["at0.15"] = <
+                text = <"Turbid">
+                description = <"*">
+            >
+            ["at0021.1"] = <
+                text = <"Blood clots">
+                description = <"Blood clots are observed within or associated with the body fluid.">
+            >
+            ["ac0.9000"] = <
+                text = <"Colour (synthesised)">
+                description = <"The colour of the body fluid. (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"Clarity (synthesised)">
+                description = <"The amount of transparency of the urine. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.1", "at0.2", "at0.3", "at0.4", "at0.5", "at0.6", "at0.7", "at0.8", "at0.9", "at0.10">
+        >
+        ["ac0.9001"] = <
+            id = <"ac0.9001">
+            members = <"at0.12", "at0.13", "at0.14", "at0.15">
+        >
+    >

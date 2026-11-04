@@ -1,0 +1,122 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=e5243e9c-8e98-4877-af93-eeee308a2c37; build_uid=fba771b3-54c6-4bf6-97eb-12c3f52af0fd)
+    openEHR-EHR-COMPOSITION.progress_note.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Mikkel Johan Gaup Grønmo">
+                ["organisation"] = <"Forvaltningssenter EPJ, Helse-Nord">
+                ["email"] = <"mikkel.johan.gaup.gronmo@helse-nord.no">
+            >
+            accreditation = <"Nasjonal IKT">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics, Australia">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2013-04-11">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    references = <
+        ["1"] = <"Derived from: Progress note, Draft archetype [Internet]. Australian Digital Health Agency (NEHTA), ADHA Clinical Knowledge Manager. Authored: 2013 Apr 11. Available at: http://dcm.nehta.org.au/ckm#showArchetype_1013.1.1278_1 (discontinued)">
+    >
+    other_details = <
+        ["current_contact"] = <"Dr Heather Leslie, Atomica Informatics, Australia<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"828E3A9242B5A392FFB0A74D4AC7F494">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Repräsentation von gesundheitsbezogenen Ereignissen, die im Rahmen der Pflege und/oder des Gesundheitszustands des Patienten eingetreten sind, der Befunde, Gutachten und Pläne, die zum Zeitpunkt der Aufzeichnung aktuell sind.">
+            keywords = <"Fortschrittsbericht, Fortschrittsnotiz", ...>
+            use = <"Zur Repräsentation von gesundheitsbezogenen Ereignissen, die im Rahmen der Pflege und/oder des Gesundheitszustands des Patienten eingetreten sind, der Befunde, Gutachten und Pläne, die zum Zeitpunkt der Aufzeichnung aktuell sind. Fortschrittsberichte werden in der Regel verwendet, um laufende Notizen von verschiedenen Gesundheitsdienstleister darzustellen, die an der Patientenversorgung während einer Art von Gesundheitspflegeepisode teilnehmen. Diese Composition steht im Gegensatz zu einem einmaligen persönlichen Kontakt in einer Klinik, der normalerweise mit COMPOSITION.encounter dargestellt wird. Eine Fortschrittsbericht enthält möglicherweise keine persönliche Visite des Patienten bei einem Arzt, kann jedoch verwendet werden, um die Gesundheitsinformationen vom Patienten aus der Ferne aufzuzeichnen oder über ein anschließendes Telefongespräch oder ein Kontakt zwischen den Gesundheitsdienstleistern zu berichten, ohne dass der Patient dabei anwesend ist.
+
+Ein typischer Fortschrittsbericht während einer Krankenhausepisode für die Krankenpglege kann Archetypen EVALUATION.reason_for_encounter, EVALUATION.progress_note zur Darstellung der Beschreibung der Schicht der Krankenpflege enthalten oder eine Kombination von OBSERVATION-Archetypen zur Darstellung von Vitalzeichen-Parameter und / oder ACTION-Archetypen zur Darstellung der durchgeführten Maßnahmen oder Prozeduren umfassen.">
+            misuse = <"">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere detaljer om helserelaterte hendelser som har hendt som ledd i omsorg av et individ og/eller individets helsestatus, funn, meninger eller planer som er gyldig på tidspunktet det registreres.">
+            keywords = <"Fortløpende notat", ...>
+            use = <"Brukes for å registrere detaljer om helserelaterte hendelser som har hendt som ledd i omsorg av et individ og/eller individets helsestatus, funn, meninger eller planer som er gyldig på tidspunktet det registreres. Fortløpende notater blir typisk brukt for å registrere pågående omsorgsnotater av ulike tjenesteytere som deltar i omsorgsammenheng i en innleggelsesperiode, i motsetning til engangstilfelle ansikt til ansikt møte i en klinikk som normalt registreres som en COMPOSITION.encounter. Et fortløpende notat kan ikke inneholde et ansikt til ansikt møte mellom kliniker og individet, men kan bli brukt for å registrere helseinformasjon indirekte fra pasienten eller som en oppsummering om en telefonisk oppfølgingssamtale eller som samarbeidsnotat mellom helsepersonell uten at individet er tilstede.
+
+Et typisk fortløpende sykepleienotat under en innleggelse kan inkludere EVALUATION.reason_for_encounter, EVALUATION.progress_note for å registrere en fritekstlig oppsummering fra vaktskiftet, en kombinasjon av OBSERVATIONS for å registrere vitaltegn, målinger og/eller ACTIONS for å registrere planer eller prosedyrer som ble utført.">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details of health-related events that have occurred as part of the subject's care, and/or the subject's health status, findings, opinions and plans that are current at the time of recording.">
+            keywords = <"progress note", ...>
+            use = <"Use to record details of health-related events that have occurred as part of the subject's care, and/or the subject's health status, findings, opinions and plans that are current at the time of recording. Progress notes are more typically used to record ongoing care notes by various providers participating in aspects of care during some kind of healthcare episode, as distinct from a one-off face-to-face meeting in a clinic which is typically recorded as a COMPOSITION.encounter. A progress note may not include a face-to-face meeting between a clinician and the subject, but may be used to record health information remotely from the patient or report on a follow-up telephone conversation or liaison between healthcare providers without the subject present.
+
+A typical nursing progress note during a hospital episode might include EVALUATION.reason_for_encounter, EVALUATION.progress_note to record the narrative summary of the nursing shift, a combination of OBSERVATIONS for recording vital signs measurements and/or ACTIONS to record the tasks or procedures carried out.">
+            misuse = <"">
+            copyright = <"© Australian Digital Health Agency, openEHR Foundation">
+        >
+    >
+
+definition
+    COMPOSITION[at0000] matches {    -- Progress Note
+        category matches {
+            DV_CODED_TEXT[at9001] matches {
+                defining_code matches {[at9000]}    -- event
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Fortschrittsbericht">
+                description = <"Ein Dokument, das zur Repräsentation gesundheitsbezogener Ereignisse dient, die im Rahmen der Pflege und/oder des Gesundheitszustands des Patienten aufgetreten sind, der Befunde, Gutachten und Plänen, die zum Zeitpunkt der Aufzeichnung aktuell sind.">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Fortløpende notat">
+                description = <"Dokument brukt for å registrere detaljer om helserelaterte hendelser som har hendt som ledd i omsorg av et individ og/eller individets helsestatus, funn, meninger eller planer som er gyldig på tidspunktet det registreres.">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Progress Note">
+                description = <"Document used to record details of health-related events that have occurred as part of the subject's care, and/or the subject's health status, findings, opinions and plans that are current at the time of recording.">
+            >
+            ["at9000"] = <
+                text = <"event">
+                description = <"event">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/433>
+        >
+    >

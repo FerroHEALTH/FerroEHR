@@ -1,0 +1,307 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=7ae05da1-d0a5-36ed-8b79-c2f943384ee0; build_uid=8146c3a6-17a8-45f6-a4a9-9c4d0b1312dd)
+    openEHR-EHR-EVALUATION.source.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Vanessa Pereira">
+                ["organisation"] = <"Luxembourg Institute of Health (LIH)">
+                ["email"] = <"vanessapereira@protonmail.com">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Clóvis Puttini, Débora Farage, Fernanda Maia, Ana Paula Andrade, Adriana Kitajima">
+                ["organisation"] = <"Core Consulting">
+                ["email"] = <"contato@coreconsulting.com.br">
+            >
+            accreditation = <"Hospital Alemão Oswaldo Cruz (HAOC)">
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            author = <
+                ["name"] = <"Vanessa Pereira">
+                ["organisation"] = <"Luxembourg Institute of Health (LIH)">
+                ["email"] = <"vanessapereira@protonmail.com">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2013-03-11">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, heather.leslie@atomicainformatics.com">
+        ["MD5-CAM-1.0.1"] = <"441F10504D2BA13BC8729A9819B88D86">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Aufzeichnung von Details über Informationen, die von Dritten stammen und als Teil einer Fernbewertung oder eines Berichts verwendet werden.">
+            keywords = <"Quelle", "Bild", "Original">
+            use = <"Zur Aufzeichnung von Details über Informationen, die von Dritten stammen und als Teil einer Fernbeurteilung oder eines Berichts verwendet werden.
+
+Dieser Archetyp wurde entwickelt, um die Identifizierung und Qualität von Gesundheitsinformationen zu unterstützen, die von einer klinischen Drittquelle stammen. 
+
+Jede klinische Information, die von einer Drittquelle stammt, muss vor ihrer Verwendung zur Unterstützung der klinischen Entscheidungsfindung auf ihre Verwendbarkeit geprüft werden. Ein Beispiel: Ein digitales Bild, das während einer klinischen Konsultation aufgenommen wurde, oder ein digitales Röntgenbild, das an einen entfernten Spezialisten zur Beurteilung und Behandlungsberatung geschickt wird, muss die gesamte anatomische Region abbilden und von angemessener Qualität sein.">
+            misuse = <"">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Para gravar detalhes sobre informação originada de terceiros que é utilizada como parte de uma avaliação remota ou relatório.">
+            keywords = <"origem", "imagem", "original">
+            use = <"Para gravar detalhes sobre informação originada deterceiros que é utilizada como parte de uma avaliação remota ou relatório.
+
+Este arquétipo foi designado para apoiar a identificação e qualidade da informação de saúde proveniente de uma fonte clínica de terceiros.
+
+
+Cada parte da evidencia clínica recebida de terceiros precisa ser avaliada como 'apta para uso' antes de ser utilizada para apoiar a tomada de decisão clínica. Por exemplo: a imagem digital capturada durante a consulta clínica, ou a radiografia digital , enviada para um especialista remoto para avaliação das necessidades de aconselhamento do tramamento, precisa ser considerado como sendo região anatômica completa e de qualidade apropriada.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about information sourced from a third party that is utilised as part of a remote assessment or report.">
+            keywords = <"source", "image", "original">
+            use = <"Use to record details about information sourced from a third party that is utilised as part of a remote assessment or report.
+
+This archetype has been designed to support the identification and quality of health information sourced from a third party clinical source. 
+
+Each piece of clinical evidence that has been received from a third party source needs to be assessed as 'fit for use' prior to being utilisied to support clinical decision-making. For example: a digital image captured during a clinical consultation, or a digital radiograph, sent to a remote specialist for assessment and treatment advice needs to be deemed to be of the complete anatomical region and of appropriate quality.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            purpose = <"Enregistrer des détails sur les informations provenant d'un tiers et utilisées dans le cadre d'une évaluation ou d'un rapport à distance.">
+            keywords = <"source", "image", "original">
+            use = <"À utiliser pour enregistrer des détails sur des informations provenant d'un tiers et utilisées dans le cadre d'une évaluation ou d'un rapport à distance.
+
+Cet archétype a été conçu pour soutenir l'identification et la qualité des informations de santé provenant d'une source clinique tierce. 
+
+Chaque élément de preuve clinique reçu d'une source tierce doit être évalué comme étant \"apte à l'emploi\" avant d'être utilisé pour soutenir la prise de décision clinique. Par exemple : une image numérique capturée lors d'une consultation clinique ou une radiographie numérique envoyée à un spécialiste à distance pour évaluation et conseils de traitement doit être considérée comme représentant la région anatomique complète et d'une qualité appropriée.">
+            misuse = <"">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Source information
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Source information
+                        value matches {
+                            DV_TEXT[at9001]
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Path
+                        value matches {
+                            DV_URI[at9002]
+                        }
+                    }
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Quality
+                        value matches {
+                            DV_CODED_TEXT[at9003] matches {
+                                defining_code matches {[ac9000]}    -- Quality (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0007] matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9004]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0008] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0009] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Informationen zur Quelle">
+                description = <"Informationen, die von einer dritten Partei stammen und als Teil einer Fernbewertung oder eines Berichts verwendet werden.">
+            >
+            ["at0002"] = <
+                text = <"Informationen zur Quelle">
+                description = <"Identifizierung des Originals oder der Quelle der zu bewertenden Informationen.">
+            >
+            ["at0003"] = <
+                text = <"Pfad">
+                description = <"Identifizierung des Pfads zum Archetyp oder Datenknoten für die ursprünglichen Informationen.">
+            >
+            ["at0004"] = <
+                text = <"Qualität">
+                description = <"Bewertung der \"Gebrauchstauglichkeit\" der ursprünglichen Informationen.">
+            >
+            ["at0005"] = <
+                text = <"Ausreichend für den Gebrauch">
+                description = <"Die ursprüngliche Information gilt als \"gebrauchstauglich\".">
+            >
+            ["at0006"] = <
+                text = <"Für den Gebrauch nicht geeignet">
+                description = <"Die ursprüngliche Information gilt nicht als \"gebrauchstauglich\".">
+            >
+            ["at0007"] = <
+                text = <"Kommentar">
+                description = <"Kommentar zu den Quelleninformationen, die nicht in anderen Datenfeldern erfasst werden.">
+            >
+            ["at0009"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen sind erforderlich, um den lokalen Kontext zu erfassen oder mit anderen Referenzmodellen/Formalismen in Einklang zu bringen.">
+                comment = <"Zum Beispiel: Lokale Krankenhausabteilungsinformationen oder zusätzliche Metadaten zur Angleichung an FHIR oder CIMI-Äquivalente.">
+            >
+            ["ac9000"] = <
+                text = <"Qualität (synthesised)">
+                description = <"Bewertung der \"Gebrauchstauglichkeit\" der ursprünglichen Informationen. (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Origem da informação">
+                description = <"Origem da informação de terceiros que é utilizada como parte de uma avaliação remota ou relatório.">
+            >
+            ["at0002"] = <
+                text = <"Origem da Informação">
+                description = <"Identificação da informação original, ou fonte da informação, em análise.">
+            >
+            ["at0003"] = <
+                text = <"Caminho">
+                description = <"Identificação do caminho para o arquétipo ou modo para a informação original.">
+            >
+            ["at0004"] = <
+                text = <"Qualidade">
+                description = <"Avaliação sobre adequação ao uso da informação original.">
+            >
+            ["at0005"] = <
+                text = <"Adequado para uso">
+                description = <"A informação é considerada apropriada para uso.">
+            >
+            ["at0006"] = <
+                text = <"Não adequado para uso">
+                description = <"A informação é considerada não apropriada para uso.">
+            >
+            ["at0007"] = <
+                text = <"Comentário">
+                description = <"Descrição sobre a origem da informação não capturada em outros campos de dados.">
+            >
+            ["at0009"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local context or to align with other reference models/formalisms.(en)">
+                comment = <"*For example: Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.(en)">
+            >
+            ["ac9000"] = <
+                text = <"Qualidade (synthesised)">
+                description = <"Avaliação sobre adequação ao uso da informação original. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Source information">
+                description = <"Information sourced from a third party that is utilised as part of a remote assessment or report.">
+            >
+            ["at0002"] = <
+                text = <"Source information">
+                description = <"Identification of the original, or source of, information being assessed.">
+            >
+            ["at0003"] = <
+                text = <"Path">
+                description = <"Identification of the path to the archetype or data node for  the original information.">
+            >
+            ["at0004"] = <
+                text = <"Quality">
+                description = <"Assessment regarding 'fitness for use' of the original information.">
+            >
+            ["at0005"] = <
+                text = <"Adequate for Use">
+                description = <"The original information is deemed to be 'fit for use'.">
+            >
+            ["at0006"] = <
+                text = <"Not Adequate for Use">
+                description = <"The original information is not deemed to be 'fit for use'.">
+            >
+            ["at0007"] = <
+                text = <"Comment">
+                description = <"Narrative about the source information not captured in other data fields.">
+            >
+            ["at0009"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"For example: Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["ac9000"] = <
+                text = <"Quality (synthesised)">
+                description = <"Assessment regarding 'fitness for use' of the original information. (synthesised)">
+            >
+        >
+        ["fr"] = <
+            ["at0000"] = <
+                text = <"Source d'information">
+                description = <"Informations provenant d'un tiers et utilisées dans le cadre d'une évaluation ou d'un rapport à distance.">
+            >
+            ["at0002"] = <
+                text = <"Source d'information">
+                description = <"Identification de l'original ou de la source de l'information évaluée.">
+            >
+            ["at0003"] = <
+                text = <"Chemin d'accès">
+                description = <"Identification du chemin d'accès à l'archétype ou au nœud de données pour l'information originale.">
+            >
+            ["at0004"] = <
+                text = <"Qualité">
+                description = <"Évaluation de l'aptitude à l'emploi de l'information originale.">
+            >
+            ["at0005"] = <
+                text = <"Adéquat pour l'utilisation">
+                description = <"L'information originale est considérée comme \"apte à l'emploi\".">
+            >
+            ["at0006"] = <
+                text = <"Inadéquat pour l'utilisation">
+                description = <"L'information originale n'est pas considérée comme \"apte à l'emploi\".">
+            >
+            ["at0007"] = <
+                text = <"Commentaire">
+                description = <"Informations sur la source d'information qui n'ont pas été saisies dans d'autres champs de données.">
+            >
+            ["at0009"] = <
+                text = <"Extension">
+                description = <"Informations supplémentaires requises pour tenir compte du contexte local ou pour s'aligner sur d'autres modèles/formalismes de référence.">
+                comment = <"Par exemple : Informations départementales de l'hôpital local ou métadonnées supplémentaires pour s'aligner sur les équivalents FHIR ou CIMI.">
+            >
+            ["ac9000"] = <
+                text = <"Qualité (synthesised)">
+                description = <"Évaluation de l'aptitude à l'emploi de l'information originale. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0005", "at0006">
+        >
+    >

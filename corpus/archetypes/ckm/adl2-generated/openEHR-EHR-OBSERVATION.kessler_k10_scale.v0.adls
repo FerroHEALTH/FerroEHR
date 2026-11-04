@@ -1,0 +1,554 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=86d582e5-12e4-4cf3-8a81-5a8cf2536e28; build_uid=06e64e79-2b78-4bf7-a4bc-8a9cdb79bc30)
+    openEHR-EHR-OBSERVATION.kessler_k10_scale.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Silje Ljosland Bakke">
+        ["organisation"] = <"Nasjonal IKT HF">
+        ["email"] = <"silje.ljosland.bakke@nasjonalikt.no">
+        ["date"] = <"2016-12-02">
+    >
+    original_namespace = <"no.nasjonalikt">
+    original_publisher = <"Nasjonal IKT">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"no.nasjonalikt">
+    custodian_organisation = <"Nasjonal IKT">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Kessler, R.C., Andrews, G., Colpe, L.J., Hiripi, E., Mroczek, D.K., Normand, S.-L.T., Walters, E.E. and Zaslavsky, A.M. (2002) \"Short screening scales to monitor population prevalences and trends in non-specific psychological distress\", Psychological Medicine, 32(6), pp. 959–976. doi: 10.1017/S0033291702006074.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"531F58D569C3CD8A6A754A5314C0C9EB">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For measuring anxiety and depression through a 10-item questionnaire. It's intended to yield a global measure of
+distress based on questions about anxiety and depressive symptoms that a person has experienced in the most recent 4 week period.">
+            use = <"Use for measuring anxiety and depression through a 10-item questionnaire. The numbers attached to the subject's 10 responses are added up and the total score is the score on the Kessler Psychological Distress Scale (K10). Scores will range from 10 to 50.">
+            misuse = <"Not to be used to record any other measures of anxiety and depression than the Kessler Psychological Distress Scale (K10).">
+            copyright = <"© Nasjonal IKT HF">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Kessler Psychological Distress Scale (K10)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] occurrences matches {0..1} matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- During the last 30 days, about how often did you feel tired out for no good reason?
+                                        value matches {
+                                            DV_ORDINAL[at9010] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0005]}],    -- None of the time
+                                                    [{2}, {[at0006]}],    -- A little of the time
+                                                    [{3}, {[at0007]}],    -- Some of the time
+                                                    [{4}, {[at0008]}],    -- Most of the time
+                                                    [{5}, {[at0009]}]    -- All of the time
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- During the last 30 days, about how often did you feel nervous?
+                                        value matches {
+                                            DV_ORDINAL[at9011] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0016]}],    -- None of the time
+                                                    [{2}, {[at0017]}],    -- A little of the time
+                                                    [{3}, {[at0018]}],    -- Some of the time
+                                                    [{4}, {[at0019]}],    -- Most of the time
+                                                    [{5}, {[at0020]}]    -- All of the time
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- During the last 30 days, about how often did you feel so nervous that nothing could calm you down?
+                                        value matches {
+                                            DV_ORDINAL[at9012] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0022]}],    -- None of the time
+                                                    [{2}, {[at0023]}],    -- A little of the time
+                                                    [{3}, {[at0024]}],    -- Some of the time
+                                                    [{4}, {[at0025]}],    -- Most of the time
+                                                    [{5}, {[at0026]}]    -- All of the time
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0027] occurrences matches {0..1} matches {    -- During the last 30 days, about how often did you feel hopeless?
+                                        value matches {
+                                            DV_ORDINAL[at9013] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0028]}],    -- None of the time
+                                                    [{2}, {[at0029]}],    -- A little of the time
+                                                    [{3}, {[at0030]}],    -- Some of the time
+                                                    [{4}, {[at0031]}],    -- Most of the time
+                                                    [{5}, {[at0032]}]    -- All of the time
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0033] occurrences matches {0..1} matches {    -- During the last 30 days, about how often did you feel restless or fidgety?
+                                        value matches {
+                                            DV_ORDINAL[at9014] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0034]}],    -- None of the time
+                                                    [{2}, {[at0035]}],    -- A little of the time
+                                                    [{3}, {[at0036]}],    -- Some of the time
+                                                    [{4}, {[at0037]}],    -- Most of the time
+                                                    [{5}, {[at0038]}]    -- All of the time
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0039] occurrences matches {0..1} matches {    -- During the last 30 days, about how often did you feel so restless you could not sit still?
+                                        value matches {
+                                            DV_ORDINAL[at9015] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0040]}],    -- None of the time
+                                                    [{2}, {[at0041]}],    -- A little of the time
+                                                    [{3}, {[at0042]}],    -- Some of the time
+                                                    [{4}, {[at0043]}],    -- Most of the time
+                                                    [{5}, {[at0044]}]    -- All of the time
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0045] occurrences matches {0..1} matches {    -- During the last 30 days, about how often did you feel depressed?
+                                        value matches {
+                                            DV_ORDINAL[at9016] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0046]}],    -- None of the time
+                                                    [{2}, {[at0047]}],    -- A little of the time
+                                                    [{3}, {[at0048]}],    -- Some of the time
+                                                    [{4}, {[at0049]}],    -- Most of the time
+                                                    [{5}, {[at0050]}]    -- All of the time
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0051] occurrences matches {0..1} matches {    -- During the last 30 days, about how often did you feel that everything was an effort?
+                                        value matches {
+                                            DV_ORDINAL[at9017] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0052]}],    -- None of the time
+                                                    [{2}, {[at0053]}],    -- A little of the time
+                                                    [{3}, {[at0054]}],    -- Some of the time
+                                                    [{4}, {[at0055]}],    -- Most of the time
+                                                    [{5}, {[at0056]}]    -- All of the time
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0057] occurrences matches {0..1} matches {    -- During the last 30 days, about how often did you feel so sad that nothing could cheer you up?
+                                        value matches {
+                                            DV_ORDINAL[at9018] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0058]}],    -- None of the time
+                                                    [{2}, {[at0059]}],    -- A little of the time
+                                                    [{3}, {[at0060]}],    -- Some of the time
+                                                    [{4}, {[at0061]}],    -- Most of the time
+                                                    [{5}, {[at0062]}]    -- All of the time
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0063] occurrences matches {0..1} matches {    -- During the last 30 days, about how often did you feel worthless?
+                                        value matches {
+                                            DV_ORDINAL[at9019] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0064]}],    -- None of the time
+                                                    [{2}, {[at0065]}],    -- A little of the time
+                                                    [{3}, {[at0066]}],    -- Some of the time
+                                                    [{4}, {[at0067]}],    -- Most of the time
+                                                    [{5}, {[at0068]}]    -- All of the time
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9020] matches {
+                                                magnitude matches {|10..50|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0069] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9021]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0070] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0071] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Kessler Psychological Distress Scale (K10)">
+                description = <"The Kessler Psychological Distress Scale (K10) is a tool for measuring anxiety and depression through a 10-item questionnaire. Each question pertains to an emotional state and each has a five-level response scale.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"During the last 30 days, about how often did you feel tired out for no good reason?">
+                description = <"During the last 30 days, about how often did you feel tired out for no good reason?">
+            >
+            ["at0005"] = <
+                text = <"None of the time">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"A little of the time">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Some of the time">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Most of the time">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"All of the time">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Total score">
+                description = <"The total score on the Kessler Psychological Distress Scale (K10).">
+            >
+            ["at0015"] = <
+                text = <"During the last 30 days, about how often did you feel nervous?">
+                description = <"During the last 30 days, about how often did you feel nervous?">
+            >
+            ["at0016"] = <
+                text = <"None of the time">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"A little of the time">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Some of the time">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Most of the time">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"All of the time">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"During the last 30 days, about how often did you feel so nervous that nothing could calm you down?">
+                description = <"During the last 30 days, about how often did you feel so nervous that nothing could calm you down?">
+            >
+            ["at0022"] = <
+                text = <"None of the time">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"A little of the time">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Some of the time">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Most of the time">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"All of the time">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"During the last 30 days, about how often did you feel hopeless?">
+                description = <"During the last 30 days, about how often did you feel hopeless?">
+            >
+            ["at0028"] = <
+                text = <"None of the time">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"A little of the time">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Some of the time">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Most of the time">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"All of the time">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"During the last 30 days, about how often did you feel restless or fidgety?">
+                description = <"During the last 30 days, about how often did you feel restless or fidgety?">
+            >
+            ["at0034"] = <
+                text = <"None of the time">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"A little of the time">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Some of the time">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"Most of the time">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"All of the time">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"During the last 30 days, about how often did you feel so restless you could not sit still?">
+                description = <"During the last 30 days, about how often did you feel so restless you could not sit still?">
+            >
+            ["at0040"] = <
+                text = <"None of the time">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"A little of the time">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"Some of the time">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"Most of the time">
+                description = <"">
+            >
+            ["at0044"] = <
+                text = <"All of the time">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"During the last 30 days, about how often did you feel depressed?">
+                description = <"During the last 30 days, about how often did you feel depressed?">
+            >
+            ["at0046"] = <
+                text = <"None of the time">
+                description = <"">
+            >
+            ["at0047"] = <
+                text = <"A little of the time">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"Some of the time">
+                description = <"">
+            >
+            ["at0049"] = <
+                text = <"Most of the time">
+                description = <"">
+            >
+            ["at0050"] = <
+                text = <"All of the time">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"During the last 30 days, about how often did you feel that everything was an effort?">
+                description = <"During the last 30 days, about how often did you feel that everything was an effort?">
+            >
+            ["at0052"] = <
+                text = <"None of the time">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"A little of the time">
+                description = <"">
+            >
+            ["at0054"] = <
+                text = <"Some of the time">
+                description = <"">
+            >
+            ["at0055"] = <
+                text = <"Most of the time">
+                description = <"">
+            >
+            ["at0056"] = <
+                text = <"All of the time">
+                description = <"">
+            >
+            ["at0057"] = <
+                text = <"During the last 30 days, about how often did you feel so sad that nothing could cheer you up?">
+                description = <"During the last 30 days, about how often did you feel so sad that nothing could cheer you up?">
+            >
+            ["at0058"] = <
+                text = <"None of the time">
+                description = <"">
+            >
+            ["at0059"] = <
+                text = <"A little of the time">
+                description = <"">
+            >
+            ["at0060"] = <
+                text = <"Some of the time">
+                description = <"">
+            >
+            ["at0061"] = <
+                text = <"Most of the time">
+                description = <"">
+            >
+            ["at0062"] = <
+                text = <"All of the time">
+                description = <"">
+            >
+            ["at0063"] = <
+                text = <"During the last 30 days, about how often did you feel worthless?">
+                description = <"During the last 30 days, about how often did you feel worthless?">
+            >
+            ["at0064"] = <
+                text = <"None of the time">
+                description = <"">
+            >
+            ["at0065"] = <
+                text = <"A little of the time">
+                description = <"">
+            >
+            ["at0066"] = <
+                text = <"Some of the time">
+                description = <"">
+            >
+            ["at0067"] = <
+                text = <"Most of the time">
+                description = <"">
+            >
+            ["at0068"] = <
+                text = <"All of the time">
+                description = <"">
+            >
+            ["at0069"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the overall Kessler Psychological Distress Scale not captured in other fields.">
+            >
+            ["at0071"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"e.g. Local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["ac9021"] = <
+                text = <"During the last 30 days, about how often did you feel tired out for no good reason? (synthesised)">
+                description = <"During the last 30 days, about how often did you feel tired out for no good reason? (synthesised)">
+            >
+            ["ac9022"] = <
+                text = <"During the last 30 days, about how often did you feel nervous? (synthesised)">
+                description = <"During the last 30 days, about how often did you feel nervous? (synthesised)">
+            >
+            ["ac9023"] = <
+                text = <"During the last 30 days, about how often did you feel so nervous that nothing could calm you down? (synthesised)">
+                description = <"During the last 30 days, about how often did you feel so nervous that nothing could calm you down? (synthesised)">
+            >
+            ["ac9024"] = <
+                text = <"During the last 30 days, about how often did you feel hopeless? (synthesised)">
+                description = <"During the last 30 days, about how often did you feel hopeless? (synthesised)">
+            >
+            ["ac9025"] = <
+                text = <"During the last 30 days, about how often did you feel restless or fidgety? (synthesised)">
+                description = <"During the last 30 days, about how often did you feel restless or fidgety? (synthesised)">
+            >
+            ["ac9026"] = <
+                text = <"During the last 30 days, about how often did you feel so restless you could not sit still? (synthesised)">
+                description = <"During the last 30 days, about how often did you feel so restless you could not sit still? (synthesised)">
+            >
+            ["ac9027"] = <
+                text = <"During the last 30 days, about how often did you feel depressed? (synthesised)">
+                description = <"During the last 30 days, about how often did you feel depressed? (synthesised)">
+            >
+            ["ac9028"] = <
+                text = <"During the last 30 days, about how often did you feel that everything was an effort? (synthesised)">
+                description = <"During the last 30 days, about how often did you feel that everything was an effort? (synthesised)">
+            >
+            ["ac9029"] = <
+                text = <"During the last 30 days, about how often did you feel so sad that nothing could cheer you up? (synthesised)">
+                description = <"During the last 30 days, about how often did you feel so sad that nothing could cheer you up? (synthesised)">
+            >
+            ["ac9030"] = <
+                text = <"During the last 30 days, about how often did you feel worthless? (synthesised)">
+                description = <"During the last 30 days, about how often did you feel worthless? (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9030"] = <
+            id = <"ac9030">
+            members = <"at0064", "at0065", "at0066", "at0067", "at0068">
+        >
+        ["ac9024"] = <
+            id = <"ac9024">
+            members = <"at0028", "at0029", "at0030", "at0031", "at0032">
+        >
+        ["ac9023"] = <
+            id = <"ac9023">
+            members = <"at0022", "at0023", "at0024", "at0025", "at0026">
+        >
+        ["ac9022"] = <
+            id = <"ac9022">
+            members = <"at0016", "at0017", "at0018", "at0019", "at0020">
+        >
+        ["ac9021"] = <
+            id = <"ac9021">
+            members = <"at0005", "at0006", "at0007", "at0008", "at0009">
+        >
+        ["ac9028"] = <
+            id = <"ac9028">
+            members = <"at0052", "at0053", "at0054", "at0055", "at0056">
+        >
+        ["ac9027"] = <
+            id = <"ac9027">
+            members = <"at0046", "at0047", "at0048", "at0049", "at0050">
+        >
+        ["ac9026"] = <
+            id = <"ac9026">
+            members = <"at0040", "at0041", "at0042", "at0043", "at0044">
+        >
+        ["ac9025"] = <
+            id = <"ac9025">
+            members = <"at0034", "at0035", "at0036", "at0037", "at0038">
+        >
+        ["ac9029"] = <
+            id = <"ac9029">
+            members = <"at0058", "at0059", "at0060", "at0061", "at0062">
+        >
+    >

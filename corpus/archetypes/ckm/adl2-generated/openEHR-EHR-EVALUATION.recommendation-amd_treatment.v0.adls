@@ -1,0 +1,209 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=eef4b601-8d7d-4a3b-a7b6-d199eee2fafd; build_uid=9badbeec-d858-46a3-876b-a77f71e4bfbb)
+    openEHR-EHR-EVALUATION.recommendation-amd_treatment.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-EVALUATION.recommendation.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Aitor Eguzkitza">
+        ["organisation"] = <"Universidad Pública de Navarra - Complejo Hospitalario de Navarra">
+        ["email"] = <"aitor.eguzkiza@unavarra.es">
+        ["date"] = <"2015-07-04">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Koray Atalag, University of Auckland, New Zealand", "Silje Ljosland Bakke, Bergen Hospital Trust, Norway (openEHR Editor)", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Einar Fosse, National Centre for Integrated Care and Telemedicine, Norway", "Sam Heard, Ocean Informatics, Australia", "Lars Karlsen, DIPS ASA, Norway", "Shinji Kobayashi, Kyoto University, Japan", "Heather Leslie, Ocean Informatics, Australia (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Andrej Orel, Marand d.o.o., Slovenia", "José Andonegui, Hospital de Navarra, jose.andonegui.navarro@cfnavarra.es", "Luis Serrano, Universidad Pública de Navarra (UPNA), lserrano@unavarra.es", "Jesús D. Trigo, Universidad Pública de Navarra (UPNA), jesusdaniel.trigo@unavarra.es">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["current_contact"] = <"Aitor Eguzkitza, Universidad Pública de Navarra - Complejo Hospitalario de Navarra<aitor.eguzkiza@unavarra.es>">
+        ["MD5-CAM-1.0.1"] = <"90F3DB6FB27CA260C42AE260C3122C98">
+    >
+    details = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registrar una sugerencia, consejo o propuesta sobre el tratamiento más adecuado para cada paciente con degeneración macular asociada a la edad.">
+            keywords = <"Tratamiento", "Degeneración macular asociada a la edad", "sugerencia", "consejo", "propuesta">
+            use = <"Se utiliza para registrar una sugerencia, consejo o propuesta sobre el tratamiento de la degeneración macular asociada a la edad, para un instante específico de su historial clínico.
+
+La declaración se considera sólo en el momento en que se registra. Es decir, el tratamiento puede cambiar con el tiempo en función de la progresión de la enfermedad.">
+            misuse = <"*(en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a suggestion, advice or proposal about the most suitable treatment at a specific time, for each patient with age-related macular degeneration.">
+            keywords = <"advice", "proposal", "suggestion", "treatment", "age-related macular degeneration", "amd">
+            use = <"Use to record a suggestion, advice or proposal about the treatment of age-related macular degeneration, valid at a specific time of healthcare.
+The statement is considered for the specific point-in-time it is registered, as the therapeutic guidelines may vary according to the context of the disease and the information evaluated in each clinical encounter.
+For example, the treatment can be modified over time depending on the progression of the disease.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000.1] matches {    -- Recommendation on the treatment of AMD
+        /data[at0001]/items matches {
+            ELEMENT[at0002.1] occurrences matches {0..1} matches {    -- Therapeutic recommendation
+                value matches {
+                    DV_CODED_TEXT[at0.9001] matches {
+                        defining_code matches {[ac0.9000; at0.4]}    -- Therapeutic recommendation (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0003.1] matches {    -- Rationale
+                value matches {
+                    DV_CODED_TEXT[at9001.1] matches {
+                        defining_code matches {[ac0.9001]}    -- Rationale (synthesised)
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0.11"] = <
+                text = <"Photodynamic Therapy (PDT)">
+                description = <"A light-sensitive medicine is injected into the bloodstream, and blocks selectively abnormal blood vessels under the macula in response to laser light. PDT is applicable to stop further formation of wet AMD, but it cannot reverse damage.">
+            >
+            ["at0.12"] = <
+                text = <"High dose Antioxidant Vitamin and Mineral Supplements">
+                description = <"Daily intake of certain antioxidants and minerals can help slow the progression of age-related macular degeneration (AMD).">
+            >
+            ["at0.14"] = <
+                text = <"Thermal Laser Photocoagulation Surgery">
+                description = <"By treating the abnormal blood vessels that have formed on the retina, laser surgery can delay advancement of the disease.">
+            >
+            ["at0.15"] = <
+                text = <"Visual acuity decrease with macular fluid">
+                description = <"Loss of at least one line of visual acuity, in comparison to the previous revision, associated with the presence of macular fluid indicative of activity on AMD.">
+            >
+            ["at0.16"] = <
+                text = <"Macular fluid">
+                description = <"Persistence of intraretinal or subretinal macular fluid indicative of AMD activity.">
+            >
+            ["at0.17"] = <
+                text = <"New macular haemorrhage">
+                description = <"Emerging new macular haemorrhage detected.">
+            >
+            ["at0.4"] = <
+                text = <"Do not treat">
+                description = <"Observation of the condition is recommended when no treatment is indicated or the afection is not tratable.">
+            >
+            ["at0.5"] = <
+                text = <"Intravitreal anti-VEGF injection">
+                description = <"Inhibition of neovascularization may delay or even halt progression of exudative form of AMD.">
+            >
+            ["at0000.1"] = <
+                text = <"Recommendation on the treatment of AMD">
+                description = <"A suggestion, advice or proposal toward application of the appropriate therapy for patients diagnosed with age-related macular degeneration.">
+            >
+            ["at0002.1"] = <
+                text = <"Therapeutic recommendation">
+                description = <"Narrative description of the most effective treatment based on a previous assessment of AMD.">
+            >
+            ["at0003.1"] = <
+                text = <"Rationale">
+                description = <"Justification for the recommendation.">
+            >
+            ["ac0.9000"] = <
+                text = <"Therapeutic recommendation (synthesised)">
+                description = <"Narrative description of the most effective treatment based on a previous assessment of AMD. (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"Rationale (synthesised)">
+                description = <"Justification for the recommendation. (synthesised)">
+            >
+        >
+        ["es"] = <
+            ["at0.11"] = <
+                text = <"Terapia fotodinámica (PDT)">
+                description = <"Un medicamento sensible a la luz se inyecta en el torrente sanguíneo, y bloquea selectivamente los vasos sanguíneos anormales debajo de la mácula en respuesta a la luz láser. La PDT es aplicable para detener el avance de la AMD húmeda, pero no puede revertir el daño.">
+            >
+            ["at0.12"] = <
+                text = <"Suplementos de alta dosis de vitaminas y minerales antioxidantes">
+                description = <"La ingesta diaria de ciertos antioxidantes y minerales puede ayudar a retardar la progresión de la degeneración macular asociada a la edad (DMAE).">
+            >
+            ["at0.14"] = <
+                text = <"Cirugía de fotocoagulación térmica con láser">
+                description = <"La cirugía láser puede retrasar el avance de la enfermedad, por medio del tratamiento de los vasos sanguíneos anormales que se forman en la retina.">
+            >
+            ["at0.15"] = <
+                text = <"Disminución visual con fluido macular">
+                description = <"Pérdida de al menos una línea de la agudeza visual en comparación con la revisión anterior, asociado con la presencia de fluido macular indicativo de la actividad en DMAE.">
+            >
+            ["at0.16"] = <
+                text = <"Fluido macular">
+                description = <"Persistencia de líquido macular intrarretiniano o subretiniano indicativo de la actividad de la DMAE.">
+            >
+            ["at0.17"] = <
+                text = <"Nueva hemorragia macular">
+                description = <"Nueva hemorragia macular emergente.">
+            >
+            ["at0.4"] = <
+                text = <"No tratar">
+                description = <"Se recomienda observar la enfermedad cuando no se ha indicado tratamiento, o la afection no es tratable.">
+            >
+            ["at0.5"] = <
+                text = <"Inyección intravítrea de antiangiogénicos">
+                description = <"La inhibición de la neovascularización puede retrasar o incluso detener la progresión de la enfermedad.">
+            >
+            ["at0000.1"] = <
+                text = <"Recomendación de tratamiento para la DMAE">
+                description = <"Una sugerencia, consejo o propuesta para gestionar el tratamiento de la degeneración macular asociada a la edad.">
+            >
+            ["at0002.1"] = <
+                text = <"Recomendación terapéutica">
+                description = <"Descripción narrativa del tratamiento más eficaz basado en una evaluación previa de DR.">
+            >
+            ["at0003.1"] = <
+                text = <"Justificación">
+                description = <"Justificación o motivo de la recomendación.">
+            >
+            ["ac0.9000"] = <
+                text = <"Recomendación terapéutica (synthesised)">
+                description = <"Descripción narrativa del tratamiento más eficaz basado en una evaluación previa de DR. (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"Justificación (synthesised)">
+                description = <"Justificación o motivo de la recomendación. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0.11"] = <http://snomed.info/id/257891001>
+            ["at0.14"] = <http://snomed.info/id/399867007>
+            ["at0.16"] = <http://snomed.info/id/421843005>
+            ["at0.17"] = <http://snomed.info/id/247161000>
+            ["at0.4"] = <http://snomed.info/id/183964008>
+            ["at0002.1"] = <http://snomed.info/id/118910000>
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.4", "at0.12", "at0.5", "at0.11", "at0.14">
+        >
+        ["ac0.9001"] = <
+            id = <"ac0.9001">
+            members = <"at0.15", "at0.16", "at0.17">
+        >
+    >

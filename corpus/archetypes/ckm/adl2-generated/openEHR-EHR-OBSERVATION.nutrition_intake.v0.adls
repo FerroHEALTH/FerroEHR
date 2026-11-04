@@ -1,0 +1,145 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=db616764-b35e-42cd-bc97-5e313479eaf5; build_uid=35a112a2-5b2c-48f6-b4a0-4b60f5502d28)
+    openEHR-EHR-OBSERVATION.nutrition_intake.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Silje Ljosland Bakke">
+        ["organisation"] = <"Nasjonal IKT HF">
+        ["email"] = <"silje.ljosland.bakke@nasjonalikt.no">
+        ["date"] = <"2018-11-29">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Terje Sagmyr, DIPS AS, Norway">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"D37A37F4C4CB98ACBBBD6A5F70A5D9AA">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For recording the total intake of nutrients at a point in time or interval of time, such as a meal or a day.">
+            keywords = <"nutrition", "nutrients">
+            use = <"Use for recording the total intake of nutrients at a point in time or interval of time, such as a meal or a day.">
+            misuse = <"Not to be used for recording the details of food items consumed. Use the OBSERVATION.food_item archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Nutrition intake
+        data matches {
+            HISTORY[at0001] matches {    -- History
+                events cardinality matches {0..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any Event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    allow_archetype CLUSTER[at0010] matches {    -- Nutrients
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.dietary_nutrients(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-CLUSTER\.dietary_nutrients(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.macronutrients(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-CLUSTER\.macronutrients(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.micronutrients(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-CLUSTER\.micronutrients(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9002]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    EVENT[at0015] matches {    -- Meal
+                        data matches {
+                            use_node ITEM_TREE[at9007] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                    }
+                    INTERVAL_EVENT[at0004] matches {    -- Cumulative total
+                        data matches {
+                            use_node ITEM_TREE[at9003] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                        math_function matches {
+                            DV_CODED_TEXT[at9004] matches {
+                                defining_code matches {[at9000]}    -- total
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0012] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Nutritional day definition
+                        value matches {
+                            DV_TIME[at9006]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0014] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Nutrition intake">
+                description = <"The total intake of nutrients at a point in time or interval of time, such as a meal or a day.">
+            >
+            ["at0001"] = <
+                text = <"History">
+                description = <"*">
+            >
+            ["at0002"] = <
+                text = <"Any Event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Cumulative total">
+                description = <"Cumulative nutritional intake within a specified interval of time, which should be explicitly defined in a template or at run-time.">
+                comment = <"A common use case is to record the cumulative total nutritional intake from the start time of a \"nutritional day\" until the time of recording. The start time of the \"nutritional day\" will be the start time for this event – for example 06:00. It may be defined by the application or by the value recorded in the 'Nutritional day definition' element in the Protocol of this archetype.">
+            >
+            ["at0010"] = <
+                text = <"Nutrients">
+                description = <"Details about the component nutrients for the event.">
+            >
+            ["at0011"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the nutrition intake not captured in other fields.">
+            >
+            ["at0013"] = <
+                text = <"Nutritional day definition">
+                description = <"The applied definition for the starting time of the 'Cumulative total' event used in this archetype.">
+                comment = <"For example: 00:00 or 06:00.">
+            >
+            ["at0014"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0015"] = <
+                text = <"Meal">
+                description = <"A unspecified meal, either as a point in time or interval event, which should be explicitly defined and renamed in a template or at run-time.">
+                comment = <"For example: Breakfast or lunch.">
+            >
+            ["at9000"] = <
+                text = <"total">
+                description = <"total">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/148>
+        >
+    >

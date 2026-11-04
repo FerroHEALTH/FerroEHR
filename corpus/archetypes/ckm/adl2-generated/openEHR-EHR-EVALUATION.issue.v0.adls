@@ -1,0 +1,96 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=836b34a1-5d7d-45c0-90cb-b995f7d8086c; build_uid=ffd33a84-e1c2-473e-8da4-49775545202f)
+    openEHR-EHR-EVALUATION.issue.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2020-06-07">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"74E03CB95E0B59124862DFCDF3D5AFA8">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about a health-related issue or concern identified and described by the individual (or their proxy) about the individual's health.">
+            use = <"Use to record details about a health-related issue or concern identified and described by the individual (or their proxy) about the individual's health.">
+            misuse = <"Not to be used to record details about a symptom or sign - use CLUSTER.symptom_sign for this purpose.
+
+Not to be used to record details about a health-related event - use CLUSTER.health_event for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Issue
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {1} matches {    -- Issue name
+                        value matches {
+                            DV_TEXT[at9000]
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9001]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0005] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9002]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0004] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Issue">
+                description = <"A health-related concern or worry identified and described by the individual (or their proxy) about the individual's health, usually related to personal perceptions about their state of health or the identification of external factors that influence or impact upon their health.">
+            >
+            ["at0002"] = <
+                text = <"Issue name">
+                description = <"The name of the issue or concern as presented by the individual.">
+                comment = <"Coding with an external terminology is optional.">
+            >
+            ["at0003"] = <
+                text = <"Description">
+                description = <"Narrative description about the issue.">
+            >
+            ["at0004"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0006"] = <
+                text = <"Last updated">
+                description = <"The date when this issue record was last updated.">
+            >
+        >
+    >

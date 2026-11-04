@@ -63,6 +63,10 @@ adjudication the file exists to carry.
 (`versioned_relationship.rs` from `relationship.rs`, `access_restriction.rs`
 from `marks.rs`, `xml_overrides.rs` from `overrides.rs`): the class is the
 content, so a file carved out of an excluded one keeps its entry.
+#4973 added a third pinned expectation table on the #2915 argument,
+`ckm_adl2_generated.rs`: its `ADJUDICATED` table holds one row per refused
+file of CKM's generated ADL 2 export, each with its rule code and cause, and
+it alone measured 67.0% duplication on #4975's new code.
 
 ## New Code = since the last release (#2657)
 

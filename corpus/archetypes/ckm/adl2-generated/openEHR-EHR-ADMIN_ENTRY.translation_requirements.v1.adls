@@ -1,0 +1,168 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=17b595bb-f18b-477d-8f5b-344b4d17a1f8; build_uid=dbc92f53-e0a8-401d-a8fb-de4acd9b5b51)
+    openEHR-EHR-ADMIN_ENTRY.translation_requirements.v1.1.2
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand and Vebjørn Arntzen, Marit Alice Venheim">
+                ["organisation"] = <"Helse Bergen HF and Oslo University Hospital, Helse Vest IKT">
+                ["email"] = <"john.tore.valand@helse-bergen.no and varntzen@ous-hf.no, marit.alice.venheim@helse-vest-ikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"John Tore Valand">
+        ["organisation"] = <"Helse Bergen HF">
+        ["email"] = <"john.tore.valand@helse-bergen.no">
+        ["date"] = <"2018-11-06">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Erling Are Hole, Helse Bergen, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Heidi Aursand, Oslo universitetssykehus, Norway", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Birgitte Bjerkely, Senter for sjeldne diagnoser, OUS, Norway", "Anita Bjørnnes, Helse Bergen, Norway", "Bjørn Christensen, Helse Bergen HF, Norway", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Valborg Ellingsen, Haraldsplass Diakonale sykehus, Norway", "Heather Grain, Llewelyn Grain Informatics, Australia", "Mikkel Johan Gaup Grønmo, Forvaltningssenter EPJ, Helse-Nord, Norway (openEHR Editor)", "Tom Jarl Jakobsen, Helse Bergen, Norway", "Nils Kolstrup, Skansen Legekontor og Nasjonalt Senter for samhandling og telemedisin, Norway", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Siv Marie Lien, DIPS ASA, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Lars Morgan Karlsen, Nordlandssykehuset Bodø, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Gro-Hilde Severinsen, Norwegian center for ehealthresearch, Norway", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Nyree Taylor, Ocean Informatics, Australia", "Susanne Trønnes, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"82E2B88773B988D9567B89FC37210DC5">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere behov for tolking for å kunne levere helsetjenester eller helserelaterte tjenester.">
+            keywords = <"oversetting", "oversettelse">
+            use = <"Brukes for å registrere behov for tolking for å kunne levere helsetjenester eller helserelaterte tjenester.
+
+Denne arketypen er tenkt brukt for å støtte logikken i et klinisk informasjonssystem. Det kan være uhensiktsmessig å utveksle informasjon i denne arketypen til et annet klinisk system.
+
+Hvis det er flere enn ett administrativt språk (i systemet eller ved lokasjonen der systemet brukes), må det gjøres en separat vurdering om tolkebehov for hvert språk. En ny instans av denne arketypen må da lages for hvert administrative språk.">
+            misuse = <"Brukes ikke for å registrere individets praktiske evne til å kommunisere, inkludert funksjonsnedsettelser og behov for kommunikasjonshjelpemidler, bruk arketypen EVALUATION.communication_capability (Evne til kommunikasjon) for dette formålet.
+
+Brukes ikke for å registrere detaljer om et språk, bruk arketypen CLUSTER.language (Språk) for dette formålet.
+
+Brukes ikke for å registrere detaljer om en forespørsel om tolketjenester. Nøst arketypen CLUSTER.interpreter_requirements (Tolkebehov) i en egnet INSTRUCTION-arketype, for eksempel INSTRUCTION.service_request (Helsetjenesteforespørsel).
+
+Brukes ikke for å registrere detaljer om tolking som er gjennomført. Bruk arketypen ACTION.interpretation for dette formålet.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the need for language translation in order to provide delivery of health care or related services.">
+            use = <"Use to record the need for language translation in order to provide delivery of health care or related services.
+
+This archetype is intended to support logistics within the local clinical information system. It may not be appropriate to exchange this content with another clinical system in another location. If there is more than one administrative language a separate assessment should be made of the need for translation of each language. A new instance of this archetype should be created for each administration language.">
+            misuse = <"Not to be used to record details about the practical ability of an individual to communicate, including impairments and need for communication aids - use EVALUATION.communication_capability for this purpose.
+
+Not to be used to record details about a language - use CLUSTER.language for this purpose.
+
+Not to be used to record details about a request for interpreter services - use CLUSTER.Interpreter_requirements nested within a suitable INSTRUCTION archetype, for example INSTRUCTION.service_request.
+
+Not to be used to record details about an interpretation that was performed - use the proposed ACTION.interpretation.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    ADMIN_ENTRY[at0000] matches {    -- Translation requirement
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {1..*; unordered} matches {
+                    allow_archetype CLUSTER[at0002] occurrences matches {1} matches {    -- Administrative language
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.language(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Translation required?
+                        value matches {
+                            DV_BOOLEAN[at9000]
+                            DV_TEXT[at9002]
+                            DV_CODED_TEXT[at9003] matches {
+                                defining_code matches {[ac9001]}    -- Translation required? (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9001]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Tolkebehov">
+                description = <"Behov for tolking for å kunne levere helsetjenester eller helserelaterte tjenester.">
+            >
+            ["at0002"] = <
+                text = <"Administrasjonsspråk">
+                description = <"Språket som snakkes eller presenteres når man leverer helsetjenester eller helserelaterte tjenester.">
+            >
+            ["at0003"] = <
+                text = <"Trengs tolk?">
+                description = <"Om individet trenger tolk.">
+                comment = <"For eksempel kan et engelsktalende individ i Quebec trenge tolk dersom administrasjonsspråket er fransk, og dermed konsultasjonen gjennomføres på fransk, men ikke dersom administrasjonsspråket er engelsk.">
+            >
+            ["at0004"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekstbeskrivelse om administrasjonsspråket som ikke er registrert i andre felt.">
+            >
+            ["at0005"] = <
+                text = <"Ikke behov for tolk">
+                description = <"Individet trenger normalt ikke tolk.">
+            >
+            ["at0006"] = <
+                text = <"Behov for tolk">
+                description = <"Individet trenger normalt tolk.">
+            >
+            ["ac9001"] = <
+                text = <"Trengs tolk? (synthesised)">
+                description = <"Om individet trenger tolk. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Translation requirement">
+                description = <"The need for language translation in order to provide delivery of health care or related services.">
+            >
+            ["at0002"] = <
+                text = <"Administrative language">
+                description = <"The language used for provision of health care or related services.">
+            >
+            ["at0003"] = <
+                text = <"Translation required?">
+                description = <"Is translation required?">
+                comment = <"For example, an English speaker in Quebec will not require an English interpreter but may require one if the consultation is being conducted in French.">
+            >
+            ["at0004"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the administrative language not captured in other fields.">
+            >
+            ["at0005"] = <
+                text = <"Interpreter not needed">
+                description = <"The individual does not normally need an interpreter.">
+            >
+            ["at0006"] = <
+                text = <"Interpreter needed">
+                description = <"The individual normally needs an interpreter.">
+            >
+            ["ac9001"] = <
+                text = <"Translation required? (synthesised)">
+                description = <"Is translation required? (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0005", "at0006">
+        >
+    >

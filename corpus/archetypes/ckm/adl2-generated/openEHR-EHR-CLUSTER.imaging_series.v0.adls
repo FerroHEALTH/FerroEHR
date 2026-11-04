@@ -1,0 +1,183 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=aa04836a-789a-4ceb-8dd9-b0415b7629e8; build_uid=58bbb144-df67-4157-9c26-4d0eb9564769)
+    openEHR-EHR-CLUSTER.imaging_series.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2022-01-25">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Digital imaging and Communications in Medicine (DICOM) [Internet]. Medical Imaging Technology Association (MITA); [cited 2022 Jan 25]. Available from: https://www.dicomstandard.org/current.">
+        ["2"] = <"HL7 FHIR Resource - DiagnosticReport v4.0.1 R4 [Internet]. Health Level Seven International; [accessed 2021 Aug 04]. Available from: https://www.hl7.org/fhir/diagnosticreport.html.">
+        ["3"] = <"HL7 FHIR Resource - ImagingStudy v4.0.1 R4 [Internet]. Health Level Seven International; [accessed 2021 Aug 04]. Available from: http://hl7.org/fhir/imagingstudy.html.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"45E420440F969D0D932CD86484E07A34">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung von Informationen zu einer DICOM-Serie.">
+            keywords = <"DICOM", "Radiologie", "Serie", "Bild">
+            use = <"Zur Darstellung von Informationen zu einer DICOM-Serie.
+
+Dieser Archetyp wurde entworfen, um ihn in den SLOT „Seriendetails“ und/oder „Details zur Vergleichsserie“ in OBSERVATION.imaging_exam_result oder anderen Archetypen, sofern klinisch relevant, einzufügen.">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about a DICOM series.">
+            keywords = <"DICOM", "radiology", "series", "image">
+            use = <"Use to record details about a DICOM series.
+
+This archetype has been designed to be nested within the 'Series details' and 'Comparison series details' SLOTs in the OBSERVATION.imaging_exam_result or other archetypes where clinically relevant.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Imaging series
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0016] occurrences matches {0..1} matches {    -- Series instance identifier
+                value matches {
+                    DV_IDENTIFIER[at9000]
+                }
+            }
+            ELEMENT[at0017] occurrences matches {0..1} matches {    -- Series number
+                value matches {
+                    DV_COUNT[at9001]
+                }
+            }
+            ELEMENT[at0022] occurrences matches {0..1} matches {    -- Series description
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0018] occurrences matches {0..1} matches {    -- Modality
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Number of instances
+                value matches {
+                    DV_COUNT[at9004]
+                }
+            }
+            ELEMENT[at0019] matches {    -- Series end point
+                value matches {
+                    DV_URI[at9005]
+                    DV_TEXT[at9006]
+                }
+            }
+            allow_archetype CLUSTER[at0021] matches {    -- Device
+                include
+                    archetype_id/value matches {/.*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Bildserie">
+                description = <"Details zu einer Bilderserie im Rahmen einer DICOM-Studie.">
+            >
+            ["at0010"] = <
+                text = <"Anzahl der Instanz">
+                description = <"Die Anzahl der in der Serie enthaltenen Instanzen.">
+                comment = <"Entspricht ImagingStudy.series.numberOfInstances in FHIR.">
+            >
+            ["at0016"] = <
+                text = <"Serieninstanz-ID">
+                description = <"Eindeutige Kennung für die vom radiologischen Dienst vergebene Bildserie.">
+                comment = <"Entspricht ImagingStudy.identifier in FHIR und Series Instance UID (0020,000E) in DICOM.">
+            >
+            ["at0017"] = <
+                text = <"Seriennummer">
+                description = <"Die numerische Kennung dieser Serie in der Studie.">
+                comment = <"Entspricht ImagingStudy.series.number in FHIR.">
+            >
+            ["at0018"] = <
+                text = <"Modalität">
+                description = <"Die Art des diagnostischen Geräts oder die Funktion oder Technik dieses Geräts, das ursprünglich die Daten erfasst hat, die zur Erstellung der Bildserie verwendet wurden.">
+                comment = <"Es wird empfohlen, die \"Modalität\" mit einem Wertesatz zu codieren. Zum Beispiel der Wertesatz DICOM CID 29 Acquisition Modality. Entspricht ImagingStudy.series.modality in FHIR.">
+            >
+            ["at0019"] = <
+                text = <"Serienendpunkt">
+                description = <"Ort, an dem Bildinhalte und Metadaten (QIDO-RS, WADO-RS, or WADO-URI) abgefragt werden.">
+                comment = <"Der Netzwerkdienst, der den Zugriff (z. B. Abfrage, Ansicht oder Abruf) für die Serie bereitstellt. Entspricht ImagingStudy.series.endpoint in FHIR.">
+            >
+            ["at0021"] = <
+                text = <"Gerät">
+                description = <"Details zu dem/-n Bildgebungsgerät/-en, das/die zum Erfassen der Serie verwendet wurde/-n.">
+            >
+            ["at0022"] = <
+                text = <"Serienbeschreibung">
+                description = <"Beschreibung zur Serie.">
+                comment = <"Entspricht Series description (0008, 103E) in DICOM.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Imaging series">
+                description = <"Details about a series of images, as part of a DICOM study.">
+            >
+            ["at0010"] = <
+                text = <"Number of instances">
+                description = <"The number of instances contained in the series.">
+                comment = <"Equivalent to ImagingStudy.series.numberOfInstances in FHIR.">
+            >
+            ["at0016"] = <
+                text = <"Series instance identifier">
+                description = <"Unique identifier for the imaging series assigned by the radiology service.">
+                comment = <"Equivalent to FHIR ImagingStudy.identifier and DICOM Series Instance UID (0020,000E).">
+            >
+            ["at0017"] = <
+                text = <"Series number">
+                description = <"The numeric identifier of this series in the study.">
+                comment = <"Equivalent to ImagingStudy.series.number in FHIR.">
+            >
+            ["at0018"] = <
+                text = <"Modality">
+                description = <"The type of diagnostic equipment, or function or technique of that equipment, that originally acquired, the data used to create the image series.">
+                comment = <"Coding of the 'Modality' with a value set is recommended. For example, the DICOM CID 29 Acquisition Modality value set. Equivalent to ImagingStudy.series.modality in FHIR.">
+            >
+            ["at0019"] = <
+                text = <"Series end point">
+                description = <"Location of where to query for imaging content and metadata (QIDO-RS, WADO-RS, or WADO-URI).">
+                comment = <"The network service providing access (e.g., query, view, or retrieval) for the series. Equivalent to ImagingStudy.series.endpoint in FHIR.">
+            >
+            ["at0021"] = <
+                text = <"Device">
+                description = <"Details about imaging device/s used to capture the series.">
+            >
+            ["at0022"] = <
+                text = <"Series description">
+                description = <"Description about the series.">
+                comment = <"Equivalent to Series description (0008, 103E) in DICOM.">
+            >
+        >
+    >

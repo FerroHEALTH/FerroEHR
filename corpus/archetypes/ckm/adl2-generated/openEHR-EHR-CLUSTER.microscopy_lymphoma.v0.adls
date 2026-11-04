@@ -1,0 +1,703 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=e59eb5d1-2645-4aa9-8cf9-5d95559f4358; build_uid=3d241a98-b63e-4fb6-97e1-bb1e75fd0523)
+    openEHR-EHR-CLUSTER.microscopy_lymphoma.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Dr Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics, UK">
+        ["email"] = <"ian.mcnicoll@oceaninformatics.com">
+        ["date"] = <"26/04/2009">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Koray Atalag, University of Auckland, New Zealand", "Matt Cordell, NEHTA, Australia", "David Ellis, RCPA, Australia", "Sam Heard, Ocean Informatics, Australia", "Heather Leslie, Ocean Informatics, Australia", "David McKillop, NEHTA, Australia", "Cathy Richardson, NEHTA, Australia">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Royal College of Pathologists of Australasia. Tumours of haematopoietic and lymphoid tissue, Structured Reporting Protocol (1st Edition 2010). [Internet]. 2010;[cited 2010 Mar 21 ] Available from: http://www.rcpa.edu.au//static/File/Asset%20library/public%20documents/Publications/StructuredReporting/TUMOURS%20OF%20HAEMATOPOIETIC%20AND%20LYMPHOID%20TISSUE%20STRUCTURED%20REPORTING%20PROTOCOL.pdf">
+        ["2"] = <"College of American Pathologists. Lymphoma and Hodkgin disease - Full protocol [Internet]. 2005 Jan ;[cited 2009 Jul 25 ] ">
+        ["3"] = <"Available from: http://www.cap.org/apps/docs/committees/cancer/cancer_protocols/2005/lymphnonhodg05_pw.pdf">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"80031F7CBD62D7460BC30410EB3052EC">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record detailed findings about lymphoma and other haematopoietic tumours, excluding leukaemias,  found on microscopic examination.">
+            keywords = <"lab", "pathology", "laboratory", "lymphoma", "haematopoietic", "malignancy", "haematology", "hodgkin", "histopathology", "cancer", "non-hodgkin">
+            use = <"To record detailed findings about microscopic examination of tissue related to lymphoma or other hameatopietic tumour, excluding leukaemias
+Use as a component archetype in the context of a suite of archetypes that make up a histopathology report ie OBSERVATION.lab_test.histopathology.">
+            misuse = <"Not designed to be used within any other archetype other than OBSERVATION.lab_test.histopathology.
+Not designed to be used to record microscopic findings for leukaemias.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتسجيل الموجودات التفصيلية حول سرطان الخلايا الليمفاوية و أورام الأنسجة المكونة للدم, فيما عدا الأنواع ابيضاض الدم, التي تُكتَشف عند الفحص المجهري">
+            keywords = <"المعمل/المختبر", "الباثولوجيا/المرضية", "المعمل/المختبر", "سرطان الخلايا الليمفاوية", "مسئول عن تكوين الدم", "الخباثة", "علم الدمويات", "داء هودجكن", "الهيستوباثولوجيا", "السرطان", "داء غير هودجكن">
+            use = <"لتسجيل الموجودات التفصيلية حول الفحص المجهري للنسيج المتعلق بسرطان الخلايا الليمفاوية أو أورام الأنسجة الأخرى المكونة للدم, فيما عدا ابيضاض الدم.
+يستخدم في سياق مجموعة من النماذج التي يتكون منها تقرير الهيستوباثولوجيا, نموذج ملاحظة.اختبار معملي.الهيستوباثولوجيا">
+            misuse = <"لم يتم تصميم هذا النموذج ليتم استخدامه مع نموذج آخر غير ملاحظة. اختبار معملي. الهيستوباثولوجيا.
+لم يتم تصميمه لتسجيل الموجودات المجهرية لابيضاض الدم.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] occurrences matches {0..1} matches {    -- Microscopic findings - Lymphoma
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0078] occurrences matches {0..1} matches {    -- Infiltration pattern
+                value matches {
+                    DV_TEXT[at9022]
+                }
+            }
+            ELEMENT[at0079] occurrences matches {0..1} matches {    -- Tumour cell size
+                value matches {
+                    DV_CODED_TEXT[at9023] matches {
+                        defining_code matches {[ac9020]}    -- Tumour cell size (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0125] occurrences matches {0..1} matches {    -- Proliferative indicators
+                value matches {
+                    DV_TEXT[at9024]
+                }
+            }
+            CLUSTER[at0080] occurrences matches {0..1} matches {    -- Abnormal cytomorphology
+                items cardinality matches {1..*; unordered} matches {
+                    CLUSTER[at0131] occurrences matches {0..1} matches {    -- Cytomorphology findings
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0081] matches {    -- Generic features
+                                value matches {
+                                    DV_CODED_TEXT[at9010] matches {
+                                        defining_code matches {[ac9002]}    -- Generic features (synthesised)
+                                    }
+                                    DV_TEXT[at9011]
+                                }
+                            }
+                            ELEMENT[at0082] matches {    -- Specific features
+                                value matches {
+                                    DV_CODED_TEXT[at9025] matches {
+                                        defining_code matches {[ac9017]}    -- Specific features (synthesised)
+                                    }
+                                    DV_TEXT[at9026]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0137] occurrences matches {0..1} matches {    -- Grade (follicular lymphoma)
+                value matches {
+                    DV_CODED_TEXT[at9027] matches {
+                        defining_code matches {[ac9021]}    -- Grade (follicular lymphoma) (synthesised)
+                    }
+                }
+            }
+            CLUSTER[at0075] occurrences matches {0..1} matches {    -- Host cell/tissue reactions
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0076] matches {    -- Host cell reaction
+                        value matches {
+                            DV_CODED_TEXT[at9014] matches {
+                                defining_code matches {[ac9018]}    -- Host cell reaction (synthesised)
+                            }
+                            DV_TEXT[at9015]
+                        }
+                    }
+                    ELEMENT[at0077] matches {    -- Host tissue reaction
+                        value matches {
+                            DV_CODED_TEXT[at9028] matches {
+                                defining_code matches {[ac9019]}    -- Host tissue reaction (synthesised)
+                            }
+                            DV_TEXT[at9029]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Microscopic findings - Lymphoma">
+                description = <"Microscopic anatomical pathology findings related to lymphoma and other haematopoietic tumours, excluding leukaemias.">
+            >
+            ["at0075"] = <
+                text = <"Host cell/tissue reactions">
+                description = <"Findings of host cell reactions to tumour.">
+            >
+            ["at0076"] = <
+                text = <"Host cell reaction">
+                description = <"Finding of a host cell reaction to tumour.">
+            >
+            ["at0077"] = <
+                text = <"Host tissue reaction">
+                description = <"Finding of host tissue reactions to tumour.">
+            >
+            ["at0078"] = <
+                text = <"Infiltration pattern">
+                description = <"Findings of pattern of abnormal cell infiltration.">
+            >
+            ["at0079"] = <
+                text = <"Tumour cell size">
+                description = <"Estimates of tumour cell size.">
+            >
+            ["at0080"] = <
+                text = <"Abnormal cytomorphology">
+                description = <"Findings of abnormal cell morphology.">
+            >
+            ["at0081"] = <
+                text = <"Generic features">
+                description = <"Finding of generic cytomorphology features.">
+            >
+            ["at0082"] = <
+                text = <"Specific features">
+                description = <"Finding of specific cytomorphology features.">
+            >
+            ["at0084"] = <
+                text = <"Necrotic">
+                description = <"Necrotic host tissue reaction is present.">
+            >
+            ["at0085"] = <
+                text = <"Sclerotic">
+                description = <"Sclerotic host tissue reaction is present.">
+            >
+            ["at0086"] = <
+                text = <"Granulomatous">
+                description = <"Granulomatous host tissue reaction is present.">
+            >
+            ["at0087"] = <
+                text = <"Suppurative">
+                description = <"Suppurative host tissue reaction to tumour is present.">
+            >
+            ["at0088"] = <
+                text = <"High Endothelial Venule (HEV) hyperplasia">
+                description = <"High Endothelial Venule (HEV) hyperplasia is present.">
+            >
+            ["at0089"] = <
+                text = <"Starry sky pattern">
+                description = <"Starry sky pattern is present.">
+            >
+            ["at0090"] = <
+                text = <"Amyloid">
+                description = <"Amyloid host tissue reaction is present.">
+            >
+            ["at0091"] = <
+                text = <"Increased reticulin">
+                description = <"Increased reticulin is present.">
+            >
+            ["at0092"] = <
+                text = <"T-cell rich">
+                description = <"T-cell rich host cell reaction is present.">
+            >
+            ["at0093"] = <
+                text = <"Eosinophil-rich">
+                description = <"Eosinophil-rich host cell reaction is present.">
+            >
+            ["at0094"] = <
+                text = <"Histiocyte-rich">
+                description = <"Histiocyte-rich host cell reaction is present.">
+            >
+            ["at0095"] = <
+                text = <"Neutrophil-rich">
+                description = <"Neutrophil-rich host cell reaction is present.">
+            >
+            ["at0096"] = <
+                text = <"Plasma cell-rich">
+                description = <"Plasma cell-rich host cell reaction is present.">
+            >
+            ["at0097"] = <
+                text = <"Erythrophagocytic">
+                description = <"Erythrophagocytic host cell reaction is present.">
+            >
+            ["at0098"] = <
+                text = <"Small">
+                description = <"Small or intermediate tumour cell size (smaller than a histiocyte  nucleus).">
+            >
+            ["at0099"] = <
+                text = <"Medium">
+                description = <"Medium tumour cell size (equal to a histiocyte nucleus).">
+            >
+            ["at0100"] = <
+                text = <"Large">
+                description = <"Large tumour cell size (larger than a histiocyte nucleus).">
+            >
+            ["at0101"] = <
+                text = <"Indeterminate">
+                description = <"The tumour cell size has not been determined.">
+            >
+            ["at0102"] = <
+                text = <"Pleomorphic">
+                description = <"Pleomorphic features are present.">
+            >
+            ["at0103"] = <
+                text = <"Hyperbolate">
+                description = <"Hyperbolate features are present.">
+            >
+            ["at0104"] = <
+                text = <"Anaplastic">
+                description = <"Anaplastic features are present.">
+            >
+            ["at0105"] = <
+                text = <"Clear cell">
+                description = <"Clear cell features are present.">
+            >
+            ["at0106"] = <
+                text = <"Giant cell">
+                description = <"Giant cell features are present.">
+            >
+            ["at0107"] = <
+                text = <"Spindle cell">
+                description = <"Spindle cell features are present.">
+            >
+            ["at0108"] = <
+                text = <"Signet ring cell">
+                description = <"Signet ring cell features are present.">
+            >
+            ["at0109"] = <
+                text = <"Blastic">
+                description = <"Blastic features are present.">
+            >
+            ["at0110"] = <
+                text = <"Indeterminate">
+                description = <"Generic abnormal cell features have not been determined.">
+            >
+            ["at0111"] = <
+                text = <"Centroblastic">
+                description = <"Centroblastic features are present.">
+            >
+            ["at0112"] = <
+                text = <"Centrocytic">
+                description = <"Centrocytic features are present.">
+            >
+            ["at0113"] = <
+                text = <"Immunoblastic">
+                description = <"Immunoblastic features are present.">
+            >
+            ["at0114"] = <
+                text = <"Plasmacytic">
+                description = <"Plasmacytic features are present.">
+            >
+            ["at0115"] = <
+                text = <"Lymphoplasmacytic">
+                description = <"Lymphoplasmacytic features are present.">
+            >
+            ["at0116"] = <
+                text = <"Lymphoplasmacytoid">
+                description = <"Lymphoplasmacytoid features are present.">
+            >
+            ["at0117"] = <
+                text = <"Prolymphocytic">
+                description = <"Prolymphocytic features are present.">
+            >
+            ["at0118"] = <
+                text = <"Paraimmunoblastic">
+                description = <"Paraimmunoblastic features are present.">
+            >
+            ["at0119"] = <
+                text = <"Plasmablastic">
+                description = <"Plasmablastic features are present.">
+            >
+            ["at0120"] = <
+                text = <"Monocytoid">
+                description = <"Monocytoid features are present.">
+            >
+            ["at0121"] = <
+                text = <"Centrocyte-like">
+                description = <"Centrocyte-like features are present.">
+            >
+            ["at0122"] = <
+                text = <"Popcorn cell">
+                description = <"Popcorn cell features are present.">
+            >
+            ["at0123"] = <
+                text = <"Reed-Sternberg cell-like">
+                description = <"Reed-Sternberg cell-like cytomorphology features are present.">
+            >
+            ["at0125"] = <
+                text = <"Proliferative indicators">
+                description = <"Proilerative indicators of abnormal cells.">
+            >
+            ["at0131"] = <
+                text = <"Cytomorphology findings">
+                description = <"Findings of generic cytomorphology.">
+            >
+            ["at0133"] = <
+                text = <"Indeterminate">
+                description = <"Specific cytomorphology features have not been determined.">
+            >
+            ["at0134"] = <
+                text = <"Indeterminate">
+                description = <"Presence of a host cell reaction has not been determined.">
+            >
+            ["at0135"] = <
+                text = <"Indeterminate">
+                description = <"Presence of a host tissue reaction has not been determined.">
+            >
+            ["at0136"] = <
+                text = <"Mixed">
+                description = <"Mixed tumour cell size.">
+            >
+            ["at0137"] = <
+                text = <"Grade (follicular lymphoma)">
+                description = <"Histological grade - follicular lymphoma only.">
+            >
+            ["at0138"] = <
+                text = <"Grade 1">
+                description = <"Follicular lymphoma Grade 1.">
+            >
+            ["at0139"] = <
+                text = <"Grade 2">
+                description = <"Follicular lymphoma Grade 2.">
+            >
+            ["at0140"] = <
+                text = <"Grade 3">
+                description = <"Follicular lymphoma Grade 3.">
+            >
+            ["at0141"] = <
+                text = <"Grade 3a">
+                description = <"Follicular lymphoma Grade 3a.">
+            >
+            ["at0142"] = <
+                text = <"Grade 3b">
+                description = <"Follicular lymphoma Grade 3b.">
+            >
+            ["ac9020"] = <
+                text = <"Tumour cell size (synthesised)">
+                description = <"Estimates of tumour cell size. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Generic features (synthesised)">
+                description = <"Finding of generic cytomorphology features. (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Specific features (synthesised)">
+                description = <"Finding of specific cytomorphology features. (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"Grade (follicular lymphoma) (synthesised)">
+                description = <"Histological grade - follicular lymphoma only. (synthesised)">
+            >
+            ["ac9018"] = <
+                text = <"Host cell reaction (synthesised)">
+                description = <"Finding of a host cell reaction to tumour. (synthesised)">
+            >
+            ["ac9019"] = <
+                text = <"Host tissue reaction (synthesised)">
+                description = <"Finding of host tissue reactions to tumour. (synthesised)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"الموجودات المحهرية - الورم اللمفي">
+                description = <"موجودات الباثولوجيا الباثولوجية التشريحية المجهرية المتعلقة بالورم اللمفي و الأورام الأخرى بالخلايا المكونة للدم, فيما عدا حالات ابيضاض الدم.">
+            >
+            ["at0075"] = <
+                text = <"تفعلات النسيج/الخلايا المضيفة">
+                description = <"الموجودات المتعلقة بتفاعلات الخلايا المضيفة للورم">
+            >
+            ["at0076"] = <
+                text = <"تفاعل الخلية المضيفة">
+                description = <"الموجودات المتعلقة بتفاعل الخلية المضيفة للورم">
+            >
+            ["at0077"] = <
+                text = <"تفاعل النسيج المضيف">
+                description = <"الموجودات المتعلقة بتفاعل النسيج المضيف للورم">
+            >
+            ["at0078"] = <
+                text = <"نمط الارتشاح">
+                description = <"الموجودات المتعلقة بنمط ارتشاح الخلايا غير الطبيعية">
+            >
+            ["at0079"] = <
+                text = <"حجم خلية الورم">
+                description = <"تقديرات حجم خلية الورم">
+            >
+            ["at0080"] = <
+                text = <"مورفولوجيا خلوية غير طبيعية">
+                description = <"الموجودات المتعلقة بالمورفولوجيا الخلوية غير الطبيعية">
+            >
+            ["at0081"] = <
+                text = <"خصائص جنيسة - غير محدودة الملكية">
+                description = <"الموجودات المتعلقة بخصائص جنيسة للمورفولوجيا الخلوية.">
+            >
+            ["at0082"] = <
+                text = <"خصائص محددة">
+                description = <"الموجودات المتعلقة بخصائص الموروفولوجيا الخلوية">
+            >
+            ["at0084"] = <
+                text = <"نخري">
+                description = <"يوجد تفاعل نخري للنسيج المضيف">
+            >
+            ["at0085"] = <
+                text = <"تصلبي">
+                description = <"يوجد تفاعل تصلبي للنسيج المضيف">
+            >
+            ["at0086"] = <
+                text = <"ورم حُبَيْبي">
+                description = <"يوجد تفاعل ورم حُبَيْبي للنسيج المضيف">
+            >
+            ["at0087"] = <
+                text = <"قيحي">
+                description = <"يوجد تفاعل قيحي للنسيج المضيف بسبب الورم">
+            >
+            ["at0088"] = <
+                text = <"فرط التنسج في الوُرَيْد البطاني المرتفع">
+                description = <"يوجد فرط التنسج في الوُرَيْد البطاني المرتفع">
+            >
+            ["at0089"] = <
+                text = <"نمط السماء النجمية">
+                description = <"يوجد نمط السماء النجمية">
+            >
+            ["at0090"] = <
+                text = <"نشواني">
+                description = <"يوجد تفاعل نشواني للورم المضيف">
+            >
+            ["at0091"] = <
+                text = <"زيادة في الريتيكيولين/بروتين في النسيج الضام">
+                description = <"يوجد زيادة في الريتيكيولين/بروتين في النسيج الضام">
+            >
+            ["at0092"] = <
+                text = <"غني بخلايا ت">
+                description = <"يوجد تفاعل للخلايا المضيفة غني بالخلايا ت">
+            >
+            ["at0093"] = <
+                text = <"غني بالخلايا اليوزينية/الحمضة">
+                description = <"يوجد تفاعل للخلايا المضيفة غني بالخلايا اليوزينية">
+            >
+            ["at0094"] = <
+                text = <"غني بالخلايا المُنسِجة">
+                description = <"يوجد تفاعل للخلايا المضيفة غني بالخلايا المنسجة">
+            >
+            ["at0095"] = <
+                text = <"غني بالخلايا العدِلة">
+                description = <"يوجد تفاعل للخلايا المضيفة غني بالخلايا العدِلة">
+            >
+            ["at0096"] = <
+                text = <"غني بخلايا البلازما">
+                description = <"يوجد تفاعل للخلايا المضيفة غني بالخلايا البلازمية">
+            >
+            ["at0097"] = <
+                text = <"بلعمية الكرات الحمراء">
+                description = <"يوجد تفاعل للخلايا المضيفة غني ببلعمية الكرات الحمراء">
+            >
+            ["at0098"] = <
+                text = <"صغير">
+                description = <"حجم صغير أو متوسط - أصغر من نواة المُنْسَجة">
+            >
+            ["at0099"] = <
+                text = <"متوسط">
+                description = <"حجم متوسط لخلية الورم - يساوي نواة المُنْسِجة">
+            >
+            ["at0100"] = <
+                text = <"كبير">
+                description = <"حجم كبير لخلية الورم - أكبر من نواة المُنْسِجة">
+            >
+            ["at0101"] = <
+                text = <"غير محدد">
+                description = <"لم يتم تحديد حجم خلية الورم">
+            >
+            ["at0102"] = <
+                text = <"متعدد الأشكال">
+                description = <"يوجد خصائص تعدد الأشكال">
+            >
+            ["at0103"] = <
+                text = <"قطع زائد">
+                description = <"يوجد خصائص قطع زائد">
+            >
+            ["at0104"] = <
+                text = <"كَشَمي">
+                description = <"يوجد خصائص كَشَمِيَّة">
+            >
+            ["at0105"] = <
+                text = <"خلية واضحة">
+                description = <"يوجد خصائص لخلية واضحة">
+            >
+            ["at0106"] = <
+                text = <"خلية عملاقة">
+                description = <"يوجد خصائص خلية عملاقة">
+            >
+            ["at0107"] = <
+                text = <"خلية مغزلية">
+                description = <"يوجد خصائص خلية مغزلية">
+            >
+            ["at0108"] = <
+                text = <"خلية بشكل خاتم التوقيع">
+                description = <"يوجد خصائص خلية بشكل خاتم التوقيع">
+            >
+            ["at0109"] = <
+                text = <"برعمية">
+                description = <"يوجد خصائص برعمية">
+            >
+            ["at0110"] = <
+                text = <"غير محدد">
+                description = <"لم يتم تحديد الخصائص الجنيسة لخصائص الخلايا غير الطبيعية">
+            >
+            ["at0111"] = <
+                text = <"مركزية البرعم">
+                description = <"يوجد خصائص مركزية البرعم">
+            >
+            ["at0112"] = <
+                text = <"مركزية الخلية">
+                description = <"يوجد خصائص مركزية الخلية">
+            >
+            ["at0113"] = <
+                text = <"الأرومة المناعية">
+                description = <"يوجد خصائص الأرومة المناعية">
+            >
+            ["at0114"] = <
+                text = <"بلازماوي">
+                description = <"يوجد خصائص بلازماوية">
+            >
+            ["at0115"] = <
+                text = <"أرومة ليمفاوية بلازماوية">
+                description = <"يوجد خصائص أرومة ليمفاوية بلازماوية">
+            >
+            ["at0116"] = <
+                text = <"ليمفية بلازماوية الشكل">
+                description = <"يوجد خصائص ليمفية بلازماوية الشكل">
+            >
+            ["at0117"] = <
+                text = <"سليفة الليمفاوية">
+                description = <"يوجد خصائص سليفة الليمفاوية">
+            >
+            ["at0118"] = <
+                text = <"خلل الأرومة مناعية ">
+                description = <"يوجد خلل بالأرومة المناعية">
+            >
+            ["at0119"] = <
+                text = <"أرومة بلازماوية">
+                description = <"يوجد خصائص الأرومة البلازماوية">
+            >
+            ["at0120"] = <
+                text = <"وحيداني">
+                description = <"يوجد خصائص وحيدانية/شبيهة الوحيدة">
+            >
+            ["at0121"] = <
+                text = <"يشبه الخلايا المركزية">
+                description = <"يوجد خصائص تشبه الخلايا المركزية">
+            >
+            ["at0122"] = <
+                text = <"خلايا الفشار">
+                description = <"يوجد خصائص خلايا الفشار">
+            >
+            ["at0123"] = <
+                text = <"يشبه خلايا ريد-ستيرنبرج">
+                description = <"يوجد خصائص المورفولوجيا الخلوية الشبيهة بخلايا ريد - ستيرنبرج">
+            >
+            ["at0125"] = <
+                text = <"المؤشرات التكاثرية">
+                description = <"المؤشرات التكاثرية للخلايا غير الطبيعية">
+            >
+            ["at0131"] = <
+                text = <"الموجودات المتعلقة بالمورفولوجيا الخلوية">
+                description = <"الموجودات المتعلقة بالمورفولوجيا الخلوية الجنيسة">
+            >
+            ["at0133"] = <
+                text = <"غير محدد">
+                description = <"لم يتم تحديد الخصائص المحددة المورفولوجية الخلوية">
+            >
+            ["at0134"] = <
+                text = <"غير محدد">
+                description = <"لم يتم تحديد وجود تفاعل الخلايا المضيفة">
+            >
+            ["at0135"] = <
+                text = <"غير محدد">
+                description = <"لم يتم تحديد وجود تفاعل للنسيج المضيف">
+            >
+            ["at0136"] = <
+                text = <"مختلط">
+                description = <"حجم خلية الورم مختلط">
+            >
+            ["at0137"] = <
+                text = <"الدرجة - الورم اللمفي الجُرَيْبي">
+                description = <"درجة هيستولوجية - ورم لمفي جُرَيْبي فقط">
+            >
+            ["at0138"] = <
+                text = <"الدرجة 1">
+                description = <"الدرجة 1 من الورم اللمفي الجُرَيْبي">
+            >
+            ["at0139"] = <
+                text = <"الدرجة 2">
+                description = <"الدرجة 2 من الورم اللمفي الجُرَيْبي
+">
+            >
+            ["at0140"] = <
+                text = <"الدرجة 3">
+                description = <"الدرجة 3 من الورم اللمفي الجُرَيْبي">
+            >
+            ["at0141"] = <
+                text = <"الدرجة 3 أ">
+                description = <"الدرجة 3 أ من الورم اللمفي الجُرَيْبي">
+            >
+            ["at0142"] = <
+                text = <"الدرجة 3 ب">
+                description = <"الدرجة 3 ب من الورم اللمفي الجُرَيْبي">
+            >
+            ["ac9020"] = <
+                text = <"حجم خلية الورم (synthesised)">
+                description = <"تقديرات حجم خلية الورم (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"خصائص جنيسة - غير محدودة الملكية (synthesised)">
+                description = <"الموجودات المتعلقة بخصائص جنيسة للمورفولوجيا الخلوية. (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"خصائص محددة (synthesised)">
+                description = <"الموجودات المتعلقة بخصائص الموروفولوجيا الخلوية (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"الدرجة - الورم اللمفي الجُرَيْبي (synthesised)">
+                description = <"درجة هيستولوجية - ورم لمفي جُرَيْبي فقط (synthesised)">
+            >
+            ["ac9018"] = <
+                text = <"تفاعل الخلية المضيفة (synthesised)">
+                description = <"الموجودات المتعلقة بتفاعل الخلية المضيفة للورم (synthesised)">
+            >
+            ["ac9019"] = <
+                text = <"تفاعل النسيج المضيف (synthesised)">
+                description = <"الموجودات المتعلقة بتفاعل النسيج المضيف للورم (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9017"] = <
+            id = <"ac9017">
+            members = <"at0111", "at0112", "at0113", "at0114", "at0115", "at0116", "at0117", "at0118", "at0119", "at0120", "at0121", "at0122", "at0123", "at0133">
+        >
+        ["ac9020"] = <
+            id = <"ac9020">
+            members = <"at0098", "at0099", "at0100", "at0101", "at0136">
+        >
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0102", "at0103", "at0104", "at0105", "at0106", "at0107", "at0108", "at0109", "at0110">
+        >
+        ["ac9021"] = <
+            id = <"ac9021">
+            members = <"at0138", "at0139", "at0140", "at0141", "at0142">
+        >
+        ["ac9019"] = <
+            id = <"ac9019">
+            members = <"at0084", "at0085", "at0086", "at0087", "at0088", "at0089", "at0090", "at0091", "at0135">
+        >
+        ["ac9018"] = <
+            id = <"ac9018">
+            members = <"at0092", "at0093", "at0094", "at0095", "at0096", "at0097", "at0134">
+        >
+    >

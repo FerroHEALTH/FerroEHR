@@ -1,0 +1,879 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=1b7dc82e-55a1-4033-b5ab-67e3194772f9; build_uid=c0d724e8-a2a9-487b-a8b9-57158ea96131)
+    openEHR-EHR-COMPOSITION.report.v1.3.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Ramona Wellmann, Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Sofia Janstad, Åsa Skagerhult, Per Nemirovski">
+                ["organisation"] = <"SLL, Region Östergötland, B3 HealthTech">
+                ["email"] = <"sofia.lang-janstad@sll.se, asa.skagerhult@regionostergotland.se, per.nemirovski@b3.se">
+            >
+        >
+        ["ko"] = <
+            language = <[ISO_639-1::ko]>
+            author = <
+                ["name"] = <"Seung-Jong Yu">
+                ["organisation"] = <"InfoClinic Co.,Ltd.">
+                ["email"] = <"seungjong.yu@gmail.com">
+            >
+            accreditation = <"Certified Board of Family Medicine in South Korea">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Adriana Kitajima, Débora Farage, Fernanda Maia, Laíse Figueiredo, Marivan Abrahão">
+                ["organisation"] = <"Core Consulting">
+                ["email"] = <"contato@coreconsulting.com.br">
+            >
+            accreditation = <"Hospital Alemão Oswaldo Cruz (HAOC)">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            author = <
+                ["name"] = <"Francesca Frexia">
+                ["organisation"] = <"CRS4 - Center for advanced studies, research and development in Sardinia, Pula (Cagliari), Italy">
+                ["email"] = <"francesca.frexia@crs4.it">
+            >
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            author = <
+                ["name"] = <"Jonas Bucher">
+                ["organisation"] = <"Cistec AG">
+                ["email"] = <"jonas.bucher@cistec.com">
+            >
+        >
+        ["zh-cn"] = <
+            language = <[ISO_639-1::zh-cn]>
+            author = <
+                ["name"] = <"Lin Zhang">
+                ["organisation"] = <"Freelancer">
+                ["email"] = <"linforest@163.com">
+            >
+        >
+        ["zh"] = <
+            language = <[ISO_639-1::zh]>
+            author = <
+                ["name"] = <"Yexuan Cheng">
+                ["organisation"] = <"浙江大学">
+                ["email"] = <"3160100913@zju.edu.cn">
+            >
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Laura Moral Lopez">
+                ["organisation"] = <"Sistema de Salut de Catalunya">
+                ["email"] = <"lauramoral@catsalut.cat">
+            >
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            author = <
+                ["name"] = <"Alan March">
+                ["organisation"] = <"Hospital Universitario Austral - Buenos Aires - Argentina">
+                ["email"] = <"alandmarch@gmail.com">
+            >
+            accreditation = <"physician">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand, Liv Laugen, Silje Ljosland Bakke">
+                ["organisation"] = <"Helse Bergen, ​Oslo University Hospital, Norway, Helse Vest IKT AS">
+                ["email"] = <"liv.laugen@ous-hf.no, silje.ljosland.bakke@helse-vest-ikt.no">
+            >
+        >
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            author = <
+                ["name"] = <"Pieter Bos, Jelte Zeilstra">
+                ["organisation"] = <"Nedap Healthcare">
+            >
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            author = <
+                ["name"] = <"Julio de Sosa">
+                ["organisation"] = <"Servei Català de la Salut">
+                ["email"] = <"juliodesosa@catsalut.cat">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2010-04-14">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Koray Atalag, GALATA-Digital, New Zealand", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Sistine Barretto-Daniels, Ocean Informatics, Australia", "Maria Berggren, Region Uppsala, Sweden", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Hanne Marte Bårholm, Helse Vest IKT, Norway (openEHR Editor)", "Grete Hovde Bøe, Sykehuspartner HF, Norway (openEHR Editor)", "Claudia Ehrentraut, Karolinska University Hospital, Sweden", "Einar Fosse, National Centre for Integrated Care and Telemedicine, Norway", "Heath Frankel, Ocean Informatics, Australia", "Aleksander Furnes, Helse Nord IKT, Norway (openEHR Editor)", "Ciprian Gerstenberger, Helse Nord IKT, Norway (openEHR Editor)", "Sam Heard, openEHR, Ocean, Congress, RACGP, Australia", "Kristian Heldal, Telemark Hospital Trust, Norway", "Susanna Jönsson, Region Värmland, Sweden", "Lars Morgan Karlsen, DIPS ASA, Norway", "June Marie Nepstad Knappskog, Helse Nord IKT AS, Norway (openEHR Editor), Norway (openEHR Editor)", "Shinji Kobayashi, NPO openEHR Japan, Japan", "Elin Kristiansen, Sykehuspartner HF, Norway (openEHR Editor)", "Kanika Kuwelker, Helse Vest IKT, Norway (openEHR Editor)", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Eli Larsen, UNN, Norway (openEHR Editor)", "Anette Larsson, Tieto Sweden AB, Sweden", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Hugh Leslie, Ocean Informatics, Australia", "Tomas Lundqvist, Region Uppsala, Sweden", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Martin Milde, Helse Vest IKT, Norway (openEHR Editor)", "Bjoern Naess, DIPS ASA, Norway", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Bjørn Næss, DIPS AS, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Rune Pedersen, Universitetssykehuset i Nord Norge, Norway", "Terje Sagmyr, Helse Vest IKT, Norway (openEHR Editor)", "Carina Sandell, Region Östergötland, Sweden", "Åsa Skagerhult, Västra Götalandsregionen, Sweden (openEHR Translation Editor)", "Erik Sundvall, Karolinska Institutet + Karolinska University Hospital, Region Stockholm + Linköping University, Sweden", "Line Sæle, Nasjonal IKT HF, Norway", "Anders Thurin, VGR, Sweden", "John Tore Valand, Helse Vest IKT, Norway (openEHR Editor)", "David Wetterbro, Region Östergotland, Sweden", "Karsten Øvretveit, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics, heather.leslie@oceaninformatics.com">
+        ["MD5-CAM-1.0.1"] = <"5D7128B10BA5AF84CC9C973D48833BE9">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Ein generischer Container-Archetyp zur Bereitstellung von Informationen, die mit anderen geteilt werden müssen.">
+            keywords = <"Bericht", "Report">
+            use = <"Als generischer Archetyp zur Bereitstellung von Informationen, die mit anderen geteilt werden müssen, wenn kein spezialisierter Archetyp für einen bestimmten Berichtstyp existiert.
+
+Übliche Anwendungsfälle sind: Dokumentation einer Antwort auf eine Informationsanfrage; Dokumentation des Ergebnisses einer Untersuchung; Dokumentation von Maßnahmen die durchgeführt wurden; oder Dokumentation von eingetretenen Ereignissen.
+
+Der Hauptabschnitt \"Content\" wurden absichtlich ausgelassen. Dadurch kann dieser Abschnitt mit beliebigen SECTION- oder ENTRY-Archetypen gefüllt werden.">
+            misuse = <"">
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            purpose = <"*Generic container archetype to carry information that needs to be shared with others.(en)">
+            keywords = <"*report(en)", ...>
+            use = <"*Use as a generic archetype to carry information that needs to be shared with others, where no specialised archetype for a specific report type exists.
+
+Common use cases are: documenting a response to a request for information; the outcome of testing; activities that have been performed; or events that have occurred.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"En generell behållare för information som behöver delas med andra.">
+            keywords = <"rapport", ...>
+            use = <"Används som en generell arketyp för information som behöver delas med andra när specifik arketyp för ändamålet saknas.
+
+Vanliga användningsområden är att dokumentera ett svar på en förfrågan om information, resultatet av ett test, aktiviteter som har utförts, eller händelser som har inträffat.
+
+De huvudsakliga avsnitts- och innehållskomponenterna har avsiktligt lämnats obegränsade. Det tillåter utvidgning med alla SECTION- eller ENTRY-arketyper som är lämpliga för det kliniska syftet i en mall.">
+            misuse = <"">
+        >
+        ["ko"] = <
+            language = <[ISO_639-1::ko]>
+            purpose = <"다른 사람들과 공유될 필요가 있는 정보를 운반하기 위한 일반적인 컨테이너 아키타입">
+            keywords = <"리포트", ...>
+            use = <"*Use as a generic archetype to carry information that needs to be shared with others, where no specialised archetype for a specific report type exists.
+
+Common use cases are: documenting a response to a request for information; the outcome of testing; activities that have been performed; or events that have occurred.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Arquétipo de conteúdo genérico para carregar informações que precisam ser compartilhadas com outros.">
+            keywords = <"relatório", ...>
+            use = <"*Use as a generic archetype to carry information that needs to be shared with others, where no specialised archetype for a specific report type exists.
+
+Common use cases are: documenting a response to a request for information; the outcome of testing; activities that have been performed; or events that have occurred.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"نموذج جنيس (غير محدود الملكية) يحتوي على معلومات من أجل مشاركتها مع الجميع.">
+            keywords = <"تقرير", ...>
+            use = <"*Use as a generic archetype to carry information that needs to be shared with others, where no specialised archetype for a specific report type exists.
+
+Common use cases are: documenting a response to a request for information; the outcome of testing; activities that have been performed; or events that have occurred.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Generic container archetype to carry information that needs to be shared with others.">
+            keywords = <"report", ...>
+            use = <"Use as a generic archetype to carry information that needs to be shared with others, where no specialised archetype for a specific report type exists.
+
+Common use cases are: documenting a response to a request for information; the outcome of testing; activities that have been performed; or events that have occurred.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            purpose = <"Archetipo contenitore generico per veicolare informazioni che devono essere condivise con gli altri.">
+            keywords = <"rapporto", ...>
+            use = <"*Use as a generic archetype to carry information that needs to be shared with others, where no specialised archetype for a specific report type exists.
+
+Common use cases are: documenting a response to a request for information; the outcome of testing; activities that have been performed; or events that have occurred.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            purpose = <"Archétype container générique destiné à contenir des informations devant être partagées avec des tiers.">
+            keywords = <"rapport", ...>
+            use = <"À utiliser comme archétype générique pour contenir des informations devant être partagées avec des tiers, lorsqu’il n’existe pas d’archétype spécialisé pour un type de rapport spécifique.
+
+Les cas d’utilisation courants sont les suivants : documenter une réponse à une demande d’informations ; les résultats d’examens ; les activités qui ont été réalisées ; ou les événements qui se sont produits.
+
+Le composant principal « Sections/Contenu » a été délibérément laissé sans contrainte. Cela permettra de le remplir avec n’importe quel archétype de type SECTION ou ENTRY adapté à l’objectif clinique au sein du template.">
+            misuse = <"">
+        >
+        ["zh-cn"] = <
+            language = <[ISO_639-1::zh-cn]>
+            purpose = <"通用的容器类原始型，用于携带需要与他方共享的信息。">
+            keywords = <"报告", "报告单">
+            use = <"当不存在适用于具体报表类型的专用原始型时，作为通用的原始型，用于携带需要与他方共享的信息。
+
+常见的用例包括：记录对信息请求的响应、检测（检验/检查）结果、已经执行的活动或者已经发生的事件。
+
+在此故意对其总的章节/内容（Sections/Content）构成要素不加约束。这样，在模板当中，就可以利用任何适合相应临床目的的章节型（SECTION）或条目型（ENTRY）原始型来对其加以填充。">
+            misuse = <"">
+        >
+        ["zh"] = <
+            language = <[ISO_639-1::zh]>
+            purpose = <"用作携带共享所需信息的通用容器原型。">
+            keywords = <"报告", ...>
+            use = <"用作携带共享所需信息的通用原型。
+常见用例是：请求信息的响应记录；测试结果；已进行的活动；或已经发生的事件。
+主要的Section/Content有意设计为不受约束，从而允许在模板中填充符合临床目的的任何 SECTION 或 ENTRY 原型。">
+            misuse = <"">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Arquetipo de contenido genérico para transmitir información que necesita ser compartida con otros.">
+            keywords = <"informe", ...>
+            use = <"Utilizar como un arquetipo genérico para transmitir información que necesita compartirse con otros, cuando no existe un arquetipo especializado para un tipo de informe específico.
+
+Los casos de uso comunes son: documentar la respuesta a una solicitud de información; el resultado de las pruebas; las actividades realizadas; o los eventos ocurridos.
+
+El componente principal Secciones/Contenido se ha dejado deliberadamente sin restricciones. Esto permitirá que se complete con cualquier arquetipo de SECTION o ENTRY adecuado para el propósito clínico dentro de una plantilla.">
+            misuse = <"">
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            purpose = <"Arquetipo contenedor genérico para la portación de información que necesita ser compartida con otros.">
+            keywords = <"informe", ...>
+            use = <"*Use as a generic archetype to carry information that needs to be shared with others, where no specialised archetype for a specific report type exists.
+
+Common use cases are: documenting a response to a request for information; the outcome of testing; activities that have been performed; or events that have occurred.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"En generisk container-arketype for å lagre informasjon som skal deles med andre.">
+            keywords = <"rapport", "svar", "svarrapport">
+            use = <"Brukes som en generisk arketype for å lagre informasjon som skal deles med andre.
+
+Vanlige bruksområder: Dokumentasjon av svar på informasjonsforespørsel, prøveresultat, aktiviteter som er utført, eller hendelser som har skjedd eller hendelser som har skjedd, der det ikke finnes spesialiserte arketyper for de spesifikke rapporttypene. Eksempler på dette kan være laboratoriesvar, logistikkmeldinger, dialogmeldinger, helseopplysningsmeldinger og statusrapporter til fastlege.
+
+Innholdskomponenten er bevisst latt være ubegrenset. Dette tillater bruk av enhver SECTION- og/eller ENTRY-arketype som er nødvendig/hensiktsmessig i templaten brukt i den aktuelle kliniske konteksten.">
+            misuse = <"">
+        >
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            purpose = <"*Generic container archetype to carry information that needs to be shared with others.(en)">
+            keywords = <"*report(en)", ...>
+            use = <"*Use as a generic archetype to carry information that needs to be shared with others, where no specialised archetype for a specific report type exists.
+
+Common use cases are: documenting a response to a request for information; the outcome of testing; activities that have been performed; or events that have occurred.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            purpose = <"Generiek containerarchetype om informatie over te dragen die met anderen moet worden gedeeld.">
+            keywords = <"rapportage", ...>
+            use = <"*Use as a generic archetype to carry information that needs to be shared with others, where no specialised archetype for a specific report type exists.
+
+Common use cases are: documenting a response to a request for information; the outcome of testing; activities that have been performed; or events that have occurred.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            purpose = <"Arquetip contenidor genèric usat per transmetre informació que s'ha de compartir amb altres.">
+            keywords = <"informe", ...>
+            use = <"S'utilitza com a arquetip genèric per transmetre informació que s'ha de compartir amb altres quan no existeix un arquetip especialitzat per a un tipus d'informe concret.
+
+Els casos més comuns són: documentar una resposta a una sol·licitud d'informació; el resultat d'una prova; les activitats que s'han dut a terme; o els esdeveniments que han tingut lloc.
+
+El component principal Seccions/Contingut s'ha deixat deliberadament sense restriccions. Això permet emplenar-lo amb qualsevol arquetip de tipus SECTION o ENTRY apropiat per al propòsit clínic dins d'una plantilla.">
+            misuse = <"">
+        >
+    >
+
+definition
+    COMPOSITION[at0000] matches {    -- Report
+        category matches {
+            DV_CODED_TEXT[at9001] matches {
+                defining_code matches {[at9000]}    -- event
+            }
+        }
+        context matches {
+            EVENT_CONTEXT[at9002] matches {
+                other_context matches {
+                    ITEM_TREE[at0001] matches {
+                        items cardinality matches {0..*; unordered} matches {
+                            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Report ID
+                                value matches {
+                                    DV_TEXT[at9005]
+                                }
+                            }
+                            ELEMENT[at0005] matches {    -- Status
+                                value matches {
+                                    DV_TEXT[at9006]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0006] matches {    -- Extension
+                                include
+                                    archetype_id/value matches {/.*/}
+                            }
+                            ELEMENT[at0007] matches {    -- Comment
+                                value matches {
+                                    DV_TEXT[at9007]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Bericht">
+                description = <"Ein Dokument zur Übermittlung von Informationen an andere, meist als Antwort auf eine Anfrage.">
+            >
+            ["at0002"] = <
+                text = <"Bericht ID">
+                description = <"Identifizierungsmerkmal des Berichts.">
+            >
+            ["at0005"] = <
+                text = <"Status">
+                description = <"Der Status des gesamten Berichts. Hinweis: Dies ist nicht der Status einer Berichtskomponente.">
+                comment = <"*Multiple instances are allowed to represent different aspects or categories of status. (en)">
+            >
+            ["at0006"] = <
+                text = <"Erweiterung">
+                description = <"*Additional information required to extend the model with local content or to align with other reference models or formalisms. (en)">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["at0007"] = <
+                text = <"*Comment (en)">
+                description = <"*A narrative statement concerning the diagnostic report as a whole. (en)">
+                comment = <"*For example: justification for a change or cancellation, recommended time frame for action, or a recommendation to repeat the investigation. (en)">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["fi"] = <
+            ["at0000"] = <
+                text = <"Raportti">
+                description = <"Asiakirja tiedon välittämiseksi muille, vastauksena yleensä toisen osapuolen pyyntöön.">
+            >
+            ["at0002"] = <
+                text = <"Raportti ID">
+                description = <"Raportin tunnistetiedot">
+            >
+            ["at0005"] = <
+                text = <"Status">
+                description = <"Koko raportin tila. Huomaa: Tämä ei ole minkään raporttiosien tila.">
+                comment = <"*Multiple instances are allowed to represent different aspects or categories of status. (en)">
+            >
+            ["at0006"] = <
+                text = <"Laajennus">
+                description = <"*Additional information required to extend the model with local content or to align with other reference models or formalisms. (en)">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["at0007"] = <
+                text = <"*Comment (en)">
+                description = <"*A narrative statement concerning the diagnostic report as a whole. (en)">
+                comment = <"*For example: justification for a change or cancellation, recommended time frame for action, or a recommendation to repeat the investigation. (en)">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Rapport">
+                description = <"Dokument för att förmedla information till andra, vanligen som svar på en begäran från en annan part.">
+            >
+            ["at0002"] = <
+                text = <"Rapport-id">
+                description = <"Information som identifierar rapporten.
+">
+            >
+            ["at0005"] = <
+                text = <"Status">
+                description = <"Status för hela rapporten. Observera att detta inte är status för någon av rapportkomponenterna.">
+                comment = <"*Multiple instances are allowed to represent different aspects or categories of status. (en)">
+            >
+            ["at0006"] = <
+                text = <"Tilläggsinformation">
+                description = <"*Additional information required to extend the model with local content or to align with other reference models or formalisms. (en)">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["at0007"] = <
+                text = <"*Comment (en)">
+                description = <"*A narrative statement concerning the diagnostic report as a whole. (en)">
+                comment = <"*For example: justification for a change or cancellation, recommended time frame for action, or a recommendation to repeat the investigation. (en)">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["ko"] = <
+            ["at0000"] = <
+                text = <"*Report(en)">
+                description = <"일반적으로 다른 상대의 요청에 대한 응답으로, 다른 사람들과 정보를 통신하는 문서.">
+            >
+            ["at0002"] = <
+                text = <"*Report ID(en)">
+                description = <"리포트에 대한 식별 정보.">
+            >
+            ["at0005"] = <
+                text = <"*Status(en)">
+                description = <"전체 리포트의 상태. 주의: 이것은 리포트 컴포넌트들 중 어떤 부분의 상태가 아님.">
+                comment = <"*Multiple instances are allowed to represent different aspects or categories of status. (en)">
+            >
+            ["at0006"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to extend the model with local content or to align with other reference models or formalisms. (en)">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["at0007"] = <
+                text = <"*Comment (en)">
+                description = <"*A narrative statement concerning the diagnostic report as a whole. (en)">
+                comment = <"*For example: justification for a change or cancellation, recommended time frame for action, or a recommendation to repeat the investigation. (en)">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Relatório">
+                description = <"Documento para comunicar informações a outros, comumente em resposta a uma solicitação de terceiros.">
+            >
+            ["at0002"] = <
+                text = <"Identificador do relatório">
+                description = <"Informação de identificação sobre o relatório.">
+            >
+            ["at0005"] = <
+                text = <"Estado">
+                description = <"O estado de todo o relatório. Nota: este não é o estado de qualquer dos componentes do relatório.">
+                comment = <"*Multiple instances are allowed to represent different aspects or categories of status. (en)">
+            >
+            ["at0006"] = <
+                text = <"Extensão">
+                description = <"*Additional information required to extend the model with local content or to align with other reference models or formalisms. (en)">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["at0007"] = <
+                text = <"*Comment (en)">
+                description = <"*A narrative statement concerning the diagnostic report as a whole. (en)">
+                comment = <"*For example: justification for a change or cancellation, recommended time frame for action, or a recommendation to repeat the investigation. (en)">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"تقرير">
+                description = <"وثيقة لتوصيل المعلومات للآخرين, عادة كاستجابة لطلب من طرف آخر.">
+            >
+            ["at0002"] = <
+                text = <"العنصر التعريفي الفريد للتقرير">
+                description = <"معلومات التعريف حول التقرير">
+            >
+            ["at0005"] = <
+                text = <"الحالة">
+                description = <"حالة التقرير بشكل كلي. و لا تمثل هذه الحالة جزءا من التقرير و إنما جميعه ككل.">
+                comment = <"*Multiple instances are allowed to represent different aspects or categories of status. (en)">
+            >
+            ["at0006"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to extend the model with local content or to align with other reference models or formalisms. (en)">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["at0007"] = <
+                text = <"*Comment (en)">
+                description = <"*A narrative statement concerning the diagnostic report as a whole. (en)">
+                comment = <"*For example: justification for a change or cancellation, recommended time frame for action, or a recommendation to repeat the investigation. (en)">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Report">
+                description = <"Document to communicate information to others, commonly in response to a request from another party.">
+            >
+            ["at0002"] = <
+                text = <"Report ID">
+                description = <"Identification information about the report.">
+            >
+            ["at0005"] = <
+                text = <"Status">
+                description = <"The status of the entire report. Note: This is not the status of any of the report components.">
+                comment = <"Multiple instances are allowed to represent different aspects or categories of status.">
+            >
+            ["at0006"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0007"] = <
+                text = <"Comment">
+                description = <"A narrative statement concerning the diagnostic report as a whole.">
+                comment = <"For example: justification for a change or cancellation, recommended time frame for action, or a recommendation to repeat the investigation.">
+            >
+            ["at9000"] = <
+                text = <"event">
+                description = <"event">
+            >
+        >
+        ["it"] = <
+            ["at0000"] = <
+                text = <"Rapporto">
+                description = <"Documento per comunicare informazioni ad altri, comunemente in risposta ad una richiesta di un altro soggetto.">
+            >
+            ["at0002"] = <
+                text = <"ID del rapporto">
+                description = <"Informazioni di identificazione del rapporto">
+            >
+            ["at0005"] = <
+                text = <"Stato">
+                description = <"Lo stato dell'intero rapporto. Nota: Questo non è lo stato di alcuna delle componenti del rapporto.">
+                comment = <"*Multiple instances are allowed to represent different aspects or categories of status. (en)">
+            >
+            ["at0006"] = <
+                text = <"Estensione">
+                description = <"*Additional information required to extend the model with local content or to align with other reference models or formalisms. (en)">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["at0007"] = <
+                text = <"*Comment (en)">
+                description = <"*A narrative statement concerning the diagnostic report as a whole. (en)">
+                comment = <"*For example: justification for a change or cancellation, recommended time frame for action, or a recommendation to repeat the investigation. (en)">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["fr"] = <
+            ["at0000"] = <
+                text = <"Rapport">
+                description = <"Document destiné à communiquer des informations à des tiers, généralement en réponse à une demande émanant de tiers.">
+            >
+            ["at0002"] = <
+                text = <"Identifiant du rapport">
+                description = <"Informations d'identification relatives au rapport.">
+            >
+            ["at0005"] = <
+                text = <"Statut">
+                description = <"Statut de l'ensemble du rapport. Remarque : il ne s'agit pas du statut d'un des composants du rapport.">
+                comment = <"Plusieurs instances sont autorisées à représenter différents aspects ou catégories d'état.">
+            >
+            ["at0006"] = <
+                text = <"Extension">
+                description = <"Informations supplémentaires nécessaires pour représenter un contenu local ou pour assurer l’alignement avec d’autres modèles de référence ou formalismes.">
+                comment = <"Par exemple: exigences d’information locales ou métadonnées supplémentaires permettant l’alignement avec des équivalents FHIR.">
+            >
+            ["at0007"] = <
+                text = <"Commentaire">
+                description = <"Un texte descriptif concernant le rapport de diagnostic dans son ensemble.">
+                comment = <"Par exemple : justification d’un changement ou d’une annulation, délai recommandé pour agir ou recommandation de répéter l’examen.">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["zh-cn"] = <
+            ["at0000"] = <
+                text = <"报告">
+                description = <"用于向他人传达信息的文档，通常是为了响应另一方的请求。">
+            >
+            ["at0002"] = <
+                text = <"报告标识符">
+                description = <"关于报告的标识信息。">
+            >
+            ["at0005"] = <
+                text = <"状态">
+                description = <"整个报告的状态。注意： 这里指的并不是任何报告构成要素的状态。">
+                comment = <"*Multiple instances are allowed to represent different aspects or categories of status. (en)">
+            >
+            ["at0006"] = <
+                text = <"扩展">
+                description = <"*Additional information required to extend the model with local content or to align with other reference models or formalisms. (en)">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["at0007"] = <
+                text = <"*Comment (en)">
+                description = <"*A narrative statement concerning the diagnostic report as a whole. (en)">
+                comment = <"*For example: justification for a change or cancellation, recommended time frame for action, or a recommendation to repeat the investigation. (en)">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["zh"] = <
+            ["at0000"] = <
+                text = <"报告">
+                description = <"用于交流信息的文件，通常是为了响应某一方的请求">
+            >
+            ["at0002"] = <
+                text = <"报告ID">
+                description = <"关于这份报告的标识信息。">
+            >
+            ["at0005"] = <
+                text = <"状态">
+                description = <"整份报告的状态。注意：这不是指报告的任何一个组成部分的状态">
+                comment = <"*Multiple instances are allowed to represent different aspects or categories of status. (en)">
+            >
+            ["at0006"] = <
+                text = <"扩展">
+                description = <"*Additional information required to extend the model with local content or to align with other reference models or formalisms. (en)">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["at0007"] = <
+                text = <"*Comment (en)">
+                description = <"*A narrative statement concerning the diagnostic report as a whole. (en)">
+                comment = <"*For example: justification for a change or cancellation, recommended time frame for action, or a recommendation to repeat the investigation. (en)">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Informe">
+                description = <"Documento para comunicar información con otros, generalmente en respuesta a una solicitud de otra parte.">
+            >
+            ["at0002"] = <
+                text = <"Identificación del informe">
+                description = <"Información identificativa sobre el informe.">
+            >
+            ["at0005"] = <
+                text = <"Estado">
+                description = <"Estado del informe completo. Nota: Este no es el estado de cualquiera de los componentes del informe.">
+                comment = <"*Multiple instances are allowed to represent different aspects or categories of status. (en)">
+            >
+            ["at0006"] = <
+                text = <"Extensión">
+                description = <"*Additional information required to extend the model with local content or to align with other reference models or formalisms. (en)">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["at0007"] = <
+                text = <"*Comment (en)">
+                description = <"*A narrative statement concerning the diagnostic report as a whole. (en)">
+                comment = <"*For example: justification for a change or cancellation, recommended time frame for action, or a recommendation to repeat the investigation. (en)">
+            >
+            ["at9000"] = <
+                text = <"evento">
+                description = <"evento">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Rapport">
+                description = <"Dokument som brukes for å kommunisere informasjon til andre, ofte som svar på en forespørsel.">
+            >
+            ["at0002"] = <
+                text = <"Rapport ID">
+                description = <"Informasjon som identifiserer rapporten.">
+            >
+            ["at0005"] = <
+                text = <"Status">
+                description = <"Status for hele rapporten. Merk: Dette er ikke statusen for noen av enkeltkomponentene i rapporten.">
+                comment = <"Flere forekomster kan brukes for å representere ulike aspekter eller kategorier av status.">
+            >
+            ["at0006"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller eller formalismer.">
+                comment = <"For eksempel: lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0007"] = <
+                text = <"Kommentar">
+                description = <"En narrativ beskrivelse som omhandler den diagnostiske rapporten som helhet.">
+                comment = <"For eksempel: begrunnelse for en endring eller kansellering, anbefalt tidsramme for tiltak, eller en anbefaling om å gjenta undersøkelsen.">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["es-ar"] = <
+            ["at0000"] = <
+                text = <"Informe">
+                description = <"Documento para comunicar información a otros, comunmente en respuesta a la solicitud de un tercero.">
+            >
+            ["at0002"] = <
+                text = <"ID del informe">
+                description = <"Información para la identificación del informe.">
+            >
+            ["at0005"] = <
+                text = <"Estado">
+                description = <"El estado del informe como un todo. Nota: no se refiere al estado de alguno de los componentes del informe.">
+                comment = <"*Multiple instances are allowed to represent different aspects or categories of status. (en)">
+            >
+            ["at0006"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to extend the model with local content or to align with other reference models or formalisms. (en)">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["at0007"] = <
+                text = <"*Comment (en)">
+                description = <"*A narrative statement concerning the diagnostic report as a whole. (en)">
+                comment = <"*For example: justification for a change or cancellation, recommended time frame for action, or a recommendation to repeat the investigation. (en)">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["sl"] = <
+            ["at0000"] = <
+                text = <"Poročilo">
+                description = <"*Document to communicate information to others, commonly in response to a request from another party.(en)">
+            >
+            ["at0002"] = <
+                text = <"ID Poročila">
+                description = <"*Identification information about the report.(en)">
+            >
+            ["at0005"] = <
+                text = <"Status">
+                description = <"*The status of the entire report. Note: This is not the status of any of the report components.(en)">
+                comment = <"*Multiple instances are allowed to represent different aspects or categories of status. (en)">
+            >
+            ["at0006"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to extend the model with local content or to align with other reference models or formalisms. (en)">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["at0007"] = <
+                text = <"*Comment (en)">
+                description = <"*A narrative statement concerning the diagnostic report as a whole. (en)">
+                comment = <"*For example: justification for a change or cancellation, recommended time frame for action, or a recommendation to repeat the investigation. (en)">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["nl"] = <
+            ["at0000"] = <
+                text = <"Rapportage">
+                description = <"Document om informatie met anderen te communiceren, vaak op verzoek van een andere partij.">
+            >
+            ["at0002"] = <
+                text = <"Rapportage ID">
+                description = <"Identificerende informatie over deze rapportage.">
+            >
+            ["at0005"] = <
+                text = <"Status">
+                description = <"De status van de rapportage. Let op, dit is niet de status van een van de onderdelen van de rapportage.">
+                comment = <"*Multiple instances are allowed to represent different aspects or categories of status. (en)">
+            >
+            ["at0006"] = <
+                text = <"Uitbreiding">
+                description = <"*Additional information required to extend the model with local content or to align with other reference models or formalisms. (en)">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["at0007"] = <
+                text = <"*Comment (en)">
+                description = <"*A narrative statement concerning the diagnostic report as a whole. (en)">
+                comment = <"*For example: justification for a change or cancellation, recommended time frame for action, or a recommendation to repeat the investigation. (en)">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["ca"] = <
+            ["at0000"] = <
+                text = <"Informe">
+                description = <"Document per comunicar informació a altres persones, normalment en resposta a una sol·licitud procedent d'una altra banda.">
+            >
+            ["at0002"] = <
+                text = <"ID de l'informe">
+                description = <"Informació identificativa de l'informe.">
+            >
+            ["at0005"] = <
+                text = <"Estat">
+                description = <"L´estat de tot l´informe. Nota: No és l'estat de cap dels components de l'informe.">
+                comment = <"*Multiple instances are allowed to represent different aspects or categories of status. (en)">
+            >
+            ["at0006"] = <
+                text = <"Ampliació">
+                description = <"*Additional information required to extend the model with local content or to align with other reference models or formalisms. (en)">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["at0007"] = <
+                text = <"*Comment (en)">
+                description = <"*A narrative statement concerning the diagnostic report as a whole. (en)">
+                comment = <"*For example: justification for a change or cancellation, recommended time frame for action, or a recommendation to repeat the investigation. (en)">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/433>
+        >
+    >

@@ -1,0 +1,405 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=db395587-546b-48c3-84c1-384f990cc222; build_uid=1ff298a7-9698-40ba-a272-61784df6d0f4)
+    openEHR-EHR-CLUSTER.refraction_details.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Thomas Baerland">
+                ["organisation"] = <"Oslo Universitetssykehus HF / DIPS ASA">
+                ["email"] = <"tba@dips.no">
+            >
+            accreditation = <"?">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Gustavo Bacelar-Silva">
+                ["organisation"] = <"Healthcare Designs">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Gustavo M Bacelar-Silva">
+        ["email"] = <"mail@gustavobacelar.com">
+        ["date"] = <"2012-09-10">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Gustavo Bacelar-Silva, Brazil (Editor)", "Mike Mair, Timaru Eye Clinic, New Zealand", "Ian McNicoll, Ocean Informatics, United Kingdom (Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"IHE Eye Care Domain. General Eye Evaluation (GEE) [Internet]. IHE; 2012. Available from: http://www.ihe.net/Technical_Framework/upload/IHE_EyeCare_Supp_GEE_Rev1-1_TI_2012-06-29.pdf">
+        ["2"] = <"Royal College of Opthalmologists. Cataract National Dataset for Adults [Internet]. 2011. Available from: http://www.rcophth.ac.uk/page.asp?section=583&sectionTitle=Cataract+National+Data+Set+for+Adults">
+        ["3"] = <"CfH, UK. Do Once & Share - Glaucoma [Internet]. [cited 2012 Sep 26]. Available from: http://www.doasglaucoma.org/">
+        ["4"] = <"DICOM Supplement 30 [Internet]. [cited 2012 Sep 26]. Available from: http://medical.nema.org/">
+    >
+    other_details = <
+        ["current_contact"] = <"Gustavo M Bacelar-Silva, mail@gustavobacelar.com">
+        ["MD5-CAM-1.0.1"] = <"7AEF92C688CD13F85B78F9C263160847">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"Formål å registrere okulær refraksjon alene eller som del av visusundersøkelse.">
+            keywords = <"*øye", "*visus", "*korreksjon", "*refraksjon">
+            use = <"Denne arketypen brukes vanligvis som cluster i OBSERVATION.visual_acuity arketypen for å registrere visus.">
+            misuse = <"">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Registrar os detalhes da refração ocular durante o teste de acuidade visual, para registrar a correção do paciente obtida durante o exame físico ou para a prescrição de lentes (óculos ou contato).">
+            keywords = <"olho", "correção", "refração", "dioptria", "lenses">
+            use = <"*This archetype is normally used within the OBSERVATION.visual_acuity archetype to record a refraction applied as part of measurement or within INSTRUCTION and ACTION archetypes where a prescription order and supply process is being modelled.(en)">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details of ocular refraction applied either as part of visual acuity testing, to report a subject's current correction of spectacles or contact lenses, or to request a new ocular prescription.">
+            keywords = <"eye", "correction">
+            use = <"This archetype is normally used within the OBSERVATION.visual_acuity archetype to record a refraction applied as part of measurement or within INSTRUCTION and ACTION archetypes where a prescription order and supply process is being modelled.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Refraction Details
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Power of Sphere
+                value matches {
+                    DV_QUANTITY[at9004] matches {
+                        property matches {[at9000]}    -- Refractive power
+                        magnitude matches {|-100.0..100.0|}
+                        units matches {"dioptre"}
+                        precision matches {2}
+                    }
+                }
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Power of Cylinder
+                value matches {
+                    DV_QUANTITY[at9005] matches {
+                        property matches {[at9000]}    -- Refractive power
+                        magnitude matches {|-100.0..100.0|}
+                        units matches {"dioptre"}
+                        precision matches {2}
+                    }
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Axis of Cylinder
+                value matches {
+                    DV_QUANTITY[at9006] matches {
+                        property matches {[at9001]}    -- Angle, plane
+                        magnitude matches {|0.0..180.0|}
+                        units matches {"°"}
+                        precision matches {1}
+                    }
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Prism Strength
+                value matches {
+                    DV_QUANTITY[at9007] matches {
+                        property matches {[at9000]}    -- Refractive power
+                        units matches {"dioptre"}
+                    }
+                }
+            }
+            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Prism Base Direction
+                value matches {
+                    DV_CODED_TEXT[at9008] matches {
+                        defining_code matches {[ac9002]}    -- Prism Base Direction (synthesised)
+                    }
+                    DV_QUANTITY[at9009] matches {
+                        property matches {[at9001]}    -- Angle, plane
+                        magnitude matches {|0.0..360.0|}
+                        units matches {"°"}
+                    }
+                }
+            }
+            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Reading Addition Power
+                value matches {
+                    DV_QUANTITY[at9010] matches {
+                        property matches {[at9000]}    -- Refractive power
+                        units matches {"dioptre"}
+                        precision matches {2}
+                    }
+                }
+            }
+            ELEMENT[at0015] occurrences matches {0..1} matches {    -- Intermediate Distance Power
+                value matches {
+                    DV_QUANTITY[at9011] matches {
+                        property matches {[at9000]}    -- Refractive power
+                        units matches {"dioptre"}
+                        precision matches {2}
+                    }
+                }
+            }
+            ELEMENT[at0016] occurrences matches {0..1} matches {    -- Interpupillary Distance
+                value matches {
+                    DV_QUANTITY[at9012] matches {
+                        property matches {[at9003]}    -- Length
+                        magnitude matches {|0.0..500.0|}
+                        units matches {"mm"}
+                        precision matches {1}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Refraksjonsdetaljer">
+                description = <"Detaljer for okulær refraksjon.">
+            >
+            ["at0004"] = <
+                text = <"Sfærisk dioptri">
+                description = <"Sfærisk korreksjon">
+            >
+            ["at0005"] = <
+                text = <"Sylinder dioptri">
+                description = <"Sylinderkorreksjon">
+            >
+            ["at0006"] = <
+                text = <"Sylinders akse">
+                description = <"Sylinders akse">
+            >
+            ["at0007"] = <
+                text = <"Prismedioptri">
+                description = <"Prismes styrke">
+            >
+            ["at0008"] = <
+                text = <"Prismes baseretning">
+                description = <"Prismes baseretning uttrykt som vinkelretning eller kodet tekst">
+            >
+            ["at0009"] = <
+                text = <"Base inn">
+                description = <"Base mot nasalsiden">
+            >
+            ["at0010"] = <
+                text = <"Base ut">
+                description = <"Base mot lateralsiden">
+            >
+            ["at0011"] = <
+                text = <"Base opp">
+                description = <"Prismebasen rettet oppover">
+            >
+            ["at0012"] = <
+                text = <"Base ned">
+                description = <"Prismebasen rettet nedover">
+            >
+            ["at0013"] = <
+                text = <"Base skrå">
+                description = <"Basen rettet skrått">
+            >
+            ["at0014"] = <
+                text = <"Lesetillegg">
+                description = <"Lesetillegg er +tillegg for å flytte fokusplanet til leseavstand">
+            >
+            ["at0015"] = <
+                text = <"Mellomdistanse">
+                description = <"Refraksjonstillegg for å flytte fokusplanet mellom lesedistanse og uendelig.">
+            >
+            ["at0016"] = <
+                text = <"Pupilleavstand">
+                description = <"Avstanden mellom pupillene på de to øyne">
+            >
+            ["at9003"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["at9001"] = <
+                text = <"* Angle, plane (en)">
+                description = <"* Angle, plane (en)">
+            >
+            ["at9000"] = <
+                text = <"* Refractive power (en)">
+                description = <"* Refractive power (en)">
+            >
+            ["ac9002"] = <
+                text = <"Prismes baseretning (synthesised)">
+                description = <"Prismes baseretning uttrykt som vinkelretning eller kodet tekst (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Detalhes da Refração">
+                description = <"Detalhes da refração ocular para propósitos de medidas e terapêuticos.">
+            >
+            ["at0004"] = <
+                text = <"*Power of Sphere(en)">
+                description = <"*Correction of the sphere, the base correction upon which cylinder, reading addition and prism may be superimposed.(en)">
+            >
+            ["at0005"] = <
+                text = <"*Power of Cylinder(en)">
+                description = <"*Correction of the cylinder.(en)">
+            >
+            ["at0006"] = <
+                text = <"Eixo do Cilindro">
+                description = <"Correção do eixo.">
+            >
+            ["at0007"] = <
+                text = <"*Prism Strength(en)">
+                description = <"*Strength of the prism.(en)">
+            >
+            ["at0008"] = <
+                text = <"*Prism Base Direction(en)">
+                description = <"*Prism base direction expressed as a numeric angle or as coded text.(en)">
+            >
+            ["at0009"] = <
+                text = <"*Base in(en)">
+                description = <"*The prism base is directed inwards.(en)">
+            >
+            ["at0010"] = <
+                text = <"*Base out(en)">
+                description = <"*The prism base is directed outwards.(en)">
+            >
+            ["at0011"] = <
+                text = <"*Base up(en)">
+                description = <"*The prism base is directed upwards.(en)">
+            >
+            ["at0012"] = <
+                text = <"*Base down(en)">
+                description = <"*The prism base is directed downwards.(en)">
+            >
+            ["at0013"] = <
+                text = <"*Base oblique(en)">
+                description = <"*The prism base is directed obliquely.(en)">
+            >
+            ["at0014"] = <
+                text = <"*Reading Addition Power(en)">
+                description = <"*The difference in spherical power between distance and near corrections.(en)">
+            >
+            ["at0015"] = <
+                text = <"*Intermediate Distance Power(en)">
+                description = <"*The intermediate distance power applied to the correction.(en)">
+            >
+            ["at0016"] = <
+                text = <"*Interpupillary Distance(en)">
+                description = <"*The distance between the center of the pupils of the two eyes.(en)">
+            >
+            ["at9003"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["at9001"] = <
+                text = <"* Angle, plane (en)">
+                description = <"* Angle, plane (en)">
+            >
+            ["at9000"] = <
+                text = <"* Refractive power (en)">
+                description = <"* Refractive power (en)">
+            >
+            ["ac9002"] = <
+                text = <"*Prism Base Direction(en) (synthesised)">
+                description = <"*Prism base direction expressed as a numeric angle or as coded text.(en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Refraction Details">
+                description = <"Details of ocular refraction for both measurement and therapetic purposes.">
+            >
+            ["at0004"] = <
+                text = <"Power of Sphere">
+                description = <"Correction of the sphere,  the base correction upon which cylinder, reading addition and prism may be superimposed.">
+            >
+            ["at0005"] = <
+                text = <"Power of Cylinder">
+                description = <"Correction of the cylinder.">
+            >
+            ["at0006"] = <
+                text = <"Axis of Cylinder">
+                description = <"Correction of the axis.">
+            >
+            ["at0007"] = <
+                text = <"Prism Strength">
+                description = <"Strength of the prism.">
+            >
+            ["at0008"] = <
+                text = <"Prism Base Direction">
+                description = <"Prism base direction expressed as a numeric angle or as coded text.">
+            >
+            ["at0009"] = <
+                text = <"Base in">
+                description = <"The prism base is directed inwards.">
+            >
+            ["at0010"] = <
+                text = <"Base out">
+                description = <"The prism base is directed outwards.">
+            >
+            ["at0011"] = <
+                text = <"Base up">
+                description = <"The prism base is directed upwards.">
+            >
+            ["at0012"] = <
+                text = <"Base down">
+                description = <"The prism base is directed downwards.">
+            >
+            ["at0013"] = <
+                text = <"Base oblique">
+                description = <"The prism base is directed obliquely.">
+            >
+            ["at0014"] = <
+                text = <"Reading Addition Power">
+                description = <"The difference in spherical power between distance and near corrections.">
+            >
+            ["at0015"] = <
+                text = <"Intermediate Distance Power">
+                description = <"The intermediate distance power applied to the correction.">
+            >
+            ["at0016"] = <
+                text = <"Interpupillary Distance">
+                description = <"The distance between the center of the pupils of the two eyes.">
+            >
+            ["at9003"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["at9001"] = <
+                text = <"Angle, plane">
+                description = <"Angle, plane">
+            >
+            ["at9000"] = <
+                text = <"Refractive power">
+                description = <"Refractive power">
+            >
+            ["ac9002"] = <
+                text = <"Prism Base Direction (synthesised)">
+                description = <"Prism base direction expressed as a numeric angle or as coded text. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9003"] = <http://openehr.org/id/122>
+            ["at9001"] = <http://openehr.org/id/497>
+            ["at9000"] = <http://openehr.org/id/685>
+        >
+        ["SNOMED-CT"] = <
+            ["at0004"] = <http://snomed.info/id/251795007>
+            ["at0005"] = <http://snomed.info/id/251797004>
+            ["at0006"] = <http://snomed.info/id/251799001>
+            ["at0007"] = <http://snomed.info/id/251762001>
+            ["at0008"] = <http://snomed.info/id/246223004>
+            ["at0014"] = <http://snomed.info/id/397282003>
+            ["at0015"] = <http://snomed.info/id/251802005>
+            ["at0016"] = <http://snomed.info/id/397258008>
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0009", "at0010", "at0011", "at0012", "at0013">
+        >
+    >

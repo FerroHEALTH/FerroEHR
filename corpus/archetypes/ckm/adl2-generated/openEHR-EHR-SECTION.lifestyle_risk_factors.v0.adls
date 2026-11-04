@@ -1,0 +1,59 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=48ecda8e-8ab2-46ed-948f-86af39853833; build_uid=ea00fe88-bf89-4309-bdab-282608d73be6)
+    openEHR-EHR-SECTION.lifestyle_risk_factors.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2020-10-28">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"999CF2285FE14684F1D9B29CC45BAD80">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To provide a framework and design guidance for consistent modelling of content within a template representing persistent summaries about Lifestyle risk factors.">
+            keywords = <"tobacco", "alcohol", "substance", "abuse", "exercise", "activity", "diet", "nutrition", "health", "sexual", "smoking", "drinking">
+            use = <"Use as a framework and suggested design guidance for consistent modelling of content within a template representing persistent summaries about Lifestyle risk factors.
+
+This archetype is intended to be used within the COMPOSITION.lifestyle_factors or as one component of other COMPOSITION archetypes. For example: complex documents, such as a discharge summary or referral.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    SECTION[at0000] matches {    -- Lifestyle risk factors
+        items cardinality matches {1..*; unordered} matches {
+            allow_archetype ENTRY[at0005] matches {    -- Risk factors
+                include
+                    archetype_id/value matches {/openEHR-EHR-EVALUATION\.tobacco_smoking_summary\.v1\..*|openEHR-EHR-EVALUATION\.alcohol_consumption_summary\.v1\..*|openEHR-EHR-EVALUATION\.physical_activity_summary\.v0\..*|openEHR-EHR-EVALUATION\.food_nutrition_summary\.v0\..*|openEHR-EHR-EVALUATION\.gambling_summary\.v0\..*|openEHR-EHR-EVALUATION\.sexual_health_summary\.v0\..*|openEHR-EHR-EVALUATION\.vaping_summary\.v0\..*|openEHR-EHR-EVALUATION\.smokeless_tobacco_summary\.v1\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Lifestyle risk factors">
+                description = <"Framework for consistent modelling of content within a template for Lifestyle risk factors.">
+            >
+            ["at0005"] = <
+                text = <"Risk factors">
+                description = <"">
+            >
+        >
+    >

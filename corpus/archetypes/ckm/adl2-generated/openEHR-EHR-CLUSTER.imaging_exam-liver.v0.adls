@@ -1,0 +1,152 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=3d70322c-2a98-4406-8035-d90daa07b122; build_uid=0ff97054-33dc-49b2-80d3-dea57a63791f)
+    openEHR-EHR-CLUSTER.imaging_exam-liver.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-CLUSTER.imaging_exam.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Vebjørn Arntzen">
+                ["organisation"] = <"Oslo University Hospital">
+                ["email"] = <"varntzen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-11-24">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital", "Liv Laugen, Oslo University Hospital", "Peter Fedorcsak, Oslo University Hospital">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"98BA8024ACD00AAAB92039511B99209E">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung der Beschreibung, strukturierter Details und eines klinischen Eindrucks der Ergebnisse, die bei einer bildgebenden Untersuchung der Leber festgestellt wurden.">
+            use = <"Zur Darstellung der Beschreibung, strukturierter Details und eines klinischen Eindrucks der Ergebnisse, die bei einer bildgebenden Untersuchung der Leber festgestellt wurden.
+
+Dieser Archetyp wurde für die Verwendung im SLOT „Strukturierte bildgebende Befunde“ innerhalb des Archetyps OBSERVATION.imaging_exam_result entwickelt, kann aber auch in anderen ENTRY- oder CLUSTER-Archetypen verwendet werden, sofern klinisch angemessen.
+
+Der Archetyp wird verwendet, um einen Rahmen bereitzustellen, in dem CLUSTER-Archetypen im SLOT „Zusätzliche Angaben“ innerhalb dieses Archetyps verschachtelt werden können, um zusätzliche verschachtelte Ebenen strukturierter bildgebender Befunde für zusammenhängende Körpersubstrukturen oder oganspezifische Befunde darzustellen.">
+            misuse = <"Nicht zur Darstellung von Befunden verwenden, die außerhalb der identifizierten Körperstruktur oder -region beobachtet wurden. Verwenden Sie zu diesem Zweck andere Archetypen aus der Familie CLUSTER.imaging_exam.
+
+Darf nicht verwendet werden, um Details in Bezug auf die Gesamtbefunde, den Kontext oder technische Details in Bezug auf ein vollständiges Testergebnis einer bildgebenden Untersuchung darzustellen. Verwenden Sie zu diesem Zweck das OBSERVATION.imaging_exam_result. Zum Beispiel Kommentare zur Studienqualität, zu Differentialdiagnosen und zum Gesamteindruck.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere en fritekstbeskrivelse, strukturerte detaljer og klinisk tolkning av funn eller observasjoner ved bildediagnostisk undersøkelse av leveren.">
+            keywords = <"funn", "observasjon", "bildediagnostikk", "kropp", "organ", "kroppsstruktur", "diagnostisk", "radiologi", "bilde">
+            use = <"Brukes for å registrere en fritekstbeskrivelse, strukturerte detaljer og klinisk tolkning av funn eller observasjoner ved bildediagnostisk undersøkelse av leveren.
+
+Denne arketypen ble utviklet til bruk i SLOT'et \"Strukturerte funn\" i arketypen OBSERVATION.imaging_exam_result (Bildediagnostisk svar), men kan også brukes innen andre ENTRY- og CLUSTER-arketyper der det er klinisk passende.
+
+Brukes som et rammeverk hvor andre CLUSTER arketyper kan nøstes i SLOT'et \"Strukturerte detaljer\" for å registrere ytterligere strukturerte billedfunn for delstrukturer av leveren eller andre relevante funn.">
+            misuse = <"Skal ikke brukes til å registrere funn som er gjort utenom det definerte organet eller den definerte kroppsdelen. Bruk en egen instans av en eller flere arketyper innen gruppen av CLUSTER.imaging_exam - arketyper (Undersøkelsesfunn) for dette formålet.
+
+Skal ikke brukes til å registrere overordnede undersøkelsesfunn, kontekst eller tekniske detaljer relatert til bildeundersøkelsen. Bruk arketypen OBSERVATION.imaging_exam_result (Bildediagnostisk svar) for å registrere for eksempel kommentar om undersøkelseskvalitet, differensialdiagnose og overordnet konklusjon.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a narrative description, structured details and clinical impression of the findings observed in an imaging examination targeting the liver.">
+            use = <"Use to record a narrative description, structured details and clinical impression of the findings observed in an imaging examination targeting the liver.
+
+This archetype has been designed to be used in the 'Structured imaging findings' SLOT within the OBSERVATION.imaging_exam_result archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. 
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Additional details' SLOT within this archetype to record additional nested levels of structured imaging findings for related body substructures or site-specific findings.">
+            misuse = <"Not to be used to record findings outside the specified body structure or region. Use other archetypes from the CLUSTER.imaging_exam family for this purpose.
+
+Not to be used to record details related to the overall findings, context or technical details related to a complete imaging examination test result. Use the OBERSERVATION.imaging_exam_result for this purpose. For example, comments on the study quality, differential diagnoses, and overall impression.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Imaging examination of the liver
+        items matches {
+            ELEMENT[at0001.1] matches {    -- Body structure
+                value matches {
+                    DV_CODED_TEXT[at0.9000] matches {
+                        defining_code matches {[at0.1]}    -- Liver
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0.1"] = <
+                text = <"Leber">
+                description = <"Die Leber wurde untersucht.">
+            >
+            ["at0000.1"] = <
+                text = <"Bildgebende Untersuchung der Leber">
+                description = <"Ergebnisse der radiologischen Untersuchung der Leber.">
+            >
+            ["at0001.1"] = <
+                text = <"Körperstruktur">
+                description = <"Identifizierung der untersuchten Körperstruktur oder -region.">
+            >
+        >
+        ["nb"] = <
+            ["at0.1"] = <
+                text = <"Lever">
+                description = <"Leveren ble undersøkt.">
+            >
+            ["at0000.1"] = <
+                text = <"Bildediagnostisk undersøkelse - leveren">
+                description = <"Funn eller observasjoner ved bildediagnostisk undersøkelse av leveren med bruk av radiologiske metoder.">
+            >
+            ["at0001.1"] = <
+                text = <"Kroppsstruktur">
+                description = <"Identifisering av organet eller kroppsdelen som svaret gjelder.">
+                comment = <"For eksempel \"Lever\", \"Høyre ankel\" eller \"Lymfeknutegruppe\". Det er anbefalt å kode kroppsstruktur med en passende terminologi, som SNOMED CT.">
+            >
+        >
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Imaging examination of the liver">
+                description = <"Findings observed in an imaging examination targeting the liver, using radiographic techniques.">
+            >
+            ["at0001.1"] = <
+                text = <"Body structure">
+                description = <"Identification of the body structure or region examined.">
+            >
+            ["at0.1"] = <
+                text = <"Liver">
+                description = <"The liver was examined.">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0.1"] = <http://snomed.info/id/10200004>
+        >
+    >

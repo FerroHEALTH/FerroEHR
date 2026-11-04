@@ -1,0 +1,147 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=39aa7393-2b87-4206-a4f8-1daac636e4a1; build_uid=e3e74110-0ee6-4b02-9cae-37abc106a486)
+    openEHR-EHR-CLUSTER.delay_details.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2022-06-27">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"A1817BA67D0CB0FDA54F852C65506E88">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record information about recognised subcategories of delay or specific delays in seeking, reaching or receiving healthcare using the \"Three Delays\" framework.">
+            use = <"Use to record information about recognised subcategories of delay or specific delays in seeking, reaching or receiving healthcare using the \"Three Delays\" framework.
+
+This archetype has been designed to be nested within the 'Delay details' SLOT in the  ADMIN_ENTRY.three_delays_model archetype, so that variable levels of detail can be recorded.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Delay details
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Delay name
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Delay presence?
+                value matches {
+                    DV_CODED_TEXT[at9008] matches {
+                        defining_code matches {[ac9007]}    -- Delay presence? (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Description
+                value matches {
+                    DV_TEXT[at9009]
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Delay duration
+                value matches {
+                    DV_DURATION[at9010]
+                }
+            }
+            allow_archetype CLUSTER[at0010] matches {    -- Additional details
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.delay_details\.v0\..*/}
+            }
+            allow_archetype CLUSTER[at0009] matches {    -- Solution responsibility
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Solution timeline
+                value matches {
+                    DV_DATE_TIME[at9011]
+                    DV_DURATION[at9012] matches {
+                        value matches {PYMWD/|>=P0D|}
+                    }
+                }
+            }
+            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9007]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Delay details">
+                description = <"Information about subcategories of delay or specific delays in seeking, reaching or receiving healthcare using the \"Three Delays\" framework.">
+            >
+            ["at0001"] = <
+                text = <"Delay name">
+                description = <"The name of one or more subcategories of delay or of a specific delay.">
+            >
+            ["at0002"] = <
+                text = <"Delay presence?">
+                description = <"Was the delay recognised as present, relevant to the identified 'Delay name'?">
+            >
+            ["at0003"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Unknown">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Description">
+                description = <"Narrative description about the identified delay.">
+            >
+            ["at0007"] = <
+                text = <"Delay duration">
+                description = <"The duration of the recognised delay.">
+            >
+            ["at0011"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the identified delay, not captured in other fields.">
+            >
+            ["at0010"] = <
+                text = <"Additional details">
+                description = <"Additional details about the identified delay.">
+                comment = <"This SLOT allows another instance of this CLUSTER.delay_detail archetype to be nested, to support representation of multiple levels of delay.">
+            >
+            ["at0009"] = <
+                text = <"Solution responsibility">
+                description = <"The name of the person or organisation assigned responsibility to solve or mitigate the identified delay.">
+            >
+            ["at0008"] = <
+                text = <"Solution timeline">
+                description = <"The due date or proposed timeframe for resolution or mitigation of the identified delay.">
+            >
+            ["ac9007"] = <
+                text = <"Delay presence? (synthesised)">
+                description = <"Was the delay recognised as present, relevant to the identified 'Delay name'? (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9007"] = <
+            id = <"ac9007">
+            members = <"at0003", "at0004", "at0005">
+        >
+    >

@@ -1,0 +1,143 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=7be5cb7d-5706-48fc-b8f4-e4306853a832; build_uid=af3eace2-630e-45cf-b373-457919af33a7)
+    openEHR-EHR-CLUSTER.exam_occlusal.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::ja]>
+
+description
+    original_author = <
+        ["name"] = <"">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"33DF36FCB7E3711C8F2378B7BB95DFB0">
+    >
+    details = <
+        ["ja"] = <
+            language = <[ISO_639-1::ja]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© Takahiro Nakahara
+Shinji Kobayashi
+© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Examination of occlusal
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- No abnormality detected
+                value matches {
+                    DV_BOOLEAN[at9000] matches {
+                        value matches {True, False}
+                    }
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Clinical description
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            allow_archetype ELEMENT[at0003] matches {    -- Examination findings
+                include
+                    archetype_id/value matches {/openEHR-EHR-ELEMENT\.exam_oral_membrane(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            allow_archetype ELEMENT[at0004] matches {    -- Examination not done
+                include
+                    archetype_id/value matches {/openEHR-EHR-ELEMENT\.exclusion_exam(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            CLUSTER[at0005] matches {    -- Style
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Group function
+                        value matches {
+                            DV_TEXT[at9002]
+                        }
+                    }
+                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Cuspid protected
+                        value matches {
+                            DV_TEXT[at9003]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Relationship
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+            allow_archetype ELEMENT[at0009] matches {    -- Multimedia representation
+                include
+                    archetype_id/value matches {/openEHR-EHR-ELEMENT\.multimedia(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Clinical interpretation
+                value matches {
+                    DV_TEXT[at9005]
+                }
+            }
+            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9006]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["ja"] = <
+            ["at0000"] = <
+                text = <"Examination of occlusal">
+                description = <"unknown">
+            >
+            ["at0001"] = <
+                text = <"No abnormality detected">
+                description = <"*">
+            >
+            ["at0002"] = <
+                text = <"Clinical description">
+                description = <"*">
+            >
+            ["at0003"] = <
+                text = <"Examination findings">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"Examination not done">
+                description = <"*">
+            >
+            ["at0005"] = <
+                text = <"Style">
+                description = <"*">
+            >
+            ["at0006"] = <
+                text = <"Cuspid protected">
+                description = <"*">
+            >
+            ["at0007"] = <
+                text = <"Group function">
+                description = <"*">
+            >
+            ["at0008"] = <
+                text = <"Relationship">
+                description = <"*">
+            >
+            ["at0009"] = <
+                text = <"Multimedia representation">
+                description = <"*">
+            >
+            ["at0010"] = <
+                text = <"Clinical interpretation">
+                description = <"*">
+            >
+            ["at0011"] = <
+                text = <"Comment">
+                description = <"*">
+            >
+        >
+    >

@@ -1,0 +1,229 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=b5da1158-c2d8-4948-9dbe-62f83cec4605; build_uid=7de6b744-863b-4493-b9ff-faf9f3abd9ae)
+    openEHR-EHR-CLUSTER.lab_microscopy_stain.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2024-08-29">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Nicola Ewen, SERHA/Ministry of Health and Wellness, Jamaica", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Yohann White, Ministry of Health and Wellness, Jamaica">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"76955E97886B931E600143D5944F6BEC">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record findings observed on microscopic examination of specimens.">
+            use = <"Use to record findings observed on microscopic examination of specimens.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation, Ministry of Health and Wellness Jamaica">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Microscopy stain findings
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0004] occurrences matches {1} matches {    -- Staining method
+                value matches {
+                    DV_TEXT[at9003]
+                    DV_CODED_TEXT[at9004] matches {
+                        defining_code matches {[ac9000]}    -- Staining method (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0015] occurrences matches {0..1} matches {    -- Staining agent
+                value matches {
+                    DV_TEXT[at9005]
+                }
+            }
+            allow_archetype CLUSTER[at0014] matches {    -- Specimen
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            ELEMENT[at0024] occurrences matches {0..1} matches {    -- Clinical findings
+                value matches {
+                    DV_TEXT[at9006]
+                }
+            }
+            CLUSTER[at0016] matches {    -- Per target finding
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0017] occurrences matches {1} matches {    -- Staining target
+                        value matches {
+                            DV_TEXT[at9007]
+                        }
+                    }
+                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Presence
+                        value matches {
+                            DV_CODED_TEXT[at9008] matches {
+                                defining_code matches {[ac9001]}    -- Presence (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Qualitative result
+                        value matches {
+                            DV_CODED_TEXT[at9009] matches {
+                                defining_code matches {[ac9002]}    -- Qualitative result (synthesised)
+                            }
+                            DV_TEXT[at9010]
+                        }
+                    }
+                    ELEMENT[at0023] occurrences matches {0..1} matches {    -- Morphology
+                        value matches {
+                            DV_TEXT[at9011]
+                        }
+                    }
+                    ELEMENT[at0027] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9013]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0012] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9012]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Microscopy stain findings">
+                description = <"Findings observed during microscopic examination of tissue treated with specialised stains, intended to enhance the visualisation of specimen, including microorganisms, tissue structures and cellular details.">
+            >
+            ["at0004"] = <
+                text = <"Staining method">
+                description = <"Name of the technique used to stain the specimen.">
+                comment = <"For example: Ziehl–Neelsen; Gram stain">
+            >
+            ["at0005"] = <
+                text = <"Gram stain">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"India ink stain">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Ziehl-Neelsen stain">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Presence">
+                description = <"Statement about detection of the staining target in the specimen.">
+            >
+            ["at0010"] = <
+                text = <"Detected">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Not detected">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the overall microscopy findings using the identified stain, not captured in other fields.">
+            >
+            ["at0014"] = <
+                text = <"Specimen">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Staining agent">
+                description = <"A chemical dye or compound that interacts with biological specimens to produce a colour change, improving their visibility and differentiation under a microscope.">
+                comment = <"For example: crystal violet, carbol fuchsin.">
+            >
+            ["at0016"] = <
+                text = <"Per target finding">
+                description = <"Details about a specific microorganism, tissue structure, or cell structure observed during the microscopic examination of a stained specimen.">
+            >
+            ["at0017"] = <
+                text = <"Staining target">
+                description = <"Identification of the target organism, cell or structure.">
+                comment = <"For example: gram-positive cocci, fungi, acid-fast bacilli, cell nuclei or pathological inclusions.
+Coding with an external terminology is preferred, if available.">
+            >
+            ["at0018"] = <
+                text = <"Qualitative result">
+                description = <"Qualitative assessment of the amount of the target organism, cell, or structure observed using the stain.">
+            >
+            ["at0019"] = <
+                text = <"Scant">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Low">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"High">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Morphology">
+                description = <"Narrative description about the physical characteristics of the staining target.">
+                comment = <"For example: gram-positive cocci in clusters; gram-negative bacilli, short rods; elongated fibroblasts; multinucleated giant cells; branching hyphae; oval yeast forms with budding.">
+            >
+            ["at0024"] = <
+                text = <"Clinical findings">
+                description = <"Narrative description about the findings observed using the identified stain.">
+                comment = <"For example: an overall description; the presence of non-targeted findings such as epithelial cells or debris.">
+            >
+            ["at0025"] = <
+                text = <"Absent">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Indeterminate">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the target findings using the identified stain, not captured in other fields.">
+            >
+            ["ac9000"] = <
+                text = <"Staining method (synthesised)">
+                description = <"Name of the technique used to stain the specimen. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Presence (synthesised)">
+                description = <"Statement about detection of the staining target in the specimen. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Qualitative result (synthesised)">
+                description = <"Qualitative assessment of the amount of the target organism, cell, or structure observed using the stain. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0019", "at0020", "at0021", "at0022", "at0025">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0010", "at0011", "at0026">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0005", "at0006", "at0007">
+        >
+    >

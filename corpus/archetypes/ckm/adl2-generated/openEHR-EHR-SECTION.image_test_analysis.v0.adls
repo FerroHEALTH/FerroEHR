@@ -1,0 +1,81 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=da112912-a7eb-4cb7-8848-697bc54f2e54; build_uid=75723587-ec97-478d-b1af-456692c5e439)
+    openEHR-EHR-SECTION.image_test_analysis.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Aitor Eguzkitza">
+        ["organisation"] = <"Universidad Pública de Navarra - Complejo Hospitalario de Navarra">
+        ["email"] = <"aitor.eguzkiza@unavarra.es">
+        ["date"] = <"2015-06-27">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"José Andonegui, Hospital de Navarra, jose.andonegui.navarro@cfnavarra.es", "Luis Serrano, Universidad Pública de Navarra (UPNA), lserrano@unavarra.es", "Jesús D. Trigo, Universidad Pública de Navarra (UPNA), jesusdaniel.trigo@unavarra.es">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"E25495BF0F0078F70D2AEE3F135396E6">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Register all clinical findings obtained in the review of diverse diagnostic imaging tests, whenever they are associated with the assessment of a specific disease.">
+            use = <"Use to analyze studies on diagnostic imaging acquired beforehand, looking for clinically relevant findings in the assessment of a specific disease.">
+            misuse = <"The order and acquisition of imaging tests beyond the scope of this archetype. Use the corresponding archetypes for that purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registrar todos los hallazgos clínicos obtenidos al examinar diversas pruebas de imagen diagnóstica, siempre que éstas esten incluidas en la evaluación de una enfermedad específica.">
+            use = <"Utilícese para analizar estudios de imagen diagnóstica que hayan sido adquiridos con anterioridad, en busca de hallazgos clinicamente relevantes para la evaluación de una enfermedad específica.">
+            misuse = <"La planificación y captura de las pruebas de imagen diagnóstica están fuera del alcance de este arquetipo. Utilice los arquetipos correspondientes para tal fin.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    SECTION[at0000] matches {    -- Image test analysis
+        items cardinality matches {1..*; unordered} matches {
+            allow_archetype OBSERVATION[at0001] matches {    -- Imaging test examination
+                include
+                    archetype_id/value matches {/openEHR-EHR-OBSERVATION\.fundoscopic_examination(-[a-zA-Z0-9_]+)*\.v([0-9]+)|openEHR-EHR-OBSERVATION\.ophthalmic_tomography_examination(-[a-zA-Z0-9_]+)*\.v([0-9]+)|openEHR-EHR-OBSERVATION\.visual_field_measurement(-[a-zA-Z0-9_]+)*\.v([0-9]+)/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Image test analysis">
+                description = <"Describes the analysis of image based diagnostic tests, to find clinical findings which can be relevant to decide a diagnosis for a specific disease.">
+            >
+            ["at0001"] = <
+                text = <"Imaging test examination">
+                description = <"Record of clinical findings on a specific modality of diagnostic imaging.">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Análisis de pruebas de imagen">
+                description = <"Describe el análisis de las pruebas diagnósticas basadas en imagen, para encontrar hallazgos clínicos que puedan ser relevantes en la decisión diagnóstica para una enfermedad específica.">
+            >
+            ["at0001"] = <
+                text = <"Exámen de fondo de ojo">
+                description = <"Registra hallazgos clínicos en imágenes de fondo de ojo.">
+            >
+        >
+    >

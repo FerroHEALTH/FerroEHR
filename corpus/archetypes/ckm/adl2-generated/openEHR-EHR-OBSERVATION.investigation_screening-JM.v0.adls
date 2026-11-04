@@ -1,0 +1,199 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=d2db06eb-f82a-41b8-b306-78f1145a1b91; build_uid=0ecbd966-bc1e-42bd-9fbc-6ed0fd09e94f)
+    openEHR-EHR-OBSERVATION.investigation_screening-JM.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-OBSERVATION.investigation_screening.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch, Darin Leonhardt">
+                ["organisation"] = <"Medizinische Hochschule Hannover, PLRI">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de, leonhardt.darin@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Kanika Kuwelker, John Tore Valand, Vebjørn Arntzen">
+                ["organisation"] = <"Helse Vest IKT, Helse Bergen, Oslo University Hospital">
+                ["email"] = <"kanika.kuwelker@helse-vest-ikt.no, john.tore.valand@helse-vest-ikt.no, varntzen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2022-10-21">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Astrid Askeland, Dips AS, Norway", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Terje Bektesevic Holmlund, UiT Norges arktiske universitet, Norway", "Ivar Berge, Oslo Universitetssykehus, Norway", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Randi Brendberg, Helse Nord RHF, Norway", "Yexuan Cheng, 浙江大学, China", "Are Edvardsen, SKDE, Helse Nord RHF, Norway", "Heike Eichele, Regionalt fagmiljø for autimse, ADHD, Tourettes syndrom og narkolepsi Helse Vest, Kronstad DPS, Haukeland universitetssykehus, Bergen, Norway", "Alexander Eikrem-Lüthi, Lovisenberg Diakonale Sykehus, Norway", "Gunn Elin Blakkisrud, DIPS ASA, Norway", "Kåre Flø, DIPS ASA, Norway", "Grant Forrest, Lunaria Ltd, United Kingdom", "Anca Heyd, DIPS ASA, Norway", "Joost Holslag, Nedap, Netherlands", "Evelyn Hovenga, EJSH Consulting, Australia", "Mikkel Johan Gaup Grønmo, Helse Nord IKT, Norway (Nasjonal IKT redaktør)", "Gunnar Jårvik, Helse Vest IKT AS, Norway", "Runar Kristiansen, DIPS AS, Norway", "Anjali Kulkarni, Karkinos, India", "Kanika Kuwelker, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Liv Laugen, Oslo universitetssykehus, Norway (Nasjonal IKT redaktør)", "Øygunn Leite Kallevik, Helse Bergen, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Nina Louise Jebsen, Haukeland Universitetssykehus, Norway", "Martine Louise Nalum, DIPS AS, Norway", "Hanne Marte Bårholm, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Svenne Naumann, Finnmarkssykehuset, Norway", "Terje Nordberg, Helse Bergen, Norway", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Bjørn Næss, DIPS ASA, Norway", "Jussara Rotzsch, Hospital Alemão Oswaldo Cruz, Brazil", "Kritika Sarkar, Karkinos Healthcare, India", "Ragnhild Schultz, OUS, Norway", "Andre Smitt-Ingebretsen, Sørlandet sykehus HF, Norway", "Tove Stenquist, Helseforetak, Norway", "Frode Stenvik, Helse Sør-Øst, Norway", "Natalia Strauch, Medizinische Hochschule Hannover, Germany", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)", "Ina Wille, Helse-Vest RHF, Norway">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"B8C2E96DB0A27622D7007F276769C10E">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Schaffung eines Schemas für die Aufzeichnung von Antworten auf vordefinierte Screening-Fragen zu diagnostischen Untersuchungen oder einer Gruppe von Untersuchungen, einschließlich, aber nicht beschränkt auf bildgebende Untersuchungen und Labortests.">
+            keywords = <"Untersuchung, Screening, Fragebogen, Prävention, Bildgebung, Labor, Pathologie, Blut, Probe, Sputum, EMG, EKG, Gehör, Test, Untersuchung, Rückenmarksflüssigkeit, Biopsie, EEG, MRI, CT, Röntgen, PET, Ultraschall, Spirometrie", ...>
+            use = <"Dient zur Erstellung eines Schemas für die Aufzeichnung von Antworten auf vordefinierte Screening-Fragen zu diagnostischen Untersuchungen oder Gruppen von Untersuchungen. Der Umfang der diagnostischen Untersuchungen umfasst alle Arten von bildgebenden Untersuchungen und das breiteste Spektrum an Labor- und anatomisch-pathologischen Tests. Darüber hinaus kann dieser Archetyp auch verwendet werden, um zu erfassen, wann andere diagnostische Tests durchgeführt wurden, wie z. B. Herzbelastungstests, Hör- und Sehtests, Elektrokardiographie (EKG) und Elektroenzephalographie (EEG).
+
+Häufige Anwendungsfälle sind unter anderem:
+- Selbstauskunft der Patienten
+- Erstellung eines Patientenprofils in einem Krankheitsregister
+- Systematische Befragung im Rahmen einer Konsultation in Bezug auf die Verabreichung von Untersuchungsmethoden
+
+Die Semantik dieses Archetyps ist absichtlich offen formuliert, und eine Abfrage dieses Archetyps wäre normalerweise nur im Kontext der jeweiligen Vorlage sinnvoll oder sicher. Jedes Datenelement würde in der Regel in einer Vorlage umbenannt, um die spezifische Frage zu repräsentieren. Falls Wertesätze für allgemeine Anwendungsfälle vorgeschlagen wurden, können diese an die lokalen Anforderungen angepasst werden, indem die Datentypen DV_TEXT oder DV_BOOLEAN verwendet werden, um jedem spezifischen Anwendungsfall zu entsprechen.
+
+Die Verwendung dieses Schemas innerhalb einer Vorlage ermöglicht die Dokumentation eines breiten Spektrums von Frage/Antwort-Paaren wie z. B.:
+- Haben Sie jemals Ihren Cholesterinspiegel testen lassen? Ja, Nein, Unbekannt.
+- Wurden Sie auf Röteln-Antikörper getestet? Ja, Nein, Unbekannt.
+- Wurden Sie jemals auf Sichelzellenanämie untersucht? Ja, Nein, Unbekannt.
+- Wann war Ihre letzte Röntgenaufnahme der Brust?
+- Wie lautete das Ergebnis Ihres letzten INR-Tests?
+- Wie lautete der Befund des Elektrokardiogramms?
+- Hat der Säugling ein Neugeborenen-Hörscreening bestanden/nicht bestanden?
+
+Die EVENT-Struktur aus dem Referenzmodell kann verwendet werden, um anzugeben, ob sich die Fragen auf einen Zeitpunkt oder einen Zeitraum beziehen. Verwenden Sie eine separate Instanz dieses Archetyps, um zwischen einem Fragebogen, der Informationen über eine Untersuchung oder einen Test aufzeichnet, die/der zu einem beliebigen Zeitpunkt in der Vergangenheit durchgeführt wurde, und Informationen über eine Untersuchung oder einen Test, die/der innerhalb eines bestimmten Zeitraums durchgeführt wurde, zu unterscheiden - z. B. der Unterschied zwischen \"Hatten Sie jemals einen INR-Test?\" im Vergleich zu \"Hatten Sie in den letzten vier Wochen einen INR-Test?\"
+
+Die Quelle der Informationen in einer Fragebogenantwort kann in verschiedenen Kontexten variieren, kann aber mit Hilfe des Elements \"Information provider\" im Referenzmodell spezifisch identifiziert werden.
+
+Dieser Archetyp wurde entwickelt, um als Screening-Instrument verwendet zu werden oder um einfache Fragebogen-Daten für Situationen wie ein Krankheitsregister aufzuzeichnen. Wenn der Screening-Fragebogen angibt, dass eine Untersuchung durchgeführt wurde, können zusätzliche Details, die für die Speicherung in einer klinischen Akte erforderlich sind, mithilfe spezifischer Archetypen für Testergebnisse erfasst werden.">
+            misuse = <"Nicht für die Aufzeichnung eines Untersuchungsauftrags zu verwenden - verwenden Sie zu diesem Zweck INSTRUCTION.service_request.
+
+Nicht für die Aufzeichnung des Fortschritts von Aktivitäten, die als Teil einer Untersuchung durchgeführt werden, zu verwenden - verwenden Sie zu diesem Zweck entsprechende ACTION-Archetypen.
+
+Nicht für die Aufzeichnung formaler diagnostischer Testergebnisse zu verwenden - verwenden Sie zu diesem Zweck geeignete OBSERVATIONS. Zum Beispiel die OBSERVATION.laboratory_test_result oder OBSERVATION.imaging_examination_result.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å lage et rammeverk for registrering av svar på forhåndsdefinerte spørsmål om diagnostiske undersøkelser eller gruppe av undersøkelser. Dette inkluderer, men er ikke begrenset til bildediagnostiske undersøkelser og laboratorieundersøkelser.">
+            keywords = <"utredning", "undersøkelse", "kartlegging", "spørreskjema", "forebygging", "bildediagnostikk", "laboratorie", "patologi", "blodprøve", "sputum", "EMG", "EKG", "EEG", "MR", "CT", "røntgen", "PET", "spirometri", "EKKO", "billeddiagnostikk", "ultralyd", "vevsprøve", "hørseltest", "synstest">
+            use = <"Bruk for å lage et rammeverk for registrering av svar på forhåndsdefinerte spørsmål om bruk av en spesifisert diagnostisk undersøkelse eller gruppering av undersøkelser. Omfanget av diagnostiske undersøkelser inkluderer alle modaliteter av bildediagnostiske undersøkelser og den videste definisjonen av laboratorie- og patologiprøver. I tillegg kan arketypen brukes til å registrere om andre diagnostiske undersøkelser har vært gjort, som belastnings-EKG, hørsel- eller synstest eller ECG.
+
+Vanlige bruksområder inkluderer, men er ikke begrenset til:
+- Selvrapportering av pasienter
+- Til en pasientprofil i et register for sykdommer
+- Systematiske spørsmål i enhver konsultasjon, relatert til administrasjon av undersøkelser
+
+Semantikken til denne arketypen er med vilje løs, og å spørre etter denne arketypen vil normalt bare være nyttig eller trygt innenfor konteksten til hver spesifikk mal. I et templat vil hvert dataelement vanligvis døpes om til det (spesifikke) spørsmålet man ønsker svar på. Flere steder er det foreslått verdisett som passer til de vanligste bruksområder, men det er allikevel mulig å tilpasse/endre verdisett for lokal bruk ved å benytte de alternative datatypene DV_TEXT eller DV_BOOLEAN i stedet.
+
+Ved å anvende dette rammeverket i et templat kan gjøre det mulig å dokumentere en vidt spekter av spørsmål/svar, som:
+
+- Har du noen gang fått testet kolesterolnivået ditt? Ja, Nei, Ukjent.
+- Har du blitt testet for rubella-antistoffer? Ja, Nei, Ukjent.
+- Har du noen gang blitt screenet for sigdcellesykdom? Ja, Nei, Ukjent
+- Når var ditt siste røntgenbilde av thorax?
+- Hva var svaret på din siste INR-prøve?
+- Hva var funnene på EKG-et?
+- Var svaret normalt på screeningen i hørselundersøkelsen for nyfødte?
+
+EVENT-strukturen fra arketypens referansemodell kan brukes for å spesifisere om spørsmålene relateres til et tidspunkt eller til et tidsintervall. Bruk egne instanser av denne arketypen for å skille mellom spørsmål om diagnostiske undersøkelser som gjelder et hvilket som helst tidspunkt eller for et tidsintervall. For eksempel; \"Har du noen gang tatt en INR-prøve?\" sammenlignet med \"Har du tatt en INR-prøve i løpet av de siste fire ukene?\".
+
+Kilden til informasjonen i et spørreskjema kan variere i ulike kontekster, men kan identifiseres spesifikt ved å benytte \"Information provider\" elementet i openEHR referansemodell.
+
+Denne arketypen er laget for å bli brukt i et spørreskjema eller for å registrere enkle strukturerte data til for eksempel et sykdomsregister. Dersom det i spørreskjemaet identifiseres at det er gjort en undersøkelse som bør lagres i den elektroniske journalen er det tenkt at de spesifikke detaljene om undersøkelsen skal lagres i persistente arketyper laget spesielt for det formålet.">
+            misuse = <"Skal ikke brukes til å registrere bestilling av diagnostiske tester - bruk INSTRUCTION.service_request for dette formålet.
+
+Skal ikke brukes til å registrere fremdriften til aktiviteter utført som en del av undersøkelse - bruk ACTION.laboratory_test for dette formålet.
+
+Skal ikke brukes til å registrere formelle diagnostiske testresultater - bruk OBSERVATION.laboratory_test_result eller OBSERVATION.imaging_examination_result for dette formålet.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To create a framework for recording answers to pre-defined screening questions about diagnostic investigations or group of investigations, including but not limited to imaging examinations and laboratory tests.">
+            keywords = <"investigation, screening, questionnaire, prevention, imaging, laboratory, pathology, blood, sample, sputum, EMG, ECG, hearing, test, examination, spinal fluid, biopsy, EEG, MRI, CT, X-ray, PET, ultrasound, spirometry", ...>
+            use = <"Use to create a framework for recording answers to pre-defined screening questions about diagnostic investigations or groups of investigations. The scope of diagnostic investigations includes all modalities of imaging examinations and the broadest range of laboratory and anatomical pathology tests. In addition, this archetype can also be used to record when other diagnostic tests have been carried out, such as cardiac stress testing, hearing and vision testing, electrocardiography (ECG) and electroencephalography (EEG).
+
+Common use cases include, but are not limited to:
+- Patient self-reporting
+- Creating a patient profile in a disease registry
+- Systematic questioning in any consultation related to patterns of investigation administration
+
+The semantics of this archetype are intentionally loose, and querying this archetype would normally only be useful or safe within the context of each specific template. Each data element would usually be renamed in a template to represent the specific question asked. Where value sets have been proposed for common use cases, these can be adapted to align with local requirements by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case. 
+
+Utilising this framework within a template can enable documentation of a broad range of question/answer pairs such as:
+- Have you ever had your cholesterol level tested? Yes, No, Unknown.
+- Have you been tested for rubella antibodies? Yes, No, Unknown.
+- Have you ever been screened for sickle cell disease? Yes, No, Unknown.
+- When was your last Chest X-ray?
+- What was the result of your most recent INR test?
+- What were the findings of the electrocardiogram?
+- Did the infant pass/fail a Neonatal hearing screen?
+
+The EVENT structure from the reference model can be used to specify whether the questions relate to a point in time or over a period of time. Use a separate instance of this archetype to distinguish between a questionnaire recording information about an investigation or test that has been done at any time in the past and information about an investigation or test done within a specified time interval - for example, the difference between \"Have you ever had an INR test?\" compared to \"Have you had an INR test during the last four weeks?\".
+
+The source of the information in a questionnaire response may vary in different contexts but can be specifically identified using the 'Information provider' element in the Reference Model.
+
+This archetype has been designed to be used as a screening tool or to record simple questionnaire-format data for use in situations such as a disease registry. If the screening questionnaire identifies an investigation has been carried out, additional details required for persistence as part of a clinical record can be captured using specific test result archetypes.">
+            misuse = <"Not to be used for recording an order for an investigation - use INSTRUCTION.service_request for this purpose.
+
+Not to be used for recording the progress of activities performed as part of an investigation - use appropriate ACTION archetypes for this purpose.
+
+Not to be used to record formal diagnostic test results - use appropriate OBSERVATIONS for this purpose. For example, the OBSERVATION.laboratory_test_result or OBSERVATION.imaging_examination_result.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000.1] matches {    -- Diagnostic investigation screening questionnaire
+        /data[at0022]/events[at0023]/data[at0001]/items[at0026]/items matches {
+            allow_archetype CLUSTER[at0.1] matches {    -- Result details
+                include
+                    archetype_id/value matches {/.*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000.1"] = <
+                text = <"Screening-Fragebogen zur diagnostischen Untersuchungen">
+                description = <"Eine Reihe von Fragen und die dazugehörigen Antworten dienen der Überprüfung, ob diagnostische Untersuchungen durchgeführt wurden.">
+                comment = <"Die Antworten können selbst berichtet werden.">
+            >
+            ["at0.1"] = <
+                text = <"*Result details (en)">
+                description = <"">
+            >
+        >
+        ["nb"] = <
+            ["at0000.1"] = <
+                text = <"Kartleggingsspørsmål om diagnostiske undersøkelser">
+                description = <"Spørsmål og tilhørende svar som er knyttet til kartlegging om diagnostiske undersøkelser har vært utført eller ikke.">
+                comment = <"Svarene kan være selvrapporterte.">
+            >
+            ["at0.1"] = <
+                text = <"*Result details (en)">
+                description = <"">
+            >
+        >
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Diagnostic investigation screening questionnaire">
+                description = <"Series of questions and associated answers used to screen whether diagnostic investigations have been carried out.">
+                comment = <"The answers may be self-reported.">
+            >
+            ["at0.1"] = <
+                text = <"Result details">
+                description = <"">
+            >
+        >
+    >

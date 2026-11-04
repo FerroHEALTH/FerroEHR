@@ -1,0 +1,200 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=4598a143-5cf0-42fa-9ae5-2b653c34063a; build_uid=d0d4bf04-59f9-4e37-910b-1833a4f96020)
+    openEHR-EHR-COMPOSITION.lifestyle_factors.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch, Simon Schumacher">
+                ["organisation"] = <"Medizinische Hochschule Hannover; Universitätsklinik Köln">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de; sschuma9@uni-koeln.de">
+            >
+        >
+        ["el"] = <
+            language = <[ISO_639-1::el]>
+            author = <
+                ["name"] = <"Erasmia Partafylla">
+                ["organisation"] = <"Sigmasoft">
+                ["email"] = <"c.partafylla@sigmasoft.gr">
+            >
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            author = <
+                ["name"] = <"Martijn van Eenennaam">
+                ["organisation"] = <"Nedap Healthcare">
+                ["email"] = <"martijn.vaneenennaam@nedap.com">
+            >
+            accreditation = <"Ph.D.">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics, Australia">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2013-06-12">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Derived from: Lifestyle factors, Draft archetype [Internet]. Australian Digital Health Agency (NEHTA), ADHA Clinical Knowledge Manager. Authored: 2013 Jun 12. Available at: http://dcm.nehta.org.au/ckm#showArchetype_1013.1.1323_2 (discontinued)">
+    >
+    other_details = <
+        ["current_contact"] = <"Dr Heather Leslie, Atomica Informatics, Australia<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"D58C6DA0C5FC12B15E83F7CE21D66F6B">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung einer beständigen und sich entwickelnden Zusammenfassung von Informationen über Lifestyle-Entscheidungen und -Aktivitäten, die den gesundheitlichen Zustand, die klinische Entscheidungsfindung und die Gesundheitsversorgung beeinflussen könnten.">
+            keywords = <"Leben", "Stil", "Lebensstil", "Risiko", "Faktor", "Tabak", "Rauchen", "Alkohol", "Sucht", "Ernährung", "Diät", "Übung", "Bewegung">
+            use = <"Verwenden Sie diesen Archetyp, um eine beständige und sich entwickelnde Zusammenfassung von Informationen über relevante Lifestyle-Entscheidungen und -Aktivitäten, die den gesundheitlichen Zustand, die klinische Entscheidungsfindung und die Gesundheitsversorgung beeinflussen könnten, zu erstellen.
+
+Der Umfang der Darstellung beinhaltet folgende Elemente, ist aber nicht auf diese beschränkt: eine Übersicht über das Rauchverhalten und Tabakkonsum, den Alkoholkonsum; den Gebrauch von Substanzen; Glücksspiele; über die körperliche Aktivität; Ernährung und Essverhalten; die sexuelle Gesundheit.
+
+Dieser Archetyp wird normalerweise als beständige Liste behandelt. Es gibt jedoch Situationen, in denen die Liste innerhalb der episodischen Behandlung verwendet werden kann und zusätzliche Attribute wie Kontext usw. erforderlich sind, um eine genaue Aufzeichnung zu ermöglichen. Das openEHR-Referenzmodell ermöglicht derzeit Aufzeichnung von Kontexten nur in Event-basierten COMPOSITION-Archetypen. Infolgedessen wurde dieser Archetyp als Event und nicht als beständige COMPOSITION modelliert, um die Flexibilität zu ermöglichen - so können dann einige klinische Systeme die Lebensstilfaktoren für Behandlungsepisoden sicher verwalten, während andere sich dafür entscheiden, diese COMPOSITION zu implementieren, um dauerhaft zu handeln.
+
+Das initiale Design des Archetyps, wurde durch das iCareNet Antenatal Shared Care Plan Projekt, Northern Territory, Australia gefördert.">
+            misuse = <"Nicht zur Darstellung einer Reihe von OBSERVATION-Archetypen über aktuelle Aktivitäten verwenden, wie sie beispielsweise verwendet werden können um ein Tagebuch über den Alkoholkonsum, oder über das Ausführen einer bestimmten körperlichen Tätigkeit zu erstellen.">
+            copyright = <"*© Northern Territory Department of Health (AU), openEHR Foundation (en)">
+        >
+        ["el"] = <
+            language = <[ISO_639-1::el]>
+            purpose = <"*To record a persistent and evolving summary record of information about lifestyle choices and activities that may influence health outcomes, clinical decision-making and provision of care.(en)">
+            keywords = <"ζωή", "ύφος", "τρόπος ζωής", "κίνδυνος", "παράγοντας", "καπνός", "κάπνισμα", "αλκοόλ", "κραιπάλη", "δίαιτα", "άσκηση">
+            use = <"*Use to record a persistent and evolving summary record of information about relevant lifestyle choices and activities that may influence health outcomes, clinical decision-making and provision of care.
+
+The scope of this record can includes, but is not limited to: an overview of smoking and tobacco use; alcohol consumption; substance use; gambling; physical activity; diet and nutrition; and sexual health.
+
+This archetype is usually managed as a persistent list, however there are situations where the list may be used within episodic care and require additional attributes such as context etc to enable accurate recording. The openEHR reference model currently only allows context to be recorded within Event-based COMPOSITION archetypes. As a result, this archetype has been modelled as an Event, rather than Persistent, COMPOSITION, to allow for flexibility so that some clinical systems can safely manage Lifestyle Factors for episodes of care, while others will choose to implement this COMPOSITION to act in a persistent manner.
+
+Initial design of this archetype was funded by the iCareNet Antenatal Shared Care Plan project, Northern Territory, Australia.(en)">
+            misuse = <"*Not to record a series of OBSERVATIONS about current activity, such as might be used to create a daily diary of alcohol consumption or activity in a specific exercise session.(en)">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a persistent and evolving summary record of information about lifestyle choices and activities that may influence health outcomes, clinical decision-making and provision of care.">
+            keywords = <"life", "style", "lifestyle", "risk", "factor", "tobacco", "smoking", "alcohol", "binge", "diet", "exercise">
+            use = <"Use to record a persistent and evolving summary record of information about relevant lifestyle choices and activities that may influence health outcomes, clinical decision-making and provision of care.
+
+The scope of this record can includes, but is not limited to: an overview of smoking and tobacco use; alcohol consumption; substance use; gambling; physical activity; diet and nutrition; and sexual health.
+
+This archetype is usually managed as a persistent list, however there are situations where the list may be used within episodic care and require additional attributes such as context etc to enable accurate recording. The openEHR reference model currently only allows context to be recorded within Event-based COMPOSITION archetypes. As a result, this archetype has been modelled as an Event, rather than Persistent, COMPOSITION, to allow for flexibility so that some clinical systems can safely manage Lifestyle Factors for episodes of care, while others will choose to implement this COMPOSITION to act in a persistent manner.
+
+Initial design of this archetype was funded by the iCareNet Antenatal Shared Care Plan project, Northern Territory, Australia.">
+            misuse = <"Not to record a series of OBSERVATIONS about current activity, such as might be used to create a daily diary of alcohol consumption or activity in a specific exercise session.">
+            copyright = <"© Northern Territory Department of Health (AU), openEHR Foundation">
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            purpose = <"Om de blijvende en voortschrijdende samenvatting van informatie over leefstijlkeuzes en activiteiten vast te leggen die van invloed kunnen zijn op klinische beslissingen en levering van zorg.">
+            keywords = <"Leven", "Stijl", "Levensstijl", "Risico", "Factor", "Tabak", "Roken", "Alcohol", "Overmatig", "Dieet", "Lichaamsbeweging">
+            use = <"Gebruik om de blijvende en voortschrijdende samenvatting van informatie over leefstijlkeuzes en activiteiten vast te leggen die van invloed kunnen zijn op klinische beslissingen en levering van zorg.
+
+Dit omvat, maar is niet gelimiteerd tot: een overzicht van rookgedrag, alcoholgebruik, drugsgebruik, gokken, fysieke activiteit, dieet en voeding en sexuele gezondheid.
+
+Dit archetype is normaliter beheerd als een persistente lijst. Er zijn echter situaties waarin de lijst gebruikt kan worden met binnen zorgepisodes waarbij aanvullende attributen nodig zijn zoals bijv. de context om accurate verslaglegging mogelijk te maken. Dit archetype is gemodelleerd als een Event, in tegenstelling tot Persistent, COMPOSITION om flexibiliteit te bieden zodat sommige clinische systemen de Lifestyle Factors voor episodes ook kunnen beheren, terwijl anderen er voor zullen kiezen om deze COMPOSITION op een persistente manier te gebruiken.
+
+Initieel ontwerp van dit archetype was gesubsidieerd door het iCareNet Antenatal Shared Care Plan project, Northern Territory, Australia.">
+            misuse = <"Niet te gebruiken voor het vastleggen van een serie OBSERVATIONS over de huidige activiteit, zoals bijvoorbeeld een dagelijks logboek van alcoholgebruik of activiteit in een specifieke oefening.">
+        >
+    >
+
+definition
+    COMPOSITION[at0000] matches {    -- Lifestyle risk factors
+        category matches {
+            DV_CODED_TEXT[at9001] matches {
+                defining_code matches {[at9000]}    -- event
+            }
+        }
+        context matches {
+            EVENT_CONTEXT[at9002] matches {
+                other_context matches {
+                    ITEM_TREE[at0002] matches {
+                        items cardinality matches {0..*; unordered} matches {
+                            allow_archetype ITEM[at0003] matches {    -- Extension
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.document_entry_metadata(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.document_entry_metadata(-[a-zA-Z0-9_]+)*\.v0\..*/}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Lifestyle-Risikofaktoren">
+                description = <"Eine beständige und sich entwickelnde Zusammenfassung von Informationen über Lifestyle-Risikofaktoren, die den gesundheitlichen Zustand, die klinische Entscheidungsfindung und die Gesundheitsversorgung beeinflussen könnten.">
+            >
+            ["at0003"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen.">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["el"] = <
+            ["at0000"] = <
+                text = <"Παράγοντες κινδύνου τρόπου ζωής">
+                description = <"Ένα επίμονο και εξελισσόμενο συνοπτικό αρχείο πληροφοριών σχετικά με τους παράγοντες κινδύνου του τρόπου ζωής που μπορεί να επηρεάσουν τα αποτελέσματα της υγείας, τη λήψη κλινικών αποφάσεων και την παροχή φροντίδας.">
+            >
+            ["at0003"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to extend the model with local content or to align with other reference models or formalisms.(en)">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Lifestyle risk factors">
+                description = <"A persistent and evolving summary record of information about lifestyle risk factors that may influence health outcomes, clinical decision-making and provision of care.">
+            >
+            ["at0003"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at9000"] = <
+                text = <"event">
+                description = <"event">
+            >
+        >
+        ["nl"] = <
+            ["at0000"] = <
+                text = <"Levensstijl risicofactoren">
+                description = <"Een blijvende en voortschrijdende samenvatting van informatie over leefstijlkeuzes en activiteiten vast te leggen die van invloed kunnen zijn op klinische beslissingen en levering van zorg.">
+            >
+            ["at0003"] = <
+                text = <"Uitbreiding">
+                description = <"Aanvullende informatie benodigd om het model uit te breiden met lokale inhoud of om aan te sluiten bij andere referentiemodellen of formalismen.">
+                comment = <"Bijvoorbeeld: lokale informatie eisen; of aanvullende metadata om aan te sluiten bij FHIR.">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/433>
+        >
+    >

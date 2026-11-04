@@ -1,0 +1,1077 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=23185f94-2926-4f62-9c6e-e3c36f5e2864; build_uid=aca218e9-d7d8-4672-a2e1-3ca01d5366db)
+    openEHR-EHR-OBSERVATION.social_context_screening.v1.1.2
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Johann Keller">
+                ["organisation"] = <"x-tention">
+                ["email"] = <"johann.keller@x-tention.ch">
+            >
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Marit Alice Venheim, John Tore Valand, Vebjørn Arntzen, Liv Laugen">
+                ["organisation"] = <"Helse Vest IKT AS, Helse Bergen, Oslo University Hospital, ​Oslo University Hospital, Norway">
+                ["email"] = <"marit.alice.venheim@helse-vest-ikt.no, john.tore.valand@helse-bergen.no, varntzen@ous-hf.no, john.tore.valand@helse-vest-ikt.no, liv.laugen@ous-hf.no">
+            >
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            author = <
+                ["name"] = <"Johann Keller">
+                ["organisation"] = <"x-tention">
+                ["email"] = <"johann.keller@x-tention.ch">
+            >
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            author = <
+                ["name"] = <"Laura Moral Lopez, Clara Calleja Vega">
+                ["organisation"] = <"Sistema de Salut de Catalunya, CatSalut. Servei Català de la Salut.">
+                ["email"] = <"lauramoral@catsalut.cat, ccalleja@catsalut.cat">
+            >
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Laura Moral Lopez">
+                ["organisation"] = <"Sistema de Salut de Catalunya">
+                ["email"] = <"lauramoral@catsalut.cat">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2020-03-13">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Nuno Abreu, Oporto Hospital Center, Portugal", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Ivar Berge, Oslo Universitetssykehus, Norway", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Hugo Claudio Briceño García, Catsalut, Spain", "Stefan Dubois, Dep't of Pathology and Genetics, University Hospitals of Lund and Malmö, Sweden", "Gunn Elin Blakkisrud, DIPS ASA, Norway", "Kåre Flø, DIPS ASA, Norway", "Heather Grain, Llewelyn Grain Informatics, Australia", "Evelyn Hovenga, EJSH Consulting, Australia", "Mikkel Johan Gaup Grønmo, Regional forvaltning EPJ, Helse Nord, Norway (Nasjonal IKT redaktør)", "Sølvi Johansen, Oslo Universitetssykehus, Ullevål, Norway", "Mika Kiviaho, Tietoevry, Finland", "Lise Kristin Knutsen, Oslo universitetssykehus, Norway", "Kanika Kuwelker, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Jamie LaPaglia, Claim Clarity, United States", "Liv Laugen, Oslo universitetssykehus, Norway (Nasjonal IKT redaktør)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Hanne Marte Bårholm, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Svenne Naumann, Finnmarkssykehuset, Norway", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Sobath Premaratne, Barts Health NHS Trust, United Kingdom", "FREDERICO RIBEIRO, Hospital das Clínicas da UFPE, Brazil", "Marte Rime Bø, Direktoratet for e-helse, Norway", "Michael Seneviratne, NHS, United Kingdom", "Andre Smitt-Ingebretsen, Sørlandet sykehus HF, Norway", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "Kanthan Theivendran, NHS, United Kingdom", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"286C7F69DB47328F7184D68EA3A8190E">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Schaffung von Rahmenbedingungen für die Darstellung von Antworten auf vordefinierte Screening-Fragen zum sozialen Kontext.">
+            keywords = <"Obdachlosigkeit", "obdachlos", "Wohnraum", "wohnen", "Glücksspiel", "spielsüchtig", "Beschäftigung", "Arbeit", "Ausbildung", "Schule", "Bildung", "Sicherheit", "Häusliche Gewalt", "Gewalt", "Abhängigkeit", "Sucht", "Vormundschaft", "Missbrauch", "Unsicherheit", "Inklusion", "Ausgrenzung", "Transport", "Mobilität", "Gerechtigkeit", "Notlage", "Arbeitslosigkeit", "Stress", "Alphabetisierung", "Wohlbefinden", "Sozial", "Soziologisch", "Sozioökonomisch", "Armut", "Hunger", "Flüchtling", "Migration", "Migrant", "Einwanderer", "Minderheit">
+            use = <"Verwendung als Rahmenbedingung für die Erfassung von Antworten auf vordefinierte Screening-Fragen zum sozialen Kontext.
+
+Häufige Anwendungsfälle sind unter anderem:
+- Systematische Befragung während Konsultationen, zum Beispiel:
+--- Sind Sie obdachlos? Ja, Nein, Unbekannt
+--- Fühlen Sie sich sozial isoliert?
+--- Fühlen Sie sich zu Hause/in der Schule/bei der Arbeit sicher?
+--- Glauben Sie, dass Sie spielsüchtig zu sein?
+--- Sind Personen von Ihnen abhängig?
+--- Benötigen Sie einen Dolmetscher, wenn Sie die Klinik besuchen?
+
+Die Semantik dieses Archetyps ist absichtlich locker gehalten, und eine Abfrage dieses Archetyps wäre normalerweise nur im Kontext des jeweiligen Templates sinnvoll oder sicher. In einen Template wird jedes Datenelement in der Regel in die spezifische Frage umbenannt, die gestellt wird. Wenn Wertemengen für allgemeine Anwendungsfälle vorgeschlagen wurden, können diese für die lokale Verwendung angepasst werden, indem die Datentypen DV_TEXT oder DV_BOOLEAN verwendet werden, um spezifische Anwendungsfälle abzubilden.
+
+Die EVENT-Struktur aus dem Referenzmodell kann verwendet werden, um anzugeben, ob sich die Fragen auf einen bestimmten Zeitpunkt oder einen bestimmten Zeitraum beziehen. Es soll eine separate Instanz dieses Archetyps verwendet werden, um klar zwischen einem Fragebogen zu unterscheiden, der Informationen zum sozialen Kontext zu einem beliebigen Zeitpunkt in der Vergangenheit erfasst, und einem Fragebogen, der Informationen zum sozialen Kontext innerhalb eines festgelegten Zeitintervalls erhebt – zum Beispiel: \"Sind Sie derzeit zu Hause sicher?\" und \"Haben Sie in den letzten 4 Wochen häusliche Gewalt erlebt?\".
+
+Die Quelle der Informationen in einer Fragebogenantwort kann je nach Kontext variieren, lässt sich jedoch mithilfe des Elements „Information provider“ im Referenzmodell eindeutig identifizieren.
+
+Dieser Archetyp wurde als Screening-Instrument oder zur Erfassung einfacher Daten im Fragebogenformat für Situationen wie beispielsweise ein Krankheitsregister entwickelt. Wenn im Rahmen des Screening-Prozesses ein sozialer Kontext, ein Problem identifiziert wird und die Details als Teil einer laufenden Gesundheitsakte erfasst und gespeichert werden sollen, sollten alle weiteren spezifischen Details zum sozialen Kontext unter Verwendung von für den klinischen Zweck vorgesehenen Archetypen aufgezeichnet werden.">
+            misuse = <"Nicht zur Erfassung des sozialen Kontexts ausserhalb eines Screenings verwenden. Verwenden Sie zu diesem Zweck vorhandene Archetypen – beispielsweise EVALUATION.housing, EVALUATION.education, EVALUATION.occupation, EVALUATION.social_network und andere Archetypen innerhalb des Projekts „Sozialer Kontext“ – https://ckm.openehr.org/ckm/projects/1013.30.39.">
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            purpose = <"*To create a framework for recording answers to pre-defined screening questions about the social context. (en)">
+            keywords = <"*homelessness (en)", "*housing (en)", "*gambling (en)", "*employment (en)", "*safety (en)", "*domestic (en)", "*violence (en)", "*dependant (en)", "*guardian (en)", "*situation (en)", "*circumstances (en)", "*abuse (en)", "*education (en)", "*insecurity (en)", "*inclusion (en)", "*exclusion (en)", "*transportation (en)", "*equity (en)", "*hardship (en)", "*unemployment (en)", "*stress (en)", "*connection (en)", "*literacy (en)", "*wellness (en)", "*social (en)", "*sociological (en)", "*socioeconomic (en)", "*poverty (en)", "*hunger (en)", "*refugee (en)", "*immigrant (en)", "*minority (en)">
+            use = <"*Use to create a framework for recording answers to pre-defined screening questions about the social context.
+
+Common use cases include, but are not limited to:
+- Systematic enquiry in any consultation, for example:
+--- Are you homeless? Yes, No, Unknown
+--- Do you feel socially isolated?
+--- Do you feel safe at home/school/work?
+--- Do you think you are a problem gambler?
+--- How many children do you have under the age of 18?
+--- Are any individuals dependent on you?
+--- Do you need an interpreter when you visit the clinic?
+
+The semantics of this archetype are intentionally loose, and querying this archetype would normally only be useful or safe within the context of each specific template. In a template, each data element would usually be renamed to the specific question asked. Where value sets have been proposed for common use cases, these can be adapted for local use by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case.
+
+The EVENT structure from the reference model can be used to specify whether the questions relate to a point in time or over a period of time. Use a separate instance of this archetype to distinguish between a questionnaire recording information about a social context issue that has been present at any time in the past and information about a social context issue within a specified time interval - for example, the difference between \"Are you safe at home now?\" compared to \"Have you experienced any domestic violence in the past 4 weeks?\"
+
+The source of the information in a questionnaire response may vary in different contexts but can be specifically identified using the 'Information provider' element in the Reference Model.
+
+This archetype has been designed to be used as a screening tool or to record simple questionnaire-format data for use in situations such as a disease registry. If the screening process identifies a social context circumstance, issue or concern and it is intended that the details are to be recorded and persisted as part of an ongoing health record, any further specific details about the social context should be recorded using archetypes specific for the clinical purpose. (en)">
+            misuse = <"*Not to be used to record persistent details about social context-related concepts. Use existing archetypes for this purpose - for example EVALUATION.housing, EVALUATION.education, EVALUATION. occupation, EVALUATION.social_network and other archetypes within the Social context project - https://ckm.openehr.org/ckm/projects/1013.30.39. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å lage et rammeverk for registrering av svar på forhåndsdefinerte spørsmål om sosiale forhold.">
+            keywords = <"hjemløs", "uten fast bolig", "UFB", "spillavhengighet", "sikkerhet", "vold", "mobbing", "diskriminering", "foresatt", "verge", "omstendigheter", "forhold", "forsørger", "rus", "barn", "bolig", "nettverk", "barnevern", "gambling", "arbeid", "arbeidsledig", "misbruk", "utdanning", "sikkerhet", "usikkerhet", "inkludering", "ekskludering", "transport", "likeverd", "lidelse", "stress", "sosial", "sosioøkonomisk", "fattigdom", "sult", "flyktning", "immigrant", "minoritet", "asyl">
+            use = <"Bruk for å lage et rammeverk for registrering av svar på forhåndsdefinerte spørsmål om sosiale forhold.
+
+Vanlige bruksområder inkluderer, men er ikke begrenset til:
+- Systematiske spørsmål ved konsultasjoner, for eksempel:
+--- Har du fast bopel? Ja, Nei, Ukjent.
+--- Føler du deg isolert sosialt?
+--- Føler du deg trygg hjemme/på skolen/på jobb?
+--- Tenker du at du er spillavhengig?
+--- Er det noen mennesker som du har ansvar for og som er avhengig av deg?
+--- Trenger du tolk mens du er på sykehuset?
+
+Semantikken i denne arketypen er med vilje løst definert, og spørringer etter data i denne arketypen vil normalt bare være hensiktsmessig eller sikkert i konteksten av det spesifikke templatet. I et templat vil hvert dataelement vanligvis døpes om til det (spesifikke) spørsmålet man ønsker svar på. Flere steder er det foreslått verdisett som passer til de vanligste bruksområder, men det er allikevel mulig å tilpasse/endre verdisett for lokal bruk ved å benytte de alternative datatypene DV_TEXT eller DV_BOOLEAN i stedet.
+
+EVENT-strukturen fra arketypens referansemodell kan brukes for å spesifisere om spørsmålene relateres til et tidspunkt eller til et tidsintervall. Bruk egne instanser av denne arketypen for å skille mellom spørsmål om sosialrelaterte emner som gjelder et hvilket som helst tidspunkt eller for et tidsintervall. For eksempel; \"Opplever du vold i nære forhold i dag?\" sammenlignet med \"Har du opplevd vold i nære forhold de siste fire ukene?\"
+
+Kilden til informasjonen i et spørreskjema kan variere i ulike kontekster, men kan identifiseres spesifikt ved å benytte \"Information provider\" elementet i openEHR referansemodell.
+
+Denne arketypen er laget for å bli brukt i et spørreskjema eller for å registrere enkle strukturerte data til for eksempel et sykdomsregister. Dersom det i spørreskjemaet identifiseres at det er noe i de sosiale forholdene som bør lagres i den elektroniske journalen, utover et øyeblikksbilde, er det tenkt at dette skal lagres i persistente arketyper laget spesielt for klinisk bruk.">
+            misuse = <"Skal ikke brukes til å registrere varige detaljer om spesifikke sosiale kontekstrelaterte konsepter. Bruk eksisterende arketyper for dette, for eksempel EVALUATION.housing (Boligsammendrag), EVALUATION.education (Utdanningssammendrag), EVALUATION. occupation (Arbeidssammedrag), EVALUATION.social_network (Sosialt nettverk) og andre arketyper som finnes i det norske bibliotekets prosjekt \"Sosialinformasjon\" - https://arketyper.no/ckm/projects/1078.43.70, eller det internasjonale bibliotekets \"Social context\" project - https://ckm.openehr.org/ckm/projects/1013.30.39.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To create a framework for recording answers to pre-defined screening questions about the social context.">
+            keywords = <"homelessness", "housing", "gambling", "employment", "safety", "domestic", "violence", "dependent", "guardian", "situation", "circumstances", "abuse", "education", "insecurity", "inclusion", "exclusion", "transportation", "equity", "hardship", "unemployment", "stress", "connection", "literacy", "wellness", "social", "sociological", "socioeconomic", "poverty", "hunger", "refugee", "immigrant", "minority">
+            use = <"Use to create a framework for recording answers to pre-defined screening questions about the social context.
+
+Common use cases include, but are not limited to:
+- Systematic enquiry in any consultation, for example:
+--- Are you homeless? Yes, No, Unknown
+--- Do you feel socially isolated?
+--- Do you feel safe at home/school/work?
+--- Do you think you are a problem gambler?
+--- Are any individuals dependent on you?
+--- Do you need an interpreter when you visit the clinic?
+
+The semantics of this archetype are intentionally loose, and querying this archetype would normally only be useful or safe within the context of each specific template. In a template, each data element would usually be renamed to the specific question asked. Where value sets have been proposed for common use cases, these can be adapted for local use by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case.
+
+The EVENT structure from the reference model can be used to specify whether the questions relate to a point in time or over a period of time. Use a separate instance of this archetype to distinguish between a questionnaire recording information about a social context issue that has been present at any time in the past and information about a social context issue within a specified time interval - for example, the difference between \"Are you safe at home now?\" compared to \"Have you experienced any domestic violence in the past 4 weeks?\"
+
+The source of the information in a questionnaire response may vary in different contexts but can be specifically identified using the 'Information provider' element in the Reference Model.
+
+This archetype has been designed to be used as a screening tool or to record simple questionnaire-format data for use in situations such as a disease registry. If the screening process identifies a social context circumstance, issue or concern and it is intended that the details are to be recorded and persisted as part of an ongoing health record, any further specific details about the social context should be recorded using archetypes specific for the clinical purpose.">
+            misuse = <"Not to be used to record persistent details about social context-related concepts. Use existing archetypes for this purpose - for example EVALUATION.housing, EVALUATION.education, EVALUATION. occupation, EVALUATION.social_network and other archetypes within the Social context project - https://ckm.openehr.org/ckm/projects/1013.30.39.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            purpose = <"*To create a framework for recording answers to pre-defined screening questions about the social context. (en)">
+            keywords = <"*homelessness (en)", "*housing (en)", "*gambling (en)", "*employment (en)", "*safety (en)", "*domestic (en)", "*violence (en)", "*dependant (en)", "*guardian (en)", "*situation (en)", "*circumstances (en)", "*abuse (en)", "*education (en)", "*insecurity (en)", "*inclusion (en)", "*exclusion (en)", "*transportation (en)", "*equity (en)", "*hardship (en)", "*unemployment (en)", "*stress (en)", "*connection (en)", "*literacy (en)", "*wellness (en)", "*social (en)", "*sociological (en)", "*socioeconomic (en)", "*poverty (en)", "*hunger (en)", "*refugee (en)", "*immigrant (en)", "*minority (en)">
+            use = <"*Use to create a framework for recording answers to pre-defined screening questions about the social context.
+
+Common use cases include, but are not limited to:
+- Systematic enquiry in any consultation, for example:
+--- Are you homeless? Yes, No, Unknown
+--- Do you feel socially isolated?
+--- Do you feel safe at home/school/work?
+--- Do you think you are a problem gambler?
+--- How many children do you have under the age of 18?
+--- Are any individuals dependent on you?
+--- Do you need an interpreter when you visit the clinic?
+
+The semantics of this archetype are intentionally loose, and querying this archetype would normally only be useful or safe within the context of each specific template. In a template, each data element would usually be renamed to the specific question asked. Where value sets have been proposed for common use cases, these can be adapted for local use by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case.
+
+The EVENT structure from the reference model can be used to specify whether the questions relate to a point in time or over a period of time. Use a separate instance of this archetype to distinguish between a questionnaire recording information about a social context issue that has been present at any time in the past and information about a social context issue within a specified time interval - for example, the difference between \"Are you safe at home now?\" compared to \"Have you experienced any domestic violence in the past 4 weeks?\"
+
+The source of the information in a questionnaire response may vary in different contexts but can be specifically identified using the 'Information provider' element in the Reference Model.
+
+This archetype has been designed to be used as a screening tool or to record simple questionnaire-format data for use in situations such as a disease registry. If the screening process identifies a social context circumstance, issue or concern and it is intended that the details are to be recorded and persisted as part of an ongoing health record, any further specific details about the social context should be recorded using archetypes specific for the clinical purpose. (en)">
+            misuse = <"*Not to be used to record persistent details about social context-related concepts. Use existing archetypes for this purpose - for example EVALUATION.housing, EVALUATION.education, EVALUATION. occupation, EVALUATION.social_network and other archetypes within the Social context project - https://ckm.openehr.org/ckm/projects/1013.30.39. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            purpose = <"Créer un cadre pour l'enregistrement des réponses à des questions prédéfinies sur le contexte sociale.
+">
+            keywords = <"sans-abri", "sans-abrisme", "logement", "jeu pathologique", "jeu compulsif", "jeu compulsif", "ludomanie", "emploi", "travail", "sécurité", "domestique", "familial", "violence", "personne à charge", "personne dépendante", "tuteur", "tutelle", "situation", "circonstances", "abus", "éducation", "formation", "insécurité", "inclusion", "exclusion", "transport", "mobilité", "équité", "difficultés", "chômage", "stress", "connexion", "alphabétisation", "bien-être", "social", "sociologique", "socioéconomique", "pauvreté", "faim", "réfugié", "immigrant", "minorité">
+            use = <"À utiliser pour créer un cadre permettant d'enregistrer les réponses à des questions prédéfinies sur le contexte social.
+
+Les cas d'utilisation les plus courants sont, entre autres, les suivants
+- L'interrogation systématique lors d'une consultation, par exemple :
+--- Êtes-vous sans domicile ? Oui, Non, Inconnu
+--- Vous sentez-vous socialement isolé(e) ?
+--- Vous sentez-vous en sécurité à la maison / à l’école / au travail ?
+--- Avez-vous des problèmes de jeu d’argent ?
+--- Des personnes sont-elles dépendantes de vous ?
+--- Avez-vous besoin d’un interprète lors de votre visite à la clinique ?
+
+
+La sémantique de cet archétype est intentionnellement floue, et requêter cet archétype ne serait normalement utile ou sûre que dans le contexte de chaque modèle spécifique. Dans un modèle, chaque élément de données est généralement renommé en fonction de la question spécifique posée. Lorsque des ensembles de valeurs ont été proposés pour des cas d'utilisation courants, ils peuvent être adaptés à un usage local en utilisant les types de données DV_TEXT ou DV_BOOLEAN pour correspondre à chaque cas d'utilisation spécifique.
+
+La structure EVENT du modèle de référence peut être utilisée pour spécifier si les questions se rapportent à un moment donné ou à une période de temps. Utilisez une instance distincte de cet archétype pour faire la distinction entre un questionnaire enregistrant des informations sur un problème lié au contexte social ayant pu survenir à tout moment dans le passé, et un questionnaire portant sur un problème lié au contexte social survenu dans un intervalle de temps donné - par exemple la différence entre \"Vous sentez-vous en sécurité à la maison actuellement ?\" et \"Avez-vous été victime de violences domestiques au cours des 4 dernières semaines ?\"
+
+La source des informations contenues dans une réponse à un questionnaire peut varier selon le contexte, mais elle peut être spécifiquement identifiée à l'aide de l'élément \"Fournisseur d'informations\" du modèle de référence.
+
+Cet archétype a été conçu pour être utilisé comme outil de dépistage ou pour enregistrer des données simples sous forme de questionnaire en vue d'une utilisation dans des situations telles qu'un registre des maladies. Si le processus de dépistage identifie une circonstance, un problème ou une inquiétude liée au contexte social et il est prévu de d’enregistrer les détails dans le dossier de santé, tout renseignement supplémentaire sur le contexte social doit être enregistré à l’aide d’archétypes dédiés à des fins cliniques.
+">
+            misuse = <"Ne pas utiliser pour enregistrer des détails persistants sur des concepts liés au contexte social. Utilisez les archétypes existants à cette fin, par exemple EVALUATION.housing, EVALUATION.education, EVALUATION.occupation, EVALUATION.social_network et d'autres archétypes du projet \"Social context\" - https://ckm.openehr.org/ckm/projects/1013.30.39.">
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            purpose = <"Crear un marc per registrar respostes a preguntes de cribratge predefinides sobre el context social.">
+            keywords = <"sense llar", "habitatge", "joc d'atzar", "ocupació", "seguretat", "domèstic", "violència", "dependent", "tutor", "situació", "circumstàncies", "abús", "educació", "inseguretat", "inclusió", "exclusió", "transport", "equitat", "dificultats", "atur", "estrès", "connexió", "alfabetització", "benestar", "social", "sociològic", "socioeconòmic", "pobresa", "fam", "refugiat", "immigrant", "minoria">
+            use = <"Utilitzeu-lo per crear un marc per registrar respostes a preguntes de cribratge predefinides sobre el context social.
+
+Els casos d'ús comuns inclouen, entre d'altres:
+- Consulta sistemàtica en qualsevol consulta, per exemple:
+--- Ets una persona sense llar? Sí, No, Desconegut
+--- Et sents socialment aïllat?
+--- Et sents segur a casa/escola/feina?
+--- Creus que tens problemes amb el joc?
+--- Hi ha alguna persona que depengui de tu?
+--- Necessites un intèrpret quan visites la clínica?
+
+La semàntica d'aquest arquetip és intencionadament flexible, i consultar aquest arquetip normalment només seria útil o segur dins del context de cada plantilla específica. En una plantilla, cada element de dades normalment es canviaria de nom a la pregunta específica que es fa. Quan s'han proposat conjunts de valors per a casos d'ús comuns, aquests es poden adaptar per a l'ús local mitjançant l'opció de tipus de dades DV_TEXT o DV_BOOLEAN per coincidir amb cada cas d'ús específic.
+
+L'estructura EVENT del model de referència es pot utilitzar per especificar si les preguntes es refereixen a un punt en el temps o a un període de temps. Utilitzeu una instància separada d'aquest arquetip per distingir entre un qüestionari que registra informació sobre un problema de context social que ha estat present en qualsevol moment del passat i informació sobre un problema de context social dins d'un interval de temps especificat; per exemple, la diferència entre \"Esteu segur a casa ara?\" en comparació amb \"Heu experimentat violència domèstica en les darreres 4 setmanes?\".
+
+La font de la informació en una resposta al qüestionari pot variar en diferents contextos, però es pot identificar específicament mitjançant l'element \"Information provider\" (\"Proveïdor d'informació\") del Model de Referència.
+
+Aquest arquetip s'ha dissenyat per ser utilitzat com a eina de cribratge o per registrar dades simples en format de qüestionari per al seu ús en situacions com ara un registre de malalties. Si el procés de cribratge identifica una circumstància, problema o preocupació de context social i es pretén que els detalls es registrin i es preservin com a part d'un historial mèdic continu, qualsevol altre detall específic sobre el context social s'ha de registrar mitjançant arquetips específics per a la finalitat clínica.">
+            misuse = <"No s'ha d'utilitzar per registrar detalls persistents sobre conceptes relacionats amb el context social. Utilitzeu arquetips existents per a aquest propòsit, per exemple, EVALUATION.housing, EVALUATION.education, EVALUATION.occupation, EVALUATION.social_network i altres arquetips dins del projecte Social context: https://ckm.openehr.org/ckm/projects/1013.30.39.">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Crear un marco para registrar respuestas a preguntas de cribado predefinidas sobre el contexto social.">
+            keywords = <"Sin hogar", "Vivienda", "Juego", "Empleo", "Seguridad", "Violencia doméstica", "Dependiente", "Tutor", "Situación", "Circunstancias", "Abuso", "Educación", "Inseguridad", "Inclusión", "Exclusión", "Transporte", "Equidad", "Dificultades", "Desempleo", "Estrés", "Conexión", "Alfabetización", "Bienestar", "Social", "Sociológico", "Socioeconómico", "Pobreza", "Hambre", "Refugiado", "Inmigrante", "Minoría">
+            use = <"Usar para crear un marco para registrar las respuestas a preguntas de cribado predefinidas sobre el contexto social.
+
+Los casos de uso comunes incluyen, entre otros:
+- Investigación sistemática en cualquier consulta, por ejemplo:
+--- ¿Es usted una persona sin hogar? Sí, No, Desconocido
+--- ¿Se siente socialmente aislado?
+--- ¿Se siente seguro en casa, en la escuela o en el trabajo?
+--- ¿Cree que tiene problemas con el juego?
+--- ¿Hay alguna persona que dependa de usted?
+--- ¿Necesita un intérprete cuando visita la clínica?
+
+La semántica de este arquetipo es intencionadamente flexible, y consultarlo normalmente solo sería útil o seguro dentro del contexto de cada plantilla específica. En una plantilla, cada elemento de datos se renombraría generalmente según la pregunta específica formulada. Cuando se han propuesto conjuntos de valores para casos de uso comunes, estos pueden adaptarse para uso local utilizando los tipos de datos DV_TEXT o DV_BOOLEAN para que coincidan con cada caso de uso específico.
+
+La estructura EVENT del modelo de referencia permite especificar si las preguntas se refieren a un momento específico o a un período determinado. Utilice una instancia independiente de este arquetipo para distinguir entre un cuestionario que registra información sobre un problema de contexto social presente en algún momento del pasado y la información sobre un problema de contexto social dentro de un intervalo de tiempo específico; por ejemplo, la diferencia entre \"¿Se encuentra seguro en casa ahora?\" y \"¿Ha sufrido violencia doméstica en las últimas 4 semanas?\".
+
+La fuente de información de una respuesta al cuestionario puede variar según el contexto, pero se puede identificar específicamente mediante el elemento \"Information provider\" (\"Proveedor de información\") del Modelo de Referencia.
+
+Este arquetipo se ha diseñado para utilizarse como herramienta de cribado o para registrar datos sencillos en formato de cuestionario para su uso en situaciones como un registro de enfermedades. Si el proceso de cribado identifica una circunstancia, problema o inquietud de contexto social y se pretende que los detalles se registren y conserven como parte de un historial clínico continuo, cualquier otro detalle específico sobre el contexto social debe registrarse utilizando arquetipos específicos para el propósito clínico.">
+            misuse = <"No debe utilizarse para registrar detalles persistentes sobre conceptos relacionados con el contexto social. Para ello, utilice los arquetipos existentes, por ejemplo, EVALUACIÓN.housing, EVALUACIÓN.education, EVALUACIÓN.occupation, EVALUACIÓN.social_network y otros arquetipos del proyecto Contexto social: https://ckm.openehr.org/ckm/projects/1013.30.39.">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Social context screening questionnaire
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0034] occurrences matches {0..1} matches {    -- Screening purpose
+                                        value matches {
+                                            DV_TEXT[at9002]
+                                        }
+                                    }
+                                    CLUSTER[at0022] matches {    -- Specific social context
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0004] occurrences matches {1} matches {    -- Context
+                                                value matches {
+                                                    DV_TEXT[at9005]
+                                                    DV_CODED_TEXT[at9014] matches {
+                                                        defining_code matches {[ac9012]}    -- Context (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Presence?
+                                                value matches {
+                                                    DV_CODED_TEXT[at9006] matches {
+                                                        defining_code matches {[ac9015]}    -- Presence? (synthesised)
+                                                    }
+                                                    DV_TEXT[at9007]
+                                                    DV_BOOLEAN[at9015]
+                                                }
+                                            }
+                                            ELEMENT[at0051] matches {    -- Timing
+                                                value matches {
+                                                    DV_TEXT[at9022]
+                                                    DV_DATE_TIME[at9023]
+                                                    DV_DURATION[at9024]
+                                                    DV_INTERVAL<DV_DATE_TIME>[at9019]
+                                                    DV_INTERVAL<DV_DURATION>[at9020]
+                                                }
+                                            }
+                                            allow_archetype CLUSTER[at0026] matches {    -- Additional details
+                                                include
+                                                    archetype_id/value matches {/.*/}
+                                            }
+                                            ELEMENT[at0025] occurrences matches {0..1} matches {    -- Comment
+                                                value matches {
+                                                    DV_TEXT[at9008]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0044] matches {    -- Additional details
+                                        include
+                                            archetype_id/value matches {/.*/}
+                                    }
+                                    ELEMENT[at0052] occurrences matches {0..1} matches {    -- Overall comment
+                                        value matches {
+                                            DV_TEXT[at9021]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0007] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0021] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Screening-Fragebogen zum sozialen Kontext">
+                description = <"Eine Reihe von Fragen und zugehörigen Antworten, um das soziale Kontext zu untersuchen und Faktoren zu identifizieren die sich auf das Wohlbefinden des Patienten auswirken können.">
+            >
+            ["at0002"] = <
+                text = <"Beliebiges Ereignis">
+                description = <"Standardwert, ein undefinierter/s Zeitpunkt oder Intervallereignis, das explizit im Template oder zur Laufzeit der Anwendung definiert werden kann.">
+            >
+            ["at0004"] = <
+                text = <"Kontext">
+                description = <"Identifizierung einer bestimmten sozialen Situation oder eines Problems, das für den Fragebogen relevant ist, oder Gruppe derer.">
+                comment = <"Dieses Element bietet die Wahl zwischen freiem und kodiertem Text. Es ist davon auszugehen, dass die Liste der kodierten Werte mit der Identifizierung weiterer Anforderungen wachsen wird. Die Kodierung des „Kontexts“ mithilfe einer Terminologie sollte bevorzugt werden - beispielsweise können relevante Begriffe innerhalb der Hierarchie „Sozialer Kontext“ in SNOMED CT (SCTID: 108329005) genutzt werden. Alternativ kann auch Freitext verwendet werden, etwa „Soziale Isolation“, „Diskriminierung“ oder „Minderheitenstress“.">
+            >
+            ["at0005"] = <
+                text = <"Vorhanden?">
+                description = <"Wurde der angegebene Kontext erlebt?">
+                comment = <"In einem Template würde das Datenelement normalerweise in die spezifische gestellte Frage umbenannt. Der vorgeschlagene Wertesatz kann für die lokale Verwendung angepasst werden, indem die Datentypauswahl DV_TEXT oder DV_BOOLEAN verwendet wird, um jedem spezifischen Anwendungsfall zu entsprechen.">
+            >
+            ["at0021"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen.">
+            >
+            ["at0022"] = <
+                text = <"Spezifischer sozialer Kontext">
+                description = <"Details zu einem spezifischen sozialen Kontext oder Problem, oder Gruppe derer, die für das Screening relevant sind.">
+            >
+            ["at0023"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Nein">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Kommentar">
+                description = <"Zusätzliche Angaben zum spezifischen sozialen Kontext, die nicht anderswo erfasst werden.">
+            >
+            ["at0026"] = <
+                text = <"Zusätzliche Angaben">
+                description = <"Zusätzliche Angaben oder Fragen zum spezifischen sozialen Kontext.">
+            >
+            ["at0027"] = <
+                text = <"Unbekannt">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Zweck des Screenings">
+                description = <"Der Kontext oder Grund für das Screening.">
+                comment = <"Dieses Datenelement soll bei einer späteren Abfrage den Erhebungskontext für die Frage/Antwort-Gruppen bereitstellen. Es ist für die interne Speicherung vorgesehen, eine Einbeziehung des Patienten bei der Erfassung wird nicht erwartet. Zum Beispiel: \"Screening vor der Aufnahme\" oder der Name des eigentlichen Fragebogens.">
+            >
+            ["at0044"] = <
+                text = <"Zusätzliche Angaben">
+                description = <"Zusätzliche Angaben oder Fragen zum sozialen Kontext im Allgemeinen.">
+            >
+            ["at0048"] = <
+                text = <"Obdachlos">
+                description = <"Die Person hat keinen festen Wohnsitz.">
+            >
+            ["at0049"] = <
+                text = <"Dolmetscher erforderlich">
+                description = <"Die Person benötigt Hilfe mit dem Übersetzen.">
+            >
+            ["at0050"] = <
+                text = <"Unsicher">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"Zeitangaben">
+                description = <"Wann die Situation erlebt wurde.">
+                comment = <"Das Datenelement „Timing“ wurde bewusst flexibel gestaltet, um die vielfältigen Einsatzmöglichkeiten in Fragebögen zu unterstützen. Die konkrete und beabsichtigte Semantik kann in einem Template weiter spezifiziert werden. Beispiele hierfür sind: Start- oder Enddatum und/oder Uhrzeit; das Alter der Person zum Zeitpunkt des Auftretens; oder die Dauer seit dem Einfluss des sozialen Kontexts. Auch ein unvollständiges Datum ist zulässig, wobei der Datentyp DV_DATE_TIME beispielsweise die Erfassung nur des Jahres ermöglicht.">
+            >
+            ["at0052"] = <
+                text = <"Allgemeiner Kommentar">
+                description = <"Zusätzliche Angaben zum sozialen Kontext im Allgemeinen, die nicht anderswo erfasst werden.">
+            >
+            ["ac9012"] = <
+                text = <"Kontext (synthesised)">
+                description = <"Identifizierung einer bestimmten sozialen Situation oder eines Problems, das für den Fragebogen relevant ist, oder Gruppe derer. (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Vorhanden? (synthesised)">
+                description = <"Wurde der angegebene Kontext erlebt? (synthesised)">
+            >
+        >
+        ["fi"] = <
+            ["at0000"] = <
+                text = <"*Social context screening questionnaire (en)">
+                description = <"*Series of questions and associated answers used to screen about the social environment and social situation which may impact the health and well-being of the individual, especially to identify potential issues or risks. (en)">
+            >
+            ["at0002"] = <
+                text = <"*Any event(en)">
+                description = <"*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.(en)">
+            >
+            ["at0004"] = <
+                text = <"*Context (en)">
+                description = <"*Identification of a specific social circumstance, issue or concern relevant for the questionnaire or grouping of such, by name.  (en)">
+                comment = <"*This element offers a choice between free and coded text. It is anticipated that the list of coded values will grow as requirements are identified. Coding of the 'Context' with a terminology is preferred, where possible - for example, relevant terms within the Social context finding hierarchy in SNOMED CT (SCTID: 108329005). (en)">
+            >
+            ["at0005"] = <
+                text = <"Olemassalolo">
+                description = <"*Has there been experience of the specified 'Context'? (en)">
+                comment = <"*In a template, the data element would usually be renamed to the specific question asked. The proposed value set can be adapted for local use by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case. (en)">
+            >
+            ["at0021"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to extend the model with local content or to align with other reference models or formalisms. (en)">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["at0022"] = <
+                text = <"*Specific social context (en)">
+                description = <"*Details about a specified social context or issue, or a grouping of these, relevant for the screening purpose. (en)">
+            >
+            ["at0023"] = <
+                text = <"*Yes (en)">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"*No (en)">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Kommentit">
+                description = <"*Additional narrative about the specific social context, not captured in other fields. (en)">
+            >
+            ["at0026"] = <
+                text = <"*Additional details (en)">
+                description = <"*Additional details or questions about the specific social context. (en)">
+            >
+            ["at0027"] = <
+                text = <"*Unknown (en)">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"*Screening purpose(en)">
+                description = <"*The context or reason for screening. (en)">
+                comment = <"*This data element is intended to provide collection context for the question/answer groups when queried at a later date. It is not expected that this data element will be exposed to the individual, but only stored in data. For example: pre-admission screening or the name of the actual questionnaire. (en)">
+            >
+            ["at0044"] = <
+                text = <"*Additional details (en)">
+                description = <"*Additional structured details or questions about screening for social context items. (en)">
+            >
+            ["at0048"] = <
+                text = <"*Homeless (en)">
+                description = <"*The individual does not have a stable place to live. (en)">
+            >
+            ["at0049"] = <
+                text = <"*Interpreter needed (en)">
+                description = <"*The individual needs assistance with language translation (en)">
+            >
+            ["at0050"] = <
+                text = <"*Unsure (en)">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"*Timing (en)">
+                description = <"*Indication of timing related to the specified 'Context.'. (en)">
+                comment = <"*The 'Timing' data element has deliberately been loosely modelled to support the myriad of ways that it can be used in questionnaires to capture timing information related to the social context. The specific and intended semantics can be further clarified in a template. For example: the start or stop date and/or time; the age of the individual at onset; or the duration of time since the social context had an impact. A partial date is valid, using the DV_DATE_TIME data type, to record only a year. (en)">
+            >
+            ["at0052"] = <
+                text = <"*Overall comment (en)">
+                description = <"*Additional narrative about the screening for any social context, not captured in other fields. (en)">
+            >
+            ["ac9012"] = <
+                text = <"*Context (en) (synthesised)">
+                description = <"*Identification of a specific social circumstance, issue or concern relevant for the questionnaire or grouping of such, by name.  (en) (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Olemassalolo (synthesised)">
+                description = <"*Has there been experience of the specified 'Context'? (en) (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Kartleggingsspørsmål om sosiale forhold">
+                description = <"Spørsmål og tilhørende svar som brukes til å kartlegge sosialt miljø og sosiale forhold som kan ha betydning for helse og velferd til et individ, spesielt for å identifisere potensielle utfordringer eller risiko.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifikk hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Sosialt forhold">
+                description = <"Navngiving av et spesifikt sosialt forhold, problem eller bekymring som er relevant for spørreskjemaet, eller en gruppering av slike.">
+                comment = <"Dette elementet tilbyr valg mellom fritekst og kodet tekst. Det er antatt at listen av kodede verdier vil vokse ettersom man identifiserer flere behov. Det er anbefalt å kode \"Sosialt forhold\" med en terminologi dersom det er mulig - for eksempel relevante termer innen hierarkiet til SNOMED CT's Social context finding hierarchy (SCTID: 108329005). Alternativt som fritekst, for eksempel \"Forsørgelsesbyrde\", \"Sosial isolasjon\", \"Diskriminering\", \"Minoritetsstress\".">
+            >
+            ["at0005"] = <
+                text = <"Tilstede?">
+                description = <"Har individet hatt noen erfaring med det spesifserte \"Sosialt forhold\"?">
+                comment = <"I templat vil navnet på dataelementet normalt omformuleres til det spesifikke spørsmålet. Det foreslåtte verdisettet kan tilpasses/endres i det enkelte bruksområde ved å benytte de alternative datatypene DV_TEXT eller DV_BOOLEAN.">
+            >
+            ["at0021"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0022"] = <
+                text = <"Spesifikt sosialt forhold">
+                description = <"Detaljer om et spesifikt sosialt forhold, eller en gruppering av slike, som er innenfor kartleggingsformålet.">
+            >
+            ["at0023"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om det spesifikke sosiale forholdet som ikke er registrert/omfattet av andre felt.">
+            >
+            ["at0026"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Ytterligere strukturerte detaljer eller spørsmål om det spesifikke sosiale forholdet.">
+            >
+            ["at0027"] = <
+                text = <"Ukjent">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Kartleggingsformål">
+                description = <"Konteksten eller årsaken for kartleggingen.">
+                comment = <"Dette dataelementet er ment for å sette en kontekst for samlingen av spørsmål/svar til bruk senere for å gjøre spørringer på dataene. Det er ikke forventet at dette dataelementet skal være synlig for en bruker av skjemaet, men kun tilgjengelig i de lagrede dataene. For eksempel: \"Preoperativ screening\" eller navnet på det faktiske spørreskjemaet.">
+            >
+            ["at0044"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Ytterligere strukturerte detaljer eller spørsmål om kartleggingen av sosiale forhold.">
+            >
+            ["at0048"] = <
+                text = <"Hjemløs">
+                description = <"Individet har ingen fast bopel.">
+            >
+            ["at0049"] = <
+                text = <"Trenger tolk">
+                description = <"Individet trenger assistanse til oversettelse.">
+            >
+            ["at0050"] = <
+                text = <"Usikker">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"Tidsangivelse">
+                description = <"Tidsangivelse for det spesifikke sosiale forholdet.">
+                comment = <"Dataelementet \"Tidsangivelse\" er med hensikt løst modellert for å støtte ulike måter å angi tidsangivelser for bekymringen, plagen, problemet eller diagnosen i et spørreskjema. Den konkrete semantikken defineres i templatet. For eksempel: Bekymringen, plagen, problemet eller diagnosen faktiske dato og/eller klokkeslett, start- og slutttid for bekymringen, plagen, problemet eller diagnosen, et tidsintervall for når bekymringen, plagen, problemet eller diagnosen oppstod, varigheten av bekymringen, plagen, problemet eller diagnosen, individets alder på tidspunktet for bekymringen, plagen, problemet eller diagnosen, eller hvor lenge det siden det oppstod. Kan være en deldato, for eksempel bare år, ved å bruke datatypen DV_DATE_TIME.">
+            >
+            ["at0052"] = <
+                text = <"Overordnet kommentar">
+                description = <"Ytterligere fritekst om kartleggingen av sosiale forhold som ikke er fanget opp i andre felt.">
+            >
+            ["ac9012"] = <
+                text = <"Sosialt forhold (synthesised)">
+                description = <"Navngiving av et spesifikt sosialt forhold, problem eller bekymring som er relevant for spørreskjemaet, eller en gruppering av slike. (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Tilstede? (synthesised)">
+                description = <"Har individet hatt noen erfaring med det spesifserte \"Sosialt forhold\"? (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Social context screening questionnaire">
+                description = <"Series of questions and associated answers used to screen about the social environment and social situation which may impact the health and well-being of the individual, especially to identify potential issues or risks.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Context">
+                description = <"Identification of a specific social circumstance, issue or concern relevant for the questionnaire or grouping of such, by name.">
+                comment = <"This element offers a choice between free and coded text. It is anticipated that the list of coded values will grow as requirements are identified. Coding of the 'Context' with a terminology is preferred, where possible - for example, relevant terms within the Social context finding hierarchy in SNOMED CT (SCTID: 108329005). Alternatively as free text, for example 'Social isolation', 'Discrimination', 'Minority stress'.">
+            >
+            ["at0005"] = <
+                text = <"Presence?">
+                description = <"Has there been experience of the specified 'Context'?">
+                comment = <"In a template, the data element would usually be renamed to the specific question asked. The proposed value set can be adapted for local use by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case.">
+            >
+            ["at0021"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0022"] = <
+                text = <"Specific social context">
+                description = <"Details about a specified social context or issue, or a grouping of these, relevant for the screening purpose.">
+            >
+            ["at0023"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the specific social context, not captured in other fields.">
+            >
+            ["at0026"] = <
+                text = <"Additional details">
+                description = <"Additional details or questions about the specific social context.">
+            >
+            ["at0027"] = <
+                text = <"Unknown">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Screening purpose">
+                description = <"The context or reason for screening.">
+                comment = <"This data element is intended to provide collection context for the question/answer groups when queried at a later date. It is not expected that this data element will be exposed to the individual, but only stored in data. For example: pre-admission screening or the name of the actual questionnaire.">
+            >
+            ["at0044"] = <
+                text = <"Additional details">
+                description = <"Additional structured details or questions about screening for social context items.">
+            >
+            ["at0048"] = <
+                text = <"Homeless">
+                description = <"The individual does not have a stable place to live.">
+            >
+            ["at0049"] = <
+                text = <"Interpreter needed">
+                description = <"The individual needs assistance with language translation.">
+            >
+            ["at0050"] = <
+                text = <"Unsure">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"Timing">
+                description = <"Indication of timing related to the specified 'Context.'.">
+                comment = <"The 'Timing' data element has deliberately been loosely modelled to support the myriad of ways that it can be used in questionnaires to capture timing information related to the social context. The specific and intended semantics can be further clarified in a template. For example: the start or stop date and/or time; the age of the individual at onset; or the duration of time since the social context had an impact. A partial date is valid, using the DV_DATE_TIME data type, to record only a year.">
+            >
+            ["at0052"] = <
+                text = <"Overall comment">
+                description = <"Additional narrative about the screening for any social context, not captured in other fields.">
+            >
+            ["ac9012"] = <
+                text = <"Context (synthesised)">
+                description = <"Identification of a specific social circumstance, issue or concern relevant for the questionnaire or grouping of such, by name. (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Presence? (synthesised)">
+                description = <"Has there been experience of the specified 'Context'? (synthesised)">
+            >
+        >
+        ["it"] = <
+            ["at0000"] = <
+                text = <"*Social context screening questionnaire (en)">
+                description = <"*Series of questions and associated answers used to screen about the social environment and social situation which may impact the health and well-being of the individual, especially to identify potential issues or risks. (en)">
+            >
+            ["at0002"] = <
+                text = <"Qualsiasi evento">
+                description = <"Evento predefinito, non specificato nel tempo o nell'intervallo di tempo, che può essere definito esplicitamente in un modello o in fase di esecuzione.">
+            >
+            ["at0004"] = <
+                text = <"*Context (en)">
+                description = <"*Identification of a specific social circumstance, issue or concern relevant for the questionnaire or grouping of such, by name.  (en)">
+                comment = <"*This element offers a choice between free and coded text. It is anticipated that the list of coded values will grow as requirements are identified. Coding of the 'Context' with a terminology is preferred, where possible - for example, relevant terms within the Social context finding hierarchy in SNOMED CT (SCTID: 108329005). (en)">
+            >
+            ["at0005"] = <
+                text = <"Presenza?">
+                description = <"*Has there been experience of the specified 'Context'? (en)">
+                comment = <"*In a template, the data element would usually be renamed to the specific question asked. The proposed value set can be adapted for local use by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case. (en)">
+            >
+            ["at0021"] = <
+                text = <"Estensione">
+                description = <"*Additional information required to extend the model with local content or to align with other reference models or formalisms. (en)">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["at0022"] = <
+                text = <"*Specific social context (en)">
+                description = <"*Details about a specified social context or issue, or a grouping of these, relevant for the screening purpose. (en)">
+            >
+            ["at0023"] = <
+                text = <"*Yes (en)">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"*No (en)">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Commento">
+                description = <"*Additional narrative about the specific social context, not captured in other fields. (en)">
+            >
+            ["at0026"] = <
+                text = <"*Additional details (en)">
+                description = <"*Additional details or questions about the specific social context. (en)">
+            >
+            ["at0027"] = <
+                text = <"*Unknown (en)">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Scopo dello screening">
+                description = <"*The context or reason for screening. (en)">
+                comment = <"*This data element is intended to provide collection context for the question/answer groups when queried at a later date. It is not expected that this data element will be exposed to the individual, but only stored in data. For example: pre-admission screening or the name of the actual questionnaire. (en)">
+            >
+            ["at0044"] = <
+                text = <"*Additional details (en)">
+                description = <"*Additional structured details or questions about screening for social context items. (en)">
+            >
+            ["at0048"] = <
+                text = <"*Homeless (en)">
+                description = <"*The individual does not have a stable place to live. (en)">
+            >
+            ["at0049"] = <
+                text = <"*Interpreter needed (en)">
+                description = <"*The individual needs assistance with language translation (en)">
+            >
+            ["at0050"] = <
+                text = <"*Unsure (en)">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"*Timing (en)">
+                description = <"*Indication of timing related to the specified 'Context.'. (en)">
+                comment = <"*The 'Timing' data element has deliberately been loosely modelled to support the myriad of ways that it can be used in questionnaires to capture timing information related to the social context. The specific and intended semantics can be further clarified in a template. For example: the start or stop date and/or time; the age of the individual at onset; or the duration of time since the social context had an impact. A partial date is valid, using the DV_DATE_TIME data type, to record only a year. (en)">
+            >
+            ["at0052"] = <
+                text = <"*Overall comment (en)">
+                description = <"*Additional narrative about the screening for any social context, not captured in other fields. (en)">
+            >
+            ["ac9012"] = <
+                text = <"*Context (en) (synthesised)">
+                description = <"*Identification of a specific social circumstance, issue or concern relevant for the questionnaire or grouping of such, by name.  (en) (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Presenza? (synthesised)">
+                description = <"*Has there been experience of the specified 'Context'? (en) (synthesised)">
+            >
+        >
+        ["fr"] = <
+            ["at0000"] = <
+                text = <"Questionnaire d'évaluation du contexte social">
+                description = <"Série de questions et de réponses associées, utilisées pour évaluer l’environnement social et la situation sociale, afin de déterminer leur impact sur la santé et le bien-être de l’individu, et d’identifier d’éventuels problèmes ou risques.">
+            >
+            ["at0002"] = <
+                text = <"Tout événement">
+                description = <"Par défaut, point dans le temps non spécifié ou événement d'intervalle qui peut être explicitement défini dans un modèle ou au moment de l'exécution.">
+            >
+            ["at0004"] = <
+                text = <"Contexte">
+                description = <"Identification, par leur nom, d’une circonstance, d’un problème ou d’une préoccupation sociale spécifique pertinent pour le questionnaire, ou regroupement de ceux-ci.">
+                comment = <"Cet élément offre le choix entre un texte libre et un texte codé. Il est prévu que la liste des valeurs codées evolue au fur et à mesure de l’identification des besoins. Dans la mesure du possible, il est préférable de coder le “contexte” à l’aide d’une terminologie — par exemple, les termes pertinents de la hiérarchie “constatation à propos du contexte social” dans SNOMED CT (SCTID : 108329005). À défaut, un texte libre peut être utilisé, comme par exemple : “Isolement social”, “Discrimination”, “Stress lié à l’appartenance à une minorité”.">
+            >
+            ["at0005"] = <
+                text = <"Présence ?">
+                description = <"L’individu a-t-il eu une expérience du contexte spécifié ?">
+                comment = <"Dans un modèle, l'élément de données est généralement renommé en fonction de la question spécifique posée. L'ensemble de valeurs proposé peut être adapté à un usage local en utilisant les types de données DV_TEXT ou DV_BOOLEAN pour répondre à chaque cas d'utilisation spécifique.">
+            >
+            ["at0021"] = <
+                text = <"Extension">
+                description = <"Informations supplémentaires nécessaires pour étendre le modèle au contenu local ou pour l'aligner sur d'autres modèles de référence ou formalismes.">
+                comment = <"Par exemple : exigences locales en matière d'information ou métadonnées supplémentaires pour s'aligner sur FHIR.">
+            >
+            ["at0022"] = <
+                text = <"Contexte social spécifique">
+                description = <"Détails concernant un problème ou un contexte social spécifique, ou un regroupement de ceux-ci, pertinent pour l'objectif du dépistage.">
+            >
+            ["at0023"] = <
+                text = <"Oui">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Non">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Commentaire">
+                description = <"Récit supplémentaire sur le contexte social spécifique, non saisi dans les autres champs.">
+            >
+            ["at0026"] = <
+                text = <"Détails supplémentaires">
+                description = <"Détails structurés ou questions sur le contexte social spécifique.">
+            >
+            ["at0027"] = <
+                text = <"Inconnu">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Objectif du dépistage">
+                description = <"Le contexte ou la raison du dépistage.">
+                comment = <"Cet élément de données est destiné à fournir un contexte de collecte pour les groupes de questions/réponses lors d'une requête ultérieure. Il n'est pas prévu que cet élément de données soit exposé à l'individu, mais seulement stocké dans les données. Par exemple : la sélection préalable à l'admission ou le nom du questionnaire proprement dit.">
+            >
+            ["at0044"] = <
+                text = <"Détails supplémentaires">
+                description = <"Détails structurées ou questions sur l'évaluation du contexte social.">
+            >
+            ["at0048"] = <
+                text = <"Sans abri">
+                description = <"L'individu n'a pas de domicile fixe.">
+            >
+            ["at0049"] = <
+                text = <"Interprète nécessaire">
+                description = <"L’individu a besoin d’assistance pour la traduction.">
+            >
+            ["at0050"] = <
+                text = <"Incertain">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"Timing">
+                description = <"Indication du timing lié au contexte spécifié.">
+                comment = <"L'élément de données \"Timing\" a été délibérément modélisé de manière souple afin de prendre en charge la myriade de façons dont il peut être utilisé dans les questionnaires pour saisir des indications temporelles liées à un contexte social. La sémantique spécifique et prévue peut être précisée dans un modèle. Par exemple : le moment exact du contexte social ; la date du début et de la fin du contexte social ; l’intervalle pendant lequel il s’est déroulé ; sa durée ; l’âge de l’individu au moment du contexte social ; le temps écoulé depuis ce contexte social.">
+            >
+            ["at0052"] = <
+                text = <"Commentaire général">
+                description = <"Récit supplémentaire sur l’évaluation du contexte social, non saisi dans les autres champs.">
+            >
+            ["ac9012"] = <
+                text = <"Contexte (synthesised)">
+                description = <"Identification, par leur nom, d’une circonstance, d’un problème ou d’une préoccupation sociale spécifique pertinent pour le questionnaire, ou regroupement de ceux-ci. (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Présence ? (synthesised)">
+                description = <"L’individu a-t-il eu une expérience du contexte spécifié ? (synthesised)">
+            >
+        >
+        ["ca"] = <
+            ["at0000"] = <
+                text = <"Qüestionari de detecció del context social">
+                description = <"Sèrie de preguntes i respostes associades que s'utilitzen per avaluar l'entorn social i la situació social que poden afectar la salut i el benestar de l'individu, especialment per identificar possibles problemes o riscos.">
+            >
+            ["at0002"] = <
+                text = <"Qualsevol esdeveniment">
+                description = <"Esdeveniment per defecte, d'un punt o interval de temps no especificat, que es pot definir explícitament en una plantilla o en temps d'execució.">
+            >
+            ["at0004"] = <
+                text = <"Context">
+                description = <"Identificació d'una circumstància social, problema o preocupació específica rellevant per al qüestionari o agrupació d'aquests, pel seu nom.">
+                comment = <"Aquest element ofereix una opció entre text lliure i codificat. Es preveu que la llista de valors codificats creixi a mesura que s'identifiquin els requisits. Es prefereix la codificació del \"Context\" amb una terminologia, sempre que sigui possible; per exemple, termes rellevants dins de la jerarquia de cerca de context social a SNOMED CT (SCTID: 108329005). Alternativament, com a text lliure, per exemple, \"Aïllament social\", \"Discriminació\", \"Estrès de les minories\".">
+            >
+            ["at0005"] = <
+                text = <"Presència">
+                description = <"Hi ha hagut experiència amb el «context» especificat?">
+                comment = <"En una plantilla, l'element de dades normalment es rebatejarà amb el nom de la pregunta específica que es fa. El conjunt de valors proposat es pot adaptar per a ús local mitjançant l'opció de tipus de dades DV_TEXT o DV_BOOLEAN per adaptar-lo a cada cas d'ús específic.">
+            >
+            ["at0021"] = <
+                text = <"Extensió">
+                description = <"Informació addicional necessària per ampliar el model amb contingut local o per alinear-lo amb altres models o formalismes de referència.">
+                comment = <"Per exemple: requisits d'informació local; o metadades addicionals per alinear-se amb FHIR.">
+            >
+            ["at0022"] = <
+                text = <"Context social específic">
+                description = <"Detalls sobre un context o problema social especificat, o un grup d'aquests, rellevants per a la finalitat del cribratge.">
+            >
+            ["at0023"] = <
+                text = <"Si">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Comentari">
+                description = <"Narrativa addicional sobre el context social específic, no recollida en altres camps.">
+            >
+            ["at0026"] = <
+                text = <"Detalls addicionals">
+                description = <"Detalls o preguntes addicionals sobre el context social específic.">
+            >
+            ["at0027"] = <
+                text = <"Desconegut">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Propòsit de cribratge">
+                description = <"El context o el motiu del cribratge.">
+                comment = <"Aquest element de dades té com a objectiu proporcionar un context de recopilació per als grups de preguntes/respostes quan es consultin posteriorment. No s'espera que aquest element de dades s'exposi a l'individu, sinó que només s'emmagatzemi a les dades. Per exemple: cribratge previ a l'ingrés o el nom del qüestionari real.">
+            >
+            ["at0044"] = <
+                text = <"Detalls addicionals">
+                description = <"Detalls estructurats addicionals o preguntes sobre el cribratge d'elements de context social.">
+            >
+            ["at0048"] = <
+                text = <"Sense llar">
+                description = <"La persona no té un lloc estable on viure.">
+            >
+            ["at0049"] = <
+                text = <"Necessitat d'intèrpret">
+                description = <"La persona necessita ajuda amb la traducció d'idiomes.">
+            >
+            ["at0050"] = <
+                text = <"Dubtós">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"Temps">
+                description = <"Indicació del temps relacionat amb el «Context» especificat.">
+                comment = <"L'element de dades \"Temps\" s'ha modelat deliberadament de manera flexible per donar suport a la infinitat de maneres en què es pot utilitzar en qüestionaris per capturar informació temporal relacionada amb el context social. La semàntica específica i prevista es pot aclarir més en una plantilla. Per exemple: la data i/o l'hora d'inici o finalització; l'edat de l'individu a l'inici; o la durada del temps des que el context social va tenir un impacte. Una data parcial és vàlida, utilitzant el tipus de dades DV_DATE_TIME, per registrar només un any.">
+            >
+            ["at0052"] = <
+                text = <"Comentari general">
+                description = <"Narrativa addicional sobre la detecció per a qualsevol context social, no recollida en altres camps.">
+            >
+            ["ac9012"] = <
+                text = <"Context (synthesised)">
+                description = <"Identificació d'una circumstància social, problema o preocupació específica rellevant per al qüestionari o agrupació d'aquests, pel seu nom. (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Presència (synthesised)">
+                description = <"Hi ha hagut experiència amb el «context» especificat? (synthesised)">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Cuestionario de cribado del contexto social">
+                description = <"Serie de preguntas y respuestas asociadas que se utilizan para investigar el entorno social y la situación social que pueden afectar la salud y el bienestar del individuo, especialmente para identificar posibles problemas o riesgos.">
+            >
+            ["at0002"] = <
+                text = <"Cualquier evento">
+                description = <"Evento predeterminado, de punto en el tiempo o intervalo no especificado, que puede definirse explícitamente en una plantilla o en tiempo de ejecución.">
+            >
+            ["at0004"] = <
+                text = <"Contexto">
+                description = <"Identificación de una circunstancia, problema o preocupación social específica relevante para el cuestionario o agrupación de las mismas, por su nombre.">
+                comment = <"Este elemento ofrece la opción de texto libre y codificado. Se prevé que la lista de valores codificados aumente a medida que se identifiquen los requisitos. Se prefiere codificar el «Contexto» con una terminología, siempre que sea posible; por ejemplo, términos relevantes dentro de la jerarquía de búsqueda de contexto social en SNOMED CT (SCTID: 108329005). También se puede usar como texto libre, por ejemplo, «Aislamiento social», «Discriminación» o «Estrés de minorías».">
+            >
+            ["at0005"] = <
+                text = <"¿Presencia?">
+                description = <"¿Ha tenido experiencia con el 'Contexto' especificado?">
+                comment = <"En una plantilla, el elemento de datos normalmente se renombraría según la pregunta específica formulada. El conjunto de valores propuesto puede adaptarse para uso local mediante los tipos de datos DV_TEXT o DV_BOOLEAN para cada caso de uso específico.">
+            >
+            ["at0021"] = <
+                text = <"Extensión">
+                description = <"Se requiere información adicional para ampliar el modelo con contenido local o para alinearlo con otros modelos de referencia o formalismos.">
+                comment = <"Por ejemplo: requisitos de información local; o metadatos adicionales para alinearse con FHIR.">
+            >
+            ["at0022"] = <
+                text = <"Contexto social específico">
+                description = <"Detalles sobre un contexto o tema social específico, o una agrupación de ellos, relevantes para el propósito del cribado.">
+            >
+            ["at0023"] = <
+                text = <"Si">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Comentario">
+                description = <"Narrativa adicional sobre el contexto social específico, no captada en otros campos.">
+            >
+            ["at0026"] = <
+                text = <"Detalles adicionales">
+                description = <"Detalles adicionales o preguntas sobre el contexto social específico.">
+            >
+            ["at0027"] = <
+                text = <"Desconocido">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Propósito del cribado">
+                description = <"El contexto o motivo del cribado.">
+                comment = <"Este elemento de datos proporciona contexto para la recopilación de datos de los grupos de preguntas y respuestas cuando se consulten posteriormente. No se espera que este elemento de datos se exponga al individuo, sino que solo se almacene en los datos. Por ejemplo: la evaluación previa al ingreso o el nombre del cuestionario actual.">
+            >
+            ["at0044"] = <
+                text = <"Detalles adicionales">
+                description = <"Narrativa adicional sobre el contexto social del cribado, no captada en otros campos.">
+            >
+            ["at0048"] = <
+                text = <"Sin hogar">
+                description = <"El individuo no tiene un lugar estable donde vivir.">
+            >
+            ["at0049"] = <
+                text = <"Necesidad de intérprete">
+                description = <"La persona necesita ayuda con la traducción del idioma.">
+            >
+            ["at0050"] = <
+                text = <"Dudoso">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"Tiempo">
+                description = <"Indicación de tiempo relacionado con el 'Contexto' especificado.">
+                comment = <"El elemento de datos \"Tiempo\" se ha modelado deliberadamente de forma flexible para facilitar su uso en cuestionarios para capturar información temporal relacionada con el contexto social. La semántica específica y prevista puede aclararse con más detalle en una plantilla. Por ejemplo: la fecha y/o hora de inicio o fin; la edad de la persona al inicio; o el tiempo transcurrido desde que el contexto social tuvo un impacto. Una fecha parcial es válida, utilizando el tipo de dato DV_DATE_TIME, para registrar solo un año.">
+            >
+            ["at0052"] = <
+                text = <"Comentario general">
+                description = <"Narrativa adicional sobre el cribado para cualquier contexto social, no captada en otros campos.">
+            >
+            ["ac9012"] = <
+                text = <"Contexto (synthesised)">
+                description = <"Identificación de una circunstancia, problema o preocupación social específica relevante para el cuestionario o agrupación de las mismas, por su nombre. (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"¿Presencia? (synthesised)">
+                description = <"¿Ha tenido experiencia con el 'Contexto' especificado? (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0023"] = <http://snomed.info/id/373066001>
+            ["at0024"] = <http://snomed.info/id/373067005>
+            ["at0027"] = <http://snomed.info/id/261665006>
+            ["at0048"] = <http://snomed.info/id/32911000>
+            ["at0049"] = <http://snomed.info/id/315594003>
+        >
+    >
+    value_sets = <
+        ["ac9012"] = <
+            id = <"ac9012">
+            members = <"at0048", "at0049">
+        >
+        ["ac9015"] = <
+            id = <"ac9015">
+            members = <"at0023", "at0024", "at0027", "at0050">
+        >
+    >

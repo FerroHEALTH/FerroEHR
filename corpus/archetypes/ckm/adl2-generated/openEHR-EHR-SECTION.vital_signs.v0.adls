@@ -1,0 +1,172 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=546fd1ef-c520-4b30-a360-cc815fb2d641; build_uid=b282c3ad-df60-4d19-9602-505ab079b7b9)
+    openEHR-EHR-SECTION.vital_signs.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Sebastian Garde, Natalia Strauch">
+                ["organisation"] = <"Ocean Informatics, Medizinische Hochschule Hannover">
+                ["email"] = <"sebastian.garde@oceaninformatics.com, Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Kirsi Poikela">
+                ["organisation"] = <"Tieto Sweden AB">
+                ["email"] = <"ext.kirsi.poikela@tieto.com">
+            >
+        >
+        ["ko"] = <
+            language = <[ISO_639-1::ko]>
+            author = <
+                ["name"] = <"Seung-Jong Yu">
+                ["organisation"] = <"Yonsei FM Clinic">
+            >
+            accreditation = <"Medical Doctor">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Pablo Pazos">
+                ["organisation"] = <"CaboLabs">
+            >
+            accreditation = <"Computer Engineer">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2020-10-28">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Sam Heard, Ocean Informatics, Australia">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"19FEDB8EB9D83F76587DE9C7D7A30872">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Bereitstellung eines Frameworks für die konsistente Modellierung von Vitalparametern innerhalb eines Templates.">
+            keywords = <"Blutdruck", "Temperatur", "Puls", "Sauerstoffsättigung", "Atmung", "Observationen", "Vital", "Parameter">
+            use = <"Verwenden Sie diesen Archetyp, um ein Framework und vorgeschlagene Design für die konsistente Modellierung von Vitalparametern innerhalb eines Templates bereitzustellen.
+
+Dieser Archetyp soll in einem Template verwendet werden, in dem der Inhalt klinisch angemessen ist und in einem entsprechenden COMPOSITION-Archetyp verschachtelt ist. Zum Beispiel: eine Konsultationsnotiz oder Beobachtungen in der Pflege.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"*To provide a framework for consistent modelling of Vital signs within a template. (en)">
+            keywords = <"blodtryck", "temperatur", "puls", "syremättnad", "andning", "observationer", "vitala", "tecken">
+            use = <"*Use to provide a framework and suggested design guidance for consistent modelling of Vital signs within a template.
+
+This archetype is intended to be used within a template in which the content is clinically appropriate, nested within any relevant COMPOSITION archetype. For example: a consultation note or nursing observations. (en)">
+            misuse = <"">
+        >
+        ["ko"] = <
+            language = <[ISO_639-1::ko]>
+            purpose = <"*To provide a framework for consistent modelling of Vital signs within a template. (en)">
+            keywords = <"*혈압(ko)", "*체온(ko)", "*맥박(ko)", "*산소 포화도(ko)", "*호흡수(ko)", "*관찰(ko)", "*생체(ko)", "*징후(ko)">
+            use = <"*Use to provide a framework and suggested design guidance for consistent modelling of Vital signs within a template.
+
+This archetype is intended to be used within a template in which the content is clinically appropriate, nested within any relevant COMPOSITION archetype. For example: a consultation note or nursing observations. (en)">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To provide a framework for consistent modelling of Vital signs within a template.">
+            keywords = <"blood pressure", "temperature", "pulse", "oxygen saturation", "respirations", "observations", "vital", "signs">
+            use = <"Use to provide a framework and suggested design guidance for consistent modelling of Vital signs within a template.
+
+This archetype is intended to be used within a template in which the content is clinically appropriate, nested within any relevant COMPOSITION archetype. For example: a consultation note or nursing observations.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"*To provide a framework for consistent modelling of Vital signs within a template. (en)">
+            keywords = <"presión arterial", "temperatura", "frecuencia cardíaca", "saturación de oxígeno", "frecuencia respiratoria", "observaciones", "signos vitales">
+            use = <"*Use to provide a framework and suggested design guidance for consistent modelling of Vital signs within a template.
+
+This archetype is intended to be used within a template in which the content is clinically appropriate, nested within any relevant COMPOSITION archetype. For example: a consultation note or nursing observations. (en)">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    SECTION[at0000] matches {    -- Vital signs
+        items cardinality matches {1..*; unordered} matches {
+            allow_archetype OBSERVATION[at0001] matches {    -- Vital signs
+                include
+                    archetype_id/value matches {/openEHR-EHR-OBSERVATION\.pulse_oximetry(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-OBSERVATION\.respiration(-[a-zA-Z0-9_]+)*\.v2\..*|openEHR-EHR-OBSERVATION\.pulse(-[a-zA-Z0-9_]+)*\.v2\..*|openEHR-EHR-OBSERVATION\.blood_pressure(-[a-zA-Z0-9_]+)*\.v2\..*|openEHR-EHR-OBSERVATION\.body_temperature(-[a-zA-Z0-9_]+)*\.v2\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Vitalparameter">
+                description = <"Ein Framework für die konsistente Modellierung von Beobachtungen und Messungen über wesentliche physiologische Funktionen.">
+            >
+            ["at0001"] = <
+                text = <"Vitalparameter">
+                description = <"">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Vitalparametrar">
+                description = <"*Framework for consistent modelling of observations and measurements about essential physiological functions. (en)">
+            >
+            ["at0001"] = <
+                text = <"Vitalparametrar">
+                description = <"">
+            >
+        >
+        ["ko"] = <
+            ["at0000"] = <
+                text = <"생체 징후">
+                description = <"*Framework for consistent modelling of observations and measurements about essential physiological functions. (en)">
+            >
+            ["at0001"] = <
+                text = <"생체 징후">
+                description = <"">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Vital signs">
+                description = <"Framework for consistent modelling of observations and measurements about essential physiological functions.">
+            >
+            ["at0001"] = <
+                text = <"Vital signs">
+                description = <"">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Signos vitales">
+                description = <"*Framework for consistent modelling of observations and measurements about essential physiological functions. (en)">
+            >
+            ["at0001"] = <
+                text = <"Signos vitales">
+                description = <"">
+            >
+        >
+    >

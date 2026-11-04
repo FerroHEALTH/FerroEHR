@@ -1,0 +1,577 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=fe803dde-b9ff-4701-a0ed-81e0a7002ad6; build_uid=a3ce48e3-f41c-46d9-bfbc-aa61350b8755)
+    openEHR-EHR-OBSERVATION.mayo_score.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Vebjørn Arntzen">
+                ["organisation"] = <"Oslo University Hospital">
+                ["email"] = <"varntzen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Bjørn Næss">
+        ["organisation"] = <"DIPS AS">
+        ["email"] = <"bna@dips.no">
+        ["date"] = <"2020-12-01">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Dag Aarhus, Vestre Viken HF, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Are Edvardsen, SKDE, Helse Nord RHF, Norway", "Heather Grain, Llewelyn Grain Informatics, Australia", "Mikkel Johan Gaup Grønmo, Forvaltningssenter EPJ, Helse-Nord, Norway (openEHR Editor)", "Johan Gustav Bellika, Norwegian Centre for Integrated Care and Telemedicine, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Vendel Kristensen, Oslo University Hospital, Norway", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia", "Bjørn Næss, DIPS ASA, Norway", "Ørjan Næss, Diakonhjemmet sykehus, Norway", "Andre Smitt-Ingebretsen, Sørlandet sykehus HF, Norway", "Natalia Strauch, Medizinische Hochschule Hannover, Germany", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Clinical Review Report: adalimumab (Humira) [Internet]. Ottawa (ON): Canadian Agency for Drugs and Technologies in Health; 2016 Apr. PMID: 30912894. Available from: https://pubmed.ncbi.nlm.nih.gov/30912894/.">
+        ["2"] = <"Lewis JD, Chuai S, Nessel L, Lichtenstein GR, Aberra FN, Ellenberg JH. Use of the noninvasive components of the Mayo score to assess clinical response in ulcerative colitis. Inflamm Bowel Dis. 2008 Dec;14(12):1660-6. doi: 10.1002/ibd.20520. PMID: 18623174; PMCID: PMC2597552.">
+        ["3"] = <"Schroeder KW, Tremaine WJ, Ilstrup DM. Coated oral 5-aminosalicylic acid therapy for mildly to moderately active ulcerative colitis. A randomized study. N Engl J Med. 1987 Dec 24;317(26):1625-9. doi: 10.1056/NEJM198712243172603. PMID: 3317057.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"2056F609B2EE6F105EBCA9742263296B">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung einer Beurteilung des Schweregrads der Colitis ulcerosa.">
+            keywords = <"IBD", "Inflammatory Bowel Disease", "Entzündliche Darmerkrankung", "Ulcerative Colitis", "Colitis Ulcerosa", "Disease Activity Index", "DAI", "Krankheitsaktivitätsindex">
+            use = <"Zur Darstellung einer Beurteilung des Schweregrads der Colitis ulcerosa.
+
+Dieser Archetyp ermöglicht die Darstellung eines oder mehreren der folgenden Score: den vollständigen Mayo-Score (12 Punkte); den partial Mayo-Score (9 Punkte); den vereinfachten Mayo-Score (Simplified Mayo Score) (6 Punkte) und den endoskopischen Subscore (3 Punkte aus dem Datenelement \"Endoskopische Befunde\").">
+            misuse = <"">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere en evaluering av alvorlighetsgrad av ulcerøs colitt.">
+            keywords = <"IBD, Inflammatorisk tarm-sykdom, ulcerøs kolitt, colitis ulcerosa, Disease Activity Index, DAI", ...>
+            use = <"Bruk for å registrere en evaluering av alvorlighetsgrad av ulcerøs colitt.
+
+Denne arketypen tillater å registrere en eller flere av: Full Mayo skår (12 poeng), Partial Mayo skår (9 poeng), Forenklet Mayo skår (6 poeng) og Mayo endoskopisk subskår (3 poeng, fra elementet \"Funn ved endoskopi\").">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record an assessment of the severity of ulcerative colitis.">
+            keywords = <"IBD", "Inflammatory bowel disease", "Ulcerative colitis", "Colitis ulcerosa", "Disease Activity Index", "DAI">
+            use = <"Use to record an assessment of the severity of ulcerative colitis.
+
+This archetype allows the recording of one or more of: the full Mayo score (12 points); the partial Mayo score (9 points); the Simplified Mayo score (6 points); and the Endoscopic subscore (3 points, from 'Endoscopic findings' data element).">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Mayo score
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Stool frequency
+                                        value matches {
+                                            DV_ORDINAL[at9004] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0010]}],    -- Normal number of stools
+                                                    [{1}, {[at0011]}],    -- 1-2 stools more than normal
+                                                    [{2}, {[at0012]}],    -- 3-4 stools more than normal
+                                                    [{3}, {[at0013]}]    -- 5 or more stools more than normal
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Rectal bleeding
+                                        value matches {
+                                            DV_ORDINAL[at9005] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0015]}],    -- No blood seen
+                                                    [{1}, {[at0016]}],    -- Streaks of blood with stool less than half the time
+                                                    [{2}, {[at0017]}],    -- Obvious blood with stool most of the time
+                                                    [{3}, {[at0018]}]    -- Blood alone passed
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Endoscopy findings
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0020]}],    -- Normal or inactive disease
+                                                    [{1}, {[at0021]}],    -- Mild disease
+                                                    [{2}, {[at0022]}],    -- Moderate disease
+                                                    [{3}, {[at0023]}]    -- Severe disease
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0024] occurrences matches {0..1} matches {    -- Global assessment
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0025]}],    -- Normal or inactive disease
+                                                    [{1}, {[at0026]}],    -- Mild disease
+                                                    [{2}, {[at0027]}],    -- Moderate disease
+                                                    [{3}, {[at0028]}]    -- Severe disease
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0029] occurrences matches {0..1} matches {    -- Total Mayo score
+                                        value matches {
+                                            DV_COUNT[at9008] matches {
+                                                magnitude matches {|0..12|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0033] occurrences matches {0..1} matches {    -- Partial Mayo score
+                                        value matches {
+                                            DV_COUNT[at9009] matches {
+                                                magnitude matches {|0..9|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0034] occurrences matches {0..1} matches {    -- Simplified Mayo score
+                                        value matches {
+                                            DV_COUNT[at9010] matches {
+                                                magnitude matches {|0..6|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0030] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0032] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Mayo Score">
+                description = <"Ein Bewertungsscore der zur Abschätzung des Schweregrads der Colitis Ulcerosa verwendet wird.">
+            >
+            ["at0002"] = <
+                text = <"Beliebiges Ereignis">
+                description = <"Standardwert, ein undefinierter/s Zeitpunkt oder Intervallereignis, das explizit im Template oder zur Laufzeit der Anwendung definiert werden kann.">
+            >
+            ["at0009"] = <
+                text = <"Stuhlfrequenz">
+                description = <"Anzahl der Stühle pro Tag, die für einen Individuum über dem Normalwert liegt.">
+            >
+            ["at0010"] = <
+                text = <"Normale Anzahl der Stühle">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"1-2 Stühle mehr als normal">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"3-4 Stühle mehr als normal">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"5 oder mehr Stühle mehr als normal">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Rektaler Blutabgang">
+                description = <"Die schwerste Rektalblutung des Tages.">
+            >
+            ["at0015"] = <
+                text = <"Kein Blut sichtbar">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Blutstreifen bei weniger als bei der Hälfte der Stühle">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Deutliche Blutbeimengung im Stuhl die meiste Zeit">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Blut ohne Stuhl">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Endoskopische Befunde">
+                description = <"Beurteilung der Beschaffenheit der Mukosa während der Endoskopie.">
+                comment = <"Auch als \"Endoscopic Subscore\" bekannt.">
+            >
+            ["at0020"] = <
+                text = <"Normaler Befund oder inaktive Erkrankung">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Milde Colitis">
+                description = <"Charakterisiert durch Erythem, vermindertes Gefäßmuster, leicht spröde Schleimhaut.">
+            >
+            ["at0022"] = <
+                text = <"Moderate Colitis">
+                description = <"Charakterisiert durch deutliches Erythem, fehlendes Gefässmuster, spröde Schleimhaut, Erosionen.">
+            >
+            ["at0023"] = <
+                text = <"Schwere Colitis">
+                description = <"Charakterisiert durch spontane Blutungen und Ulzerationen.">
+            >
+            ["at0024"] = <
+                text = <"Globale Beurteilung">
+                description = <"Gesamtbeurteilung des Schweregrads der Colitis Ulcerosa durch einen Arzt.">
+            >
+            ["at0025"] = <
+                text = <"Normal oder inaktive Erkrankung">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Milde Erkrankung">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Moderate Erkrankung">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Schwere Erkrankung">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Total Mayo Score">
+                description = <"Die Gesamtsumme aller vier Komponentenparameter.">
+                comment = <"Die Werte reichen von Null bis 12, wobei höhere Werte mit einer schwereren Erkrankung korrelieren.">
+            >
+            ["at0032"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen.">
+            >
+            ["at0033"] = <
+                text = <"Partial Mayo Score">
+                description = <"Die Gesamtsumme der drei nicht-invasiven Komponentenparameter.">
+                comment = <"Der Partial Mayo Score schließt ausdrücklich \"Endoskopische Befunde\" aus.">
+            >
+            ["at0034"] = <
+                text = <"Simplified Mayo Score">
+                description = <"Die Gesamtsumme der zwei symptombezogenen Komponentenparameter.">
+                comment = <"Der Simplified Mayo Score umfasst nur \"Stuhlfrequenz\" und \"Rektalen Blutabgang\" und schließt \"Endoskopische Befunde\" mit \"Globaler Beurteilung\" aus.">
+            >
+            ["ac9008"] = <
+                text = <"Stuhlfrequenz (synthesised)">
+                description = <"Anzahl der Stühle pro Tag, die für einen Individuum über dem Normalwert liegt. (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"Rektaler Blutabgang (synthesised)">
+                description = <"Die schwerste Rektalblutung des Tages. (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"Endoskopische Befunde (synthesised)">
+                description = <"Beurteilung der Beschaffenheit der Mukosa während der Endoskopie. (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Globale Beurteilung (synthesised)">
+                description = <"Gesamtbeurteilung des Schweregrads der Colitis Ulcerosa durch einen Arzt. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Mayo skår">
+                description = <"Skåringssystem for å evaluere alvorlighetsgrad av ulcerøs colitt.">
+            >
+            ["at0002"] = <
+                text = <"Tidspunkt">
+                description = <"Spesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i en templat eller i en applikasjon.">
+            >
+            ["at0009"] = <
+                text = <"Avføringsfrekvens">
+                description = <"Antall avføringer per dag som overstiger det som er normalt for individet.">
+            >
+            ["at0010"] = <
+                text = <"Normalt antall avføringer">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"1-2 flere avføringer enn normalt">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"3-4 flere avføringer enn normalt">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"5 eller mer flere avføringer enn normalt">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Rektale blødninger">
+                description = <"Dagens mest alvorlige blødning.">
+            >
+            ["at0015"] = <
+                text = <"Ikke synlig blod">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Synlig blod i avføringen mindre enn halvparten av tiden">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Synlig blod i avføringen mer enn halvparten av tiden">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Tømming består utelukkende av blod">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Funn ved endoskopi">
+                description = <"Slimhinnevurdering ved koloskopi.">
+                comment = <"Også kjent som \"Mayo endoskopisk subscore\"">
+            >
+            ["at0020"] = <
+                text = <"Normal eller inaktiv sykdom">
+                description = <"Normal eller inaktiv sykdom">
+            >
+            ["at0021"] = <
+                text = <"Mild sykdom">
+                description = <"Mild sykdom (erytem, redusert karmønster, mild lederbarhet)">
+            >
+            ["at0022"] = <
+                text = <"Moderat sykdom">
+                description = <"Moderat sykdom (markert erytem, utviskete karmønster, lederbarhet, erosjoner)">
+            >
+            ["at0023"] = <
+                text = <"Alvorlig sykdom">
+                description = <"Kjennetegnet ved spontan blødning, ulcerasjoner.">
+            >
+            ["at0024"] = <
+                text = <"Overordnet vurdering">
+                description = <"Den overordnede vurderingen av alvorlighetsgrad av ulcerøs colitt, gjort av lege.">
+            >
+            ["at0025"] = <
+                text = <"Normal">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Moderat">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Alvorlig">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Total Mayo skår">
+                description = <"Summen av skår av hver enkelt kategori.">
+                comment = <"Skåren går fra 0 til 12, der høyere skår korrelerer med mer alvorlig sykdom.">
+            >
+            ["at0032"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel: lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0033"] = <
+                text = <"Partial Mayo skår">
+                description = <"Summen av verdiene i alle de ikke-invasive komponentene.">
+                comment = <"Partial Mayo skår eksluderer eksplisitt \"Funn ved endoskopi\".">
+            >
+            ["at0034"] = <
+                text = <"Forenklet Mayo skår">
+                description = <"Summen av verdiene i de to symptomrelaterte komponentene.">
+                comment = <"\"Forenklet Mayo skår\" inkluderer \"Avføringsfrekvens\" og \"Rektale blødninger\". \"Funn ved endoskopi\" og \"Overordnet vurdering\" er ekskludert.">
+            >
+            ["ac9008"] = <
+                text = <"Avføringsfrekvens (synthesised)">
+                description = <"Antall avføringer per dag som overstiger det som er normalt for individet. (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"Rektale blødninger (synthesised)">
+                description = <"Dagens mest alvorlige blødning. (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"Funn ved endoskopi (synthesised)">
+                description = <"Slimhinnevurdering ved koloskopi. (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Overordnet vurdering (synthesised)">
+                description = <"Den overordnede vurderingen av alvorlighetsgrad av ulcerøs colitt, gjort av lege. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Mayo score">
+                description = <"An assessment score used to estimate the severity of ulcerative colitis.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0009"] = <
+                text = <"Stool frequency">
+                description = <"The number stools per day, in excess of normal for the individual.">
+            >
+            ["at0010"] = <
+                text = <"Normal number of stools">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"1-2 stools more than normal">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"3-4 stools more than normal">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"5 or more stools more than normal">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Rectal bleeding">
+                description = <"The most severe rectal bleeding of the day.">
+            >
+            ["at0015"] = <
+                text = <"No blood seen">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Streaks of blood with stool less than half the time">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Obvious blood with stool most of the time">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Blood alone passed">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Endoscopy findings">
+                description = <"Assessment of the mucosal appearance during endoscopy.">
+                comment = <"Also known as \"Endoscopic subscore\".">
+            >
+            ["at0020"] = <
+                text = <"Normal or inactive disease">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Mild disease">
+                description = <"Characterised by erythema, decreased vascular pattern, mild friability.">
+            >
+            ["at0022"] = <
+                text = <"Moderate disease">
+                description = <"Characterised by marked erythema, absent vascular pattern, friability, erosions.">
+            >
+            ["at0023"] = <
+                text = <"Severe disease">
+                description = <"Characterised by spontaneous bleeding, ulceration.">
+            >
+            ["at0024"] = <
+                text = <"Global assessment">
+                description = <"Overall assessment of ulcerative colitis severity, as made by a physician.">
+            >
+            ["at0025"] = <
+                text = <"Normal or inactive disease">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Mild disease">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Moderate disease">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Severe disease">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Total Mayo score">
+                description = <"The total sum of all 4 component parameters.">
+                comment = <"Scores range from zero to 12, with higher scores correlating with more severe disease.">
+            >
+            ["at0032"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0033"] = <
+                text = <"Partial Mayo score">
+                description = <"The total sum of the 3 non-invasive component parameters only.">
+                comment = <"The Partial Mayo score specifically excludes 'Endoscopy findings'.">
+            >
+            ["at0034"] = <
+                text = <"Simplified Mayo score">
+                description = <"The total sum of the 2 symptom-related component parameters.">
+                comment = <"The Simplified Mayo score includes 'Stool frequency' and 'Rectal bleeding' only, and excludes 'Endoscopy findings' and 'Global assessment'.">
+            >
+            ["ac9008"] = <
+                text = <"Stool frequency (synthesised)">
+                description = <"The number stools per day, in excess of normal for the individual. (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"Rectal bleeding (synthesised)">
+                description = <"The most severe rectal bleeding of the day. (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"Endoscopy findings (synthesised)">
+                description = <"Assessment of the mucosal appearance during endoscopy. (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Global assessment (synthesised)">
+                description = <"Overall assessment of ulcerative colitis severity, as made by a physician. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9011"] = <
+            id = <"ac9011">
+            members = <"at0025", "at0026", "at0027", "at0028">
+        >
+        ["ac9010"] = <
+            id = <"ac9010">
+            members = <"at0020", "at0021", "at0022", "at0023">
+        >
+        ["ac9009"] = <
+            id = <"ac9009">
+            members = <"at0015", "at0016", "at0017", "at0018">
+        >
+        ["ac9008"] = <
+            id = <"ac9008">
+            members = <"at0010", "at0011", "at0012", "at0013">
+        >
+    >

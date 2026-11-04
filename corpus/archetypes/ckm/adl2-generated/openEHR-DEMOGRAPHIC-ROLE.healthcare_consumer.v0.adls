@@ -1,0 +1,210 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=1517197f-15bc-46f6-a906-7f5cd52e623c; build_uid=c04a96ab-2f14-4f78-8969-caa38dbd408e)
+    openEHR-DEMOGRAPHIC-ROLE.healthcare_consumer.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["ko"] = <
+            language = <[ISO_639-1::ko]>
+            author = <
+                ["name"] = <"Seung-Jong Yu">
+                ["organisation"] = <"NOUSCO Co.,Ltd.">
+                ["email"] = <"seungjong.yu@gmail.com">
+            >
+            accreditation = <"Certified Board of Family Medicine in South Korea">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Sergio Miranda Freire">
+                ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+                ["email"] = <"sergio@lampada.uerj.br">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sergio Miranda Freire & Rigoleta Dutra Mediano Dias">
+        ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+        ["email"] = <"sergio@lampada.uerj.br">
+        ["date"] = <"2009-05-22">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Rigoleta Dutra, Ministry of Defense, Brazil (openEHR Editor)", "Sergio Freire, State University of Rio de Janeiro, Brazil (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"CD1017943BDE45BF911DBDFCD78BC5AE">
+    >
+    details = <
+        ["ko"] = <
+            language = <[ISO_639-1::ko]>
+            purpose = <"개인이 건강 소비자일 때 개인 데이터의 표현.">
+            keywords = <"*인적정보 서비스(ko)", "*건강 소비자(ko)", "*보험지불자(ko)">
+            use = <"개인이 건강 소비자일 때 개인에 대한 인적 데이터를 수집하는 인적정보 서비스에서 사용됨.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Representação dos dados de uma pessoa que exerce o papel de um consumidor de serviços de saúde">
+            keywords = <"serviço demográfico", "consumidor em saúde", "fonte pagadora">
+            use = <"Usado em serviços de demografia para coletar dados demográficos de uma pessoa que exerce o papel de um consumidor de serviços de saúde">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Representation of a person's data when he/she acts as a healthcare consumer">
+            keywords = <"demographic service", "healthcare consumer", "third-party payer">
+            use = <"Used in demographic service to collect demographic data about a person when he/she acts as a healthcare consumer">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    ROLE[at0000] matches {    -- Healthcare consumer
+        identities matches {
+            allow_archetype PARTY_IDENTITY[at0001] occurrences matches {1} matches {    -- Consumer name
+                include
+                    archetype_id/value matches {/openEHR-DEMOGRAPHIC-PARTY_IDENTITY\.person_name[a-zA-Z0-9_-]*\.v0\..*/}
+            }
+        }
+        relationships cardinality matches {1..*} matches {
+            PARTY_RELATIONSHIP[at0002] occurrences matches {1} matches {    -- Consumer-Third party payer
+                details matches {
+                    ITEM_TREE[at0020] matches {    -- Healthcare consumer identifiers
+                        items cardinality matches {1..*} matches {
+                            allow_archetype CLUSTER[at0021] occurrences matches {1} matches {    -- Healthcare consumer identifier
+                                include
+                                    archetype_id/value matches {/openEHR-DEMOGRAPHIC-CLUSTER\.person_identifier[a-zA-Z0-9_-]*\.v0\..*/}
+                            }
+                        }
+                    }
+                }
+            }
+            PARTY_RELATIONSHIP[at0003] occurrences matches {1} matches {    -- Patient
+                details matches {
+                    ITEM_TREE[at0030] matches {    -- Patient identifiers
+                        items cardinality matches {1..*} matches {
+                            allow_archetype CLUSTER[at0031] occurrences matches {1} matches {    -- Patient identifier
+                                include
+                                    archetype_id/value matches {/openEHR-DEMOGRAPHIC-CLUSTER\.person_identifier[a-zA-Z0-9_-]*\.v0\..*/}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["ko"] = <
+            ["at0000"] = <
+                text = <"건강소비자">
+                description = <"개인이 건강소비자의 역할을 수행.">
+            >
+            ["at0001"] = <
+                text = <"소비자 이름">
+                description = <"건강 소비자의 이름.">
+            >
+            ["at0002"] = <
+                text = <"보험지불자">
+                description = <"건강소비자와 보험지불자와의 관계.">
+            >
+            ["at0003"] = <
+                text = <"환자">
+                description = <"환자: 건강소비자와 의료기관/의료인 간의 관계.">
+            >
+            ["at0020"] = <
+                text = <"건강소비자 식별자">
+                description = <"보험지불자의 건강소비자의 식별자.">
+            >
+            ["at0021"] = <
+                text = <"건강소비자 식별자">
+                description = <"보험지불자의 건강소비자의 식별자의 기록.">
+            >
+            ["at0030"] = <
+                text = <"환자 식별자">
+                description = <"관련된 의료기관의 환자 식별자.">
+            >
+            ["at0031"] = <
+                text = <"환자 식별자">
+                description = <"관련된 의료기관의 식별자의 기록.">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Consumidor em saúde">
+                description = <"Papel Consumidor de serviços de saúde">
+            >
+            ["at0001"] = <
+                text = <"Nome do consumidor">
+                description = <"Nome do consumidor de saúde">
+            >
+            ["at0002"] = <
+                text = <"Beneficiário">
+                description = <"Beneficiário: Relacionamento do Consumidor com uma Fonte Pagadora">
+            >
+            ["at0003"] = <
+                text = <"Paciente">
+                description = <"Paciente: Relacionamento do Consumidor com uma organização prestadora de serviço de saúde/profissional de saúde">
+            >
+            ["at0020"] = <
+                text = <"Identificações do beneficiário">
+                description = <"Identificações do beneficiário junto à fonte pagadora">
+            >
+            ["at0021"] = <
+                text = <"Identificação do beneficiário">
+                description = <"Documento de identificação do beneficiário junto à fonte pagadora">
+            >
+            ["at0030"] = <
+                text = <"Identificações no prestador">
+                description = <"Identificações do paciente junto ao prestador">
+            >
+            ["at0031"] = <
+                text = <"Identificação no prestador">
+                description = <"Documento de identificação do paciente junto ao prestador">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Healthcare consumer">
+                description = <"A person performing the role of a healthcare consumer">
+            >
+            ["at0001"] = <
+                text = <"Consumer name">
+                description = <"Healthcare consumer's name">
+            >
+            ["at0002"] = <
+                text = <"Consumer-Third party payer">
+                description = <"Relationship between a healthcare consumer and a third-party payer">
+            >
+            ["at0003"] = <
+                text = <"Patient">
+                description = <"Patient: relationship between a healthcare consumer and a healthcare provider organisation/health professional">
+            >
+            ["at0020"] = <
+                text = <"Healthcare consumer identifiers">
+                description = <"Identifiers of a healthcare consumer at the third-party payer">
+            >
+            ["at0021"] = <
+                text = <"Healthcare consumer identifier">
+                description = <"Identifier of a healthcare consumer at the third-party payer">
+            >
+            ["at0030"] = <
+                text = <"Patient identifiers">
+                description = <"Patient identifiers at the related healthcare provider">
+            >
+            ["at0031"] = <
+                text = <"Patient identifier">
+                description = <"A patient identifier at the related healthcare provider">
+            >
+        >
+    >

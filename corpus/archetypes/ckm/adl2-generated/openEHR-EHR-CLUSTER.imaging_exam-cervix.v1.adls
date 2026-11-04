@@ -1,0 +1,193 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=c59b71c5-9867-48d6-8867-999ddbe40eb9; build_uid=0fd00a81-3437-4438-a68d-107c353078e5)
+    openEHR-EHR-CLUSTER.imaging_exam-cervix.v1.0.0
+
+specialize
+    openEHR-EHR-CLUSTER.imaging_exam.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Peter Fedorcsak, Vebjørn Arntzen">
+                ["organisation"] = <"University of Oslo, Oslo University Hospital">
+                ["email"] = <"peterfe@uio.no, varntzen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-11-24">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Marit Alice Venheim, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Randi Brendberg, Helse Nord RHF, Norway", "Peter Fedorcsak, University of Oslo, Norway (openEHR Editor)", "Heather Grain, Llewelyn Grain Informatics, Australia", "Anne Helbig, MD PhD, Oslo University Hospital, Norway", "Anca Heyd, DIPS ASA, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Mikkel Johan Gaup Grønmo, Regional forvaltning EPJ, Helse Nord, Norway (Nasjonal IKT redaktør)", "Anjali Kulkarni, Karkinos, India", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "Tina Tellum, Oslo Universitetssykehus, Norway", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)", "Ina Wille, Helse-Vest RHF, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"4F54A5EBA43FF47A6972B8822E31F05E">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"*To record the findings on radiological examination of the cervix, and their interpretation. (en)">
+            keywords = <"Befund, Ergebnis, Bildgebung, Körper, Organ, System, Struktur, Region, Beobachtung, Diagnostik, Radiologie, Bild", ...>
+            use = <"*Use to record the findings on radiological examination of the cervix, and their interpretation.
+
+The intended scope for this archetype is to eventually record all detailed findings on radiological examination of the uterus using any modality. It is anticipated that further data elements may be added as requirements are identified and confirmed.
+
+This archetype is designed to be nested within the 'Additional details' SLOT in the CLUSTER.imaging_exam-uterus, the 'Structured imaging findings' SLOT in the OBSERVATION.imaging_exam_result or within other relevant CLUSTER.imaging_exam archetypes, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. If this archetype needs to be extended with further levels of structured findings, additional instances of the CLUSTER.imaging_exam or its specialisations can be nested in the 'Additional details' SLOT. (en)">
+            misuse = <"*Not to be used to record imaging examination findings for any body structure or region other than the cervix. Use other archetypes from the CLUSTER.imaging_exam family for this purpose.
+
+Not to be used to record details related to the overall findings, context or technical details related to a complete imaging examination test result. Use the OBERSERVATION.imaging_exam_result for this purpose. For example, comments on the study quality, differential diagnoses, and overall impression. (en)">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere funn ved radiologisk undersøkelse av livmorhals og tolkning av funnene.">
+            use = <"Brukes for å registrere funn ved radiologisk undersøkelse av livmorhals og tolkning av funnene.
+
+Det tiltenkte omfanget for denne CLUSTER.imaging_exam (Bildediagnostisk undersøkelse) - arketypen er til slutt å kunne registrere alle detaljerte funn ved bildediagnostisk undersøkelse av livmorhals uavhengig av modalitet. Det er forventet at flere dataelementer kan bli lagt til når krav til slike er identifisert og bekreftet.
+
+Denne arketypen er utformet for å bli nøstet i SLOT'et \"Ytterligere detaljer\" i arketypen CLUSTER.imaging_exam-uterus (Bildediagnostisk undersøkelse - livmor), SLOT'et \"Strukturerte funn\" i OBSERVATION.imaging_exam_result (Bildediagnostisk svar) eller i andre relevante Bildediagnostisk svar-arketyper, men kan også brukes innen andre ENTRY- og CLUSTER-arketyper der det er klinisk passende. Hvis denne arketypen, eller en spesialisering av denne, må utvides med flere nivåer med detaljerte funn eller observasjoner, kan flere forekomster av arketypen eller dens spesialiseringer nøstes i SLOT'et \"Ytterligere detaljer\".">
+            misuse = <"Skal ikke brukes til å registrere funn fra undersøkelser av andre kroppsstrukturer enn livmorhals. Bruk andre arketyper fra gruppen av CLUSTER.imaging_exam-arketyper for dette.
+
+Skal ikke brukes til å registrere overordnede undersøkelsesfunn, kontekst eller tekniske detaljer relatert til et fullstendig svar på billedundersøkelsen. Bruk arketypen OBSERVATION.imaging_exam_result (Bildediagnostisk svar) for å registrere dette, for eksempel kommentar om undersøkelseskvalitet, differensialdiagnose og overordnet konklusjon.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the findings on radiological examination of the cervix, and their interpretation.">
+            use = <"Use to record the findings on radiological examination of the cervix, and their interpretation.
+
+The intended scope for this archetype is to eventually record all detailed findings on radiological examination of the uterus using any modality. It is anticipated that further data elements may be added as requirements are identified and confirmed.
+
+This archetype is designed to be nested within the 'Additional details' SLOT in the CLUSTER.imaging_exam-uterus, the 'Structured imaging findings' SLOT in the OBSERVATION.imaging_exam_result or within other relevant CLUSTER.imaging_exam archetypes, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. If this archetype needs to be extended with further levels of structured findings, additional instances of the CLUSTER.imaging_exam or its specialisations can be nested in the 'Additional details' SLOT.">
+            misuse = <"Not to be used to record imaging examination findings for any body structure or region other than the cervix. Use other archetypes from the CLUSTER.imaging_exam family for this purpose.
+
+Not to be used to record details related to the overall findings, context or technical details related to a complete imaging examination test result. Use the OBERSERVATION.imaging_exam_result for this purpose. For example, comments on the study quality, differential diagnoses, and overall impression.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Imaging examination of the cervix
+        items matches {
+            ELEMENT[at0001.1] matches {    -- Body structure
+                value matches {
+                    DV_CODED_TEXT[at0.9000] matches {
+                        defining_code matches {[at0.1]}    -- Cervix
+                    }
+                }
+            }
+            after [at0004]
+            ELEMENT[at0.4] occurrences matches {0..1} matches {    -- Length
+                value matches {
+                    DV_QUANTITY[at0.9002] matches {
+                        property matches {[at0.9001]}    -- Length
+                        [magnitude, units, precision] matches {
+                            [{|>=0.0|}, {"mm"}, {0}],
+                            [{|>=0.0|}, {"cm"}, {1}]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000.1"] = <
+                text = <"*Imaging examination of the cervix (en)">
+                description = <"*Findings on radiological examination of the cervix. (en)">
+            >
+            ["at0001.1"] = <
+                text = <"Körperstruktur">
+                description = <"Identifizierung der untersuchten Körperstruktur oder Region.">
+                comment = <"*If the body structure has been fully identified in this 'Body structure' element, then the 'Body site' data element and 'Structured body site' SLOT becomes redundant. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Cervix (en)">
+                description = <"">
+            >
+            ["at0.4"] = <
+                text = <"*Length (en)">
+                description = <"*The length of the uterine cervix. (en)">
+            >
+            ["at0.9001"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+        >
+        ["nb"] = <
+            ["at0.1"] = <
+                text = <"Livmorhals">
+                description = <"">
+            >
+            ["at0.4"] = <
+                text = <"Lengde">
+                description = <"Den målte lengden av livmorhalsen.">
+            >
+            ["at0000.1"] = <
+                text = <"Bildediagnostisk undersøkelse - livmorhals">
+                description = <"Funn ved radiologisk undersøkelse av livmorhals.">
+            >
+            ["at0001.1"] = <
+                text = <"Kroppsstruktur">
+                description = <"Identifisering av strukturen i kroppen eller regionen som er undersøkt.">
+                comment = <"Dersom den aktuelle strukturen i kroppen er fullt ut angitt i dette \"Kroppsstruktur\"-elementet er det ikke nødvendig å bruke \"Anatomisk lokalisasjon\" eller \"Strukturert anatomisk lokalisasjon\".">
+            >
+            ["at0.9001"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Imaging examination of the cervix">
+                description = <"Findings on radiological examination of the cervix.">
+            >
+            ["at0001.1"] = <
+                text = <"Body structure">
+                description = <"Identification of the body structure or region examined.">
+                comment = <"If the body structure has been fully identified in this 'Body structure' element, then the 'Body site' data element and 'Structured body site' SLOT becomes redundant.">
+            >
+            ["at0.1"] = <
+                text = <"Cervix">
+                description = <"">
+            >
+            ["at0.4"] = <
+                text = <"Length">
+                description = <"The length of the uterine cervix.">
+            >
+            ["at0.9001"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at0.9001"] = <http://openehr.org/id/122>
+        >
+        ["SNOMED-CT"] = <
+            ["at0.1"] = <http://snomed.info/id/71252005>
+        >
+    >

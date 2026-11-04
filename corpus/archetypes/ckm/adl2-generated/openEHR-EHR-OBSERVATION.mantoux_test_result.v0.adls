@@ -1,0 +1,177 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=90e6342c-c561-40c9-8eda-b07da65e801a; build_uid=b9869743-507a-46a6-9dc4-1e0bc31e3874)
+    openEHR-EHR-OBSERVATION.mantoux_test_result.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2012-11-21">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Merrilyn Curtis, AnalyzeIT, Australia", "Sistine Barretto-Daniels, Ocean Informatics, Australia">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Nayak S, Acharjya B. Mantoux test and its interpretation. Indian Dermatol Online J. 2012 Jan;3(1):2-6. doi: 10.4103/2229-5178.93479. PMID: 23130251; PMCID: PMC3481914. Available from: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3481914/.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, heather.leslie@atomicainformatics.com">
+        ["MD5-CAM-1.0.1"] = <"8BA03A4FE79E57F943C24308E6300812">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record thetest result, including findings and interpretation, following administration of the Mantoux Tuberculin Skin Test (TST).">
+            keywords = <"TB", "Mantoux", "reaction", "tuburculin", "TST">
+            use = <"Use to record the test result, including findings and interpretation, following administration of the Mantoux Tuberculin Skin Test (TST).">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Mantoux test result
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] matches {    -- Any point-in-time event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0011] occurrences matches {0..3} matches {    -- Diameter
+                                        value matches {
+                                            DV_QUANTITY[at9002] matches {
+                                                property matches {[at9000]}    -- Length
+                                                magnitude matches {|>=0.0|}
+                                                units matches {"mm"}
+                                                precision matches {0}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Clinical description
+                                        value matches {
+                                            DV_TEXT[at9003]
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Interpretation
+                                        value matches {
+                                            DV_CODED_TEXT[at9004] matches {
+                                                defining_code matches {[ac9001]}    -- Interpretation (synthesised)
+                                            }
+                                            DV_TEXT[at9005]
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0016] matches {    -- Multimedia representation
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.media_file(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                    ELEMENT[at0008] matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9006]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0014] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0007] matches {    -- Rationale for interpretation
+                        value matches {
+                            DV_TEXT[at9007]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0015] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Mantoux test result">
+                description = <"The test result, including findings and interpretation, following administration of the Mantoux Tuberculin Skin Test (TST).">
+            >
+            ["at0002"] = <
+                text = <"Any point-in-time event">
+                description = <"Default, unspecified point-in-time event which may be more explicitly defined in a template or at run-time.">
+            >
+            ["at0005"] = <
+                text = <"Interpretation">
+                description = <"Clinical interpretation of the induration response.">
+            >
+            ["at0007"] = <
+                text = <"Rationale for interpretation">
+                description = <"Rationale used to interpret the reaction.">
+                comment = <"The criterion or classification as positive or negative takes into account two parameters: size of induration; and a mixture of patient's background risk of infection, including age, occupation and health conditions. For example: a patient with a HIV-positive status would have a different criteria for recording a positive Mantoux test than the general population.">
+            >
+            ["at0008"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the Mantoux test result, not captured in other fields.">
+                comment = <"For example, 'suspicious of infection', 'suggestive of infection', 'consistent with past infection', '90% of patients have infection', and 'virtually all have infection'.
+http://rcpamanual.edu.au/index.php?option=com_content&view=article&id=80&Itemid=80">
+            >
+            ["at0009"] = <
+                text = <"Positive">
+                description = <"The reaction is positive, based on the specified patient criterion.">
+            >
+            ["at0010"] = <
+                text = <"Negative">
+                description = <"The reaction is negative, based on the specified patient criterion.">
+            >
+            ["at0011"] = <
+                text = <"Diameter">
+                description = <"The measured diameter of the induration reaction.">
+            >
+            ["at0012"] = <
+                text = <"Clinical description">
+                description = <"Narrative description about the Mantoux reaction findings.">
+                comment = <"For example: noting the formation of vesicles, bullae, lymphangitis, ulceration and necrosis at the test site.">
+            >
+            ["at0015"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0016"] = <
+                text = <"Multimedia representation">
+                description = <"Digital image, video or diagram representing the test result.">
+                comment = <"Multiple formats are allowed but they should represent equivalent clinical content.">
+            >
+            ["at9000"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["ac9001"] = <
+                text = <"Interpretation (synthesised)">
+                description = <"Clinical interpretation of the induration response. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/122>
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0009", "at0010">
+        >
+    >

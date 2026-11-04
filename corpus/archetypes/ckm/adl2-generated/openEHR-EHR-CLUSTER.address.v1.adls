@@ -1,0 +1,1516 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=9d44ce81-a4e4-4edc-a828-20f5e4b88af5; build_uid=7ce6e91c-68bd-4aa0-b33e-934ce14d0911)
+    openEHR-EHR-CLUSTER.address.v1.1.3
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch, Alina Rehberg">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de, rehberg.alina@mh-hannover.de">
+            >
+        >
+        ["pt-pt"] = <
+            language = <[ISO_639-1::pt-pt]>
+            author = <
+                ["name"] = <"Hugo Silva">
+                ["organisation"] = <"University of Minho">
+                ["email"] = <"pg50416@uminho.pt">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Erik Sundvall">
+                ["organisation"] = <"Karolinska Institutet + Karolinska University Hospital, Region Stockholm + Linköping University">
+                ["email"] = <"erik.sundvall@regionstockholm.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Liv Laugen, John Tore Valand, Vebjørn Arntzen, Kanika Kuwelker">
+                ["organisation"] = <"​Oslo University Hospital, Norway, Helse Bergen, Helse Vest IKT">
+                ["email"] = <"liv.laugen@ous-hf.no, john.tore.valand@helse-bergen.no, john.tore.valand@helse-vest-ikt.no, varntzen@ous-hf.no, kanika.kuwelker@helse-vest-ikt.no">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Nelio Borrozzino">
+                ["organisation"] = <"L2d Saúde Digital">
+                ["email"] = <"nelio.borrozzino@l2d.com.br">
+            >
+        >
+        ["el"] = <
+            language = <[ISO_639-1::el]>
+            author = <
+                ["name"] = <"Erasmia Partafylla">
+                ["organisation"] = <"Sigmasoft">
+                ["email"] = <"c.partafylla@sigmasoft.gr">
+            >
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            author = <
+                ["name"] = <"Vanessa Pereira">
+                ["organisation"] = <"Luxembourg Institute of Health (LIH)">
+                ["email"] = <"vanessapereira@protonmail.com">
+            >
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            author = <
+                ["name"] = <"Joost Holslag">
+                ["organisation"] = <"Joost Holslag Geneeskunde & Advies">
+                ["email"] = <"info@joostholslag.nl">
+            >
+            accreditation = <"MD">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-04-14">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Dag Aarhus, Vestre Viken HF, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Astrid Askeland, Dips AS, Norway", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Keisha Barwise, MOHW/IDB HSSP Project, Jamaica", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Yexuan Cheng, 浙江大学, China", "Candice de Lisser, Ministry of Health and Wellness, Jamaica", "Ludvig Eek Hofmann, Cambio Healthcare Systems AB, Sweden", "Valborg Ellingsen, Haraldsplass Diakonale sykehus, Norway", "Heather Grain, Llewelyn Grain Informatics, Australia", "Martin Grundberg, Cambio Healthcare Systems, Sweden", "Mikkel Johan Gaup Grønmo, Regional forvaltning EPJ, Helse Nord, Norway (openEHR Editor)", "Rebecka Hansson, Cambio Healthcare Systems AB, Sweden", "Anca Heyd, DIPS ASA, Norway", "Joost Holslag, Nedap, Netherlands", "Evelyn Hovenga, EJSH Consulting, Australia", "Gunnar Jårvik, Helse Vest IKT AS, Norway", "Gunn-Lisbeth Kleiven, Oslo universitetssykehus HF, Norway", "Shinji Kobayashi, National Institute of Public Health, Japan", "Kanika Kuwelker, Helse Vest IKT, Norway", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Lars Morgan Karlsen, Nordlandssykehuset Bodø, Norway", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Jayashree Panickar, Karolinska Institute, Sweden", "Erik Skjemstad, Helse Nord RHF, Norway", "Natalia Strauch, Medizinische Hochschule Hannover, Germany", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "Nyree Taylor, Ocean Health Systems, Australia", "Anders Thurin, VGR, Sweden", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)", "Ina Wille, Helse-Vest RHF, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Health Care Client Identification - AS 5017-2006. New South Wales (AU): Standards Australia; 2006.">
+        ["2"] = <"Health Care Provider Identification - AS 4846-2006. New South Wales (AU): Standards Australia; 2006.">
+        ["3"] = <"Health informatics — Identification of subjects of health care - ISO/TS 22220:2007. Geneva: International Organization for Standardization; 2007.">
+        ["4"] = <"HL7 FHIR Resource - Person v4.0.1: R4 [Internet]. Health Level Seven International; [accessed 2021 05 04]. Available from: http://hl7.org/fhir/2021May/person.html.">
+        ["5"] = <"HL7 FHIR Resource - Organization v4.0.1: R4 [Internet]. Health Level Seven International; [accessed 2021 05 04]. Available from: http://hl7.org/fhir/2021May/organization.html">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"112E6F77A1FACD78CC4B7ED6810372F4">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung von Details über den Standort einer Person, eines physischen Gebäudes oder einer Landmarke, wie sie im Rahmen der klinischen Dokumentation bekannt sind oder verstanden werden.">
+            keywords = <"Adresse", "Anschrift", "postalisch", "Mailing", "Privat", "Geschäft", "physisch", "Landmarke">
+            use = <"Verwenden Sie diesen Archetyp, um Details über den Standort einer Person, eines physischen Gebäudes oder einer Landmarke darzustellen, wie sie im Rahmen der klinischen Dokumentation bekannt sind oder verstanden werden, oft ad hoc oder wenn es nicht angemessen oder möglich ist, einen Adresssuchdienst zu verwenden. Beispiele beinhalten:
+- die Geschäftsadresse einer Organisation, die eine Person zu Hause betreut; oder
+- die Postanschrift des Inhabers einer Patientenverfügung innerhalb des Archetyps EVALUATION.advance_care_directive; oder
+- der Sturz- oder Unfallort.
+
+Der Geltungsbereich dieses Archetyps wurde darauf beschränkt, nur die gebräuchlichsten strukturierten Komponenten zur Identifizierung eines bestimmten physischen Gebäudes oder einer Landmarke zu enthalten. In diesem Zusammenhang kann eine vollständige Adresse beschrieben werden mit:
+- Ein oder mehrere Freitext-„Adresszeilen“-Datenelemente, um die große Vielfalt an Möglichkeiten darzustellen, wie Details auf „Straßenebene“ aufgezeichnet werden müssen; und
+- „Stadt“, um einen Vorort, eine Stadt, ein Dorf oder eine Gemeinde darzustellen;
+- „Region/Landkreis“ zur Darstellung eines lokalen Regierungsbezirks;
+- „Staat/Territorium/Provinz“, um einen großen Regierungsbezirk darzustellen;
+- „Postleitzahl“ und
+- \"Land\".
+
+Dieser Archetyp könnte auch als Ersatz für formelle demografische Daten verwendet werden, wenn ein Template mit Domänenexperten überprüft wird – beispielsweise bei einer Bewertung, bei der Prüfer eine Adresse in einem Bewertungsformular erwarten würden. Dieser CLUSTER.address könnte auch als Stellvertreter für eine Adresse in formalen demografischen Adressdaten verwendet werden, wenn ein Template mit Klinikern überprüft wird – zum Beispiel bei einer Bewertung, bei der Prüfer erwarten würden, dass die vollständigen Kontaktdaten der Person oben auf dem Bewertungsformular angezeigt werden.">
+            misuse = <"Darf nicht verwendet werden, um eine vollständig strukturierte Adresse, wie sie in ISO-Standards beschrieben ist, im Rahmen der Führung eines offiziellen demografischen Registers oder Index zu erfassen. Verwenden Sie zu diesem Zweck einen Adresssuchdienst, einen formalen Master Patient Index oder Health Provider Index oder Archetypen, die auf dem openEHR Demographic Information Model basieren.
+
+Darf nicht verwendet werden, um digitale Adressen zur Verwendung in der elektronischen Kommunikation darzustellen. Verwenden Sie für diesen Zweck den Archetyp CLUSTER.electronic_communication.
+
+Darf nicht verwendet werden, um Details über Wohnungs- oder Obdachlosigkeit darzustellen. Verwenden Sie für diesen Zweck den Archetyp EVALUATION.housing_summary.">
+        >
+        ["pt-pt"] = <
+            language = <[ISO_639-1::pt-pt]>
+            purpose = <"Registar os detalhes sobre a localização de uma pessoa, edifício físico ou ponto de referência, tal como são conhecidos ou compreendidos no decurso da documentação clínica.">
+            keywords = <"endereço", "morada", "postal", "correio", "casa", "negócio", "físico", "marco", "ponto de referência">
+            use = <"Utilize para registar detalhes sobre a localização de uma pessoa, edifício físico ou ponto de referência, tal como são conhecidos ou compreendidos no decurso da documentação clínica, muitas vezes ad hoc ou quando não é apropriado ou possível utilizar um serviço de pesquisa de endereços. Exemplos incluem:
+- o endereço comercial de uma organização que presta cuidados domiciliários a um indivíduo; ou
+- o endereço postal do titular de um registo de cuidados avançados, dentro do arquétipo EVALUATION.advance_care_directive; ou
+- a localização física de uma queda ou acidente.
+
+O âmbito deste arquétipo foi restringido para conter os componentes estruturados mais comuns para identificar um edifício físico ou um ponto de referência específico. Neste contexto, um endereço completo pode ser descrito utilizando:
+- Um ou mais elementos de dados de texto livre de 'Linha de endereço' para representar a enorme variedade de formas pelas quais os detalhes 'ao nível da rua' podem ter de ser registados; e
+- 'Cidade' para representar um subúrbio, vila, cidade, vila ou comunidade;
+- 'Distrito/Concelho' para representar um distrito governamental local;
+- 'Estado/Território/Província' para representar um importante distrito governamental;
+- ‘Código postal’, e
+- 'País'.
+No entanto, este arquétipo pode ser estendido para incluir detalhes adicionais sobre o endereço, aninhando o CLUSTER.structured_address dentro do SLOT 'Endereço estruturado'.
+
+Este arquétipo CLUSTER.address também pode ser utilizado como um substituto para um endereço em dados formais de endereço demográfico ao rever um template com especialistas do domínio - por exemplo, uma avaliação em que os revisores esperariam ver os detalhes completos de contacto do indivíduo na parte superior do formulário de avaliação.">
+            misuse = <"Não deve ser utilizado para registar um endereço totalmente estruturado, tal como descrito nas normas ISO ou como parte da manutenção de um registo ou índice demográfico oficial. Utilize um serviço de pesquisa de endereços, um Índice Mestre de Pacientes formal ou um Índice de Prestadores de Cuidados de Saúde para este fim, ou arquétipos baseados no Modelo de Informação Demográfica openEHR.
+
+Não deve ser utilizado para representar endereços digitais para utilização em comunicação eletrónica. Utilize CLUSTER.electronic_communication para este efeito.
+
+Não deve ser utilizado para registar detalhes sobre habitação ou falta de habitação. Utilize EVALUATION.housing_summary para esta finalidade.">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"*To record details about the location of a person, physical building or landmark as they are known or understood in the course of clinical documentation.(en)">
+            keywords = <"adress", "postadress", "hem", "företag", "position", "ort", "distrikt", "region">
+            use = <"*Use to record details about the location of a person, physical building or landmark as they are known or understood in the course of clinical documentation, often ad hoc or when it is not appropriate or possible to use an address lookup service. Examples include:
+- the business address of an organisation providing home care to an individual; or
+- the postal address of the copyholder of an advanced care record, within the EVALUATION.advance_care_directive archetype; or
+- the physical location of a fall or accident.
+
+The scope of this archetype has been constrained to carry the commonest structured components for identifying a specific physical building or landmark. In this context, a complete address may be described using:
+- One or more free text 'Address line' data elements to represent the huge variety of ways that ‘street-level' details may need to be recorded; and
+- 'Town' to represent a suburb, town, city, village, or community;
+- 'District/County' to represent a local government district;
+- 'State/Territory/Province’ to represent a major government district;
+- ‘Postcode’, and 
+- ‘Country'.
+However, this archetype can be extended to include additional fine-grained details about the address by nesting the CLUSTER.structured_address within the 'Structured address' SLOT.
+
+This CLUSTER.address archetype can also be used as a proxy for an address in formal demographic address data when reviewing a template with domain experts - for example, an assessment where reviewers would expect to see the individual's full contact details at the top of the assessment form.(en)">
+            misuse = <"*Not to be used to record a fully structured address, such as described in ISO standards or as part of maintaining an official demographic register or index. Use an address lookup service, a formal Master Patient Index or a Health Provider Index for this purpose, or archetypes based on the openEHR Demographic Information Model.
+
+Not to be used to represent digital addresses for use in electronic communication. Use CLUSTER.electronic_communication for this purpose.
+
+Not to be used to record details about housing or homelessness. Use the EVALUATION.housing_summary for this purpose.(en)">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere detaljer om lokaliseringen til en person, en fysisk bygning eller et landemerke, som man har informasjon om eller har forstått, i det kliniske dokumentasjonsarbeidet.">
+            keywords = <"adresse", "postadresse", "hjem", "arbeid", "fysisk", "oppmøtested">
+            use = <"	
+Brukes for å registrere detaljer om lokaliseringen til en person, en fysisk bygning eller et landemerke, som man har informasjon om eller har forstått, i det kliniske dokumentasjonsarbeidet. Brukes ofte ad hoc eller i de tilfeller der det ikke er ønskelig eller mulig å bruke et formelt demografisk register eller indeks.
+For eksempel:
+- Adressen til hjemmetjeneste eller en annen helsetjenesteyter.
+- Adressen til en person eller organisasjon som oppbevarer fremtidige behandlingsvalg i arketypen EVALUATION.advance_care_directive (Fremtidig behandlingsvalg).
+- Adressen til hendelsestedet til en ulykke eller et fall.
+
+Omfanget av denne arketypen har blitt begrenset til å dekke de vanligste komponentene i en enkel adresse. I denne sammenhengen kan en fullstendig adresse beskrives ved å bruke:
+- Ett eller flere \"Adresselinje\"-dataelementer for å representere det store utvalget av måter \"gatenivå\" kan registreres på.
+- \"By\" for å representere en forstad, by eller landsby.
+- \"Distrikt/fylke\" for å representere et lokalt myndighetsdistrikt.
+- \"Stat/territorium/provins\" for å representere et større myndighetsdistrikt.
+- \"Postnummer\".
+- \"Land\".
+Imidlertidig kan denne arketypen utvides for å inkludere ytteligere detaljer om adressen ved å nøste arketypen CLUSTER.structured_address i SLOTet \"Strukturert adresse\"
+
+Denne CLUSTER-arketypen kan også brukes istedenfor formelle demografiske adressedata ved gjennomgang av et templat med klinikere – for eksempel en vurdering der brukeren/klinikeren forventer å se personens fullstendige kontaktinformasjon øverst i vurderingsskjemaet.">
+            misuse = <"Brukes ikke til å representere en fullstendig strukturert adresse, som beskrevet i ISO-standarder eller for å opprettholde et demografisk register eller en indeks. Bruk en adresseoppslagstjeneste, et formelt pasientregister, helsepersonellregister eller arketyper basert på openEHR demografisk informasjonsmodell til dette formålet.
+
+Brukes ikke til å representere digitale adresser for bruk i elektronisk kommunikasjon. Bruk CLUSTER.electronic_communication (Elektronisk kommunikasjon) for dette formålet.
+
+Brukes ikke for å registrere detaljer om bolig eller hjemløshet, Bruk arketypen EVALUATION.housing_summary (Boligsammendrag) for dette formålet.">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Registrar detalhes sobre a localização de uma pessoa, edifício físico ou ponto de referência, conforme conhecidos ou compreendidos no decorrer da documentação clínica.
+">
+            keywords = <"endereço", "postal", "mailing", "casa", "negócios", "físico", "ponto de referência">
+            use = <"Use para registrar detalhes sobre a localização de uma pessoa, edifício físico ou ponto de referência, conforme conhecidos ou compreendidos no curso da documentação clínica, frequentemente ad hoc ou quando não for apropriado ou possível usar um serviço de busca de endereço. Exemplos incluem:
+- o endereço comercial de uma organização que fornece atendimento domiciliar a um indivíduo; ou
+- o endereço postal do titular de um registro de cuidados avançados, dentro do arquétipo EVALUATION.advance_care_directive; ou
+- a localização física de uma queda ou acidente.
+
+O escopo deste arquétipo foi limitado para conter os componentes estruturados mais comuns para identificar um edifício físico ou ponto de referência específico. Neste contexto, um endereço completo pode ser descrito usando:
+- Um ou mais elementos de dados de texto livre 'Linha de endereço' para representar a enorme variedade de maneiras pelas quais os detalhes 'no nível da rua' podem precisar ser registrados; e
+- 'Cidade' para representar um subúrbio, cidade, vila ou comunidade;
+- 'Distrito/Condado' para representar um distrito do governo local;
+- 'Estado/Território/Província' para representar um importante distrito governamental;
+- 'CEP' e
+- 'País'.
+No entanto, este arquétipo pode ser estendido para incluir detalhes adicionais mais detalhados sobre o endereço, aninhando o CLUSTER.structured_address dentro do SLOT 'Endereço estruturado'.
+
+Este arquétipo CLUSTER.address também pode ser usado como um proxy para um endereço em dados demográficos formais de endereço ao revisar um modelo com especialistas da área — por exemplo, uma avaliação em que os revisores esperariam ver os detalhes completos de contato do indivíduo na parte superior do formulário de avaliação.">
+            misuse = <"Não deve ser usado para registrar um endereço totalmente estruturado, como descrito nas normas ISO, ou como parte da manutenção de um registro ou índice demográfico oficial. Use um serviço de busca de endereços, um Índice Mestre de Pacientes formal ou um Índice de Provedores de Saúde para essa finalidade, ou arquétipos baseados no Modelo de Informações Demográficas do openEHR.
+
+Não deve ser usado para representar endereços digitais para uso em comunicação eletrônica. Use CLUSTER.electronic_communication para essa finalidade.
+
+Não deve ser usado para registrar detalhes sobre moradia ou situação de rua. Use EVALUATION.housing_summary para essa finalidade.">
+        >
+        ["el"] = <
+            language = <[ISO_639-1::el]>
+            purpose = <"*To record details about the location of a person, physical building or landmark as they are known or understood in the course of clinical documentation.(en)">
+            keywords = <"*address(en)", "*postal(en)", "*mailing(en)", "*home(en)", "*business(en)", "*physical(en)", "*landmark(en)">
+            use = <"*Use to record details about the location of a person, physical building or landmark as they are known or understood in the course of clinical documentation, often ad hoc or when it is not appropriate or possible to use an address lookup service. Examples include:
+- the business address of an organisation providing home care to an individual; or
+- the postal address of the copyholder of an advanced care record, within the EVALUATION.advance_care_directive archetype; or
+- the physical location of a fall or accident.
+
+The scope of this archetype has been constrained to carry the commonest structured components for identifying a specific physical building or landmark. In this context, a complete address may be described using:
+- One or more free text 'Address line' data elements to represent the huge variety of ways that ‘street-level' details may need to be recorded; and
+- 'Town' to represent a suburb, town, city, village, or community;
+- 'District/County' to represent a local government district;
+- 'State/Territory/Province’ to represent a major government district;
+- ‘Postcode’, and 
+- ‘Country'.
+However, this archetype can be extended to include additional fine-grained details about the address by nesting the CLUSTER.structured_address within the 'Structured address' SLOT.
+
+This CLUSTER.address archetype can also be used as a proxy for an address in formal demographic address data when reviewing a template with domain experts - for example, an assessment where reviewers would expect to see the individual's full contact details at the top of the assessment form.(en)">
+            misuse = <"*Not to be used to record a fully structured address, such as described in ISO standards or as part of maintaining an official demographic register or index. Use an address lookup service, a formal Master Patient Index or a Health Provider Index for this purpose, or archetypes based on the openEHR Demographic Information Model.
+
+Not to be used to represent digital addresses for use in electronic communication. Use CLUSTER.electronic_communication for this purpose.
+
+Not to be used to record details about housing or homelessness. Use the EVALUATION.housing_summary for this purpose.(en)">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about the location of a person, physical building or landmark as they are known or understood in the course of clinical documentation.">
+            keywords = <"address", "postal", "mailing", "home", "business", "physical", "landmark">
+            use = <"Use to record details about the location of a person, physical building or landmark as they are known or understood in the course of clinical documentation, often ad hoc or when it is not appropriate or possible to use an address lookup service. Examples include:
+- the business address of an organisation providing home care to an individual; or
+- the postal address of the copyholder of an advanced care record, within the EVALUATION.advance_care_directive archetype; or
+- the physical location of a fall or accident.
+
+The scope of this archetype has been constrained to carry the commonest structured components for identifying a specific physical building or landmark. In this context, a complete address may be described using:
+- One or more free text 'Address line' data elements to represent the huge variety of ways that ‘street-level' details may need to be recorded; and
+- 'Town' to represent a suburb, town, city, village, or community;
+- 'District/County' to represent a local government district;
+- 'State/Territory/Province’ to represent a major government district;
+- ‘Postcode’, and 
+- ‘Country'.
+However, this archetype can be extended to include additional fine-grained details about the address by nesting the CLUSTER.structured_address within the 'Structured address' SLOT.
+
+This CLUSTER.address archetype can also be used as a proxy for an address in formal demographic address data when reviewing a template with domain experts - for example, an assessment where reviewers would expect to see the individual's full contact details at the top of the assessment form.">
+            misuse = <"Not to be used to record a fully structured address, such as described in ISO standards or as part of maintaining an official demographic register or index. Use an address lookup service, a formal Master Patient Index or a Health Provider Index for this purpose, or archetypes based on the openEHR Demographic Information Model.
+
+Not to be used to represent digital addresses for use in electronic communication. Use CLUSTER.electronic_communication for this purpose.
+
+Not to be used to record details about housing or homelessness. Use the EVALUATION.housing_summary for this purpose.">
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            purpose = <"Enregistrer des détails sur la localisation d'une personne, d'un bâtiment physique ou d'un point de repère, tels qu'ils sont connus ou compris dans le cadre de la documentation clinique.">
+            keywords = <"adresse", "postale", "courrier", "domicile", "professionnel", "physique", "repère">
+            use = <"Sert à enregistrer des détails sur la localisation d'une personne, d'un bâtiment physique ou d'un point de repère, tels qu'ils sont connus ou compris dans le cadre de la documentation clinique, souvent de manière ad hoc ou lorsqu'il n'est pas approprié ou possible d'utiliser un service de recherche d'adresses. Il s'agit par exemple
+- l'adresse professionnelle d'une organisation fournissant des soins à domicile à une personne ; ou
+- l'adresse postale du détenteur de la copie d'un dossier de soins avancés, dans l'archétype EVALUATION.advance_care_directive ; ou
+- le lieu physique d'une chute ou d'un accident.
+
+Le champ d'application de cet archétype a été limité aux composants structurés les plus courants permettant d'identifier un bâtiment physique ou un point de repère spécifique. Dans ce contexte, une adresse complète peut être décrite à l'aide des éléments suivants
+- un ou plusieurs éléments de données \"ligne d'adresse\" en texte libre pour représenter l'énorme variété de façons dont les détails \"au niveau de la rue\" peuvent être enregistrés ; et
+- Ville\" pour représenter une banlieue, une ville, un village ou une communauté ;
+- District/County\" pour représenter un district d'administration locale ;
+- \"État/Territoire/Province\" pour représenter un grand district gouvernemental ;
+- Code postal\", et 
+- Pays\".
+Toutefois, cet archétype peut être étendu pour inclure des détails plus fins sur l'adresse en imbriquant le CLUSTER.structured_address dans le SLOT \"Adresse structurée\".
+
+Cet archétype CLUSTER.address peut également être utilisé comme substitut d'une adresse dans les données démographiques formelles lors de la révision d'un modèle avec des experts du domaine - par exemple, une évaluation où les examinateurs s'attendent à voir les coordonnées complètes de la personne en haut du formulaire d'évaluation.">
+            misuse = <"Ne pas utiliser pour enregistrer une adresse entièrement structurée, telle que décrite dans les normes ISO ou dans le cadre de la tenue d'un registre ou d'un index démographique officiel. Utiliser à cette fin un service de recherche d'adresses, un index principal officiel des patients ou un index des prestataires de soins de santé, ou des archétypes fondés sur le modèle d'information démographique de l'openEHR.
+
+Ne pas utiliser pour représenter des adresses numériques destinées à la communication électronique. Utiliser CLUSTER.electronic_communication à cette fin.
+
+Ne doit pas être utilisé pour enregistrer des détails sur le logement ou l'absence de domicile. Utilisez EVALUATION.housing_summary à cette fin.">
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            purpose = <"Voor het vastleggen van gegevens over een locatie van een persoon, fysiek gebouw, of oriëntatiepunt zoals je bekend of geïnterpreteerd zijn tijdens gezondheidszorg dossiervoering.">
+            keywords = <"addres", "post", "huis", "bedrijfs", "fysiek", "oriëntatiepunt">
+            use = <"*en
+Use to record details about the location of a person, physical building or landmark as they are known or understood in the course of clinical documentation, often ad hoc or when it is not appropriate or possible to use an address lookup service. Examples include:
+- the business address of an organisation providing home care to an individual; or
+- the postal address of the copyholder of an advanced care record, within the EVALUATION.advance_care_directive archetype; or
+- the physical location of a fall or accident.
+
+The scope of this archetype has been constrained to carry the commonest structured components for identifying a specific physical building or landmark. In this context, a complete address may be described using:
+- One or more free text 'Address line' data elements to represent the huge variety of ways that ‘street-level' details may need to be recorded; and
+- 'Town' to represent a suburb, town, city, village, or community;
+- 'District/County' to represent a local government district;
+- 'State/Territory/Province’ to represent a major government district;
+- ‘Postcode’, and 
+- ‘Country'.
+However, this archetype can be extended to include additional fine-grained details about the address by nesting the CLUSTER.structured_address within the 'Structured address' SLOT.
+
+This CLUSTER.address archetype can also be used as a proxy for an address in formal demographic address data when reviewing a template with domain experts - for example, an assessment where reviewers would expect to see the individual's full contact details at the top of the assessment form.">
+            misuse = <"*en
+Not to be used to record a fully structured address, such as described in ISO standards or as part of maintaining an official demographic register or index. Use an address lookup service, a formal Master Patient Index or a Health Provider Index for this purpose, or archetypes based on the openEHR Demographic Information Model.
+
+Not to be used to represent digital addresses for use in electronic communication. Use CLUSTER.electronic_communication for this purpose.
+
+Not to be used to record details about housing or homelessness. Use the EVALUATION.housing_summary for this purpose.">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Address
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] matches {    -- Address line
+                value matches {
+                    DV_TEXT[at9022]
+                }
+            }
+            ELEMENT[at0002] matches {    -- City/Town
+                value matches {
+                    DV_TEXT[at9035]
+                }
+            }
+            ELEMENT[at0003] matches {    -- District/County
+                value matches {
+                    DV_TEXT[at9036]
+                }
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- State/Territory/Province
+                value matches {
+                    DV_TEXT[at9026]
+                }
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Postal code
+                value matches {
+                    DV_TEXT[at9019]
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Country
+                value matches {
+                    DV_TEXT[at9027]
+                }
+            }
+            allow_archetype CLUSTER[at0020] matches {    -- Structured address
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.structured_address(-[a-zA-Z0-9_]+)*\.v0\..*/}
+            }
+            ELEMENT[at0021] occurrences matches {0..1} matches {    -- Geolocation code
+                value matches {
+                    DV_TEXT[at9037]
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Latitude
+                value matches {
+                    DV_QUANTITY[at9028] matches {
+                        property matches {[at9020]}    -- Angle, plane
+                        magnitude matches {|-90.0..90.0|}
+                        units matches {"deg"}
+                        precision matches {6}
+                    }
+                }
+            }
+            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Longitude
+                value matches {
+                    DV_QUANTITY[at9029] matches {
+                        property matches {[at9020]}    -- Angle, plane
+                        magnitude matches {|-180.0..180.0|}
+                        units matches {"deg"}
+                        precision matches {6}
+                    }
+                }
+            }
+            ELEMENT[at0009] occurrences matches {0..1} matches {    -- Altitude
+                value matches {
+                    DV_QUANTITY[at9030] matches {
+                        property matches {[at9021]}    -- Length
+                        units matches {"m"}
+                        precision matches {2}
+                    }
+                }
+            }
+            ELEMENT[at0019] occurrences matches {0..1} matches {    -- Map URL
+                value matches {
+                    DV_TEXT[at9012]
+                }
+            }
+            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Type
+                value matches {
+                    DV_CODED_TEXT[at9031] matches {
+                        defining_code matches {[ac9022]}    -- Type (synthesised)
+                    }
+                    DV_TEXT[at9032]
+                }
+            }
+            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Use
+                value matches {
+                    DV_CODED_TEXT[at9033] matches {
+                        defining_code matches {[ac9023]}    -- Use (synthesised)
+                    }
+                    DV_TEXT[at9034]
+                }
+            }
+            ELEMENT[at0018] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9011]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Adresse">
+                description = <"Informationen über den Standort einer Person, eines physischen Gebäudes oder einer Landmarke.">
+            >
+            ["at0001"] = <
+                text = <"Adresszeile">
+                description = <"Eine unstrukturierte Adresszeile, die alle relevanten Details auf Straßenebene oder zum Postfach darstellt, die die Identifizierung eines Standorts unterstützen würden.">
+                comment = <"Vorkommen für dieses Datenelement ist auf 0..* gesetzt, damit ein oder mehrere Freitext-„Adresszeilen“-Datenelemente die große Vielfalt an Möglichkeiten darstellen können, wie Details auf „Straßenebene“ möglicherweise im Kontext einer bestimmten \"Stadt\" erfasst werden müssen. Mehrere Adresszeilen können in einem Template dargestellt und in „Adresszeile 1“, „Adresszeile 2“ usw. umbenannt werden. Beispiel: „7A/52 Davis Street“ oder „Appartment 7A“ als Adresszeile 1 mit „52 Davis Street“ als Adresszeile 2; ein Postfachstandort am Straßenrand, wie z. B. „RMB 725, Princes Highway“ oder Verwendung eines beschreibenden Orientierungspunkts wie „Ecke Smith & Brown Street“ oder „Zweites Haus nördlich des Gemischtwarenladens mit der roten Tür“.">
+            >
+            ["at0002"] = <
+                text = <"Stadt / Gemeinde">
+                description = <"Der Name des Ortes der untersten Ebene der Adresse.
+">
+                comment = <"Zum Beispiel: Vorort, Stadt, Stadt, Siedlung, Dorf oder Gemeinde. Die Codierung mit einer externen Terminologie wird nach Möglichkeit bevorzugt. Zum Beispiel: „Fitzroy“; 'Manchester'; „Kingston“ oder „Bergen“.">
+            >
+            ["at0003"] = <
+                text = <"Bezirk / Landkreis">
+                description = <"Der Name eines internen politischen Bezirks oder geografischen Gebiets, der/das die Adresse enthält.">
+                comment = <"Die Codierung mit einer externen Terminologie wird nach Möglichkeit bevorzugt. Zum Beispiel. For example: Kommunalverwaltungen 'Surf Coast“ und „Yarra“ in Victoria, Australien und die Grafschaften \"Cornwall\", Australia; und die Pfarreien von „Saint Andrew“ und „Kingston“ in Jamaika(en)">
+            >
+            ["at0004"] = <
+                text = <"Staat / Land / Bundesland">
+                description = <"Der Name eines großen politischen Bezirks oder geografischen Gebiets, der/das die Adresse enthält.">
+                comment = <"Die Codierung mit einer externen Terminologie wird nach Möglichkeit bevorzugt. Zum Beispiel: „New South Wales“ und „Queensland“ in Australien; „British Columbia“ und „Nova Scotia“ in Kanada; und die Grafschaften „Cornwall\",„Middlesex\" und „Surrey\" in Jamaika.">
+            >
+            ["at0005"] = <
+                text = <"Postleitzahl">
+                description = <"Der Code für einen Postzustellungsbereich, der die Adresse enthält, wie vom jeweiligen Postzustelldienst definiert.">
+                comment = <"Auch als Postleitzahl PLZ bekannt.">
+            >
+            ["at0006"] = <
+                text = <"Land">
+                description = <"Der Name des Landes, in dem sich die Adresse befindet.">
+                comment = <"Zum Beispiel: Australien, Kanada, Jamaika oder Norwegen. Die Codierung mit einer externen Terminologie, wie z. B. EN ISO 3166–1 Alpha 2 Ländercode, wird empfohlen.">
+            >
+            ["at0007"] = <
+                text = <"Breitengrad">
+                description = <"Horizontale (y) Koordinate einer Geolokalisierung für die Adresse.">
+                comment = <"Der Breitengrad wird durch positive Werte nördlich des Äquators und negative Werte südlich des Äquators dargestellt. Zum Beispiel ist der Breitengrad des Eiffelturms 48.858093.">
+            >
+            ["at0008"] = <
+                text = <"Längengrad">
+                description = <"Horizontale (x) Koordinate einer Geolokalisierung für die Adresse.">
+                comment = <"Der Längengrad wird durch negative Werte westlich des Nullmeridians und positive Werte östlich des Nullmeridians dargestellt. Zum Beispiel ist der Längengrad des Eiffelturms 2.294694.">
+            >
+            ["at0009"] = <
+                text = <"Höhe">
+                description = <"Die vertikale Koordinate einer Geolokalisierung, die die Höhe oder Tiefe der Adresse darstellt.">
+                comment = <"Zum Beispiel, die Höhe der Spitze des Eiffelturms beträgt +324 m.">
+            >
+            ["at0010"] = <
+                text = <"Art">
+                description = <"Art der Adresse.">
+                comment = <"Zum Beispiel: Hausadresse oder postalische Adresse.">
+            >
+            ["at0011"] = <
+                text = <"Physisch">
+                description = <"Ein physischer Ort, der besucht werden kann.">
+            >
+            ["at0012"] = <
+                text = <"Postalisch">
+                description = <"Adresse, die als Ziel für den Versand von Briefen oder Paketen verwendet wird.">
+            >
+            ["at0013"] = <
+                text = <"Beides">
+                description = <"Adresse eines physischen Standorts, der auch als Ziel für E-Mails verwendet wird.">
+            >
+            ["at0014"] = <
+                text = <"Verwendung">
+                description = <"Der primäre Zweck oder die primäre Verwendung der Adresse.">
+            >
+            ["at0015"] = <
+                text = <"Geschäftlich">
+                description = <"Adresse des physischen Standorts eines Unternehmens oder Büros.">
+            >
+            ["at0016"] = <
+                text = <"Privat">
+                description = <"Adresse, an der eine Person regelmäßig lebt.">
+            >
+            ["at0017"] = <
+                text = <"Vorrübergehende Unterkunft">
+                description = <"Adresse, an der eine Person vorübergehend lebt.">
+            >
+            ["at0018"] = <
+                text = <"Kommentar">
+                description = <"Zusätzliche Erläuterungen zur Adresse, die nicht in anderen Feldern erfasst werden.">
+            >
+            ["at0019"] = <
+                text = <"Karte URL">
+                description = <"Link zu einem Ort auf einer Online-Karte.">
+                comment = <"Zum Beispiel: ein Standort auf einer Google- oder iOS-Map.">
+            >
+            ["at0020"] = <
+                text = <"Strukturierte Adresse">
+                description = <"Strukturierte Angaben oder Erweiterungen der Adresse.">
+                comment = <"Zum Beispiel: um eine strukturierte, detailgenaue Adresse darzustellen oder als standardisierte Konzepte zu verwenden, die miteinander verkettet werden können, um konsistent eine einzige „Adresszeile“ zu erstellen.">
+            >
+            ["at0021"] = <
+                text = <"Geolocation-Code">
+                description = <"Eindeutige Kennung, die einen genauen geografischen Standort darstellt.">
+                comment = <"Wird auch als Geocode bezeichnet. Zum Beispiel: GPS-Koordinaten, die Längengrad, Breitengrad +/-Höhe verketten; Standortcode oder Pluscode öffnen; Universeller transversaler Mercator (UTM); und Geohash.">
+            >
+            ["at9021"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["at9020"] = <
+                text = <"* Angle, plane (en)">
+                description = <"* Angle, plane (en)">
+            >
+            ["ac9022"] = <
+                text = <"Art (synthesised)">
+                description = <"Art der Adresse. (synthesised)">
+            >
+            ["ac9023"] = <
+                text = <"Verwendung (synthesised)">
+                description = <"Der primäre Zweck oder die primäre Verwendung der Adresse. (synthesised)">
+            >
+        >
+        ["pt-pt"] = <
+            ["at0000"] = <
+                text = <"Morada">
+                description = <"Detalhes sobre a localização de uma pessoa, edifício físico ou ponto de referência.">
+            >
+            ["at0001"] = <
+                text = <"Linha de endereço">
+                description = <"Uma linha de endereço não estruturada que representa todos os detalhes relevantes ao nível da rua ou da caixa de correio que apoiariam a identificação de um local.">
+                comment = <"As ocorrências para este elemento de dados são definidas como 0..* para permitir que um ou mais elementos de dados de texto livre 'Linha de endereços' representem a enorme variedade de formas pelas quais os detalhes do 'nível da rua' podem ter de ser registados no contexto de uma 'Cidade' especificada. Podem ser representadas várias linhas de endereço num modelo, renomeadas como 'Linha de endereço 1', 'Linha de endereço 2' etc. Por exemplo: '7A/52 Davis Street' ou 'Apartamento 7A' como Linha de endereço 1 com ' 52 Davis Street' como linha de endereço 2; uma localização de caixa de correio à beira da estrada, como 'RMB 725, Princes Highway'; ou utilizando um ponto de referência descritivo, como 'Esquina das ruas Smith & Brown' ou 'Segunda casa a norte do armazém com a porta vermelha'.">
+            >
+            ["at0002"] = <
+                text = <"Cidade">
+                description = <"O nome da localidade de nível mais baixo que contém o endereço.">
+                comment = <"Por exemplo: subúrbio, vila, cidade, povoação, vila ou comunidade. É preferível codificar com uma terminologia externa, sempre que possível. Por exemplo: 'Fitzroy'; 'Manchester'; 'Kingston' ou 'Bergen'.">
+            >
+            ["at0003"] = <
+                text = <"Distrito/Concelho">
+                description = <"O nome de um distrito governamental local ou área geográfica que contém o endereço.">
+                comment = <"É preferível codificar com uma terminologia externa, sempre que possível. Por exemplo: os conselhos governamentais locais de 'Surf Coast' e 'Yarra' em Victoria, Austrália; e as paróquias de 'Saint Andrew' e 'Kingston' na Jamaica.">
+            >
+            ["at0004"] = <
+                text = <"Estado/Território/Província">
+                description = <"O nome de um importante distrito governamental ou área geográfica que contém o endereço.">
+                comment = <"É preferível codificar com uma terminologia externa, sempre que possível. Por exemplo: 'Nova Gales do Sul' e 'Queensland' na Austrália; 'Colúmbia Britânica' e 'Nova Escócia' no Canadá; e os condados de 'Cornwall', 'Middlesex' e 'Surrey' na Jamaica.">
+            >
+            ["at0005"] = <
+                text = <"Código postal">
+                description = <"O código de uma área de entrega postal contendo o endereço, tal como definido pelo serviço de entrega postal relevante.">
+                comment = <"Também conhecido como CEP (ZIP code).">
+            >
+            ["at0006"] = <
+                text = <"País">
+                description = <"O nome do país que contém o endereço.">
+                comment = <"Por exemplo: Austrália; Canadá; Jamaica; ou Noruega. Recomenda-se a codificação com uma terminologia externa, como o código de país EN ISO 3166–1 Alpha 2.">
+            >
+            ["at0007"] = <
+                text = <"Latitude">
+                description = <"Coordenada horizontal (y) de uma geolocalização para o endereço.">
+                comment = <"A latitude é representada por valores positivos a norte do equador e valores negativos a sul do equador. Por exemplo, a latitude da Torre Eiffel é 48,858093.">
+            >
+            ["at0008"] = <
+                text = <"Longitude">
+                description = <"Coordenada horizontal (x) de uma geolocalização para o endereço.">
+                comment = <"A longitude é representada por valores negativos a oeste do Meridiano Principal e valores positivos a este do Meridiano Principal. Por exemplo, a longitude da Torre Eiffel é 2,294694.">
+            >
+            ["at0009"] = <
+                text = <"Altitude">
+                description = <"A coordenada vertical de uma geolocalização que representa a altura ou profundidade do endereço.">
+                comment = <"Por exemplo, a altitude do topo da Torre Eiffel é de +324m.">
+            >
+            ["at0010"] = <
+                text = <"Tipo">
+                description = <"O tipo de endereço.">
+                comment = <"Por exemplo: físico ou postal.">
+            >
+            ["at0011"] = <
+                text = <"Físico">
+                description = <"Um local físico que pode ser visitado.">
+            >
+            ["at0012"] = <
+                text = <"Postal">
+                description = <"Endereço utilizado como destino para o envio de cartas ou encomendas.">
+            >
+            ["at0013"] = <
+                text = <"Ambos">
+                description = <"Endereço de um local físico, também utilizado como destino de correio.">
+            >
+            ["at0014"] = <
+                text = <"Uso">
+                description = <"O propósito ou utilização principal do endereço.">
+            >
+            ["at0015"] = <
+                text = <"Empresarial">
+                description = <"Endereço da localização física de uma empresa ou escritório.">
+            >
+            ["at0016"] = <
+                text = <"Residencial">
+                description = <"Endereço de onde a pessoa mora regularmente.">
+            >
+            ["at0017"] = <
+                text = <"Alojamento temporário">
+                description = <"Endereço de onde a pessoa reside temporariamente.">
+            >
+            ["at0018"] = <
+                text = <"Comentário">
+                description = <"Narrativa adicional sobre o endereço não capturada noutros campos.">
+            >
+            ["at0019"] = <
+                text = <"URL do mapa">
+                description = <"Ligação para um local num mapa online.">
+                comment = <"Por exemplo: uma localização num mapa do Google ou iOS.">
+            >
+            ["at0020"] = <
+                text = <"Endereço estruturado">
+                description = <"Detalhes estruturados ou extensões do endereço.">
+                comment = <"Por exemplo: para representar um endereço estruturado e refinado ou para ser utilizado como conceitos padronizados que podem ser concatenados para construir consistentemente uma única ‘linha de endereço’.">
+            >
+            ["at0021"] = <
+                text = <"Código de geolocalização">
+                description = <"Identificador único que representa uma localização geográfica precisa.">
+                comment = <"Também conhecido como geocódigo. Por exemplo: coordenadas GPS concatenando longitude, latitude +/-altitude; Código de localização aberto ou Plus Code; Mercator Transversal Universal (UTM); e geohash.">
+            >
+            ["at9021"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["at9020"] = <
+                text = <"* Angle, plane (en)">
+                description = <"* Angle, plane (en)">
+            >
+            ["ac9022"] = <
+                text = <"Tipo (synthesised)">
+                description = <"O tipo de endereço. (synthesised)">
+            >
+            ["ac9023"] = <
+                text = <"Uso (synthesised)">
+                description = <"O propósito ou utilização principal do endereço. (synthesised)">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Adress">
+                description = <"Detaljer om platsen för en person, fysisk byggnad eller landmärke.">
+            >
+            ["at0001"] = <
+                text = <"Gatuadress">
+                description = <"*An unstructured address line representing all relevant street-level or post-box details that would support the identification of a location.(en)">
+                comment = <"*Occurrences for this data element is set to 0..* to allow one or more free text 'Address line' data elements to represent the huge variety of ways that ‘street-level' details may need to be recorded within the context of a specified 'Town'. Multiple address lines can be represented in a template, renamed as 'Address line 1', 'Address line 2,' etc. For example: '7A/52 Davis Street' or 'Apartment 7A' as Address line 1 with '52 Davis Street' as Address line 2; a roadside mail box location, such as 'RMB 725, Princes Highway'; or using a descriptive landmark, such as or 'Corner of Smith & Brown Streets' or 'Second house north of the general store with the red door'.(en)">
+            >
+            ["at0002"] = <
+                text = <"Ort/Postort">
+                description = <"*The name of the lowest level locality that contains the address.(en)">
+                comment = <"*For example: suburb, town, city, settlement, village, or community. Coding with an external terminology is preferred, where possible. For example: 'Fitzroy'; 'Manchester'; 'Kingston' or 'Bergen'.(en)">
+            >
+            ["at0003"] = <
+                text = <"Kommun">
+                description = <"*The name of a local government district or geographical area that contains the address.(en)">
+                comment = <"*Coding with an external terminology is preferred, where possible. For example: 'Surf Coast' and 'Yarra' local government councils in Victoria, Australia;and the Parishes of 'Saint Andrew' and 'Kingston' in Jamaica..(en)">
+            >
+            ["at0004"] = <
+                text = <"Region">
+                description = <"*The name of a major government district or geographical area that contains the address.(en)">
+                comment = <"*Coding with an external terminology is preferred, where possible. For example: 'New South Wales' and 'Queensland' in Australia; 'British Columbia' and 'Nova Scotia' in Canada; and the Counties of 'Cornwall', 'Middlesex' & 'Surrey' in Jamaica.(en)">
+            >
+            ["at0005"] = <
+                text = <"Postnummer">
+                description = <"*The code for a postal delivery area containing the address, as defined by the relevant postal delivery service.(en)">
+                comment = <"*Also known as a postcode or ZIP code.
+(en)">
+            >
+            ["at0006"] = <
+                text = <"Land">
+                description = <"*The name of the country containing the address.(en)">
+                comment = <"*For example: Australia; Canada; Jamaica; or Norway. Coding with an external terminology, such as EN ISO 3166–1 Alpha 2 country code, is recommended.(en)">
+            >
+            ["at0007"] = <
+                text = <"Latitud">
+                description = <"*Horizontal (y) coordinate of a geolocation for the address.(en)">
+                comment = <"*Latitude is represented by positive values north of the equator and negative values south of the equator. For example the latitude of the Eiffel Tower is 48.858093.(en)">
+            >
+            ["at0008"] = <
+                text = <"Longitud">
+                description = <"*Horizontal (x) coordinate of a geolocation for the address.(en)">
+                comment = <"*Longitude is represented by negative values west of Prime Meridian and positive values east of Prime Meridian. For example the longitude of the Eiffel Tower is 2.294694.(en)">
+            >
+            ["at0009"] = <
+                text = <"Altitud">
+                description = <"*The vertical coordinate of a geolocation representing height or depth of the address.(en)">
+                comment = <"*For example, the altitude of the top of the Eiffel Tower is +324m.(en)">
+            >
+            ["at0010"] = <
+                text = <"Typ">
+                description = <"*The type of address.(en)">
+                comment = <"*For example: physical or postal.(en)">
+            >
+            ["at0011"] = <
+                text = <"Besöksadress">
+                description = <"*A physical location that can be visited.(en)">
+            >
+            ["at0012"] = <
+                text = <"Postadress">
+                description = <"*Address used as a destination for mailing letters or parcels.(en)">
+            >
+            ["at0013"] = <
+                text = <"Både besöks- och postadress">
+                description = <"*Address of a physical location, also used as a destination for mail.(en)">
+            >
+            ["at0014"] = <
+                text = <"*Use(en)">
+                description = <"*The primary purpose or use for the address.(en)">
+            >
+            ["at0015"] = <
+                text = <"Arbete/företag">
+                description = <"*Address of the physical location of a business or office.(en)">
+            >
+            ["at0016"] = <
+                text = <"Hemadress">
+                description = <"*Address of where a person is living on a regular basis.(en)">
+            >
+            ["at0017"] = <
+                text = <"Tillfällig adress">
+                description = <"*Address of where a person is living on a temporary basis.(en)">
+            >
+            ["at0018"] = <
+                text = <"Kommentar">
+                description = <"*Additional narrative about the address not captured in other fields.(en)">
+            >
+            ["at0019"] = <
+                text = <"URL till karta">
+                description = <"*Link to a location on an online map.(en)">
+                comment = <"*For example: a location on a Google or iOS map.(en)">
+            >
+            ["at0020"] = <
+                text = <"*Structured address(en)">
+                description = <"*Structured details or extensions to the address.(en)">
+                comment = <"*For example: to represent a  structured, fine-grained address, or be used as standardised concepts that can be concatenated together to consistently construct a single 'Address line'.(en)">
+            >
+            ["at0021"] = <
+                text = <"*Geolocation code(en)">
+                description = <"*Unique identifier that represents a precise geographical location.(en)">
+                comment = <"*Also known as a geocode. For example: GPS coordinates concatenating longitude, latitude +/-altitude; Open Location Code or Plus Code; Universal Transverse Mercator (UTM); and geohash.(en)">
+            >
+            ["at9021"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["at9020"] = <
+                text = <"* Angle, plane (en)">
+                description = <"* Angle, plane (en)">
+            >
+            ["ac9022"] = <
+                text = <"Typ (synthesised)">
+                description = <"*The type of address.(en) (synthesised)">
+            >
+            ["ac9023"] = <
+                text = <"*Use(en) (synthesised)">
+                description = <"*The primary purpose or use for the address.(en) (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Adresse">
+                description = <"Informasjon om lokalisasjonen til en person, en fysisk bygning eller et landemerke.">
+            >
+            ["at0001"] = <
+                text = <"Adresselinje">
+                description = <"En ustrukturert adresselinje som representerer alle gatenivå- eller postboksdetaljer som kan støtte identifikasjon av en lokalisering.">
+                comment = <"Forekomster for dette dataelementet er satt til 0..* for å tillate registrering av flere fritekst-\"Adresselinje\"-dataelementer for å representerer alle ulike måter man har behov for å uttrykke en «adresse» i kontekst av dataelementet «By». Flere adresselinjer kan representeres i et templat, omdøpt til 'Adresselinje 1', 'Adresselinje 2' osv.
+
+For eksempel: 
+ \"7A/52 Davis Street\" eller \"Leilighet 7A\" som adresselinje 1 og \"52 Davis Street\" som adresselinje 2; en postboksplassering langs veien, for eksempel \"RMB 725, Princes Highway\"; eller et beskrivende landemerke, for eksempel \"På hjørnet mellom Storgaten og Lillegaten\" eller \"Det andre huset til høyre etter butikken med rød dør\".">
+            >
+            ["at0002"] = <
+                text = <"By">
+                description = <"Navnet på forstaden, byen, landsbyen eller det laveste nivå som inneholder adressen.">
+                comment = <"For eksempel: forstad, by, bygd, bosetting, eller tettsted. Koding med med ekstern terminologi er ønskelig om mulig. For eksempel: \"Fitzroy\", \"Manchester\", \"Kingston\" eller \"Bergen\".">
+            >
+            ["at0003"] = <
+                text = <"Distrikt/fylke">
+                description = <"Navnet på et politisk eller geografisk område som inneholder adressen.">
+                comment = <"Koding med ekstern terminologi er foretrukket om mulig. For eksempel: 'Surf Coast' og 'Yarra' lokale myndigheter i Victoria, Australia;og sognene 'Saint Andrew' og 'Kingston' på Jamaica.">
+            >
+            ["at0004"] = <
+                text = <"Stat/territorium/provins">
+                description = <"Navnet på en politisk eller geografisk inndeling av et land som en del av adressen.">
+                comment = <"Koding med ekstern terminologi er foretrukket om mulig. For eksempel: 'New South Wales og Queensland i Australia, 'Britisk Columbia' og 'Nova Scotia' i Canada; og fylkene 'Cornwall' og 'Middlesex' & 'Surrey' på Jamaica.">
+            >
+            ["at0005"] = <
+                text = <"Postnummer">
+                description = <"Koden for et postleveringsområde som er en del av adressen, og som er definert av den relevante postleveringstjenesten.">
+                comment = <"I andre land kalles dette også ZIP kode.">
+            >
+            ["at0006"] = <
+                text = <"Land">
+                description = <"Navnet på landet som en del av adressen.">
+                comment = <"For eksempel: Australia, Canada, Jamaica eller Norge. Koding med ekstern terminologi, som for eksempel EN ISO 3166-1 Alpha 2 landskode, er foretrukket om mulig.">
+            >
+            ["at0007"] = <
+                text = <"Breddegrad">
+                description = <"Horisontal (y) koordinat for en geolokalisering for adressen.">
+                comment = <"Breddegrad er representert med positive verdier nord for ekvator og negative verdier sør for ekvator. For eksempel er breddegraden til Eiffeltårnet 48.858093.">
+            >
+            ["at0008"] = <
+                text = <"Lengdegrad">
+                description = <"Horisontal (x) koordinat for en geolokalisering for adressen.">
+                comment = <"Lengdegrad er representert med negative verdier vest for nullmeridianen og positive verdier øst for nullmeridianen. For eksempel er lengdegraden til Eiffeltårnet 2.294694.">
+            >
+            ["at0009"] = <
+                text = <"Høyde">
+                description = <"Den vertikale koordinaten til en geolokasjon som representerer høyden eller dybden til adressen.">
+                comment = <"For eksempel er høyden på toppen av Eiffeltårnet +324m.">
+            >
+            ["at0010"] = <
+                text = <"Type">
+                description = <"Adressetypen.">
+                comment = <"For eksempel: Fysisk adresse eller postadresse.">
+            >
+            ["at0011"] = <
+                text = <"Fysisk">
+                description = <"Adressen til en fysisk lokalisering.">
+            >
+            ["at0012"] = <
+                text = <"Postadresse">
+                description = <"Adresse for korrespondanse, pakker eller brev.">
+            >
+            ["at0013"] = <
+                text = <"Begge">
+                description = <"Adresse både for en fysisk lokalisering og for korrespondanse.">
+            >
+            ["at0014"] = <
+                text = <"Bruksområde">
+                description = <"Primærformål for bruk av adressen.">
+            >
+            ["at0015"] = <
+                text = <"Firma">
+                description = <"Adressen til den fysiske plasseringen av en bedrift eller et kontor.">
+            >
+            ["at0016"] = <
+                text = <"Bosted">
+                description = <"Adressen hvor en person bor.">
+            >
+            ["at0017"] = <
+                text = <"Midlertidig bosted">
+                description = <"Adressen hvor en person bor på midlertidig basis.">
+            >
+            ["at0018"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om adressen som ikke er registrert i andre felt.">
+            >
+            ["at0019"] = <
+                text = <"Kart URL">
+                description = <"Lenke til en lokalisering på et online kart.">
+                comment = <"For eksempel: en lokalisering i et Google eller iOS kart.">
+            >
+            ["at0020"] = <
+                text = <"Strukturert adresse">
+                description = <"Strukturerte detaljer eller utvidelser av adressen.">
+                comment = <"For eksempel for å representere en strukturert, mer presis/detaljert adresse, eller brukes som et standardisert konsept som kan konkatineres/kjedes sammen for å bygge opp en enkelt \"Adresselinje\".">
+            >
+            ["at0021"] = <
+                text = <"Geolokaliseringskode">
+                description = <"Unik identifikator som representerer en presis geografisk plassering.">
+                comment = <"Også kjent som en geokode. For eksempel: GPS-koordinater som kombinerer lengdegrad, breddegrad +/- høyde; Open Location Code eller Plus Code; Universal Transverse Mercator (UTM); og geohash.">
+            >
+            ["at9021"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["at9020"] = <
+                text = <"* Angle, plane (en)">
+                description = <"* Angle, plane (en)">
+            >
+            ["ac9022"] = <
+                text = <"Type (synthesised)">
+                description = <"Adressetypen. (synthesised)">
+            >
+            ["ac9023"] = <
+                text = <"Bruksområde (synthesised)">
+                description = <"Primærformål for bruk av adressen. (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Endereço">
+                description = <"Detalhes sobre a localização de uma pessoa, edifício físico ou ponto de referência.">
+            >
+            ["at0001"] = <
+                text = <"Linha de endereço">
+                description = <"Uma linha de endereço não estruturada que representa todos os detalhes relevantes do nível da rua ou da caixa postal que dariam suporte à identificação de um local.">
+                comment = <"Ocorrências para este elemento de dados é definido como 0..* para permitir que um ou mais elementos de dados de \"Linha de endereço\" em texto livre representem a enorme variedade de maneiras pelas quais detalhes \"no nível da rua\" podem precisar ser registrados dentro do contexto de uma \"Cidade\" especificada. Várias linhas de endereço podem ser representadas em um modelo, renomeado como \"Linha de endereço 1\", \"Linha de endereço 2\", etc. Por exemplo: \"7A/52 Davis Street\" ou \"Apartamento 7A\" como Linha de endereço 1 com \"52 Davis Street\" como Linha de endereço 2; um local de caixa de correio na beira da estrada, como \"RMB 725, Princes Highway\"; ou usando um ponto de referência descritivo, como \"Esquina das Ruas Smith e Brown\" ou \"Segunda casa ao norte do armazém geral com a porta vermelha\".">
+            >
+            ["at0002"] = <
+                text = <"Cidade">
+                description = <"O nome da localidade de nível mais baixo que contém o endereço.">
+                comment = <"Por exemplo: subúrbio, cidade, assentamento, vila ou comunidade. Sempre que possível, é preferível codificar com uma terminologia externa. Por exemplo: \"Fitzroy\"; \"Manchester\"; \"Kingston\" ou \"Bergen\".">
+            >
+            ["at0003"] = <
+                text = <"Distrito/Condado">
+                description = <"O nome de um distrito do governo local ou área geográfica que contém o endereço.">
+                comment = <"Sempre que possível, é preferível codificar com uma terminologia externa. Por exemplo: os conselhos governamentais locais de \"Surf Coast\" e \"Yarra\" em Victoria, Austrália; e as paróquias de \"Saint Andrew\" e \"Kingston\" na Jamaica.">
+            >
+            ["at0004"] = <
+                text = <"Estado/Território/Província">
+                description = <"O nome de um grande distrito governamental ou área geográfica que contém o endereço.">
+                comment = <"Sempre que possível, é preferível codificar com uma terminologia externa. Por exemplo: \"Nova Gales do Sul\" e \"Queensland\" na Austrália; \"Colúmbia Britânica\" e \"Nova Escócia\" no Canadá; e os condados de \"Cornwall\", \"Middlesex\" e \"Surrey\" na Jamaica.">
+            >
+            ["at0005"] = <
+                text = <"CEP">
+                description = <"O código para uma área de entrega postal contendo o endereço, conforme definido pelo serviço de entrega postal relevante.">
+                comment = <"Também conhecido como código postal ou código postal.">
+            >
+            ["at0006"] = <
+                text = <"País">
+                description = <"O nome do país que contém o endereço.">
+                comment = <"Por exemplo: Austrália; Canadá; Jamaica; ou Noruega. Recomenda-se a codificação com uma terminologia externa, como o código de país EN ISO 3166–1 Alfa 2.">
+            >
+            ["at0007"] = <
+                text = <"Latitude">
+                description = <"Coordenada horizontal (y) de uma geolocalização para o endereço.">
+                comment = <"A latitude é representada por valores positivos ao norte do equador e valores negativos ao sul. Por exemplo, a latitude da Torre Eiffel é 48,858093.">
+            >
+            ["at0008"] = <
+                text = <"Longitude">
+                description = <"Coordenada horizontal (x) de uma geolocalização para o endereço">
+                comment = <"A longitude é representada por valores negativos a oeste do Meridiano de Greenwich e valores positivos a leste do Meridiano de Greenwich. Por exemplo, a longitude da Torre Eiffel é 2,294694.">
+            >
+            ["at0009"] = <
+                text = <"Altitude">
+                description = <"A coordenada vertical de uma geolocalização que representa a altura ou profundidade do endereço.">
+                comment = <"Por exemplo, a altitude do topo da Torre Eiffel é de +324m.">
+            >
+            ["at0010"] = <
+                text = <"Tipo">
+                description = <"Tipo do endereço">
+                comment = <"Por exemplo: Físico ou Postal">
+            >
+            ["at0011"] = <
+                text = <"Físico">
+                description = <"Um local físico que pode ser visitado">
+            >
+            ["at0012"] = <
+                text = <"portal">
+                description = <"Endereço usado como destino para envio de cartas ou encomendas.">
+            >
+            ["at0013"] = <
+                text = <"Ambos">
+                description = <"Endereço de um local físico, também usado como destino de correspondência.">
+            >
+            ["at0014"] = <
+                text = <"Uso">
+                description = <"O propósito ou uso principal do endereço.">
+            >
+            ["at0015"] = <
+                text = <"Negócios/Corporativo">
+                description = <"Endereço da localização física de uma empresa ou escritório.">
+            >
+            ["at0016"] = <
+                text = <"Residencial">
+                description = <"Endereço onde uma pessoa vive regularmente.">
+            >
+            ["at0017"] = <
+                text = <"Acomodação temporária">
+                description = <"Endereço onde uma pessoa está morando temporariamente.">
+            >
+            ["at0018"] = <
+                text = <"Comentários">
+                description = <"Narrativa adicional sobre o endereço não capturada em outros campos.">
+            >
+            ["at0019"] = <
+                text = <"URL do mapa">
+                description = <"Link para um local em um mapa on-line.">
+                comment = <"Por exemplo: uma localização em um mapa do Google ou iOS.">
+            >
+            ["at0020"] = <
+                text = <"Endereço estruturado">
+                description = <"Detalhes estruturados ou extensões do endereço.">
+                comment = <"Por exemplo: para representar um endereço estruturado e detalhado, ou ser usado como conceitos padronizados que podem ser concatenados para construir consistentemente uma única 'Linha de endereço'.">
+            >
+            ["at0021"] = <
+                text = <"Código de geolocalização">
+                description = <"Identificador exclusivo que representa uma localização geográfica precisa.">
+                comment = <"Também conhecido como geocódigo. Por exemplo: coordenadas GPS concatenando longitude, latitude +/-altitude; Código de Localização Aberto ou Plus Code; Universal Transverse Mercator (UTM); e geohash.">
+            >
+            ["at9021"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["at9020"] = <
+                text = <"* Angle, plane (en)">
+                description = <"* Angle, plane (en)">
+            >
+            ["ac9022"] = <
+                text = <"Tipo (synthesised)">
+                description = <"Tipo do endereço (synthesised)">
+            >
+            ["ac9023"] = <
+                text = <"Uso (synthesised)">
+                description = <"O propósito ou uso principal do endereço. (synthesised)">
+            >
+        >
+        ["el"] = <
+            ["at0000"] = <
+                text = <"Στοιχεία Διεύθυνσης">
+                description = <"*Details about the location of a person, physical building or landmark.(en)">
+            >
+            ["at0001"] = <
+                text = <"Διεύθυνση">
+                description = <"Μια μη δομημένη γραμμή διεύθυνσης που αντιπροσωπεύει όλες τις σχετικές λεπτομέρειες σε επίπεδο δρόμου ή ταχυδρομικής θυρίδας που θα υποστήριζαν την αναγνώριση μιας τοποθεσίας.">
+                comment = <"Οι εμφανίσεις για αυτό το στοιχείο δεδομένων έχουν οριστεί σε 0..* για να επιτραπεί σε ένα ή περισσότερα στοιχεία δεδομένων «Γραμμή διεύθυνσης» ελεύθερου κειμένου να αντιπροσωπεύουν την τεράστια ποικιλία τρόπων με τους οποίους ενδέχεται να χρειάζεται να καταγράφονται οι λεπτομέρειες «σε επίπεδο δρόμου» στο πλαίσιο ενός καθορισμένου 'Πόλη'. Πολλές γραμμές διευθύνσεων μπορούν να αναπαρασταθούν σε ένα πρότυπο, που μετονομάζεται σε \"Γραμμή διεύθυνσης 1\", \"Γραμμή διεύθυνσης 2\" κ.λπ. Για παράδειγμα: \"7A/52 Davis Street\" ή \"Apartment 7A\" ως γραμμή διεύθυνσης 1 με \"52 Davis Street\" ' ως γραμμή διεύθυνσης 2, μια θέση ταχυδρομικής θυρίδας στην άκρη του δρόμου, όπως «RMB 725, Princes Highway». ή χρησιμοποιώντας ένα περιγραφικό ορόσημο, όπως ή \"Corner of Smith & Brown Streets\" ή \"Second house βόρεια του γενικού καταστήματος με την κόκκινη πόρτα\"">
+            >
+            ["at0002"] = <
+                text = <"Πόλη">
+                description = <"Το όνομα της τοποθεσίας χαμηλότερου επιπέδου που περιέχει τη διεύθυνση">
+                comment = <"Για παράδειγμα: προάστιο, πόλη, πόλη, οικισμός, χωριό ή κοινότητα. Προτιμάται η κωδικοποίηση με εξωτερική ορολογία, όπου είναι δυνατόν.Για παράδειγμα: 'Αθήνα'; 'Λάρισα'">
+            >
+            ["at0003"] = <
+                text = <"Χώρα">
+                description = <"Το όνομα μιας τοπικής περιφέρειας ή γεωγραφικής περιοχής που περιέχει τη διεύθυνση.">
+                comment = <"Προτιμάται η κωδικοποίηση με εξωτερική ορολογία, όπου είναι δυνατόν. Για παράδειγμα: τα συμβούλια τοπικής αυτοδιοίκησης «Surf Coast» και «Yarra» στη Βικτώρια της Αυστραλίας και οι Ενορίες του «Saint Andrew» και «Kingston» στην Τζαμάικα.">
+            >
+            ["at0004"] = <
+                text = <"Πολιτεία /περιοχή /Επαρχία">
+                description = <"Το όνομα μιας μεγάλης κυβερνητικής περιφέρειας ή γεωγραφικής περιοχής που περιέχει τη διεύθυνση.">
+                comment = <"Προτιμάται η κωδικοποίηση με εξωτερική ορολογία, όπου είναι δυνατόν. Για παράδειγμα: «New South Wales» και «Queensland» στην Αυστραλία. «British Columbia» και «Nova Scotia» στον Καναδά. και οι κομητείες της «Κορνουάλης», «Middlesex» και «Surrey» στην Τζαμάικα.">
+            >
+            ["at0005"] = <
+                text = <"Ταχυδρομικός κώδικας">
+                description = <"Ο κωδικός για έναν χώρο ταχυδρομικής παράδοσης που περιέχει τη διεύθυνση, όπως ορίζεται από τη σχετική υπηρεσία ταχυδρομικής παράδοσης">
+                comment = <"*Also known as a postcode or ZIP code.
+(en)">
+            >
+            ["at0006"] = <
+                text = <"Χώρα">
+                description = <"Το όνομα της χώρας που περιέχει τη διεύθυνση.">
+                comment = <"*For example: Australia; Canada; Jamaica; or Norway. Coding with an external terminology, such as EN ISO 3166–1 Alpha 2 country code, is recommended.(en)">
+            >
+            ["at0007"] = <
+                text = <"Γεωγραφικό πλάτος">
+                description = <"Οριζόντια (y) συντεταγμένη μιας γεωγραφικής θέσης για τη διεύθυνση.">
+                comment = <"*Latitude is represented by positive values north of the equator and negative values south of the equator. For example the latitude of the Eiffel Tower is 48.858093.(en)">
+            >
+            ["at0008"] = <
+                text = <"Γεωγραφικό Μήκος">
+                description = <"Οριζόντια (x) συντεταγμένη μιας γεωγραφικής θέσης για τη διεύθυνση.">
+                comment = <"*Longitude is represented by negative values west of Prime Meridian and positive values east of Prime Meridian. For example the longitude of the Eiffel Tower is 2.294694.(en)">
+            >
+            ["at0009"] = <
+                text = <"Υψόμετρο">
+                description = <"Η κατακόρυφη συντεταγμένη μιας γεωγραφικής θέσης που αντιπροσωπεύει το ύψος ή το βάθος της διεύθυνσης.">
+                comment = <"*For example, the altitude of the top of the Eiffel Tower is +324m.(en)">
+            >
+            ["at0010"] = <
+                text = <"Τύπος">
+                description = <"Τύπος διεύθυνησς">
+                comment = <"*For example: physical or postal.(en)">
+            >
+            ["at0011"] = <
+                text = <"Φυσική Διεύυνση">
+                description = <"Μια φυσική τοποθεσία που μπορείτε να επισκεφτείτε.">
+            >
+            ["at0012"] = <
+                text = <"Ταχυδρομική διεύθυνση">
+                description = <"Διεύθυνση που χρησιμοποιείται ως προορισμός για την αποστολή επιστολών ή δεμάτων.">
+            >
+            ["at0013"] = <
+                text = <"Και τα δύο">
+                description = <"Διεύθυνση μιας φυσικής τοποθεσίας, που χρησιμοποιείται επίσης ως προορισμός αλληλογραφίας.">
+            >
+            ["at0014"] = <
+                text = <"Χρήση">
+                description = <"Ο πρωταρχικός σκοπός ή χρήση για τη διεύθυνση.">
+            >
+            ["at0015"] = <
+                text = <"Επαγγελματική">
+                description = <"Διεύθυνση της φυσικής τοποθεσίας μιας επιχείρησης ή γραφείου.">
+            >
+            ["at0016"] = <
+                text = <"Κατοικήσιμη">
+                description = <"Διεύθυνση όπου ζει ένα άτομο σε τακτική βάση.">
+            >
+            ["at0017"] = <
+                text = <"Προσωρινή κατοικία">
+                description = <"Διεύθυνση όπου ζει ένα άτομο σε προσωρινή βάση.">
+            >
+            ["at0018"] = <
+                text = <"Σχόλιο">
+                description = <"Πρόσθετη αφήγηση σχετικά με τη διεύθυνση που δεν καταγράφεται σε άλλα πεδία.">
+            >
+            ["at0019"] = <
+                text = <"Χάρτης URL">
+                description = <"Σύνδεσμος σε μια τοποθεσία σε έναν διαδικτυακό χάρτη.">
+                comment = <"*For example: a location on a Google or iOS map.(en)">
+            >
+            ["at0020"] = <
+                text = <"Διεύθυνση">
+                description = <"Δομημένες λεπτομέρειες ή επεκτάσεις στη διεύθυνση.">
+                comment = <"*For example: to represent a  structured, fine-grained address, or be used as standardised concepts that can be concatenated together to consistently construct a single 'Address line'.(en)">
+            >
+            ["at0021"] = <
+                text = <"Kωδικός Γεωγραφικής Θέσης">
+                description = <"Μοναδικό αναγνωριστικό που αντιπροσωπεύει μια ακριβή γεωγραφική τοποθεσία.">
+                comment = <"*Also known as a geocode. For example: GPS coordinates concatenating longitude, latitude +/-altitude; Open Location Code or Plus Code; Universal Transverse Mercator (UTM); and geohash.(en)">
+            >
+            ["at9021"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["at9020"] = <
+                text = <"* Angle, plane (en)">
+                description = <"* Angle, plane (en)">
+            >
+            ["ac9022"] = <
+                text = <"Τύπος (synthesised)">
+                description = <"Τύπος διεύθυνησς (synthesised)">
+            >
+            ["ac9023"] = <
+                text = <"Χρήση (synthesised)">
+                description = <"Ο πρωταρχικός σκοπός ή χρήση για τη διεύθυνση. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Address">
+                description = <"Details about the location of a person, physical building or landmark.">
+            >
+            ["at0001"] = <
+                text = <"Address line">
+                description = <"An unstructured address line representing all relevant street-level or post-box details that would support the identification of a location.">
+                comment = <"Occurrences for this data element is set to 0..* to allow one or more free text 'Address line' data elements to represent the huge variety of ways that ‘street-level' details may need to be recorded within the context of a specified 'Town'. Multiple address lines can be represented in a template, renamed as 'Address line 1', 'Address line 2,' etc. For example: '7A/52 Davis Street' or 'Apartment 7A' as Address line 1 with '52 Davis Street' as Address line 2; a roadside mail box location, such as 'RMB 725, Princes Highway'; or using a descriptive landmark, such as or 'Corner of Smith & Brown Streets' or 'Second house north of the general store with the red door'.">
+            >
+            ["at0002"] = <
+                text = <"City/Town">
+                description = <"The name of the lowest level locality that contains the address.">
+                comment = <"For example: suburb, town, city, settlement, village, or community. Coding with an external terminology is preferred, where possible. For example: 'Fitzroy'; 'Manchester'; 'Kingston' or 'Bergen'.">
+            >
+            ["at0003"] = <
+                text = <"District/County">
+                description = <"The name of a local government district or geographical area that contains the address.">
+                comment = <"Coding with an external terminology is preferred, where possible. For example: 'Surf Coast' and 'Yarra' local government councils in Victoria, Australia;and the Parishes of 'Saint Andrew' and 'Kingston' in Jamaica..">
+            >
+            ["at0004"] = <
+                text = <"State/Territory/Province">
+                description = <"The name of a major government district or geographical area that contains the address.">
+                comment = <"Coding with an external terminology is preferred, where possible. For example: 'New South Wales' and 'Queensland' in Australia; 'British Columbia' and 'Nova Scotia' in Canada; and the Counties of 'Cornwall', 'Middlesex' & 'Surrey' in Jamaica.">
+            >
+            ["at0005"] = <
+                text = <"Postal code">
+                description = <"The code for a postal delivery area containing the address, as defined by the relevant postal delivery service.">
+                comment = <"Also known as a postcode or ZIP code.
+">
+            >
+            ["at0006"] = <
+                text = <"Country">
+                description = <"The name of the country containing the address.">
+                comment = <"For example: Australia; Canada; Jamaica; or Norway. Coding with an external terminology, such as EN ISO 3166–1 Alpha 2 country code, is recommended.">
+            >
+            ["at0007"] = <
+                text = <"Latitude">
+                description = <"Horizontal (y) coordinate of a geolocation for the address.">
+                comment = <"Latitude is represented by positive values north of the equator and negative values south of the equator. For example the latitude of the Eiffel Tower is 48.858093.">
+            >
+            ["at0008"] = <
+                text = <"Longitude">
+                description = <"Horizontal (x) coordinate of a geolocation for the address.">
+                comment = <"Longitude is represented by negative values west of Prime Meridian and positive values east of Prime Meridian. For example the longitude of the Eiffel Tower is 2.294694.">
+            >
+            ["at0009"] = <
+                text = <"Altitude">
+                description = <"The vertical coordinate of a geolocation representing height or depth of the address.">
+                comment = <"For example, the altitude of the top of the Eiffel Tower is +324m.">
+            >
+            ["at0010"] = <
+                text = <"Type">
+                description = <"The type of address.">
+                comment = <"For example: physical or postal.">
+            >
+            ["at0011"] = <
+                text = <"Physical">
+                description = <"A physical location that can be visited.">
+            >
+            ["at0012"] = <
+                text = <"Postal">
+                description = <"Address used as a destination for mailing letters or parcels.">
+            >
+            ["at0013"] = <
+                text = <"Both">
+                description = <"Address of a physical location, also used as a destination for mail.">
+            >
+            ["at0014"] = <
+                text = <"Use">
+                description = <"The primary purpose or use for the address.">
+            >
+            ["at0015"] = <
+                text = <"Business">
+                description = <"Address of the physical location of a business or office.">
+            >
+            ["at0016"] = <
+                text = <"Residential">
+                description = <"Address of where a person is living on a regular basis.">
+            >
+            ["at0017"] = <
+                text = <"Temporary accommodation">
+                description = <"Address of where a person is living on a temporary basis.">
+            >
+            ["at0018"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the address not captured in other fields.">
+            >
+            ["at0019"] = <
+                text = <"Map URL">
+                description = <"Link to a location on an online map.">
+                comment = <"For example: a location on a Google or iOS map.">
+            >
+            ["at0020"] = <
+                text = <"Structured address">
+                description = <"Structured details or extensions to the address.">
+                comment = <"For example: to represent a  structured, fine-grained address, or be used as standardised concepts that can be concatenated together to consistently construct a single 'Address line'.">
+            >
+            ["at0021"] = <
+                text = <"Geolocation code">
+                description = <"Unique identifier that represents a precise geographical location.">
+                comment = <"Also known as a geocode. For example: GPS coordinates concatenating longitude, latitude +/-altitude; Open Location Code or Plus Code; Universal Transverse Mercator (UTM); and geohash.">
+            >
+            ["at9021"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["at9020"] = <
+                text = <"Angle, plane">
+                description = <"Angle, plane">
+            >
+            ["ac9022"] = <
+                text = <"Type (synthesised)">
+                description = <"The type of address. (synthesised)">
+            >
+            ["ac9023"] = <
+                text = <"Use (synthesised)">
+                description = <"The primary purpose or use for the address. (synthesised)">
+            >
+        >
+        ["fr"] = <
+            ["at0000"] = <
+                text = <"Adresse">
+                description = <"Détails sur l'emplacement d'une personne, d'un bâtiment physique ou d'un point de repère.">
+            >
+            ["at0001"] = <
+                text = <"Ligne d'adresse">
+                description = <"Une ligne d'adresse non structurée représentant tous les détails pertinents au niveau de la rue ou de la boîte postale qui permettraient d'identifier un lieu.">
+                comment = <"Le nombre d'occurrences de cet élément de données est fixé à 0...* pour permettre à un ou plusieurs éléments de données \"Ligne d'adresse\" à texte libre de représenter la grande variété de façons dont les détails \"au niveau de la rue\" peuvent devoir être enregistrés dans le contexte d'une \"ville\" spécifiée. Plusieurs lignes d'adresse peuvent être représentées dans un modèle, renommées \"ligne d'adresse 1\", \"ligne d'adresse 2\", etc. Par exemple : \"7A/52 Davis Street\" ou \"Appartement 7A\" comme ligne d'adresse 1 et \"52 Davis Street\" comme ligne d'adresse 2 ; l'emplacement d'une boîte aux lettres en bordure de route, comme \"RMB 725, Princes Highway\" ; ou l'utilisation d'un point de repère descriptif, comme \"Angle des rues Smith et Brown\" ou \"Deuxième maison au nord du magasin général avec la porte rouge\".">
+            >
+            ["at0002"] = <
+                text = <"Ville">
+                description = <"Le nom de la localité de niveau le plus bas qui contient l'adresse.">
+                comment = <"Par exemple : banlieue, ville, agglomération, village ou communauté. Dans la mesure du possible, il est préférable de coder avec une terminologie externe. Par exemple : \"Fitzroy\" ; \"Manchester\" ; \"Kingston\" ou \"Bergen\"">
+            >
+            ["at0003"] = <
+                text = <"District/Comté">
+                description = <"Le nom d'une circonscription administrative locale ou d'une zone géographique qui contient l'adresse.">
+                comment = <"Dans la mesure du possible, il est préférable de coder avec une terminologie externe. Par exemple : les conseils locaux de \"Surf Coast\" et de \"Yarra\" dans l'État de Victoria, en Australie ; et les paroisses de \"Saint Andrew\" et de \"Kingston\" en Jamaïque...">
+            >
+            ["at0004"] = <
+                text = <"État/Territoire/Province">
+                description = <"Le nom d'un grand district gouvernemental ou d'une zone géographique qui contient l'adresse.">
+                comment = <"Dans la mesure du possible, il est préférable de coder avec une terminologie externe. Par exemple : \"New South Wales\" et \"Queensland\" en Australie ; \"British Columbia\" et \"Nova Scotia\" au Canada ; et les comtés de \"Cornwall\", \"Middlesex\" et \"Surrey\" en Jamaïque.">
+            >
+            ["at0005"] = <
+                text = <"Code postal">
+                description = <"Code de la zone de livraison postale contenant l'adresse, tel que défini par le service de livraison postale concerné.">
+                comment = <"Également connu sous le nom de code postal ou de code ZIP.">
+            >
+            ["at0006"] = <
+                text = <"Pays">
+                description = <"Le nom du pays où se trouve l'adresse.">
+                comment = <"Par exemple, l'Australie, le Canada, la Jamaïque ou la Norvège : Australie ; Canada ; Jamaïque ; ou Norvège. Il est recommandé d'utiliser une terminologie externe, telle que le code pays EN ISO 3166-1 Alpha 2.">
+            >
+            ["at0007"] = <
+                text = <"Latitude">
+                description = <"Coordonnée horizontale (y) d'une géolocalisation pour l'adresse.">
+                comment = <"La latitude est représentée par des valeurs positives au nord de l'équateur et des valeurs négatives au sud de l'équateur. Par exemple, la latitude de la Tour Eiffel est de 48,858093.">
+            >
+            ["at0008"] = <
+                text = <"Longitude">
+                description = <"Coordonnée horizontale (x) d'une géolocalisation pour l'adresse.">
+                comment = <"La longitude est représentée par des valeurs négatives à l'ouest du méridien d'origine et des valeurs positives à l'est du méridien d'origine. Par exemple, la longitude de la Tour Eiffel est de 2,294694.">
+            >
+            ["at0009"] = <
+                text = <"Altitude">
+                description = <"Coordonnée verticale d'une géolocalisation représentant la hauteur ou la profondeur de l'adresse.">
+                comment = <"Par exemple, l'altitude du sommet de la Tour Eiffel est de +324m.">
+            >
+            ["at0010"] = <
+                text = <"Type">
+                description = <"Le type d'adresse.">
+                comment = <"Par exemple : physique ou postal.">
+            >
+            ["at0011"] = <
+                text = <"Physique">
+                description = <"Un lieu physique qui peut être visité.">
+            >
+            ["at0012"] = <
+                text = <"Poste">
+                description = <"Adresse utilisée comme destination pour l'envoi de lettres ou de colis.">
+            >
+            ["at0013"] = <
+                text = <"Les deux">
+                description = <"Address of a physical location, also used as a destination for mail.">
+            >
+            ["at0014"] = <
+                text = <"Utilisation">
+                description = <"L'objectif principal ou l'utilisation de l'adresse.">
+            >
+            ["at0015"] = <
+                text = <"Entreprise">
+                description = <"Adresse de l'emplacement physique d'une entreprise ou d'un bureau.">
+            >
+            ["at0016"] = <
+                text = <"Résidentiel">
+                description = <"Adresse du lieu de résidence habituel d'une personne.">
+            >
+            ["at0017"] = <
+                text = <"Logement temporaire">
+                description = <"Adresse du lieu de résidence temporaire d'une personne.">
+            >
+            ["at0018"] = <
+                text = <"Commentaire">
+                description = <"Informations supplémentaires sur l'adresse qui n'ont pas été saisies dans d'autres champs.">
+            >
+            ["at0019"] = <
+                text = <"URL de la carte">
+                description = <"Lien vers un lieu sur une carte en ligne.">
+                comment = <"Par exemple : un emplacement sur une carte Google ou iOS.">
+            >
+            ["at0020"] = <
+                text = <"Adresse structurée">
+                description = <"Détails structurés ou extensions de l'adresse.">
+                comment = <"Par exemple : représenter une adresse structurée et précise, ou être utilisés comme concepts normalisés pouvant être concaténés pour construire de manière cohérente une \"ligne d'adresse\" unique.">
+            >
+            ["at0021"] = <
+                text = <"Code de géolocalisation">
+                description = <"Identifiant unique qui représente une localisation géographique précise.">
+                comment = <"Également appelé géocode. Par exemple, les coordonnées GPS concaténant la longitude, la latitude et l'altitude : coordonnées GPS concaténant longitude, latitude +/-altitude ; Open Location Code ou Plus Code ; Universal Transverse Mercator (UTM) ; et geohash.">
+            >
+            ["at9021"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["at9020"] = <
+                text = <"* Angle, plane (en)">
+                description = <"* Angle, plane (en)">
+            >
+            ["ac9022"] = <
+                text = <"Type (synthesised)">
+                description = <"Le type d'adresse. (synthesised)">
+            >
+            ["ac9023"] = <
+                text = <"Utilisation (synthesised)">
+                description = <"L'objectif principal ou l'utilisation de l'adresse. (synthesised)">
+            >
+        >
+        ["nl"] = <
+            ["at0000"] = <
+                text = <"Adres">
+                description = <"Details van de locatie van een persoon, gebouw of oriëntatiepunt.">
+            >
+            ["at0001"] = <
+                text = <"Adresregel">
+                description = <"Een ongestructureerde adresregel die alle relevante informatie voor een locatie op niveau van straat of postbus aangeeft.">
+                comment = <"*en Occurrences for this data element is set to 0..* to allow one or more free text 'Address line' data elements to represent the huge variety of ways that ‘street-level' details may need to be recorded within the context of a specified 'Town'. Multiple address lines can be represented in a template, renamed as 'Address line 1', 'Address line 2,' etc. For example: '7A/52 Davis Street' or 'Apartment 7A' as Address line 1 with '52 Davis Street' as Address line 2; a roadside mail box location, such as 'RMB 725, Princes Highway'; or using a descriptive landmark, such as or 'Corner of Smith & Brown Streets' or 'Second house north of the general store with the red door'.">
+            >
+            ["at0002"] = <
+                text = <"Plaats">
+                description = <"De naam van de meest specifieke plaats waar het adres zich bevindt. Bijvoorbeeld een stad of een dorp.">
+                comment = <"Bijvoorbeeld: wijk, stad, nederzetting, dorp of gemeente. Het coderen met een externe terminologie verdient de voorkeur, indien mogelijk. 
+Bijvoorbeeld: 'Katendrecht', 'Rotterdam', 'Sliedrecht'.">
+            >
+            ["at0003"] = <
+                text = <"*District/County(en)">
+                description = <"*The name of a local government district or geographical area that contains the address.(en)">
+            >
+            ["at0004"] = <
+                text = <"*State/Territory/Province(en)">
+                description = <"*The name of a major government district or geographical area that contains the address.(en)">
+            >
+            ["at0005"] = <
+                text = <"*Postal code(en)">
+                description = <"*The code for a postal delivery area containing the address, as defined by the relevant postal delivery service.(en)">
+            >
+            ["at0006"] = <
+                text = <"*Country(en)">
+                description = <"*The name of the country containing the address.(en)">
+            >
+            ["at0007"] = <
+                text = <"*Latitude(en)">
+                description = <"*Horizontal (y) coordinate of a geolocation for the address.(en)">
+            >
+            ["at0008"] = <
+                text = <"*Longitude(en)">
+                description = <"*Horizontal (x) coordinate of a geolocation for the address.(en)">
+            >
+            ["at0009"] = <
+                text = <"*Altitude(en)">
+                description = <"*The vertical coordinate of a geolocation representing height or depth of the address.(en)">
+            >
+            ["at0010"] = <
+                text = <"*Type(en)">
+                description = <"*The type of address.(en)">
+            >
+            ["at0011"] = <
+                text = <"*Physical(en)">
+                description = <"*A physical location that can be visited.(en)">
+            >
+            ["at0012"] = <
+                text = <"*Postal(en)">
+                description = <"*Address used as a destination for mailing letters or parcels.(en)">
+            >
+            ["at0013"] = <
+                text = <"*Both(en)">
+                description = <"*Address of a physical location, also used as a destination for mail.(en)">
+            >
+            ["at0014"] = <
+                text = <"*Use(en)">
+                description = <"*The primary purpose or use for the address.(en)">
+            >
+            ["at0015"] = <
+                text = <"*Business(en)">
+                description = <"*Address of the physical location of a business or office.(en)">
+            >
+            ["at0016"] = <
+                text = <"*Residential(en)">
+                description = <"*Address of where a person is living on a regular basis.(en)">
+            >
+            ["at0017"] = <
+                text = <"*Temporary accommodation(en)">
+                description = <"*Address of where a person is living on a temporary basis.(en)">
+            >
+            ["at0018"] = <
+                text = <"*Comment(en)">
+                description = <"*Additional narrative about the address not captured in other fields.(en)">
+            >
+            ["at0019"] = <
+                text = <"*Map URL(en)">
+                description = <"*Link to a location on an online map.(en)">
+            >
+            ["at0020"] = <
+                text = <"*Structured address(en)">
+                description = <"*Structured details or extensions to the address.(en)">
+            >
+            ["at0021"] = <
+                text = <"*Geolocation code(en)">
+                description = <"*Unique identifier that represents a precise geographical location.(en)">
+            >
+            ["at9021"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["at9020"] = <
+                text = <"* Angle, plane (en)">
+                description = <"* Angle, plane (en)">
+            >
+            ["ac9022"] = <
+                text = <"*Type(en) (synthesised)">
+                description = <"*The type of address.(en) (synthesised)">
+            >
+            ["ac9023"] = <
+                text = <"*Use(en) (synthesised)">
+                description = <"*The primary purpose or use for the address.(en) (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9021"] = <http://openehr.org/id/122>
+            ["at9020"] = <http://openehr.org/id/497>
+        >
+    >
+    value_sets = <
+        ["ac9023"] = <
+            id = <"ac9023">
+            members = <"at0015", "at0016", "at0017">
+        >
+        ["ac9022"] = <
+            id = <"ac9022">
+            members = <"at0011", "at0012", "at0013">
+        >
+    >

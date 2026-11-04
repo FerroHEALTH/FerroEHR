@@ -1,0 +1,534 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=f14991ee-4c09-430c-829e-dc8eaa628d56; build_uid=2c467180-00f1-4c45-bc19-7adedc254ff6)
+    openEHR-EHR-OBSERVATION.nutritional_risk_screening.v1.1.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Gro-Hilde Ulriksen">
+                ["organisation"] = <"Nasjonal senter for ehelseforskning/Forvaltningssenter EPJ Helse Nord">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Micaela Thierley">
+        ["organisation"] = <"Helse Bergen">
+        ["email"] = <"micaela.thierley@helse-bergen.no">
+        ["date"] = <"2014-07-11">
+    >
+    original_namespace = <"no.nasjonalikt">
+    original_publisher = <"Nasjonal IKT">
+    other_contributors = <"Tomas Alme, DIPS ASA, Norway", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (Nasjonal IKT redaktør)", "Lars Bitsch-Larsen, Haukeland University Hospital, Bergen, Norway", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Kari Beate Engseth, Finnmarkssykehuset HF + Klinikk Kirkenes, Norway", "Einar Fosse, UNN HF, Norwegian Centre for Integrated Care and Telemedicine, Norway", "Lars Morgan Karlsen, Nordlandssykehuset Bodø, Norway", "Heather Leslie, Atomica Informatics, Australia", "Eli Taranger Ljønes, Bodø kommune, Norway", "Heidi Minne, Haraldsplass Diakonale sykehus, Norway", "Hugo Nilssen, UNN HF K3K/Tromsø, Norway", "Rune Pedersen, Universitetssykehuset i Nord Norge, Norway", "Laila Storesund, Haraldsplass diakonale sykehus, Norway", "Kari Sygnestveit, Helse Bergen, Norway", "Arne Løberg Sæter, DIPS ASA, Norway", "Micaela Thierley, Helse Bergen/Haraldsplass sykehus, Norway", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"no.nasjonalikt">
+    custodian_organisation = <"Nasjonal IKT">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Screening for Nutritional Deficiency in the Hospital: Nutritional Risk Screening (NRS 2002) from Kondrup J et al., Clinical Nutrition 2003; 22: 415-421, Recommended by the European Society for Clinical Nutrition and Metabolism (ESPEN) http://www.uniklinik-duesseldorf.de/fileadmin/Datenpool/einrichtungen/klinik_fuer_gastroenterologie_hepatologie_und_infektiologie_id6/Darmzentrum/Formulare_polnisch/ernhrungnrs_schuetz_2002_sept_2006_en.pdf">
+        ["2"] = <"Kondrup J, Rasmussen HH, Hamberg O, Stanga Z, ad hoc ESPEN working group: Nutritional risk screening (NRS 2002): a new method based on an analysis of controlled clinical trials. Clinical Nutrition (2003) 22(3): 321-336.">
+        ["3"] = <"Kondrup J, Allison SP, Elia M, Vellas B, Plauth M. ESPEN guidelines for nutritional screening 2002. Clinical Nutrition (2003) 22(4) 415-21.">
+        ["4"] = <"Thoresen og Wøien (2014), Screening for ernæringsmessig risiko (Nutritional Risk screening NRS 2002). http://arketyper.no/ckm/document?cid=1078.51.49">
+    >
+    other_details = <
+        ["current_contact"] = <"Micaela Thierley, Helse Bergen, micaela.thierley@helse-bergen.no">
+        ["MD5-CAM-1.0.1"] = <"1BF56ACE03BF868D21F84011F3C442A0">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"Verktøy for screening av ernæringsmessig risiko. Det finnes flere modeller for NRS, i dette tilfellet brukes oversettelsen gjort av Lene Thoresen og Hilde Wøien i 2014 og korrigert av Jens Kondrup.
+Versjonen anbefalt av det norske Helsedirektoratet inneholder andre grenseverdier for tidsintervaller i scoringen.
+
+Ernæringsmessig risiko er definert ved nåværende ernæringsstatus og risiko for svekket ernæringsstatus, på grunn av økt ernæringsbehov forårsaket av stressmetabolisme i den kliniske situasjonen.">
+            keywords = <"ernæring", "NRS", "NRS2002", "feilernæring", "underernæring", "vekttap", "vekt", "KMI", "BMI", "ernæringsmessig risiko">
+            use = <"Brukes for voksne personer.
+De første 4 spørsmålene er en innledende screening.
+Dersom svaret er \"Ja\" på noen av de innledende spørsmålene, gjennomføres hovedscreeningen.
+Dersom svaret er ”Nei” på alle de innledende spørsmålene skal pasienten rescreenes ukentlig. Dersom pasienten f.eks skal gjennomgå en planlagt stor operasjon, skal en forebyggende ernæringsplan overveies for å unngå den forventede ernæringsrisiko.
+
+Dersom total skår er ≥3 er pasienten i ernæringsmessig risiko og en ernæringsplan skal iverksettes. Dersom total skår er <3 skal pasienten rescreenes ukentlig. Hvis pasienten f.eks skal gjennomgå omfattende kirurgi skal en forebyggende ernæringsplan overveies for å unngå den forventede ernæringsrisiko.">
+            misuse = <"Brukes ikke til barn under 18 år.">
+            copyright = <"© Nasjonal IKT HF">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"NRS is a tool used for screening the patients nutritional status. There are several NRS models, in this case a translation from 2014 made by Lene Thoresen and Hilde Wøie and corrected by Jens Kondrup is used. The version recommended by the Norwegian Directorate of Health has other time interval values ​​in the scores.
+Nutritional risk is defined by combining current nutritional status and the risk of impaired nutritional status due to increased need for nutrition, caused by stress metabolism in the clinical situation.">
+            keywords = <"nutrition", "Nutritional risk screening", "NRS", "NRS 2002", "malnutrition", "undernourishment", "weight loss", "weight", "BMI", "nutritional risk">
+            use = <"To be used for adults only. 
+The first 4 questions are used as a initial screening.
+The main screening is only done if any of the questions in the initial screening are answered YES
+If all the questions in the initial screening is answered \"NO\" the patient needs a weekly re screening. 
+If a patient, e.g will undergo a planned major surgery, a preventive nutritional plan needs to be considered to avoid expected nutritional risks.
+
+Is the total score ≥3 the patient has a nutritional risk, and a nutritional plan needs to be effectuated. If the total score is <3 the patient needs weekly re screening. If the patient e.g will undergo major surgery a preventive nutrition plan have to be considered to avoid the expected nutritional risk.">
+            misuse = <"Not to be used in children under the age of 18 years old.">
+            copyright = <"© Nasjonal IKT HF">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Nutritional Risk Screening (NRS 2002)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] matches {    -- Unspecified event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    CLUSTER[at0031] occurrences matches {0..1} matches {    -- Initial screening
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Is the body mass index <20.5 kg/m²?
+                                                value matches {
+                                                    DV_CODED_TEXT[at9007] matches {
+                                                        defining_code matches {[ac9000]}    -- Is the body mass index <20.5 kg/m²? (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Has the patient lost weight in the previous 3 months?
+                                                value matches {
+                                                    DV_CODED_TEXT[at9008] matches {
+                                                        defining_code matches {[ac9001]}    -- Has the patient lost weight in the previous 3 months? (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Was nutritional intake reduced in the previous week?
+                                                value matches {
+                                                    DV_CODED_TEXT[at9009] matches {
+                                                        defining_code matches {[ac9002]}    -- Was nutritional intake reduced in the previous week? (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Is the patient very ill? (e.g. in intensive care)?
+                                                value matches {
+                                                    DV_CODED_TEXT[at9010] matches {
+                                                        defining_code matches {[ac9003]}    -- Is the patient very ill? (e.g. in intensive care)? (synthesised)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0032] occurrences matches {0..1} matches {    -- Main screening
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0016] occurrences matches {0..1} matches {    -- Nutritional status
+                                                value matches {
+                                                    DV_ORDINAL[at9011] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0018]}],    -- None
+                                                            [{1}, {[at0019]}],    -- Mild
+                                                            [{2}, {[at0020]}],    -- Moderate
+                                                            [{3}, {[at0021]}]    -- Severe
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0017] occurrences matches {0..1} matches {    -- Illness severity
+                                                value matches {
+                                                    DV_ORDINAL[at9012] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0022]}],    -- None
+                                                            [{1}, {[at0023]}],    -- Mild
+                                                            [{2}, {[at0024]}],    -- Moderate
+                                                            [{3}, {[at0025]}]    -- Severe
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0027] occurrences matches {0..1} matches {    -- Is the patients age ≥ 70?
+                                                value matches {
+                                                    DV_ORDINAL[at9013] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0028]}],    -- No
+                                                            [{1}, {[at0029]}]    -- Yes
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0030] occurrences matches {0..7} matches {    -- Total score (age adjusted)
+                                                value matches {
+                                                    DV_COUNT[at9014]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0041] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9015]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"NRS 2002">
+                description = <"Verktøyet Nutritional Risk Screening (NRS) 2002 for screening for ernæringsmessig risiko.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i en template eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Er BMI < 20,5?">
+                description = <"Er pasientens BMI under 20,5?">
+            >
+            ["at0005"] = <
+                text = <"Har pasienten tapt vekt i løpet av de 3 siste månedene?">
+                description = <"Vekttap de siste 3 månedene?">
+            >
+            ["at0006"] = <
+                text = <"Har pasienten hatt redusert næringsinntak i den siste uken?">
+                description = <"Redusert næringsinntak siste uken?">
+            >
+            ["at0007"] = <
+                text = <"Er pasienten alvorlig / kritisk syk?">
+                description = <"Har pasienten en økt stressmetabolisme i forbindelse med aktuell sykdom (traume, intensivpasient).">
+            >
+            ["at0016"] = <
+                text = <"Ernæringsstatus">
+                description = <"Ernæringsstatus (≈ grad av svekkelse).">
+            >
+            ["at0017"] = <
+                text = <"Sykdommens alvorlighetsgrad">
+                description = <"Sykdommens alvorlighetsgrad (≈ økt
+behov).">
+                comment = <"* indikerer at en studie direkte underbygger inndelingen av sykdommens alvorlighetsgrad i mild, moderat og alvorlig sykdom til pasienter med den diagnosen.
+
+# indikerer at diagnosen er basert på prototypene gitt nedenfor:
+
+Skår=1: en pasient med kronisk sykdom innlagt på sykehus på grunn av komplikasjoner. Pasienten er avkreftet, men er oppegående. Proteinbehovet er økt, men kan dekkes med mat og/eller næringstilskudd i de fleste tilfeller.
+
+Skår=2: en pasient som er sengeliggende på grunn av sykdom, f.eks etter stor abdominal kirurgi. Proteinbehov er vesentlig økt, men kan dekkes, selv om sondeernæring og/eller intravenøs ernæringstilførsel er nødvendig i mange tilfeller.
+
+Skår=3: en intensivpasient med behov for respiratorstøtte etc. Proteinbehovet er økt og kan ikke dekkes, selv med sondeernæring og/eller intravenøs ernæringstilførsel. Nedbrytning av proteiner og
+nitrogentap kan bli betydelig hemmet.">
+            >
+            ["at0018"] = <
+                text = <"Fraværende">
+                description = <"Normal ernæringsstatus.">
+            >
+            ["at0019"] = <
+                text = <"Mild">
+                description = <"Vekttap > 5 % i løpet av 3 måneder, eller matinntak 50-75 % av normalt behov i siste uke.">
+            >
+            ["at0020"] = <
+                text = <"Moderat">
+                description = <"Vekttap > 5 % i løpet av 2 måneder, eller BMI 18.5-20.5 + nedsatt almenntilstand, eller matinntak 25-50 % av normalt behov i siste uke.">
+            >
+            ["at0021"] = <
+                text = <"Alvorlig">
+                description = <"Vekttap > 5 % i løpet av 1 måned (>15 % siste 3 måneder), eller BMI<18.5 + nedsatt almenntilstand, eller matinntak 0-25 % av normalt behov siste uke.">
+            >
+            ["at0022"] = <
+                text = <"Fraværende">
+                description = <"Normale ernæringsbehov.">
+            >
+            ["at0023"] = <
+                text = <"Mild">
+                description = <"Lårhalsbrudd*, kronisk syke pasienter* spesielt de med akutte komplikasjoner, levercirrose*, KOLS*, kronisk hemodialyse#, diabetes#, kreftsykdommer#.">
+            >
+            ["at0024"] = <
+                text = <"Moderat">
+                description = <"Omfattende abdominal kirurgi*, slag*, alvorlig lungebetennelse#, maligne blodsykdommer#.">
+            >
+            ["at0025"] = <
+                text = <"Alvorlig">
+                description = <"Hodeskade*, benmargstransplantasjon*, intensivpasienter (APACHE skår>10).">
+            >
+            ["at0027"] = <
+                text = <"Er pasientens alder ≥ 70 år?">
+                description = <"Er pasienten 70 år eller eldre?">
+            >
+            ["at0028"] = <
+                text = <"Nei">
+                description = <"Pasienten er yngre enn 70 år.">
+            >
+            ["at0029"] = <
+                text = <"Ja">
+                description = <"Pasienten er 70 år eller eldre.">
+            >
+            ["at0030"] = <
+                text = <"Total score">
+                description = <"Summen av score fra ernæringsstatus, sykdommens alvorlighetsgrad og alder.">
+            >
+            ["at0031"] = <
+                text = <"Innledende screening">
+                description = <"Dersom svaret er \"Ja\" på noen av de innledende spørsmålene, gjennomføres hovedscreeningen.">
+            >
+            ["at0032"] = <
+                text = <"Hovedscreening">
+                description = <"Den avsluttende screeningen gjennomføres kun dersom det svares \"Ja\" på noen av spørsmålene i den innledende screeningen.">
+            >
+            ["at0033"] = <
+                text = <"Ja">
+                description = <"Pasientens BMI er under 20,5.">
+            >
+            ["at0034"] = <
+                text = <"Nei">
+                description = <"Pasientens BMI er over eller lik 20,5.">
+            >
+            ["at0035"] = <
+                text = <"Ja">
+                description = <"Pasienten har tapt vekt i løpet av de 3 siste månedene.">
+            >
+            ["at0036"] = <
+                text = <"Nei">
+                description = <"Pasienten har ikke tapt vekt i løpet av de 3 siste månedene.">
+            >
+            ["at0037"] = <
+                text = <"Ja">
+                description = <"Pasienten har hatt redusert næringsinntak i den siste uken.">
+            >
+            ["at0038"] = <
+                text = <"Nei">
+                description = <"Pasienten har ikke hatt redusert næringsinntak i den siste uken.">
+            >
+            ["at0039"] = <
+                text = <"Ja">
+                description = <"Pasienten er alvorlig/kritisk syk.">
+            >
+            ["at0040"] = <
+                text = <"Nei">
+                description = <"Pasienten er ikke alvorlig/kritisk syk.">
+            >
+            ["at0041"] = <
+                text = <"Kommentar">
+                description = <"Fritekstkommentar om bruk av NRS 2002 som ikke fanges opp i de strukturerte elementene.">
+            >
+            ["ac9000"] = <
+                text = <"Er BMI < 20,5? (synthesised)">
+                description = <"Er pasientens BMI under 20,5? (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Har pasienten tapt vekt i løpet av de 3 siste månedene? (synthesised)">
+                description = <"Vekttap de siste 3 månedene? (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Har pasienten hatt redusert næringsinntak i den siste uken? (synthesised)">
+                description = <"Redusert næringsinntak siste uken? (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Er pasienten alvorlig / kritisk syk? (synthesised)">
+                description = <"Har pasienten en økt stressmetabolisme i forbindelse med aktuell sykdom (traume, intensivpasient). (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Ernæringsstatus (synthesised)">
+                description = <"Ernæringsstatus (≈ grad av svekkelse). (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Sykdommens alvorlighetsgrad (synthesised)">
+                description = <"Sykdommens alvorlighetsgrad (≈ økt
+behov). (synthesised)">
+            >
+            ["ac9016"] = <
+                text = <"Er pasientens alder ≥ 70 år? (synthesised)">
+                description = <"Er pasienten 70 år eller eldre? (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Nutritional Risk Screening (NRS 2002)">
+                description = <"Screening for malnutrition using the tool NRS 2002.">
+            >
+            ["at0002"] = <
+                text = <"Unspecified event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Is the body mass index <20.5 kg/m²?">
+                description = <"Is the patients body mass index below 20.5 kg/m²?">
+            >
+            ["at0005"] = <
+                text = <"Has the patient lost weight in the previous 3 months?">
+                description = <"Weightloss during the last 3 months?">
+            >
+            ["at0006"] = <
+                text = <"Was nutritional intake reduced in the previous week?">
+                description = <"Reduced nutritional intake in the previous week?">
+            >
+            ["at0007"] = <
+                text = <"Is the patient very ill? (e.g. in intensive care)?">
+                description = <"Do the patient have an increased stress metabolism related to relevant disease (trauma, intensive care patient).">
+            >
+            ["at0016"] = <
+                text = <"Nutritional status">
+                description = <"Nutritional status (≈ degree of weakening).">
+            >
+            ["at0017"] = <
+                text = <"Illness severity">
+                description = <"Severity of disease (≈ increased needs).">
+                comment = <"Indicates that a study directly underpins dividing the disease severity in mild, moderate and severe disease for patients with a certain diagnosis.
+#Indicates the the diagnosis is based on the prototypes below: 
+
+Score=1: a patient with chronic illness admitted to the hospital with complications. The patient is weakened but ambulatory. The protein requirement is substantially increased, this is manageable with food and/or nutritional supplements. 
+
+Score=2: a patient at bed rest due to illness e.g. after major abdominal surgery. The protein requirement is significantly increased, this is manageable, however it is often necessary to use tube feeding and/or intravenous nutrition. 
+
+Score=3: an intensive care patient needing ventilation support etc. The protein requirement is increased and is not manageable even with tube feeding and/or intravenous nutrition. There is a risk of significantly inhibiting the degeneration of proteins and nitrogen loss.">
+            >
+            ["at0018"] = <
+                text = <"None">
+                description = <"Normal nutritional status.">
+            >
+            ["at0019"] = <
+                text = <"Mild">
+                description = <"Weight loss > 5% over the last 3 months or nutritional intake <50–75% of required nutritional intake in the previous week.">
+            >
+            ["at0020"] = <
+                text = <"Moderate">
+                description = <"Weight loss >5% within 2 months or BMI 18.5–20.5 kg/m² and reduced general condition (GC) or nutritional intake 25–50% of required nutritional intake in the previous week.">
+            >
+            ["at0021"] = <
+                text = <"Severe">
+                description = <"Weight loss >5 % within a month (>15% over the last 3 months) or BMI <18.5
+kg/m² and reduced general condition or nutritional intake 0–25% of required nutritional intake in the previous week.">
+            >
+            ["at0022"] = <
+                text = <"None">
+                description = <"Normal nutritional requirements.">
+            >
+            ["at0023"] = <
+                text = <"Mild">
+                description = <"For example: Femoral neck fracture, chronic disease especially if complications are present: liver cirrhosis*, chronic obstructive lung disease*, chronic hemodialysis#, diabetes#, cancer#. Patients that have a disease that causes a mildly reduced general condition status.">
+            >
+            ["at0024"] = <
+                text = <"Moderate">
+                description = <"For example: Major abdominal surgery*, stroke*, severe pneumonia, hematologic cancers.">
+            >
+            ["at0025"] = <
+                text = <"Severe">
+                description = <"For example: Head injury*, bone marrow transplantation*,
+patients in intensive care (APACHE-II >10).">
+            >
+            ["at0027"] = <
+                text = <"Is the patients age ≥ 70?">
+                description = <"Is the patients age 70 or more.">
+            >
+            ["at0028"] = <
+                text = <"No">
+                description = <"The patient is younger than 70 years.">
+            >
+            ["at0029"] = <
+                text = <"Yes">
+                description = <"The patient is 70 years or old.">
+            >
+            ["at0030"] = <
+                text = <"Total score (age adjusted)">
+                description = <"The total score is a combination of nutritional status, disease severity and age.">
+            >
+            ["at0031"] = <
+                text = <"Initial screening">
+                description = <"The main screening is done if any of the questions in the inital iscreening is answered \"YES\".">
+            >
+            ["at0032"] = <
+                text = <"Main screening">
+                description = <"The main screening is performed only if any of the questions in the initial screening is answered \"YES\".">
+            >
+            ["at0033"] = <
+                text = <"Yes">
+                description = <"The patients body mass index is below 20.5 kg/m².">
+            >
+            ["at0034"] = <
+                text = <"No">
+                description = <"The patients body mass index is equal or above 20.5 kg/m².">
+            >
+            ["at0035"] = <
+                text = <"Yes">
+                description = <"The patient has lost weight during the last 3 months.">
+            >
+            ["at0036"] = <
+                text = <"No">
+                description = <"The patient did not lose weight during the last 3 months.">
+            >
+            ["at0037"] = <
+                text = <"Yes">
+                description = <"The patient had reduced nutritional intake in the previous week.">
+            >
+            ["at0038"] = <
+                text = <"No">
+                description = <"Reduced nutritional intake in the previous week?">
+            >
+            ["at0039"] = <
+                text = <"Yes">
+                description = <"The patient is very ill (e.g. in intensive care).">
+            >
+            ["at0040"] = <
+                text = <"No">
+                description = <"The patient is not very ill.">
+            >
+            ["at0041"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the assessment of the Nutritional Risk Screening, not captured in the structured elements.">
+            >
+            ["ac9000"] = <
+                text = <"Is the body mass index <20.5 kg/m²? (synthesised)">
+                description = <"Is the patients body mass index below 20.5 kg/m²? (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Has the patient lost weight in the previous 3 months? (synthesised)">
+                description = <"Weightloss during the last 3 months? (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Was nutritional intake reduced in the previous week? (synthesised)">
+                description = <"Reduced nutritional intake in the previous week? (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Is the patient very ill? (e.g. in intensive care)? (synthesised)">
+                description = <"Do the patient have an increased stress metabolism related to relevant disease (trauma, intensive care patient). (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Nutritional status (synthesised)">
+                description = <"Nutritional status (≈ degree of weakening). (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Illness severity (synthesised)">
+                description = <"Severity of disease (≈ increased needs). (synthesised)">
+            >
+            ["ac9016"] = <
+                text = <"Is the patients age ≥ 70? (synthesised)">
+                description = <"Is the patients age 70 or more. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0037", "at0038">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0035", "at0036">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0033", "at0034">
+        >
+        ["ac9016"] = <
+            id = <"ac9016">
+            members = <"at0028", "at0029">
+        >
+        ["ac9015"] = <
+            id = <"ac9015">
+            members = <"at0022", "at0023", "at0024", "at0025">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0039", "at0040">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0018", "at0019", "at0020", "at0021">
+        >
+    >

@@ -1,0 +1,747 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=6376ffcd-e7f4-4a30-bf76-a48235723bb4; build_uid=1a7e47fc-a11a-4cfa-8b07-a950b38d4ab8)
+    openEHR-EHR-CLUSTER.exam_oocyte.v1.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Peter Fedorcsak, Trine Skuland, Vebjørn Arntzen">
+                ["organisation"] = <"University of Oslo, Oslo University Hospital">
+                ["email"] = <"peterfe@uio.no, varntzen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Peter Fedorcsak">
+        ["organisation"] = <"Oslo University Hospital">
+        ["email"] = <"peter.fedorcsak@medisin.uio.no">
+        ["date"] = <"2021-10-26">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Peter Fedorcsak, University of Oslo, Norway (openEHR Editor)", "Rosane Gotardo, Systema Ltda., Brazil", "Heather Grain, Llewelyn Grain Informatics, Australia", "Gareth Greggains, Oslo University Hospital", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Manisha Mantri, C-DAC, India", "Arunakiry Natarajan, medondo, Germany", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Trine Skuland, Oslo University Hospital", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Julius Hreinsson, Laboratory Director at Reproductive Medicine, Sahlgrenska University Hospital, Sweden">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Alpha Scientists in Reproductive, M. and E.S.I.G.o. Embryology, The Istanbul consensus workshop on embryo assessment: proceedings of an expert meeting. Human Reproduction, 2011. 26(6): p. 1270-1283.">
+        ["2"] = <"Rienzi, L., et al., The oocyte. Human Reproduction, 2012. 27(suppl_1): p. i2-i21.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"B71B0E7A7B6F58ECD029DBFDD7664E59">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere morfologiske funn ved mikroskopisk undersøkelse av en human oocytt.">
+            keywords = <"in vitro, befruktning, IVF, reproduksjon, zygote, fertilisert, befruktet, egg, eggcelle, oocytt, embryo, blastocyst, assistert, kjønnscelle", ...>
+            use = <"Brukes til å registrere morfologiske observasjoner av en human oocytt, vanligvis som del av assistert befruktning.
+
+Arketypen er laget spesifikt for å brukes i SLOT'et \"Undersøkelsesdetaljer\" i arketypen \"OBSERVATION.embryo_assessment\" eller \"ACTION.procedure\", men kan også brukes innen andre ENTRY- og CLUSTER-arketyper der det er klinisk passende.">
+            misuse = <"Skal ikke brukes til å registrere morfologiske observasjoner av zygoter, embryoer i deling og blastocyster - bruk spesifikke CLUSTER arketyper.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record structured observations of a human oocyte.">
+            keywords = <"in vitro, fertilization, IVF, reproductive medicine, zygote, fertilised, fertilized, oocyte, egg, fertilisation, embryo, reproduction, ART, blastocyst, gemete", ...>
+            use = <"Use to record morphological observations of a human oocyte, usually as part of assisted reproduction treatment.
+
+This archetype has been specifically designed to be used in the 'Observations detail' SLOT within the 'OBSERVATION.embryo_assessment' or 'ACTION.procedure' archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.">
+            misuse = <"Not to be used for recording morphological observations of zygotes, cleavage stage embryos and blastocysts - use specific CLUSTER archetypes for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Examination of an oocyte
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0028] occurrences matches {0..1} matches {    -- Maturity of cumulus-oocyte complex
+                value matches {
+                    DV_CODED_TEXT[at9009] matches {
+                        defining_code matches {[ac9000]}    -- Maturity of cumulus-oocyte complex (synthesised)
+                    }
+                    DV_TEXT[at9010]
+                }
+            }
+            ELEMENT[at0035] occurrences matches {0..1} matches {    -- Oocyte maturation stage
+                value matches {
+                    DV_CODED_TEXT[at9011] matches {
+                        defining_code matches {[ac9001]}    -- Oocyte maturation stage (synthesised)
+                    }
+                    DV_TEXT[at9012]
+                }
+            }
+            ELEMENT[at0039] occurrences matches {0..1} matches {    -- Oocyte size
+                value matches {
+                    DV_CODED_TEXT[at9013] matches {
+                        defining_code matches {[ac9002]}    -- Oocyte size (synthesised)
+                    }
+                    DV_TEXT[at9014]
+                    DV_QUANTITY[at9033] matches {
+                        property matches {[at9028]}    -- Length
+                        magnitude matches {|>=0.0|}
+                        units matches {"um"}
+                    }
+                }
+            }
+            ELEMENT[at0040] occurrences matches {0..1} matches {    -- Oocyte shape
+                value matches {
+                    DV_CODED_TEXT[at9015] matches {
+                        defining_code matches {[ac9003]}    -- Oocyte shape (synthesised)
+                    }
+                    DV_TEXT[at9016]
+                }
+            }
+            ELEMENT[at0041] matches {    -- Cytoplasmic morphology
+                value matches {
+                    DV_CODED_TEXT[at9017] matches {
+                        defining_code matches {[ac9004]}    -- Cytoplasmic morphology (synthesised)
+                    }
+                    DV_TEXT[at9018]
+                }
+            }
+            ELEMENT[at0042] occurrences matches {0..1} matches {    -- Zona pellucida thickness
+                value matches {
+                    DV_CODED_TEXT[at9019] matches {
+                        defining_code matches {[ac9005]}    -- Zona pellucida thickness (synthesised)
+                    }
+                    DV_TEXT[at9020]
+                    DV_QUANTITY[at9034] matches {
+                        property matches {[at9028]}    -- Length
+                        magnitude matches {|>=0.0|}
+                        units matches {"um"}
+                    }
+                }
+            }
+            ELEMENT[at0043] occurrences matches {0..1} matches {    -- Perivitelline space size
+                value matches {
+                    DV_CODED_TEXT[at9021] matches {
+                        defining_code matches {[ac9029]}    -- Perivitelline space size (synthesised)
+                    }
+                    DV_TEXT[at9022]
+                    DV_QUANTITY[at9035] matches {
+                        property matches {[at9028]}    -- Length
+                        units matches {"um"}
+                    }
+                }
+            }
+            ELEMENT[at0078] occurrences matches {0..1} matches {    -- Perivitelline space morphology
+                value matches {
+                    DV_CODED_TEXT[at9036] matches {
+                        defining_code matches {[ac9030]}    -- Perivitelline space morphology (synthesised)
+                    }
+                    DV_TEXT[at9037]
+                }
+            }
+            ELEMENT[at0044] matches {    -- First polar body morphology
+                value matches {
+                    DV_TEXT[at9023]
+                    DV_CODED_TEXT[at9024] matches {
+                        defining_code matches {[ac9007]}    -- First polar body morphology (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0045] occurrences matches {0..1} matches {    -- Metaphase spindle size
+                value matches {
+                    DV_TEXT[at9025]
+                    DV_CODED_TEXT[at9026] matches {
+                        defining_code matches {[ac9031]}    -- Metaphase spindle size (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0083] occurrences matches {0..1} matches {    -- Metaphase spindle location
+                value matches {
+                    DV_TEXT[at9038]
+                    DV_CODED_TEXT[at9039] matches {
+                        defining_code matches {[ac9032]}    -- Metaphase spindle location (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0046] matches {    -- Other morphological features
+                value matches {
+                    DV_TEXT[at9027]
+                }
+            }
+            ELEMENT[at0077] occurrences matches {0..1} matches {    -- Morphology grade
+                value matches {
+                    DV_TEXT[at9040]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Undersøkelse av en oocytt">
+                description = <"Morfologiske funn ved mikroskopisk undersøkelse av en human oocytt.">
+            >
+            ["at0028"] = <
+                text = <"Modenhet av cumulus-oocytt kompleks">
+                description = <"Modenhet av det intakte cumulus-oocytt komplekset.">
+            >
+            ["at0031"] = <
+                text = <"Modent">
+                description = <"Modent cumulus-oocytt kompleks med ekspanderte corona radiata celler.">
+            >
+            ["at0032"] = <
+                text = <"Umodent">
+                description = <"Umodent, kompakt cumulus-oocytt kompleks med tette corona radiata celler.">
+            >
+            ["at0033"] = <
+                text = <"Overmodent">
+                description = <"Få eller manglende cumulusdeller.">
+            >
+            ["at0034"] = <
+                text = <"Veldig umodent">
+                description = <"Liten oocytt og kompakte cumulusceller.">
+            >
+            ["at0035"] = <
+                text = <"Modenhet av oocytt">
+                description = <"Kjernens status i oocytten etter fjerning av cumulus-corona radiata celler.">
+            >
+            ["at0036"] = <
+                text = <"Metafase 2">
+                description = <"Oocytt i metafase 2 (M2) av den meiotiske celledelingen.">
+            >
+            ["at0037"] = <
+                text = <"Meiose 1">
+                description = <"Oocytt i meiose 1.">
+            >
+            ["at0038"] = <
+                text = <"Germinal vesikkel">
+                description = <"Oocytt med en intakt kjerne, germinal vesikkel (GV), i profase 1 av den meiotiske celledelingen.">
+            >
+            ["at0039"] = <
+                text = <"Oocyttens størrelse">
+                description = <"Størrelsen av oocytten.">
+            >
+            ["at0040"] = <
+                text = <"Oocyttens form">
+                description = <"Oocyttens form.">
+            >
+            ["at0041"] = <
+                text = <"Morfologi av cytoplasma">
+                description = <"Morfologi av oocyttens cytoplasma.">
+                comment = <"Dette dataelementet er satt til å kunne repeteres fordi det kan være behov for flere morfologier, eller behov for både fritekst og kodede verdier.">
+            >
+            ["at0042"] = <
+                text = <"Tykkelse på zona pellucida">
+                description = <"Tykkelse på zona pellucida.">
+            >
+            ["at0043"] = <
+                text = <"Perivittelint rom størrelse">
+                description = <"Størrelsen av det perivittelinte rom.">
+            >
+            ["at0044"] = <
+                text = <"Morfologi av det første pollegeme">
+                description = <"Morfologi av det første pollegeme.">
+                comment = <"Dette dataelementet er åpnet for å kunne repeteres for å legge til rette for at flere enn en morfologi kan registreres.">
+            >
+            ["at0045"] = <
+                text = <"Spindelstørrelse">
+                description = <"Størrelsen av den meiotiske spindelen observert ved hjelp av polarisert lysmikroskopi.">
+            >
+            ["at0046"] = <
+                text = <"Andre morfologiske observasjoner">
+                description = <"Ytterligere morfologiske observasjoner av oocytten som ikke dekkes av de andre spesifiserte elementene.">
+                comment = <"Dette dataelementet er åpnet for å kunne repeteres for å legge til rette for at flere enn en morfologi kan registreres.">
+            >
+            ["at0047"] = <
+                text = <"Normal">
+                description = <"Oocytt med normal størrelse.">
+            >
+            ["at0048"] = <
+                text = <"Liten">
+                description = <"Liten oocytt.">
+            >
+            ["at0049"] = <
+                text = <"Kjempeoocytt">
+                description = <"Gigantisk oocytt.">
+            >
+            ["at0050"] = <
+                text = <"Rund">
+                description = <"Rund oocytt.">
+            >
+            ["at0051"] = <
+                text = <"Oval eller avlang">
+                description = <"Oval eller avlang oocytt.">
+            >
+            ["at0052"] = <
+                text = <"Homogent">
+                description = <"Homogent, normalt cytoplasma.">
+            >
+            ["at0053"] = <
+                text = <"Granulert">
+                description = <"Granulert cytoplasma.">
+            >
+            ["at0054"] = <
+                text = <"Vakuolert">
+                description = <"Små eller store vakuoler i oocyttens cytoplasma.">
+            >
+            ["at0055"] = <
+                text = <"Plakk av utvidede SER-plater">
+                description = <"Plakk av utvidede plater med glatt endoplasmatisk retikulum.">
+            >
+            ["at0056"] = <
+                text = <"Normal">
+                description = <"Normal tykkelse av zona pellucida.">
+            >
+            ["at0057"] = <
+                text = <"Tynn">
+                description = <"Tynn zona pellucida.">
+            >
+            ["at0058"] = <
+                text = <"Tykk">
+                description = <"Zona pellucida er tykk.">
+            >
+            ["at0059"] = <
+                text = <"Normal">
+                description = <"Normalt størrelse av perivitellint rom.">
+            >
+            ["at0060"] = <
+                text = <"Stort">
+                description = <"Stort perivitellint rom.">
+            >
+            ["at0062"] = <
+                text = <"Refraktilt legeme">
+                description = <"Et mørkt, lite område med lipider og tett, granulert materiale i oocyttens cytoplasma.">
+            >
+            ["at0063"] = <
+                text = <"Mørkt">
+                description = <"Mørkt cytoplasma.">
+            >
+            ["at0064"] = <
+                text = <"Inklusjoner">
+                description = <"Cytoplasmatiske inklusjoner.">
+            >
+            ["at0065"] = <
+                text = <"Lite">
+                description = <"Lite perivitellint rom.">
+            >
+            ["at0066"] = <
+                text = <"Normalt, jevnt">
+                description = <"Ovalt eller rundt første pollegeme med jevn overflate.">
+            >
+            ["at0067"] = <
+                text = <"Ovalt, ujevnt">
+                description = <"Ovalt eller rundt første pollegeme med ujevn overflate.">
+            >
+            ["at0068"] = <
+                text = <"Fragmentert">
+                description = <"Fragmentert første pollegeme.">
+            >
+            ["at0069"] = <
+                text = <"Abnormt stor">
+                description = <"Unormalt stort første pollegeme.">
+            >
+            ["at0070"] = <
+                text = <"Degenerert">
+                description = <"Degenerert eller atretisk første pollegeme.">
+            >
+            ["at0071"] = <
+                text = <"Normal størrelse">
+                description = <"Normal meiotisk spindel 90 - 120 kvadratmikrometer.">
+            >
+            ["at0072"] = <
+                text = <"Liten">
+                description = <"Liten meiotisk spindel < 90 kvadratmikrometer.">
+            >
+            ["at0073"] = <
+                text = <"Stor">
+                description = <"Stor meiotisk spindel > 120 kvadratmikrometer.">
+            >
+            ["at0077"] = <
+                text = <"Morfologisk gradering">
+                description = <"Overordnet gradering eller skår basert på oocyttens registrerte, morfologiske egenskaper.">
+                comment = <"Bruk av en etablert skala for vurdering av oocyttens morfologi anbefales.">
+            >
+            ["at0078"] = <
+                text = <"Perivitellint rom morfologi">
+                description = <"Morfologi av det perivitellinte rom.">
+            >
+            ["at0079"] = <
+                text = <"Normal">
+                description = <"Normalt perivitellint rom.">
+            >
+            ["at0082"] = <
+                text = <"Rester">
+                description = <"Rester eller granuler i det perivitelline rom.">
+            >
+            ["at0083"] = <
+                text = <"Spindellokalisering">
+                description = <"Lokaliseringen av den meiotiske spindelsen observert ved hjelp av polarisert lysmikroskopi.">
+            >
+            ["at0087"] = <
+                text = <"Normal lokalisering">
+                description = <"Den meiotiske spindelen befinner seg under eller i tett nærhet til det første pollegemet (avviksvinkel < 90 grader).">
+            >
+            ["at0088"] = <
+                text = <"Unormal lokalisering">
+                description = <"Den meiotiske spindelen er langt unna det første pollegemet (avviksvinkel > 90 grader).">
+            >
+            ["at9028"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac9000"] = <
+                text = <"Modenhet av cumulus-oocytt kompleks (synthesised)">
+                description = <"Modenhet av det intakte cumulus-oocytt komplekset. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Modenhet av oocytt (synthesised)">
+                description = <"Kjernens status i oocytten etter fjerning av cumulus-corona radiata celler. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Oocyttens størrelse (synthesised)">
+                description = <"Størrelsen av oocytten. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Oocyttens form (synthesised)">
+                description = <"Oocyttens form. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Morfologi av cytoplasma (synthesised)">
+                description = <"Morfologi av oocyttens cytoplasma. (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Tykkelse på zona pellucida (synthesised)">
+                description = <"Tykkelse på zona pellucida. (synthesised)">
+            >
+            ["ac9029"] = <
+                text = <"Perivittelint rom størrelse (synthesised)">
+                description = <"Størrelsen av det perivittelinte rom. (synthesised)">
+            >
+            ["ac9030"] = <
+                text = <"Perivitellint rom morfologi (synthesised)">
+                description = <"Morfologi av det perivitellinte rom. (synthesised)">
+            >
+            ["ac9007"] = <
+                text = <"Morfologi av det første pollegeme (synthesised)">
+                description = <"Morfologi av det første pollegeme. (synthesised)">
+            >
+            ["ac9031"] = <
+                text = <"Spindelstørrelse (synthesised)">
+                description = <"Størrelsen av den meiotiske spindelen observert ved hjelp av polarisert lysmikroskopi. (synthesised)">
+            >
+            ["ac9032"] = <
+                text = <"Spindellokalisering (synthesised)">
+                description = <"Lokaliseringen av den meiotiske spindelsen observert ved hjelp av polarisert lysmikroskopi. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Examination of an oocyte">
+                description = <"Morphological findings obtained by microscopy of a human oocyte.">
+            >
+            ["at0028"] = <
+                text = <"Maturity of cumulus-oocyte complex">
+                description = <"Maturity of the entire intact cumulus-oocyte complex.">
+            >
+            ["at0031"] = <
+                text = <"Mature">
+                description = <"Mature, expanded corona cell complex.">
+            >
+            ["at0032"] = <
+                text = <"Immature">
+                description = <"Immature, unexpanded compact cumulus and corona cells.">
+            >
+            ["at0033"] = <
+                text = <"Postmature">
+                description = <"Absent corona.">
+            >
+            ["at0034"] = <
+                text = <"Very immature">
+                description = <"Small oocyte and corona.">
+            >
+            ["at0035"] = <
+                text = <"Oocyte maturation stage">
+                description = <"Nuclear maturity of oocyte after removal of the cumulus-corona cell mass.">
+            >
+            ["at0036"] = <
+                text = <"Metaphase 2">
+                description = <"Ooocyte in the metaphase 2 (M2) of the meiotic cell division.">
+            >
+            ["at0037"] = <
+                text = <"Meiosis 1">
+                description = <"Ooocyte in meiosis 1.">
+            >
+            ["at0038"] = <
+                text = <"Germinal vesicle">
+                description = <"Ooocyte still displaying an intact nucleus, the germinal vesicle (GV), in prophase 1 of meiosis.">
+            >
+            ["at0039"] = <
+                text = <"Oocyte size">
+                description = <"Size of the oocyte.">
+            >
+            ["at0040"] = <
+                text = <"Oocyte shape">
+                description = <"Shape of the oocyte.">
+            >
+            ["at0041"] = <
+                text = <"Cytoplasmic morphology">
+                description = <"Morphology of the oocyte cytoplasm.">
+                comment = <"The occurrences for this data element is set to 0..* to allow for more than one morphological attribute to be selected.">
+            >
+            ["at0042"] = <
+                text = <"Zona pellucida thickness">
+                description = <"Thickness of the zona pellucida.">
+            >
+            ["at0043"] = <
+                text = <"Perivitelline space size">
+                description = <"Size of the perivitelline space.">
+            >
+            ["at0044"] = <
+                text = <"First polar body morphology">
+                description = <"Morphology of the first polar body.">
+                comment = <"The occurrences for this data element is set to 0..* to allow for more than one morphological attribute to be selected.">
+            >
+            ["at0045"] = <
+                text = <"Metaphase spindle size">
+                description = <"Size of the metaphase spindle obtained by polarized light microscopy.">
+            >
+            ["at0046"] = <
+                text = <"Other morphological features">
+                description = <"Additional morphological features not captured by specific parameters.">
+                comment = <"The occurrences for this data element is set to 0..* to allow for more than one morphological attribute to be added as a coded value.">
+            >
+            ["at0047"] = <
+                text = <"Normal">
+                description = <"Normal sized oocyte.">
+            >
+            ["at0048"] = <
+                text = <"Small">
+                description = <"Small oocyte.">
+            >
+            ["at0049"] = <
+                text = <"Giant">
+                description = <"Giant oocyte.">
+            >
+            ["at0050"] = <
+                text = <"Round">
+                description = <"Round oocyte shape.">
+            >
+            ["at0051"] = <
+                text = <"Ovoid or elongated.">
+                description = <"Ovoid-shaped or elongated oocyte.">
+            >
+            ["at0052"] = <
+                text = <"Homogeneous">
+                description = <"Homogeneous normal cytoplasm.">
+            >
+            ["at0053"] = <
+                text = <"Granular">
+                description = <"Granulated cytoplasm.">
+            >
+            ["at0054"] = <
+                text = <"Vacuolated">
+                description = <"Small or large vacuoles in oocyte cytoplasm.">
+            >
+            ["at0055"] = <
+                text = <"Plaques of dilated SER discs">
+                description = <"Plaques of dilated smooth endoplasmatic reticulum discs.">
+            >
+            ["at0056"] = <
+                text = <"Normal">
+                description = <"Normal thickness of the zona pellucida.">
+            >
+            ["at0057"] = <
+                text = <"Thin">
+                description = <"Thin zona pellucida.">
+            >
+            ["at0058"] = <
+                text = <"Thick">
+                description = <"Thick zona pellucida.">
+            >
+            ["at0059"] = <
+                text = <"Normal">
+                description = <"Normal size of perivitelline space.">
+            >
+            ["at0060"] = <
+                text = <"Large">
+                description = <"Large perivitelline space.">
+            >
+            ["at0062"] = <
+                text = <"Refractile body">
+                description = <"Lipofuscin body in oocyte cytoplasm.">
+            >
+            ["at0063"] = <
+                text = <"Darkness">
+                description = <"Dark cytoplasm.">
+            >
+            ["at0064"] = <
+                text = <"Inclusions">
+                description = <"Cytoplasmic inclusions.">
+            >
+            ["at0065"] = <
+                text = <"Small">
+                description = <"Small perivitelline space.">
+            >
+            ["at0066"] = <
+                text = <"Normal smooth">
+                description = <"Ovoid or round first polar body with smooth surface.">
+            >
+            ["at0067"] = <
+                text = <"Ovoid rough">
+                description = <"Ovoid or round first polar body with rough surface.">
+            >
+            ["at0068"] = <
+                text = <"Fragmented">
+                description = <"Fragmented first polar body.">
+            >
+            ["at0069"] = <
+                text = <"Abnormally large">
+                description = <"Abnormally large first polar body.">
+            >
+            ["at0070"] = <
+                text = <"Degenerated">
+                description = <"Degenerated or atretic first polar body.">
+            >
+            ["at0071"] = <
+                text = <"Normal size">
+                description = <"Normal metaphase spindle size 90 - 120 micrometer sq.">
+            >
+            ["at0072"] = <
+                text = <"Small">
+                description = <"Small metaphase spindle < 90 micrometer sq.">
+            >
+            ["at0073"] = <
+                text = <"Large">
+                description = <"Large metaphase spindle > 120 micrometer sq.">
+            >
+            ["at0077"] = <
+                text = <"Morphology grade">
+                description = <"Overall grading or score based on recorded morphological features the oocyte.">
+                comment = <"Use of an established morphology assessment classification is preferred.">
+            >
+            ["at0078"] = <
+                text = <"Perivitelline space morphology">
+                description = <"Morphology of the perivitelline space.">
+            >
+            ["at0079"] = <
+                text = <"Normal">
+                description = <"Normal perivitelline space.">
+            >
+            ["at0082"] = <
+                text = <"Debris">
+                description = <"Debris or granules in perivitelline space.">
+            >
+            ["at0083"] = <
+                text = <"Metaphase spindle location">
+                description = <"Position of the metaphase spindle obtained by polarized light microscopy.">
+            >
+            ["at0087"] = <
+                text = <"Normal location">
+                description = <"Metaphase spindle beneath or close to first polar body (deviation angle < 90 degrees).">
+            >
+            ["at0088"] = <
+                text = <"Abnormal location">
+                description = <"Metaphase spindle away from first polar body (deviation angle > 90 degrees).">
+            >
+            ["at9028"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["ac9000"] = <
+                text = <"Maturity of cumulus-oocyte complex (synthesised)">
+                description = <"Maturity of the entire intact cumulus-oocyte complex. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Oocyte maturation stage (synthesised)">
+                description = <"Nuclear maturity of oocyte after removal of the cumulus-corona cell mass. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Oocyte size (synthesised)">
+                description = <"Size of the oocyte. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Oocyte shape (synthesised)">
+                description = <"Shape of the oocyte. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Cytoplasmic morphology (synthesised)">
+                description = <"Morphology of the oocyte cytoplasm. (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Zona pellucida thickness (synthesised)">
+                description = <"Thickness of the zona pellucida. (synthesised)">
+            >
+            ["ac9029"] = <
+                text = <"Perivitelline space size (synthesised)">
+                description = <"Size of the perivitelline space. (synthesised)">
+            >
+            ["ac9030"] = <
+                text = <"Perivitelline space morphology (synthesised)">
+                description = <"Morphology of the perivitelline space. (synthesised)">
+            >
+            ["ac9007"] = <
+                text = <"First polar body morphology (synthesised)">
+                description = <"Morphology of the first polar body. (synthesised)">
+            >
+            ["ac9031"] = <
+                text = <"Metaphase spindle size (synthesised)">
+                description = <"Size of the metaphase spindle obtained by polarized light microscopy. (synthesised)">
+            >
+            ["ac9032"] = <
+                text = <"Metaphase spindle location (synthesised)">
+                description = <"Position of the metaphase spindle obtained by polarized light microscopy. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9028"] = <http://openehr.org/id/122>
+        >
+    >
+    value_sets = <
+        ["ac9031"] = <
+            id = <"ac9031">
+            members = <"at0071", "at0072", "at0073">
+        >
+        ["ac9030"] = <
+            id = <"ac9030">
+            members = <"at0079", "at0082">
+        >
+        ["ac9032"] = <
+            id = <"ac9032">
+            members = <"at0087", "at0088">
+        >
+        ["ac9007"] = <
+            id = <"ac9007">
+            members = <"at0066", "at0067", "at0068", "at0069", "at0070">
+        >
+        ["ac9029"] = <
+            id = <"ac9029">
+            members = <"at0059", "at0060", "at0065">
+        >
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0047", "at0048", "at0049">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0036", "at0037", "at0038">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0031", "at0032", "at0033", "at0034">
+        >
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0056", "at0057", "at0058">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0052", "at0053", "at0054", "at0055", "at0062", "at0063", "at0064">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0050", "at0051">
+        >
+    >

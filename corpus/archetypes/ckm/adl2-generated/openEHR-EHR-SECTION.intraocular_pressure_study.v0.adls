@@ -1,0 +1,98 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=b3af1944-4deb-46e4-a356-c6dfc45c293e; build_uid=d6a52f30-1d5b-4a27-aec0-2be6ba743540)
+    openEHR-EHR-SECTION.intraocular_pressure_study.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Aitor Eguzkitza">
+        ["organisation"] = <"Universidad Pública de Navarra - Complejo Hospitalario de Navarra">
+        ["email"] = <"aitor.eguzkiza@unavarra.es">
+        ["date"] = <"2015-06-27">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"José Andonegui, Hospital de Navarra, jose.andonegui.navarro@cfnavarra.es", "Luis Serrano, Universidad Pública de Navarra (UPNA), lserrano@unavarra.es", "Jesús D. Trigo, Universidad Pública de Navarra (UPNA), jesusdaniel.trigo@unavarra.es">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"B632D4D0515FC332223E0614809263D0">
+    >
+    details = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Gestionar el proceso de llevar a cabo y posteriormente valorar la prueba de medición de la presión intraocular.">
+            use = <"Cualquier estudio clínico que requiera la medición de la presión intraocular.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Manage the process of carrying out and then reviewing the test of intraocular pressure measurement.">
+            keywords = <"IOP", "intraocular pressure">
+            use = <"Any healthcare study that requires the measurement of intraocular pressure.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    SECTION[at0000] matches {    -- Intraocular pressure study
+        items cardinality matches {1..*; unordered} matches {
+            allow_archetype ACTION[at0001] matches {    -- Procedure undertaken
+                include
+                    archetype_id/value matches {/openEHR-EHR-ACTION\.procedure(-[a-zA-Z0-9_]+)*\.v([0-9]+)/}
+                exclude
+                    archetype_id/value matches {/.*/}
+            }
+            allow_archetype OBSERVATION[at0002] matches {    -- IOP measurement
+                include
+                    archetype_id/value matches {/openEHR-EHR-OBSERVATION\.intraocular_pressure(-[a-zA-Z0-9_]+)*\.v([0-9]+)/}
+                exclude
+                    archetype_id/value matches {/.*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Intraocular pressure study">
+                description = <"Defines the process which involves the intraocular pressure acquisition and its study.">
+            >
+            ["at0001"] = <
+                text = <"Procedure undertaken">
+                description = <"Describes the procedure/s carried out to obtain the intraocular pressure from the patient.">
+            >
+            ["at0002"] = <
+                text = <"IOP measurement">
+                description = <"Examination of results for the intraocular pressure measurement of a single eye, normally using a tonometry device.">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Estudio de presión intraocular">
+                description = <"Define el proceso que implica la adquisición y estudio de la presión intraocular.">
+            >
+            ["at0001"] = <
+                text = <"Procedimiento realizado">
+                description = <"Actividad clínica que se ha llevado a cabo con propósitos terapéuticos o diagnósticos.">
+            >
+            ["at0002"] = <
+                text = <"Medición de PIO">
+                description = <"Medición de la presión intraocular de un solo ojo, normalmente utilizando un dispositivo de tonometría.">
+            >
+        >
+    >

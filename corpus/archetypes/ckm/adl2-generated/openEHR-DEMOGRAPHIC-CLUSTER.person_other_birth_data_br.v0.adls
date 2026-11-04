@@ -1,0 +1,170 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=d47790e0-9567-493b-9c6d-ef4271ae1b1d; build_uid=0d0ea30e-0033-41e0-b53d-956cfb782523)
+    openEHR-DEMOGRAPHIC-CLUSTER.person_other_birth_data_br.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::pt-br]>
+    translations = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            author = <
+                ["name"] = <"Sergio Miranda Freire">
+                ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+                ["email"] = <"sergio@lampada.uerj.br">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sergio Miranda Freire & Rigoleta Dutra Mediano Dias">
+        ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+        ["email"] = <"sergio@lampada.uerj.br">
+        ["date"] = <"2009-05-20">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"AC9A7C00AC7E81AD890F2A72B136A934">
+    >
+    details = <
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Coleta de dados da certidão de nascimento emitidas no Brasil.">
+            keywords = <"serviço demográfico", "dados da certidão de nascimento">
+            use = <"Usado em serviços demográficos para coletar os itens estado, cidade, cartório, livro, folha e termo da certidão de nascimento emitida no Brasil.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Representation of a person's birth data.">
+            keywords = <"demographic service", "birth certificate data">
+            use = <"Used in demographic service to collect other birth certificate data.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Outros dados da certidão de nascimento
+        items matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Estado/território/província
+                value matches {
+                    DV_CODED_TEXT[at9000] matches {
+                        defining_code matches {[ac2]}    -- Códigos de estados
+                    }
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Cidade/localidade
+                value matches {
+                    DV_CODED_TEXT[at9001] matches {
+                        defining_code matches {[ac3]}    -- Códigos de cidades
+                    }
+                }
+            }
+            ELEMENT[at0003] occurrences matches {1} matches {    -- Cartório
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0004] occurrences matches {1} matches {    -- Livro
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            ELEMENT[at0005] occurrences matches {1} matches {    -- Folha
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+            ELEMENT[at0006] occurrences matches {1} matches {    -- Termo
+                value matches {
+                    DV_TEXT[at9005]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Outros dados da certidão de nascimento">
+                description = <"Outros dados da certidão de nascimento brasileira..">
+            >
+            ["at0001"] = <
+                text = <"Estado/território/província">
+                description = <"O estado/território/província onde a pessoa nasceu.">
+            >
+            ["at0002"] = <
+                text = <"Cidade/localidade">
+                description = <"A cidade/localidade onde a pessoa nasceu.">
+            >
+            ["at0003"] = <
+                text = <"Cartório">
+                description = <"Nome do cartório que emitiu a certidão de nascimento.">
+            >
+            ["at0004"] = <
+                text = <"Livro">
+                description = <"Número do livro da certidão de nascimento.">
+            >
+            ["at0005"] = <
+                text = <"Folha">
+                description = <"Número da folha da certidão de nascimento.">
+            >
+            ["at0006"] = <
+                text = <"Termo">
+                description = <"Número do termo da certidão de nascimento.">
+            >
+            ["ac2"] = <
+                text = <"Códigos de estados">
+                description = <"códigos válidos para estados">
+            >
+            ["ac3"] = <
+                text = <"Códigos de cidades">
+                description = <"códigos válidos para cidade">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Other birth certificate data">
+                description = <"Other birth certificate data still used in Brazil.">
+            >
+            ["at0001"] = <
+                text = <"State/territory/province">
+                description = <"The State/territory/province where the person was born.">
+            >
+            ["at0002"] = <
+                text = <"City/town/locality">
+                description = <"The city/town/locality where the person was born.">
+            >
+            ["at0003"] = <
+                text = <"Registry">
+                description = <"Registry office that issued the birth certificate.">
+            >
+            ["at0004"] = <
+                text = <"Book number">
+                description = <"Book number where the birth was registered.">
+            >
+            ["at0005"] = <
+                text = <"Page number">
+                description = <"Page number in the book where the birth was registered.">
+            >
+            ["at0006"] = <
+                text = <"Section">
+                description = <"Section in the page where the birth was registered.">
+            >
+            ["ac2"] = <
+                text = <"State codes">
+                description = <"Valid codes for state/territory/province">
+            >
+            ["ac3"] = <
+                text = <"City codes">
+                description = <"Valid codes for city/town/locality">
+            >
+        >
+    >

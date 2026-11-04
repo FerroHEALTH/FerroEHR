@@ -1,0 +1,264 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=8aae2b01-f970-4a25-a0a9-8da12f9bf2f2; build_uid=a0110921-5a6e-4007-b266-c5e8e70c303f)
+    openEHR-EHR-CLUSTER.encounter_details.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Martin Milde">
+                ["organisation"] = <"Helse Vest IKT">
+                ["email"] = <"martin.milde@helse-vest-ikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2022-06-13">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"7DD0941945A54679866050B7EA64E131">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere detaljer om en klinisk kontakt.">
+            keywords = <"innleggelse, utskrivning, overføring, besøk, opphold, sykehusinnleggelse, innlagt, kontakt, død, poliklinikk, dagbehandling, konsultasjon, videokonsultasjon, telefonkontakt, hjemmekonsultasjon, time", ...>
+            use = <"Brukes til å registrere detaljer om en klinisk kontakt mellom en pasient og helsetjenester.
+
+I konteksten av denne arketypen tolkes begrepet kontakt vidt og omfatter enhver kontakt mellom en pasient og helsetjenesten som det er behov for å registrere. Dette inkluderer, men er ikke begrenset til, fastlegebesøk, polikliniske besøk, døgnbehandling, akuttinnleggelser, hjemmebesøk, video- og telefonkonsultasjoner, eller psykisk helsehjelp.
+
+Som følge av dette har både konseptet og dataelementene blitt gitt veldig generiske navn. Det forventes at disse ikke vil passe i alle myndighetsområder eller bruksområder, og må endres i templatet for å bedre tilpasses den aktuelle bruken.
+
+SLOT for delepisoder er utformet for å motta gjentagende forekomster av dette clusteret for å modellere delkontakter ved behov. For eksempel kan én forekomst av clusteret brukes til å registrere et sykehusopphold, én delepisode kan brukes til å registrere innleggelsen via akuttmottaket. En annen delepisode kan brukes til å registrere en overføring til en annen avdeling. Disse clusterne kan videre deles opp etter behov for å registrere mer spesifikke kontakter.
+
+Opphav, opphavskategori, destinasjon og destinasjonskategori gir ulike muligheter til å registrere hvor pasienten kom fra før kontakten, og hvor pasienten ble sendt videre etter kontakten. Opphavskategori og destinasjonskategori brukes til å registrere generell informasjon om henholdsvis opphav og destinasjon, mens SLOT for opphav og destinasjon brukes til å identifisere spesifikke organisasjoner og/eller lokasjoner.">
+            misuse = <"Brukes ikke for planlegging av fremtidige kliniske kontakter. På tidspunktet for utarbeidelsen er det ennå ikke avklart hvilken arketype som bør brukes til dette formålet.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about an encounter between a patient and healthcare services.">
+            keywords = <"admission, discharge, transfer, separation, visit, stay, hospitalization, inpatient, death, care episode", ...>
+            use = <"Use to record details about an encounter between a patient and healthcare services.
+
+Within the context of this archetype, encounter is interpreted broadly, and includes any contact between a patient and healthcare services that needs to be recorded. This includes, but is not limited to, visits to a general practitioner, outpatient treatment, inpatient treatment, admission to an emergency room, hospital at home or mental health appointments. 
+
+As a result, both the concept and the data elements have been given very generic names. It is expected that these names will not be appropriate in all jurisdictions or use cases, and will need to be renamed in templates to better fit the specific context.
+
+The Sub-episode Slot is designed to accept recursive elements of this cluster in order to model sub-encounters as needed. For instance, one instance of this cluster could be used to record a hospitalization, and a sub-episode used to record admission to the emergency room, while a different episode could be used to record a transfer to a different department. These cluster can be further sub-divided as needed to record specific encounters as needed.
+
+Source, Source category, Destination and Destination category are intended to provide alternatives to one another in regarding where the patient came from and where they departed to. Source category and Destination category are intended to give broad indications of the source and destination, while the Source and Destination slots are intended to identify specific organisations and/or locations.">
+            misuse = <"Not to be used for planning future encounter. At the time of authoring it is not yet determined which archetype should be used for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Encounter details
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0046] occurrences matches {0..1} matches {    -- Encounter ID
+                value matches {
+                    DV_IDENTIFIER[at9000]
+                    DV_TEXT[at9001]
+                }
+            }
+            allow_archetype CLUSTER[at0021] occurrences matches {0..1} matches {    -- Source
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.organisation\.v1\..*|openEHR-EHR-CLUSTER\.address\.v1\..*/}
+            }
+            ELEMENT[at0022] occurrences matches {0..1} matches {    -- Source category
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Reason
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Location
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+            allow_archetype CLUSTER[at0002] occurrences matches {0..1} matches {    -- Structured location
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.organisation\.v1\..*|openEHR-EHR-CLUSTER\.address\.v1\..*/}
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Start
+                value matches {
+                    DV_DATE_TIME[at9005]
+                }
+            }
+            allow_archetype CLUSTER[at0019] matches {    -- Sub-episode
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.encounter_details\.v0\..*|openEHR-EHR-CLUSTER\.encounter_details\.v1\..*/}
+            }
+            allow_archetype CLUSTER[at0045] occurrences matches {0..1} matches {    -- Destination
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.organisation\.v1\..*|openEHR-EHR-CLUSTER\.address\.v1\..*/}
+            }
+            ELEMENT[at0047] occurrences matches {0..1} matches {    -- Destination category
+                value matches {
+                    DV_TEXT[at9006]
+                }
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- End
+                value matches {
+                    DV_DATE_TIME[at9007]
+                }
+            }
+            allow_archetype CLUSTER[at0048] matches {    -- Additional details
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            ELEMENT[at0020] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9008]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Detaljer om klinisk kontakt">
+                description = <"Detaljer om en klinisk kontakt.">
+            >
+            ["at0001"] = <
+                text = <"Lokasjon">
+                description = <"Den fysiske lokasjonen hvor den kliniske kontakten fant sted.">
+            >
+            ["at0002"] = <
+                text = <"Strukturert lokasjon">
+                description = <"Strukturerte detaljer om den fysiske lokasjonen hvor den kliniske kontakten fant sted.">
+            >
+            ["at0003"] = <
+                text = <"Årsak">
+                description = <"Årsaken for den kliniske kontakten.">
+                comment = <"Koding av årsak med en terminologi er foretrukket om mulig. For eksempel, diagnose, elektiv kirurgi, eller fødsel.">
+            >
+            ["at0004"] = <
+                text = <"Start">
+                description = <"Dato eller dato og klokkeslett for når den kliniske kontakten startet.">
+                comment = <"For eksempel tidspunktet individet ble innlagt i døgninstitusjon eller overført til annen avdeling.">
+            >
+            ["at0005"] = <
+                text = <"Stopp">
+                description = <"Dato eller dato og klokkeslett for når den kliniske kontakten sluttet.">
+            >
+            ["at0019"] = <
+                text = <"Del-episode">
+                description = <"Detaljer om en del‑episode som utgjør en del av den opprinnelige kliniske kontakten.">
+                comment = <"Dette SLOT-et er ment for å registrere detaljer om del‑episoder ved å gjenbruke denne arketypen for underordnede episoder (nøsting). Eksempler på del‑episoder kan være overføringer til annen avdeling eller endringer av rom/seng.">
+            >
+            ["at0020"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om den kliniske kontakten som ikke er registrert/omfattet i andre felter.">
+            >
+            ["at0021"] = <
+                text = <"Opphav">
+                description = <"Stedet/organisasjonen pasienten var før den kliniske kontakten.">
+            >
+            ["at0022"] = <
+                text = <"Opphavskategori">
+                description = <"Type sted pasienten kom fra før den kliniske kontakten.">
+                comment = <"Koding av opphavskategori med en terminologi er foretrukket om mulig. For eksempel hjem, sykehjem, eller skadested.">
+            >
+            ["at0045"] = <
+                text = <"Destinasjon">
+                description = <"Stedet/organisasjonen pasienten ble utskrevet/overflyttet til etter den kliniske kontakten.">
+            >
+            ["at0046"] = <
+                text = <"Identifikator">
+                description = <"En identifikator for den kliniske kontakten.">
+            >
+            ["at0047"] = <
+                text = <"Destinasjonskategori">
+                description = <"Typen sted pasienten ble utskrevet/overflyttet til etter den kliniske kontakten.">
+                comment = <"Koding av destinasjonskategori med en terminologi er foretrukket om mulig. For eksempel hjem, sykehjem, eller annen helseinstitusjon.">
+            >
+            ["at0048"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Ytterligere strukturerte detaljer om den kliniske kontakten.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Encounter details">
+                description = <"Details about an encounter.">
+            >
+            ["at0001"] = <
+                text = <"Location">
+                description = <"The physical location where the encounter took place.">
+                comment = <"Coding with an external terminology is preferred, where possible. For example: doctor's office, emergency room, clinic.">
+            >
+            ["at0002"] = <
+                text = <"Structured location">
+                description = <"Structured details about where the encounter took place.">
+            >
+            ["at0003"] = <
+                text = <"Reason">
+                description = <"The reason for the encounter.">
+                comment = <"Coding with an external terminology is preferred, where possible. For example: diagnosis, elective surgery, or childbirth.">
+            >
+            ["at0004"] = <
+                text = <"Start">
+                description = <"The date/date-time when the encounter started.">
+                comment = <"For example: admitted to inpatient facility, transferred to different ward.">
+            >
+            ["at0005"] = <
+                text = <"End">
+                description = <"The date/date-time when the encounter ended.">
+            >
+            ["at0019"] = <
+                text = <"Sub-episode">
+                description = <"Details about a sub-episode that consitutes part of the original encounter.">
+                comment = <"This slot is intended to be used to add details about sub-episodes using nested instances of this archetype. Examples of sub-episodes can be transfers to different department or room/bed changes.">
+            >
+            ["at0020"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the encounter not captured in other fields.">
+            >
+            ["at0021"] = <
+                text = <"Source">
+                description = <"The location/organization the patient was prior to the encounter.">
+            >
+            ["at0022"] = <
+                text = <"Source category">
+                description = <"The type of location the patient was prior to the encounter.">
+                comment = <"Coding with a terminology is desirable, where possible. For example: home, nursing home, incident site">
+            >
+            ["at0045"] = <
+                text = <"Destination">
+                description = <"Location/organization to which the patient went to following the encounter.">
+            >
+            ["at0046"] = <
+                text = <"Encounter ID">
+                description = <"An identifier for the encounter.">
+            >
+            ["at0047"] = <
+                text = <"Destination category">
+                description = <"The type of location to which the patient went to following the encounter.">
+                comment = <"Coding with a terminology is desirable, where possible.  For example: home, nursing home, other healthcare facility">
+            >
+            ["at0048"] = <
+                text = <"Additional details">
+                description = <"Further details about the encounter.">
+            >
+        >
+    >

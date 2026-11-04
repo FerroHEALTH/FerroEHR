@@ -1,0 +1,98 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=76dcc6ad-db59-4c40-bc65-0075d6dee16b; build_uid=8381acfd-0fda-495b-9eb5-28f40b2afa99)
+    openEHR-EHR-CLUSTER.consent_details.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2012-11-20">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics, heather.leslie@oceaninformatics.com">
+        ["MD5-CAM-1.0.1"] = <"13ED6C748476FE1C40BF7BD0E26A88C8">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record additional common details about the informed consent request, or the status of the request for informed consent.">
+            keywords = <"informed", "consent", "request", "risk", "benefit", "intent">
+            use = <"Use to optionally record additional details about the informed consent request by optionally nesting this archetype within the INSTRUCTION.informed_consent.
+
+Use to optionally record additional details about the status of the request for consent by optionally nesting this archetype within the ACTION.informed_consent.">
+            misuse = <"Not to be used to record the actual request for informed consent or the status of the request for informed consent - use the INSTRUCTION.informed_consent or ACTION.informed_consent for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Informed consent details
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Explicit risks
+                value matches {
+                    DV_TEXT[at9000]
+                }
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Explicit benefits
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Risks from non-participation
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Benefits from non-participation
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            ELEMENT[at0007] matches {    -- Alternative options
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Informed consent details">
+                description = <"Additional details about the specifics of informed consent.">
+            >
+            ["at0001"] = <
+                text = <"Risks from non-participation">
+                description = <"Narrative description of the possible risks from non-participation in the proposed procedure, clinical trial or healthcare-related activity.">
+            >
+            ["at0003"] = <
+                text = <"Benefits from non-participation">
+                description = <"Narrative description of the possible benefits from non-participation in the proposed procedure, clinical trial or healthcare-related activity.">
+            >
+            ["at0004"] = <
+                text = <"Explicit risks">
+                description = <"Description about the inherent risks of the procedure, clinical trial or healthcare-related activity.">
+                comment = <"If used within an INSTRUCTION. archetype, this data element will describe the risks that need to be communicated as part of the request to the subject or subject's agent. If used within an ACTION archetype, this data element will describe the risks that are being communicated in the context of each pathway step, for example, what explicit risks were explained as part of the informed consent request ('Informed Consent Requested') and what explicit risks were acknowledged as consent was provided ('Informed Consent Provided') by the subject or subject's agent.">
+            >
+            ["at0005"] = <
+                text = <"Explicit benefits">
+                description = <"Description about the expected risks of the procedure, clinical trial or healthcare-related activity.">
+                comment = <"If used within an INSTRUCTION. archetype, this data element will describe the expected benefits that need to be communicated as part of the request to the subject or subject's agent. If used within an ACTION archetype, this data element will describe the expected benefits that are being communicated in the context of each pathway step, for example, what explicit beniefits were explained as part of the informed consent request ('Informed Consent Requested') and what explicit benefits were acknowledged as consent was provided ('Informed Consent Provided') by the subject or subject's agent.">
+            >
+            ["at0007"] = <
+                text = <"Alternative options">
+                description = <"Description of possible alternative treatment or management options.">
+            >
+        >
+    >

@@ -1,0 +1,312 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=36d8f5af-0467-4655-ae48-a4b6d0a2eef5; build_uid=9b996370-255c-46df-be99-5692e1cd3f31)
+    openEHR-EHR-OBSERVATION.lenke_classification.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand">
+                ["organisation"] = <"Helse Bergen">
+                ["email"] = <"john.tore.valand@helse-vest-ikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"John Tore Valand">
+        ["organisation"] = <"Helse Vest IKT AS">
+        ["email"] = <"john.tore.valand@helse-vest-ikt.no">
+        ["date"] = <"2022-06-17">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Randi Brendberg, Helse Nord RHF, Norway", "Mikkel Johan Gaup Grønmo, Regional forvaltning EPJ, Helse Nord, Norway (openEHR Editor)", "Evelyn Hovenga, EJSH Consulting, Australia", "Kanika Kuwelker, Helse Vest IKT, Norway", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Hanne Marte Bårholm, Helse Vest IKT, Norway", "Thomas Natvik, Helse Bergen, Norway", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Terje Sagmyr, Helse Vest IKT, Norway", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Lenke LG, Betz RR, Harms J, Bridwell KH, Clements DH, Lowe TG, Blanke K. Adolescent idiopathic scoliosis: a new classification to determine extent of spinal arthrodesis. J Bone Joint Surg Am. 2001;83:1169–1181.">
+        ["2"] = <"AO Surgery reference, Lenke classification. 20.09.22. Available at: https://surgeryreference.aofoundation.org/spine/deformities/adolescent-idiopathic-scoliosis/further-reading/lenke-classification#determination-of-sagittal-modifiers.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"3824D24C7B8238070BE0B6512BBC81F6">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere resultatene for hvert parameter og klassifikasjon for Lenke classification system.">
+            keywords = <"skoliose, ortopedi", ...>
+            use = <"Brukes for å registrere resultatene for hvert parameter og klassifikasjon for Lenke classification system.
+
+Per dags dato finnes det ingen validert norsk oversettelse av verktøyet. Man har derfor i arketypen valgt å beholde orginalspråk for alle dataelementene. Om det på et tidspunkt etableres en validert norsk oversettelse, vil arketypen oppdateres med denne.">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the results for each component parameter and the classification for the Lenke classification system.">
+            keywords = <"scoliosis, orthopedics", ...>
+            use = <"Use to record the results for each component parameter and the classification for the Lenke classification system.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Lenke classification system
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Curve type
+                                        value matches {
+                                            DV_CODED_TEXT[at9007] matches {
+                                                defining_code matches {[ac9006]}    -- Curve type (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Lumbar spine modifier
+                                        value matches {
+                                            DV_CODED_TEXT[at9004] matches {
+                                                defining_code matches {[ac9001]}    -- Lumbar spine modifier (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Thoracic sagittal modifier
+                                        value matches {
+                                            DV_CODED_TEXT[at9005] matches {
+                                                defining_code matches {[ac9002]}    -- Thoracic sagittal modifier (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Classification
+                                        value matches {
+                                            DV_TEXT[at9006]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0021] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0020] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Lenke classification system">
+                description = <"Et system for å klassifisere idiopatisk skoliose hos ungdom.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Curve type">
+                description = <"Based on evaluation of each of the three major spinal column regions; Proximal Thoracic, Main Thoracic, and Thoracolumbar/Lumbar.">
+            >
+            ["at0011"] = <
+                text = <"Lumbar spine modifier">
+                description = <"Based on the position of the center sacral vertical line (CSVL) to the apex of the lumbar curve.">
+            >
+            ["at0012"] = <
+                text = <"A">
+                description = <"Between pedicles.">
+            >
+            ["at0013"] = <
+                text = <"B">
+                description = <"Touches apical body(ies).">
+            >
+            ["at0014"] = <
+                text = <"C">
+                description = <"Completly medial.">
+            >
+            ["at0015"] = <
+                text = <"Thoracic sagittal modifier">
+                description = <"Based on the T5–T12 sagittal Cobb measurement on the standing lateral radiograph.">
+            >
+            ["at0016"] = <
+                text = <"-">
+                description = <"(Hypo), < 10°.">
+            >
+            ["at0017"] = <
+                text = <"N">
+                description = <"(Normal), 10° - 40°.">
+            >
+            ["at0018"] = <
+                text = <"+">
+                description = <"(Hyper), < 40°.">
+            >
+            ["at0019"] = <
+                text = <"Classification">
+                description = <"Concatenation of the three discrete components.">
+                comment = <"For example: 1B+.">
+            >
+            ["at0020"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0022"] = <
+                text = <"1">
+                description = <"Main Thoracic.">
+            >
+            ["at0023"] = <
+                text = <"2">
+                description = <"Double Thoracic.">
+            >
+            ["at0024"] = <
+                text = <"3">
+                description = <"Double Major.">
+            >
+            ["at0025"] = <
+                text = <"4">
+                description = <"Triple Major.">
+            >
+            ["at0026"] = <
+                text = <"5">
+                description = <"Thoracolumbar/Lumbar.">
+            >
+            ["at0027"] = <
+                text = <"6">
+                description = <"Thoracolumbar/Lumbar-Main Thoracic.">
+            >
+            ["ac9006"] = <
+                text = <"Curve type (synthesised)">
+                description = <"Based on evaluation of each of the three major spinal column regions; Proximal Thoracic, Main Thoracic, and Thoracolumbar/Lumbar. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Lumbar spine modifier (synthesised)">
+                description = <"Based on the position of the center sacral vertical line (CSVL) to the apex of the lumbar curve. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Thoracic sagittal modifier (synthesised)">
+                description = <"Based on the T5–T12 sagittal Cobb measurement on the standing lateral radiograph. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Lenke classification system">
+                description = <"A system for classification of adolescent idiopathic scoliosis.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Curve type">
+                description = <"Based on evaluation of each of the three major spinal column regions; Proximal Thoracic, Main Thoracic, and Thoracolumbar/Lumbar.">
+            >
+            ["at0011"] = <
+                text = <"Lumbar spine modifier">
+                description = <"Based on the position of the center sacral vertical line (CSVL) to the apex of the lumbar curve.">
+            >
+            ["at0012"] = <
+                text = <"A">
+                description = <"Between pedicles.">
+            >
+            ["at0013"] = <
+                text = <"B">
+                description = <"Touches apical body(ies).">
+            >
+            ["at0014"] = <
+                text = <"C">
+                description = <"Completly medial.">
+            >
+            ["at0015"] = <
+                text = <"Thoracic sagittal modifier">
+                description = <"Based on the T5–T12 sagittal Cobb measurement on the standing lateral radiograph.">
+            >
+            ["at0016"] = <
+                text = <"-">
+                description = <"(Hypo), < 10°.">
+            >
+            ["at0017"] = <
+                text = <"N">
+                description = <"(Normal), 10° - 40°.">
+            >
+            ["at0018"] = <
+                text = <"+">
+                description = <"(Hyper), < 40°.">
+            >
+            ["at0019"] = <
+                text = <"Classification">
+                description = <"Concatenation of the three discrete components.">
+                comment = <"For example: 1B+.">
+            >
+            ["at0020"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR equivalents.">
+            >
+            ["at0022"] = <
+                text = <"1">
+                description = <"Main Thoracic.">
+            >
+            ["at0023"] = <
+                text = <"2">
+                description = <"Double Thoracic.">
+            >
+            ["at0024"] = <
+                text = <"3">
+                description = <"Double Major.">
+            >
+            ["at0025"] = <
+                text = <"4">
+                description = <"Triple Major.">
+            >
+            ["at0026"] = <
+                text = <"5">
+                description = <"Thoracolumbar/Lumbar.">
+            >
+            ["at0027"] = <
+                text = <"6">
+                description = <"Thoracolumbar/Lumbar-Main Thoracic.">
+            >
+            ["ac9006"] = <
+                text = <"Curve type (synthesised)">
+                description = <"Based on evaluation of each of the three major spinal column regions; Proximal Thoracic, Main Thoracic, and Thoracolumbar/Lumbar. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Lumbar spine modifier (synthesised)">
+                description = <"Based on the position of the center sacral vertical line (CSVL) to the apex of the lumbar curve. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Thoracic sagittal modifier (synthesised)">
+                description = <"Based on the T5–T12 sagittal Cobb measurement on the standing lateral radiograph. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0016", "at0017", "at0018">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0012", "at0013", "at0014">
+        >
+        ["ac9006"] = <
+            id = <"ac9006">
+            members = <"at0022", "at0023", "at0024", "at0025", "at0026", "at0027">
+        >
+    >

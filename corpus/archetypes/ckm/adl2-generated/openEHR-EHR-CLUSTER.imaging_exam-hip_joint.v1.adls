@@ -1,0 +1,301 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=6f4e49a3-0c4f-4965-967c-c200808ec055; build_uid=6704d38e-e7c9-4cb2-a841-4e5c4b8f602b)
+    openEHR-EHR-CLUSTER.imaging_exam-hip_joint.v1.0.0
+
+specialize
+    openEHR-EHR-CLUSTER.imaging_exam.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch, Hanne Marte Bårholm">
+                ["organisation"] = <"Medizinische Hochschule Hannover, Helse Vest IKT">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de, hanne.marte.sandal.barholm@helse-vest-ikt.no">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Vebjørn Arntzen, John Tore Valand, Hanne Marte Bårholm">
+                ["organisation"] = <"Oslo University Hospital, Helse Vest IKT">
+                ["email"] = <"varntzen@ous-hf.no, john.tore.valand@helse-vest-ikt.no, hanne.marte.sandal.barholm@helse-vest-ikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Hanne Marte Bårholm">
+        ["organisation"] = <"Helse Vest IKT AS">
+        ["email"] = <"hanne.marte.sandal.barholm@helse-vest-ikt.no">
+        ["date"] = <"2023-03-15">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Andreas Abildgaard, OUS, Norway", "Marit Alice Venheim, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Stein Arne Rimehaug, Sunnaas sykehus, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Ivar Berge, Oslo Universitetssykehus, Norway", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Randi Brendberg, Helse Nord RHF, Norway", "Hanne Marte Bårholm, Helse Vest IKT, Norway (openEHR Editor)", "Mona Didriksen, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Heather Grain, Llewelyn Grain Informatics, Australia", "Kija Indrearne, Helse Bergen, Norway", "Anjali Kulkarni, Karkinos, India", "Kanika Kuwelker, Helse Vest IKT, Norway (openEHR Editor)", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Svenne Naumann, Finnmarkssykehuset, Norway", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Bjørn Næss, DIPS ASA, Norway", "Hallvard Reigstad, Haukeland us, Norway", "Terje Sagmyr, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Bodil Salvesen, Barneklinikken Haukeland Universitetssykehus, Norway", "Natalia Strauch, Medizinische Hochschule Hannover, Germany", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "Kanthan Theivendran, NHS, United Kingdom", "John Tore Valand, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"Tönnis D, Brunken D. Eine Abgrenzung normaler und pathologischer Hüftpfannendachwinkel zur Diagnose der Hüftdysplasie. Auswertungen von 2294 Pfannendachwinkeln kindlicher Hüftgelenke [Differentiation of normal and pathological acetabular roof angle in the diagnosis of hip dysplasia. Evaluation of 2294 acetabular roof angles of hip joints in children]. Arch Orthop Unfallchir. 1968;64(3):197-228. German. doi: 10.1007/BF02171260. PMID: 5730180.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"FF7EC6851CC77BF31757712A420EE48F">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"*To record the findings on radiological examination of a hip joint. (en)">
+            keywords = <"Befund, Ergebnis, Bildgebung, Körper, Organ, System, Struktur, Region, Beobachtung, Diagnostik, Radiologie, Bild", ...>
+            use = <"*Use to record the findings on radiological examination of a specified body structure or region, and their interpretation.
+
+The intended scope for the CLUSTER.imaging_exam family of archetypes to be used to record all detailed findings on radiological examination. The family of specialised archetypes are derived from this generic parent archetype, CLUSTER.imaging_exam, designed as a universal pattern for recording any findings in any specified body structure or region and using any modality.
+
+This archetype and its related family of specialisations are designed to be nested within the 'Structured imaging findings' SLOT in the OBSERVATION.imaging_exam_result or within the 'Additional details' SLOT in other relevant CLUSTER.imaging_exam archetypes, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. If this archetype or its specialisations need to be extended with further levels of detailed findings, additional instances of the CLUSTER.imaging_exam or its specialisations can be nested in the 'Additional details' SLOT.
+
+Each structure- or region-specific specialisation of this parent archetype is intended to be inclusive of all reasonably anticipated and relevant findings. For example, the CLUSTER.imaging_exam-ovary will support recording of all findings that would be expected in reporting on imaging of the ovary using any radiological modality, including the size of the ovary, largest follicle size and the diameter and description of specific follicles. Similarly, CLUSTER.imaging_exam-lymph_node_group will contain data elements required to record specific findings of a lymph node group, including its precise or relative location in the body and the number of lymph nodes in the group. 
+
+If an appropriate specialisation is not available for a body structure or region, this generic archetype can be used to record all relevant findings, including identification of the structure or region. (en)">
+            misuse = <"Nicht zur Darstellung von Befunden verwenden, die außerhalb der identifizierten Körperstruktur oder -region beobachtet wurden. Verwenden Sie zu diesem Zweck eine separate Instanz eines oder mehrerer Archetypen aus der Familie CLUSTER.imaging_exam.
+
+Darf nicht verwendet werden, um Details in Bezug auf die Gesamtbefunde, den Kontext oder technische Details in Bezug auf ein vollständiges Testergebnis einer bildgebenden Untersuchung darzustellen. Verwenden Sie zu diesem Zweck das OBSERVATION.imaging_exam_result. Zum Beispiel Kommentare zur Studienqualität, zu Differenzialdiagnosen und zum Gesamteindruck.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere funn ved radiologisk undersøkelse av ett hofteledd.">
+            keywords = <"funn", "observasjon", "bildediagnostikk", "kropp", "organ", "kroppsstruktur", "diagnostisk", "radiologi", "bilde", "hofte", "CT", "MR", "Ultralyd", "Røntgen", "Ledd", "Hofte">
+            use = <"Brukes for å registrere funn ved radiologisk undersøkelse av ett hofteledd.
+
+Det tiltenkte omfanget for denne arketypen er å kunne registrere detaljerte funn ved bildediagnostisk undersøkelse av hofteledd uavhengig av modalitet. Modalitet kan registeres i arketypen OBSERVATION.imaging_exam_result (Bildediagnostisk svar). Det er forventet at flere dataelementer kan bli lagt til når krav til slike er identifisert og bekreftet.
+
+Denne arketypen er utformet for å bli nøstet i SLOT'et \"Strukturerte funn\" i OBSERVATION.imaging_exam_result (Bildediagnostisk svar) eller i andre relevante Bildediagnostisk svar-arketyper, men kan også brukes innen andre ENTRY- og CLUSTER-arketyper der det er klinisk passende. Bruk separate instanser av arketypen for å registrere funn fra hvert enkelt hofteledd.">
+            misuse = <"Skal ikke brukes til å registrere funn som er gjort utenom det definerte organet eller den definerte kroppsdelen. Bruk en egen instans av en eller flere arketyper innen gruppen av CLUSTER.imaging_exam - arketyper (Undersøkelsesfunn) for dette formålet.
+
+Skal ikke brukes til å registrere overordnede undersøkelsesfunn, kontekst eller tekniske detaljer relatert til bildeundersøkelsen. Bruk arketypen OBSERVATION.imaging_exam_result (Bildediagnostisk svar) for å registrere for eksempel kommentar om undersøkelseskvalitet, differensialdiagnose og overordnet konklusjon.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the findings on radiological examination of a hip joint.">
+            keywords = <"finding, imaging, body, system, structure, region, observation, diagnostic, radiology, image, x-ray, ct, mri, ultrasound, joint, hip", ...>
+            use = <"Use to record the findings on radiological examination of a hip joint.
+
+The intended scope for this archetype is to record detailed findings on imaging examination of the hip joint using any modality. The imaging modality used can be recorded in the OBSERVATION.imaging_exam_result archetype. It is anticipated that further data elements may be added as requirements are identified and confirmed.
+ 
+This archetype is designed to be nested within the 'Structured imaging findings' SLOT in the OBSERVATION.imaging_exam_result or within other relevant CLUSTER.imaging_exam archetypes, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.
+Use separate instances of this archetype to record each examination findings of each hip separately.">
+            misuse = <"Not to be used to record findings observed outside the identified body structure or region. Use a separate instance of one or more archetypes from the CLUSTER.imaging_exam family for this purpose.
+
+Not to be used to record details related to the overall findings, context or technical details related to a complete imaging examination test result. Use the OBSERVATION.imaging_exam_result for this purpose. For example, comments on the study quality, differential diagnoses, and overall impression.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Imaging examination of a hip joint
+        items matches {
+            ELEMENT[at0001.1] matches {    -- Body structure
+                value matches {
+                    DV_CODED_TEXT[at0.9001] matches {
+                        defining_code matches {[ac0.9000]}    -- Body structure (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0.3] occurrences matches {0..1} matches {    -- Acetabular roof angle
+                value matches {
+                    DV_QUANTITY[at0.9002] matches {
+                        property matches {[at0.9005]}    -- Angle, plane
+                        magnitude matches {|-360.0..360.0|}
+                        units matches {"deg"}
+                    }
+                }
+            }
+            ELEMENT[at0.4] occurrences matches {0..1} matches {    -- Alpha angle (DDH)
+                value matches {
+                    DV_QUANTITY[at0.9003] matches {
+                        property matches {[at0.9005]}    -- Angle, plane
+                        magnitude matches {|-360.0..360.0|}
+                        units matches {"deg"}
+                    }
+                }
+            }
+            ELEMENT[at0.6] occurrences matches {0..1} matches {    -- Alpha angle (cam morphology)
+                value matches {
+                    DV_QUANTITY[at0.9006] matches {
+                        property matches {[at0.9005]}    -- Angle, plane
+                        magnitude matches {|-360.0..360.0|}
+                        units matches {"deg"}
+                    }
+                }
+            }
+            ELEMENT[at0.5] occurrences matches {0..1} matches {    -- Beta angle
+                value matches {
+                    DV_QUANTITY[at0.9004] matches {
+                        property matches {[at0.9005]}    -- Angle, plane
+                        magnitude matches {|-360.0..360.0|}
+                        units matches {"deg"}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0.1"] = <
+                text = <"*Left hip joint (en)">
+                description = <"">
+            >
+            ["at0.2"] = <
+                text = <"*Right hip joint (en)">
+                description = <"">
+            >
+            ["at0.3"] = <
+                text = <"*Acetabular roof angle (en)">
+                description = <"*The angle is formed by one line drawn from the medial edge of the acetabular sourcil and through to the most lateral aspect of the sourcil and a second line drawn in the horizontal plane of the pelvis. Also known as acetabular index. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Alpha angle (DDH) (en)">
+                description = <"*The angle is formed by the acetabular roof to the vertical cortex of the ilium and thus reflects the depth of the bony acetabular roof. (en)">
+                comment = <"*The alpha angle is a measurement used in the ultrasonographic assessment of developmental dysplasia of the hip (DDH), not to be confused with the alpha angle used in the evaluation of femoroacetabular impingement. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Beta angle (en)">
+                description = <"*The angle is formed by the cartilaginous roof to the vertical cortex of the ilium and thus reflects the femoral head cartilaginous coverage. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Alpha angle (cam morphology) (en)">
+                description = <"*The angle between a line from the center of the femoral head to the center of the femoral neck at its narrowest point, and a line from the center of the femoral head to a point where the distance from the bone to the center of the head is greater than the radius of the cartilage-covered femoral head. (en)">
+                comment = <"*The alpha angle is a measurement for the detection of cam morphology, which is sometimes associated with femoroacetabular impingement (FAI). Not to be confused with the alpha angle used in the evaluation of developmental dysplasia of the hip (DDH). (en)">
+            >
+            ["at0000.1"] = <
+                text = <"*Imaging examination of a hip joint (en)">
+                description = <"*Findings on radiological examination of a hip joint. (en)">
+            >
+            ["at0001.1"] = <
+                text = <"Körperstruktur">
+                description = <"Identifizierung der untersuchten Körperstruktur oder Region.">
+                comment = <"*For example: 'Liver', 'Right ankle' or 'Lymph node group'. Coding of the body structure with an appropriate terminology, such as SNOMED CT, is recommended. If the body structure has been fully identified in this 'Body structure' element, then the 'Body site' data element and 'Structured body site' SLOT become redundant. (en)">
+            >
+            ["at0.9005"] = <
+                text = <"* Angle, plane (en)">
+                description = <"* Angle, plane (en)">
+            >
+            ["ac0.9000"] = <
+                text = <"Körperstruktur (synthesised)">
+                description = <"Identifizierung der untersuchten Körperstruktur oder Region. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0.1"] = <
+                text = <"Venstre hofteledd">
+                description = <"">
+            >
+            ["at0.2"] = <
+                text = <"Høyre hofteledd">
+                description = <"">
+            >
+            ["at0.3"] = <
+                text = <"Acetabular helningsvinkel">
+                description = <"Vinkelen formes av én linje som går mellom den mediale og den laterale acetabularkanten, og en annen linje som går gjennom bekkenets horisontale plan. Også kjent som acetabular index.">
+            >
+            ["at0.4"] = <
+                text = <"Alfavinkel (DDH)">
+                description = <"Vinkelen dannes av acetabulartaket og den vertikale cortex av ilium og reflekterer dermed dybden av det benete acetabulartaket.">
+                comment = <"Alfavinkelen er en måling gjort med ultralyd for å vurdere hofteleddsdysplasi (DDH - Developmental Dysplasia of the Hip). Må ikke forveksles med alfavinkelen brukt i vurdering av femoroacetabular impingement.">
+            >
+            ["at0.5"] = <
+                text = <"Betavinkel">
+                description = <"Vinkelen dannes av brusktaket til den vertikale cortex av ilium og reflekterer dermed femurhodets bruskdekning.">
+            >
+            ["at0.6"] = <
+                text = <"Alfavinkel (cam-morfologi)">
+                description = <"Vinkelen dannes av en linje fra sentrum av femurhodet til sentrum av femurhalsens tynneste punkt, og en annen linje fra sentrum av femurhodet til et punkt hvor avstanden fra beinet til sentrum av hodet er større enn radiusen av det bruskdekkede femurhodet.">
+                comment = <"Alfavinkelen er måling for å påvise cam-morfologi, som kan være assosiert med femoroacetabular impingement (FAI). Må ikke forveksles med alfavinkelen brukt for å vurdere hofteleddsdysplasi.">
+            >
+            ["at0000.1"] = <
+                text = <"Bildediagnostisk undersøkelse - hofteledd">
+                description = <"Funn ved radiologisk undersøkelse av ett hofteledd.">
+            >
+            ["at0001.1"] = <
+                text = <"Kroppsstruktur">
+                description = <"Identifisering av organet eller kroppsdelen som svaret gjelder.">
+                comment = <"For eksempel \"Lever\", \"Høyre ankel\" eller \"Lymfeknutegruppe\". Det er anbefalt å kode kroppsstruktur med en passende terminologi, som SNOMED CT. Dersom den aktuelle strukturen i kroppen er fullt ut angitt i dette \"Kroppsstruktur\"-elementet er det ikke nødvendig å bruke \"Anatomisk lokalisasjon\" eller \"Strukturert anatomisk lokalisasjon\".">
+            >
+            ["at0.9005"] = <
+                text = <"* Angle, plane (en)">
+                description = <"* Angle, plane (en)">
+            >
+            ["ac0.9000"] = <
+                text = <"Kroppsstruktur (synthesised)">
+                description = <"Identifisering av organet eller kroppsdelen som svaret gjelder. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0.1"] = <
+                text = <"Left hip joint">
+                description = <"">
+            >
+            ["at0.2"] = <
+                text = <"Right hip joint">
+                description = <"">
+            >
+            ["at0.3"] = <
+                text = <"Acetabular roof angle">
+                description = <"The angle is formed by one line drawn from the medial edge of the acetabular sourcil and through to the most lateral aspect of the sourcil and a second line drawn in the horizontal plane of the pelvis. Also known as acetabular index.">
+            >
+            ["at0.4"] = <
+                text = <"Alpha angle (DDH)">
+                description = <"The angle is formed by the acetabular roof to the vertical cortex of the ilium and thus reflects the depth of the bony acetabular roof.">
+                comment = <"The alpha angle is a measurement used in the ultrasonographic assessment of developmental dysplasia of the hip (DDH), not to be confused with the alpha angle used in the evaluation of femoroacetabular impingement.">
+            >
+            ["at0.5"] = <
+                text = <"Beta angle">
+                description = <"The angle is formed by the cartilaginous roof to the vertical cortex of the ilium and thus reflects the femoral head cartilaginous coverage.">
+            >
+            ["at0.6"] = <
+                text = <"Alpha angle (cam morphology)">
+                description = <"The angle between a line from the center of the femoral head to the center of the femoral neck at its narrowest point, and a line from the center of the femoral head to a point where the distance from the bone to the center of the head is greater than the radius of the cartilage-covered femoral head.">
+                comment = <"The alpha angle is a measurement for the detection of cam morphology, which is sometimes associated with femoroacetabular impingement (FAI). Not to be confused with the alpha angle used in the evaluation of developmental dysplasia of the hip (DDH).">
+            >
+            ["at0000.1"] = <
+                text = <"Imaging examination of a hip joint">
+                description = <"Findings on radiological examination of a hip joint.">
+            >
+            ["at0001.1"] = <
+                text = <"Body structure">
+                description = <"Identification of the body structure or region examined.">
+                comment = <"For example: 'Liver', 'Right ankle' or 'Lymph node group'. Coding of the body structure with an appropriate terminology, such as SNOMED CT, is recommended. If the body structure has been fully identified in this 'Body structure' element, then the 'Body site' data element and 'Structured body site' SLOT become redundant.">
+            >
+            ["at0.9005"] = <
+                text = <"Angle, plane">
+                description = <"Angle, plane">
+            >
+            ["ac0.9000"] = <
+                text = <"Body structure (synthesised)">
+                description = <"Identification of the body structure or region examined. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at0.9005"] = <http://openehr.org/id/497>
+        >
+        ["SNOMED-CT"] = <
+            ["at0.1"] = <http://snomed.info/id/362907004>
+            ["at0.2"] = <http://snomed.info/id/362908009>
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.1", "at0.2">
+        >
+    >

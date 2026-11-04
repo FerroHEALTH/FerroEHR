@@ -1,0 +1,455 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=febe5062-e989-474a-bfd3-ddbfab8b4dae; build_uid=86acfe40-5ec9-4ce1-8bf3-f06f07abbb58)
+    openEHR-EHR-OBSERVATION.visaa.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Hildegard Franke">
+        ["organisation"] = <"freshEHR Clinical Informatics Ltd.">
+        ["email"] = <"hildi@freshehr.com">
+        ["date"] = <"2017-10-23">
+    >
+    original_namespace = <"uk.org.clinicalmodels">
+    original_publisher = <"UK Clinical Models">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"uk.org.clinicalmodels">
+    custodian_organisation = <"UK Clinical Models">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"https://www.physio-pedia.com/VISA-A_scale cited 23-Oct-2017">
+    >
+    other_details = <
+        ["current_contact"] = <"Hildegard Franke, freshEHR Clinical Informatics Ltd.<hildi@freshehr.com>">
+        ["MD5-CAM-1.0.1"] = <"697B40D7182637477DE58261BBE468C8">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For the capture and reporting of details of the VISA-A questionnaire, an index of the severity of Achilles tendinopathy.">
+            use = <"Use to record details of the VISA-A questionnaire, an index of the severity of Achilles tendinopathy.
+
+This questionnaire is a patient-reported outcome measure (PROM) for foot and ankle surgery.
+
+While openEHR archetypes are all freely available under an open license, the specific content of this archetype may be copyright protected. Any use of this archetype within implementations must be in compliance with the terms established by the copyright owners where a copyright exists.">
+            misuse = <"Not to be used unless the terms of copyright have been observed (if a copyright exists).">
+            copyright = <"© Clinical Models UK">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- VISA-A
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] occurrences matches {0..1} matches {    -- Point in time
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- 1 Minutes stiffness
+                                        value matches {
+                                            DV_ORDINAL[at9005] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0009]}],    -- 100 minutes
+                                                    [{1}, {[at0010]}],    -- 90 minutes
+                                                    [{2}, {[at0011]}],    -- 80 minutes
+                                                    [{3}, {[at0012]}],    -- 70 minutes
+                                                    [{4}, {[at0013]}],    -- 60 minutes
+                                                    [{5}, {[at0014]}],    -- 50 minutes
+                                                    [{6}, {[at0015]}],    -- 40 minutes
+                                                    [{7}, {[at0008]}],    -- 30 minutes
+                                                    [{8}, {[at0007]}],    -- 20 minutes
+                                                    [{9}, {[at0006]}],    -- 10 minutes
+                                                    [{10}, {[at0005]}]    -- Zero minutes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- 2 Pain when stretching Achilles tendon
+                                        value matches {
+                                            DV_COUNT[at9006] matches {
+                                                magnitude matches {|0..10|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- 3 Pain when walking on flat ground
+                                        value matches {
+                                            DV_COUNT[at9007] matches {
+                                                magnitude matches {|0..10|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- 4 Pain walking downstairs
+                                        value matches {
+                                            DV_COUNT[at9008] matches {
+                                                magnitude matches {|0..10|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- 5 Pain after heel raises
+                                        value matches {
+                                            DV_COUNT[at9009]
+                                        }
+                                    }
+                                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- 6 Single leg hops without pain
+                                        value matches {
+                                            DV_COUNT[at9010] matches {
+                                                magnitude matches {|>=0|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- 7 Sport or other physical activity
+                                        value matches {
+                                            DV_ORDINAL[at9011] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0022]}],    -- Not at all
+                                                    [{4}, {[at0023]}],    -- Modified training and or modified competition
+                                                    [{7}, {[at0024]}],    -- Full training and or competion but not same level as before
+                                                    [{10}, {[at0025]}]    -- Competing at same or higher level
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0026] occurrences matches {0..1} matches {    -- 8a No pain, length of training
+                                        value matches {
+                                            DV_ORDINAL[at9012] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0027]}],    -- Nil
+                                                    [{7}, {[at0028]}],    -- 1 to 10 minutes
+                                                    [{14}, {[at0029]}],    -- 11 to 20 minutes
+                                                    [{21}, {[at0030]}],    -- 21 to 30 minutes
+                                                    [{30}, {[at0031]}]    -- More than 30 minutes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0032] occurrences matches {0..1} matches {    -- 8b Some pain, length of training
+                                        value matches {
+                                            DV_ORDINAL[at9013] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0033]}],    -- Nil
+                                                    [{4}, {[at0034]}],    -- 1 to 10 minutes
+                                                    [{10}, {[at0035]}],    -- 11 to 20 minutes
+                                                    [{14}, {[at0036]}],    -- 21 to 30 minutes
+                                                    [{20}, {[at0037]}]    -- More than 30 minutes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0038] occurrences matches {0..1} matches {    -- 8c Pain stopping completion, length of training
+                                        value matches {
+                                            DV_ORDINAL[at9014] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0039]}],    -- Nil
+                                                    [{2}, {[at0040]}],    -- 1 to 10 minutes
+                                                    [{5}, {[at0041]}],    -- 11 to 20 minutes
+                                                    [{7}, {[at0042]}],    -- 21 to 30 minutes
+                                                    [{10}, {[at0043]}]    -- More than 30 minutes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0044] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9015] matches {
+                                                magnitude matches {|0..100|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0045] occurrences matches {0..1} matches {    -- Total score as percentage
+                                        value matches {
+                                            DV_PROPORTION[at9016] matches {
+                                                numerator matches {|0.0..100.0|}
+                                                is_integral matches {False}
+                                                type matches {2}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0046] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0047] matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9017]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0048] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0049] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"VISA-A">
+                description = <"VISA-A questionnaire: an index of the severity of Achilles tendinopathy.">
+            >
+            ["at0002"] = <
+                text = <"Point in time">
+                description = <"A specific date and/or time which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"1 Minutes stiffness">
+                description = <"Patient-reported estimation of how many minutes of stiffness in Achilles region is experienced when first getting up.">
+                comment = <"Questionnaire wording: 
+For how many minutes do you have stiffness in the Achilles region on first getting up?">
+            >
+            ["at0005"] = <
+                text = <"Zero minutes">
+                description = <"The patient experiences zero minutes of stiffness in Achilles region when first getting up.">
+            >
+            ["at0006"] = <
+                text = <"10 minutes">
+                description = <"The patient experiences about 10 minutes of stiffness in Achilles region when first getting up.">
+            >
+            ["at0007"] = <
+                text = <"20 minutes">
+                description = <"The patient experiences about 20 minutes of stiffness in Achilles region when first getting up.">
+            >
+            ["at0008"] = <
+                text = <"30 minutes">
+                description = <"The patient experiences about 30 minutes of stiffness in Achilles region when first getting up.">
+            >
+            ["at0009"] = <
+                text = <"100 minutes">
+                description = <"The patient experiences about 100 minutes or more of stiffness in Achilles region when first getting up.">
+            >
+            ["at0010"] = <
+                text = <"90 minutes">
+                description = <"The patient experiences about 90 minutes of stiffness in Achilles region when first getting up.">
+            >
+            ["at0011"] = <
+                text = <"80 minutes">
+                description = <"The patient experiences about 80 minutes of stiffness in Achilles region when first getting up.">
+            >
+            ["at0012"] = <
+                text = <"70 minutes">
+                description = <"The patient experiences about 70 minutes of stiffness in Achilles region when first getting up.">
+            >
+            ["at0013"] = <
+                text = <"60 minutes">
+                description = <"The patient experiences 60 minutes of stiffness in Achilles region when first getting up.">
+            >
+            ["at0014"] = <
+                text = <"50 minutes">
+                description = <"The patient experiences about 50 minutes of stiffness in Achilles region when first getting up.">
+            >
+            ["at0015"] = <
+                text = <"40 minutes">
+                description = <"The patient experiences about 40 minutes of stiffness in Achilles region when first getting up.">
+            >
+            ["at0016"] = <
+                text = <"2 Pain when stretching Achilles tendon">
+                description = <"Patient-reported estimation of pain experienced, once warmed up for the day, when stretching Achilles tendon fully over the edge of a step (keeping knee straight), on a scale of 0 to 10, where 0 indicates strong severe pain and 10 indicates no pain.">
+                comment = <"Questionnaire wording: 
+Once you are warmed up for the day, do you have pain when stretching the Achilles tendon fully over the edge of a step? (keeping knee straight)?">
+            >
+            ["at0017"] = <
+                text = <"3 Pain when walking on flat ground">
+                description = <"Patient-reported estimation of severity of pain experienced within 2 hours after walking on flat ground for 30 minutes, on a scale of 0 to 10, where 0 indicates strong severe pain or unable to walk for 30 minutes because of pain, and 10 indicates no pain.">
+                comment = <"Questionnaire wording:
+After walking on flat ground for 30 minutes, do you have pain within the next 2 hours?
+(If unable to walk on flat ground for 30 minutes because of pain, score 0 for this question).">
+            >
+            ["at0018"] = <
+                text = <"4 Pain walking downstairs">
+                description = <"Patient-reported estimation of severity of pain experienced when walking downstairs with a normal gait cycle, on a scale of 0 to 10 where 0 indicates strong severe pain and 10 indicates no pain.">
+                comment = <"Questionnaire wording: 
+Do you have pain walking downstairs with a normal gait cycle?">
+            >
+            ["at0019"] = <
+                text = <"5 Pain after heel raises">
+                description = <"Patient-reported estimation of pain experienced during or immediately after doing 10 single leg heel raises from a flat surface, on a scale of 0 to 10 where 0 indicates strong severe pain and 10 indicates no pain.">
+                comment = <"Questionnaire wording: 
+Do you have pain during or immediately after doing 10 (single leg) heel raises from a flat surface?">
+            >
+            ["at0020"] = <
+                text = <"6 Single leg hops without pain">
+                description = <"Patient-reported count of ability to do single leg hops without pain.">
+                comment = <"Questionnaire wording: 
+How many single leg hops can you do without pain?">
+            >
+            ["at0021"] = <
+                text = <"7 Sport or other physical activity">
+                description = <"Patient-reported extent to which sport or other physical activity is currently being undertaken.">
+                comment = <"Questionnaire wording: 
+Are you currently undertaking sport or other physical activity?">
+            >
+            ["at0022"] = <
+                text = <"Not at all">
+                description = <"The patient does not currently undertake sport or other physical activity.">
+            >
+            ["at0023"] = <
+                text = <"Modified training and or modified competition">
+                description = <"The patient is currently undertaking sport or other physical activity at a modified training and/or modified competition level.">
+            >
+            ["at0024"] = <
+                text = <"Full training and or competion but not same level as before">
+                description = <"The patient is currently undertaking sport or other physical activity at full training and/or competion level, but not the same level as when symptoms began.">
+            >
+            ["at0025"] = <
+                text = <"Competing at same or higher level">
+                description = <"The patient is currently competing in sport or other physical actity at the same or higher level as when symptoms began.">
+            >
+            ["at0026"] = <
+                text = <"8a No pain, length of training">
+                description = <"For patients experiencing no pain while undertaking Achilles tendon loading sports, length of time patient can train or practise.">
+                comment = <"Questionnaire wording: 
+Please complete EITHER A, B or C in this question.
+• If you have no pain while undertaking Achilles tendon loading sports please complete Q8a only.
+• If you have pain while undertaking Achilles tendon loading sports but it does not stop you from completing the activity, please complete Q8b only.
+• If you have pain that stops you from completing Achilles tendon loading sports, please complete Q8c only.
+A. If you have no pain while undertaking Achilles tendon loading sports, for how long can you train/practise?">
+            >
+            ["at0027"] = <
+                text = <"Nil">
+                description = <"Patient cannot train or practise.">
+            >
+            ["at0028"] = <
+                text = <"1 to 10 minutes">
+                description = <"Patient can train or practise for 1 to 10 minutes.">
+            >
+            ["at0029"] = <
+                text = <"11 to 20 minutes">
+                description = <"Patient can train or practise for 11 to 20 minutes.">
+            >
+            ["at0030"] = <
+                text = <"21 to 30 minutes">
+                description = <"Patient can train or practise for 21 to 30 minutes.">
+            >
+            ["at0031"] = <
+                text = <"More than 30 minutes">
+                description = <"Patient can train or practise for more than 30 minutes.">
+            >
+            ["at0032"] = <
+                text = <"8b Some pain, length of training">
+                description = <"For patients experiencing some pain while undertaking Achilles tendon loading sports, but pain does not stop them from completing training or practice, length of time patient can train or practise.">
+                comment = <"Questionnaire wording: 
+B. If you have some pain while undertaking Achilles tendon loading sport, but it does not stop you from completing your training/practice for how long can you train/practise?">
+            >
+            ["at0033"] = <
+                text = <"Nil">
+                description = <"Patient cannot train or practise.">
+            >
+            ["at0034"] = <
+                text = <"1 to 10 minutes">
+                description = <"Patient can train or practise for 1 to 10 minutes.">
+            >
+            ["at0035"] = <
+                text = <"11 to 20 minutes">
+                description = <"Patient can train or practise for 11 to 20 minutes.">
+            >
+            ["at0036"] = <
+                text = <"21 to 30 minutes">
+                description = <"Patient can train or practise for 21 to 30 minutes.">
+            >
+            ["at0037"] = <
+                text = <"More than 30 minutes">
+                description = <"Patient can train or practise for more than 30 minutes.">
+            >
+            ["at0038"] = <
+                text = <"8c Pain stopping completion, length of training">
+                description = <"For patients experiencing pain while undertaking Achilles tendon loading sports which stops them from completing training or practice, length of time patient can train or practise.">
+                comment = <"Questionnaire wording:
+C. If you have pain that stops you from completing your training/practice in Achilles tendon loading sport, for how long can you train/practise?">
+            >
+            ["at0039"] = <
+                text = <"Nil">
+                description = <"Patient cannot train or practise.">
+            >
+            ["at0040"] = <
+                text = <"1 to 10 minutes">
+                description = <"Patient can train or practise for 1 to 10 minutes.">
+            >
+            ["at0041"] = <
+                text = <"11 to 20 minutes">
+                description = <"Patient can train or practise for 11 to 20 minutes.">
+            >
+            ["at0042"] = <
+                text = <"21 to 30 minutes">
+                description = <"Patient can train or practise for 21 to 30 minutes.">
+            >
+            ["at0043"] = <
+                text = <"More than 30 minutes">
+                description = <"Patient can train or practise for more than 30 minutes.">
+            >
+            ["at0044"] = <
+                text = <"Total score">
+                description = <"Total score from questions 1 to 8.">
+            >
+            ["at0045"] = <
+                text = <"Total score as percentage">
+                description = <"Total score from questions 1 to 8 as a percentage.">
+            >
+            ["at0047"] = <
+                text = <"Confounding factors">
+                description = <"Record any issues or factors that may impact on the score or interpretation.">
+            >
+            ["at0049"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"e.g. Local hospital departmental information or additional metadata to align with HL7 or CDISC equivalents.">
+            >
+            ["ac9017"] = <
+                text = <"1 Minutes stiffness (synthesised)">
+                description = <"Patient-reported estimation of how many minutes of stiffness in Achilles region is experienced when first getting up. (synthesised)">
+            >
+            ["ac9018"] = <
+                text = <"7 Sport or other physical activity (synthesised)">
+                description = <"Patient-reported extent to which sport or other physical activity is currently being undertaken. (synthesised)">
+            >
+            ["ac9019"] = <
+                text = <"8a No pain, length of training (synthesised)">
+                description = <"For patients experiencing no pain while undertaking Achilles tendon loading sports, length of time patient can train or practise. (synthesised)">
+            >
+            ["ac9020"] = <
+                text = <"8b Some pain, length of training (synthesised)">
+                description = <"For patients experiencing some pain while undertaking Achilles tendon loading sports, but pain does not stop them from completing training or practice, length of time patient can train or practise. (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"8c Pain stopping completion, length of training (synthesised)">
+                description = <"For patients experiencing pain while undertaking Achilles tendon loading sports which stops them from completing training or practice, length of time patient can train or practise. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9020"] = <
+            id = <"ac9020">
+            members = <"at0033", "at0034", "at0035", "at0036", "at0037">
+        >
+        ["ac9021"] = <
+            id = <"ac9021">
+            members = <"at0039", "at0040", "at0041", "at0042", "at0043">
+        >
+        ["ac9017"] = <
+            id = <"ac9017">
+            members = <"at0009", "at0010", "at0011", "at0012", "at0013", "at0014", "at0015", "at0008", "at0007", "at0006", "at0005">
+        >
+        ["ac9019"] = <
+            id = <"ac9019">
+            members = <"at0027", "at0028", "at0029", "at0030", "at0031">
+        >
+        ["ac9018"] = <
+            id = <"ac9018">
+            members = <"at0022", "at0023", "at0024", "at0025">
+        >
+    >

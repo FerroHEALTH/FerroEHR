@@ -1,0 +1,302 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=ad9ec15a-6dbf-4dfc-9768-0feb33fb98d3; build_uid=215cc6fb-6601-4438-a82d-48882e315c3b)
+    openEHR-EHR-CLUSTER.transfusion_unit.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            author = <
+                ["name"] = <"Ana Pascual Segura, Laura Moral López">
+                ["organisation"] = <"Modelatge del Coneixement Clínic Catsalut">
+                ["email"] = <"anapascual@catsalut.cat, lauramoral@catsalut.cat">
+            >
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Ana Pascual Segura, Laura Moral López">
+                ["organisation"] = <"Modelatge del Coneixement Clínic Catsalut">
+                ["email"] = <"anapascual@catsalut.cat, lauramoral@catsalut.cat">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Ana Pascual Segura">
+        ["organisation"] = <"Modelatge del Coneixement Clínic Catsalut">
+        ["email"] = <"anapascual@catsalut.cat">
+        ["date"] = <"2025-03-25">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Laura Moral López, Modelatge del Coneixement Clínic Catsalut, Spain", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"46DE0FA44748B33E7D2BCDE19B14D367">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record information about a single unit of transfusion's blood product.">
+            keywords = <"blood, transfusion, unit, plasma, platelets", ...>
+            use = <"Used to record information about a single unit of transfusion's blood product. Specific details about the whole transfusion in which is involved may be recorded in an appropiate element in the parent archetype in which this archetype is nested.
+
+This archetype is designed to be nested within the ACTION.whole_transfusion_management and the EVALUATION.transfusion_summary, but it could also be nested within other archetypes where clinically appropiate.">
+            misuse = <"Not to be used to record information about a whole transfusion. 
+
+Not to be used to record information about the blood product instead of a unit of this product.
+
+When used with the ACTION.unit_transfusion_management archetype, be aware that there is no redundant information.">
+            copyright = <"© Departament de Salut de la Generalitat de Catalunya, openEHR Foundation">
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            purpose = <"Per registrar informació sobre una única unitat de producte sanguini de la transfusió.">
+            keywords = <"sang, transfusió, unitat, plasma, plaquetes", ...>
+            use = <"S'utilitza per registrar informació sobre una sola unitat de producte sanguini de la transfusió. Els detalls específics sobre tota la transfusió en què està implicada es poden registrar en un element apropiat de l'arquetip pare en el qual està aquest arquetip.
+
+Aquest arquetip està dissenyat per ser inclòs dins de la ACTION.whole_transfusion_management i la EVALUATION.transfusion_summary, però també es podria incloure dins d'altres arquetips quan sigui clínicament adequat.">
+            misuse = <"No s'ha d'utilitzar per registrar informació sobre una transfusió sencera. 
+
+No s'ha d'utilitzar per registrar informació sobre el producte sanguini en lloc d'una unitat d'aquest producte.
+
+En cas d'utilitzar-se conjuntament amb el ACTION.unit_transfusion_management, vigilar que no hi hagi informació redundant.">
+            copyright = <"© Departament de Salut de la Generalitat de Catalunya, openEHR Foundation">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Para registrar información sobre una única unidad producto sanguíneo de la transfusión.">
+            keywords = <"sangre, transfusión, unidad, plasma, plaquetas", ...>
+            use = <"Se utiliza para registrar información sobre una sola unidad producto sanguíneo de la transfusión. Los detalles específicos sobre toda la transfusión en la que está implicada se pueden registrar en un elemento apropiado del arquetipo padre en el que está este arquetipo.
+
+Este arquetipo está diseñado para ser incluido dentro de la ACTION.whole_transfusion_management y la EVALUATION.transfusion_summary, pero también se podría incluir dentro de otros arquetipos cuando sea clínicamente adecuado.">
+            misuse = <"No debe utilizarse para registrar información sobre una transfusión entera. 
+
+No debe utilizarse para registrar información sobre el producto sanguíneo en lugar de una unidad de dicho producto.
+
+En caso de utilizarse conjuntamente con el arquetipo ACTION.unit_transfusion_management, vigilar que no haya información redundante.">
+            copyright = <"© Departament de Salut de la Generalitat de Catalunya, openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Unit transfusion details
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {1} matches {    -- Unit identifier
+                value matches {
+                    DV_IDENTIFIER[at9000]
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Unit starting date/time
+                value matches {
+                    DV_DATE_TIME[at9001]
+                }
+            }
+            ELEMENT[at0005] matches {    -- Description
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Unit volume
+                value matches {
+                    DV_QUANTITY[at9003]
+                }
+            }
+            ELEMENT[at0009] occurrences matches {0..1} matches {    -- Unit duration
+                value matches {
+                    DV_DURATION[at9004]
+                }
+            }
+            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Unit end date/time
+                value matches {
+                    DV_DATE_TIME[at9005]
+                }
+            }
+            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Unit reason for cessation
+                value matches {
+                    DV_TEXT[at9006]
+                    DV_CODED_TEXT[at9007]
+                }
+            }
+            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Unit sequence number
+                value matches {
+                    DV_COUNT[at9008]
+                }
+            }
+            allow_archetype CLUSTER[at0007] matches {    -- Additional details
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            allow_archetype CLUSTER[at0015] matches {    -- Adverse reaction
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            allow_archetype CLUSTER[at0016] matches {    -- Administration details
+                include
+                    archetype_id/value matches {/.*|openEHR-EHR-CLUSTER\.administration_details\.v0\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Unit transfusion details">
+                description = <"Detailed information about a single unit of transfusion's blood product.">
+            >
+            ["at0001"] = <
+                text = <"Unit identifier">
+                description = <"The identifier of the unit of blood product transfused.">
+            >
+            ["at0002"] = <
+                text = <"Unit starting date/time">
+                description = <"The date and time when the transfusion of the unit commences.">
+            >
+            ["at0005"] = <
+                text = <"Description">
+                description = <"Narrative description about the transfusion of the unit.">
+            >
+            ["at0006"] = <
+                text = <"Unit volume">
+                description = <"The amount of blood product contained in each unit.">
+            >
+            ["at0007"] = <
+                text = <"Additional details">
+                description = <"Further structured details of the blood unit.">
+            >
+            ["at0009"] = <
+                text = <"Unit duration">
+                description = <"The duration of the transfusion of the unit.">
+            >
+            ["at0010"] = <
+                text = <"Unit end date/time">
+                description = <"The date and time when the transfusion of the unit stops.">
+            >
+            ["at0011"] = <
+                text = <"Unit reason for cessation">
+                description = <"The reason why the transfusion was stopped.">
+            >
+            ["at0014"] = <
+                text = <"Unit sequence number">
+                description = <"The order of the unit within the sequence of transfused units.">
+            >
+            ["at0015"] = <
+                text = <"Adverse reaction">
+                description = <"Additional information regarding a specific adverse reaction event caused by exposure to a specific substance.">
+                comment = <"It is strongly recommended to use the CLUSTER \"Adverse reaction event\".">
+            >
+            ["at0016"] = <
+                text = <"Administration details">
+                description = <"Detailed information about a specific administration event, and the body site where it is performed, for a specific purpose in a subject.">
+            >
+        >
+        ["ca"] = <
+            ["at0000"] = <
+                text = <"Detalls unitat transfusió">
+                description = <"Informació detallada sobre una única unitat de producte sanguini de la transfusió.">
+            >
+            ["at0001"] = <
+                text = <"Identificador del producte sanguini">
+                description = <"Identificador únic del producte sanguini transfós.">
+            >
+            ["at0002"] = <
+                text = <"Data/hora inici">
+                description = <"La data i hora en què comença la transfusió de la unitat.">
+            >
+            ["at0005"] = <
+                text = <"Descripció">
+                description = <"Descripció narrativa sobre la transfusió de l'unitat.">
+            >
+            ["at0006"] = <
+                text = <"Volum unitat">
+                description = <"Quantitat de producte sanguini contingut a cada unitat.">
+            >
+            ["at0007"] = <
+                text = <"Detalls addicionals">
+                description = <"Més detalls estructurats de la unitat.">
+            >
+            ["at0009"] = <
+                text = <"Durada unitat">
+                description = <"La durada de la transfusió de la unitat.">
+            >
+            ["at0010"] = <
+                text = <"Data/hora de fi">
+                description = <"La data i hora en què acaba la transfusió de la unitat.">
+            >
+            ["at0011"] = <
+                text = <"Motiu aturada">
+                description = <"El motiu pel qual es va aturar la transfusió.">
+            >
+            ["at0014"] = <
+                text = <"Número seqüencial unitat">
+                description = <"L'ordre de la unitat dins la seqüència d'unitats transfoses.">
+            >
+            ["at0015"] = <
+                text = <"Reacció adversa">
+                description = <"Informació addicional sobre un esdeveniment de reacció adversa específic causat per l'exposició a una substància específica.">
+                comment = <"Es recomana la utilització del CLUSTER \"Adverse reaction event\".">
+            >
+            ["at0016"] = <
+                text = <"Detalls administració">
+                description = <"Informació detallada sobre un esdeveniment d'administració clínica concret, i de la localització corporal on es realitza, amb una finalitat específica en una matèria.">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Detalles unidad de transfusión">
+                description = <"Información detallada sobre una única unidad de producto sanguíneo de la transfusión.">
+            >
+            ["at0001"] = <
+                text = <"Identificador del producto sanguíneo">
+                description = <"Identificador único del producto sanguíneo transfundido.">
+            >
+            ["at0002"] = <
+                text = <"Fecha/hora inicio">
+                description = <"La fecha y hora en que comienza la transfusión de la unidad.">
+            >
+            ["at0005"] = <
+                text = <"Descripción">
+                description = <"Descripción narrativa sobre la transfusión de la unidad.">
+            >
+            ["at0006"] = <
+                text = <"Volumen unidad">
+                description = <"Cantidad de producto sanguíneo contenido en cada unidad.">
+            >
+            ["at0007"] = <
+                text = <"Detalles adicionales">
+                description = <"Más detalles estructurados de la unidad.">
+            >
+            ["at0009"] = <
+                text = <"Duración unidad">
+                description = <"Duración de la transfusión de la unidad.">
+            >
+            ["at0010"] = <
+                text = <"Fecha/hora fin">
+                description = <"La fecha y hora en que acaba la transfusión de la unidad.
+">
+            >
+            ["at0011"] = <
+                text = <"Razón detención">
+                description = <"La razón por la cual se detuvo la transfusión.">
+            >
+            ["at0014"] = <
+                text = <"Número secuencial unidad">
+                description = <"El orden de la unidad dentro de la secuencia de unidades transfundidas.">
+            >
+            ["at0015"] = <
+                text = <"Reacción adversa">
+                description = <"Información adicional sobre un evento de reacción adversa específico causado por la exposición a una sustancia específica.">
+                comment = <"Se recomienda la utilización del CLUSTER \"Adverse reaction event\".">
+            >
+            ["at0016"] = <
+                text = <"Detalles administración">
+                description = <"Información adicional sobre un evento de reacción adversa específico causado por la exposición a una sustancia específica.">
+            >
+        >
+    >

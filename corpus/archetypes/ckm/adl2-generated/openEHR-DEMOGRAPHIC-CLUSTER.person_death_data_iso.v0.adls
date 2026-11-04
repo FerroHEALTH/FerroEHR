@@ -1,0 +1,227 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=dcacd08d-dac5-4a24-bd02-bb15699f785b; build_uid=6793f095-4efc-459a-9e48-4b5ffca3dd69)
+    openEHR-DEMOGRAPHIC-CLUSTER.person_death_data_iso.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Sarah Ballout">
+                ["email"] = <"ballout.sarah@mh-hannover.de">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Sergio Miranda Freire">
+                ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+                ["email"] = <"sergio@lampada.uerj.br">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sergio Miranda Freire & Rigoleta Dutra Mediano Dias">
+        ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+        ["email"] = <"sergio@lampada.uerj.br">
+        ["date"] = <"2009-05-20">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Rigoleta Dutra, Ministry of Defense, Brazil (openEHR Editor)", "Sergio Freire, State University of Rio de Janeiro, Brazil (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"ISO/TS 22220:2008(E) - Identification of Subject of Care - Technical Specification - International Organization for Standardization">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"637B911C4FDDA0BA860B6314C740E561">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Demographische Daten zum Tod einer Person.">
+            keywords = <"Demografische Daten zum Tod", "Demografische Daten des Todes">
+            use = <"Wird in der Bevölkerungsforschung verwendet, um Daten über den Tod einer Person zu sammeln.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Coleta de dados demográficos sobre o óbito de um indivíduo">
+            keywords = <"serviço demográfico", "dados demográficos do óbito">
+            use = <"Usado em serviços de demografia para coletar dados relativos ao óbito de um indivíduo">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Representation of a person's demographic death data">
+            keywords = <"demographic service", "death demographic data">
+            use = <"Used in demographic services to collect data about a person's death">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Death data
+        items matches {
+            ELEMENT[at0001] occurrences matches {1} matches {    -- Death date
+                value matches {
+                    DV_DATE[at9001]
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Source of notification
+                value matches {
+                    DV_CODED_TEXT[at9002] matches {
+                        defining_code matches {[ac9000]}    -- Source of notification (synthesised)
+                    }
+                }
+            }
+            allow_archetype CLUSTER[at0003] occurrences matches {0..1} matches {    -- Additional death data that are country specific
+                include
+                    archetype_id/value matches {/openEHR-DEMOGRAPHIC-CLUSTER\.person_other_death_data[a-zA-Z0-9_-]*\.v0\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Daten zum Tod">
+                description = <"Demografische Daten des Todes.">
+            >
+            ["at0001"] = <
+                text = <"Datum zum Tod">
+                description = <"Datum zum Tod einer Person.">
+            >
+            ["at0002"] = <
+                text = <"Informationsquelle">
+                description = <"Gibt an, woher die Informationen über den Tod stammen und wie sicher diese Informationen sind.">
+            >
+            ["at0003"] = <
+                text = <"Zusätzliche Daten zum Tod, die länderspezifisch sind">
+                description = <"Länderspezifische Daten zum Tod.">
+            >
+            ["at0020"] = <
+                text = <"Sterberegister">
+                description = <"Der Tod wurde von einem Sterberegister/notariell gemeldet.">
+            >
+            ["at0021"] = <
+                text = <"Gesundheitsdienstleister">
+                description = <"Zeigt an, dass der Tod von einem Gesundheitsdienstleister gemeldet wurde.">
+            >
+            ["at0022"] = <
+                text = <"Verwandte">
+                description = <"Zeigt an, dass der Tod von einem Verwandten gemeldet wurde.">
+            >
+            ["at0023"] = <
+                text = <"Eine andere Quelle">
+                description = <"Zeigt an, dass der Tod von einer anderen Quelle gemeldet wurde.">
+            >
+            ["at0024"] = <
+                text = <"Unbekannt">
+                description = <"Zeigt an, dass die Quelle der Benachrichtigung über den Tod unbekannt ist.">
+            >
+            ["ac9000"] = <
+                text = <"Informationsquelle (synthesised)">
+                description = <"Gibt an, woher die Informationen über den Tod stammen und wie sicher diese Informationen sind. (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Dados do óbito">
+                description = <"Dados demográficos do óbito">
+            >
+            ["at0001"] = <
+                text = <"Data do óbito">
+                description = <"A data do óbito da pessoa">
+            >
+            ["at0002"] = <
+                text = <"Fonte da notificação">
+                description = <"Um código que informa sobre a fonte de notificação do óbito. Este campo fornece uma indicação da confiabilidade da informação">
+            >
+            ["at0003"] = <
+                text = <"Dados adicionais do óbito que são específicos de cada país">
+                description = <"Dados específicos de um país">
+            >
+            ["at0020"] = <
+                text = <"Cartório">
+                description = <"Indica que este óbito foi comunicado por um cartório">
+            >
+            ["at0021"] = <
+                text = <"Prestador de assistência à saúde">
+                description = <"Indica que este óbito foi comunicado por um prestador de assistência à saúde">
+            >
+            ["at0022"] = <
+                text = <"Parente">
+                description = <"Indica que este óbito foi comunicado por um parente">
+            >
+            ["at0023"] = <
+                text = <"Outra fonte">
+                description = <"Indica que este óbito foi comunicado por uma outra fonte">
+            >
+            ["at0024"] = <
+                text = <"Desconhecida">
+                description = <"Indica que a fonte de notificação deste óbito é desconhecida">
+            >
+            ["ac9000"] = <
+                text = <"Fonte da notificação (synthesised)">
+                description = <"Um código que informa sobre a fonte de notificação do óbito. Este campo fornece uma indicação da confiabilidade da informação (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Death data">
+                description = <"Death demographic data">
+            >
+            ["at0001"] = <
+                text = <"Death date">
+                description = <"The date of death of a person">
+            >
+            ["at0002"] = <
+                text = <"Source of notification">
+                description = <"Indicates the source of information about a subject of care’s death. This field provides an indication of the certainty of the information">
+            >
+            ["at0003"] = <
+                text = <"Additional death data that are country specific">
+                description = <"Country specific data">
+            >
+            ["at0020"] = <
+                text = <"Registry">
+                description = <"Indicate that the notification source is a registry">
+            >
+            ["at0021"] = <
+                text = <"Healthcare provider">
+                description = <"Indicate that the notification source is a healthcare provider">
+            >
+            ["at0022"] = <
+                text = <"Relative">
+                description = <"Indicate that the notification source is a relative">
+            >
+            ["at0023"] = <
+                text = <"Other">
+                description = <"Indicate that the notification source is another source">
+            >
+            ["at0024"] = <
+                text = <"Unknown">
+                description = <"Indicate that the notification source is unknown">
+            >
+            ["ac9000"] = <
+                text = <"Source of notification (synthesised)">
+                description = <"Indicates the source of information about a subject of care’s death. This field provides an indication of the certainty of the information (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0020", "at0021", "at0022", "at0023", "at0024">
+        >
+    >

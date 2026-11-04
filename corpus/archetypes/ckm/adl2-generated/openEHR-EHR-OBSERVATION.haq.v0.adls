@@ -1,0 +1,1011 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=ba10ffb8-09bb-4702-8738-a2cec4bffdfa; build_uid=4d3969c6-1852-495d-9068-612e901d0f80)
+    openEHR-EHR-OBSERVATION.haq.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Hildegard Franke">
+        ["organisation"] = <"freshEHR Clinical Informatics Ltd.">
+        ["email"] = <"hildi@freshehr.com">
+        ["date"] = <"2016-11-02">
+    >
+    original_namespace = <"uk.org.clinicalmodels">
+    original_publisher = <"UK Clinical Models">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"uk.org.clinicalmodels">
+    custodian_organisation = <"UK Clinical Models">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Health Assessment Questionnaire  cited 03-Nov-2016 https://www.google.co.uk/url?sa=t&rct=j&q=&esrc=s&source=web&cd=4&cad=rja&uact=8&ved=0ahUKEwjtqvS70ozQAhXlCcAKHb7cBE0QFghHMAM&url=http%3A%2F%2Fwww2.gov.bc.ca%2Fassets%2Fgov%2Fhealth%2Fforms%2F5383fil.pdf&usg=AFQjCNFj2qNv5TNwHHL2R__lOQ4urvaX0g&sig2=hqc8K_Mvhd-HaxR4DWi4MA&bvm=bv.137132246,d.d2s">
+        ["2"] = <"Health Assessment Questionnaire Instructions  cited 03-Nov-2016 https://www.google.co.uk/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&uact=8&ved=0ahUKEwjtqvS70ozQAhXlCcAKHb7cBE0QFgg0MAA&url=https%3A%2F%2Fwww.niehs.nih.gov%2Fresearch%2Fresources%2Fassets%2Fdocs%2Fhaq_instructions_508.pdf&usg=AFQjCNGhSSKJSp4BDsa7KiYNi5QWnT7Tlw&sig2=PfcquJirKTB7M4-xhqwr0Q">
+    >
+    other_details = <
+        ["current_contact"] = <"Hildegard Franke, freshEHR Clinical Informatics Ltd.<hildi@freshehr.com>">
+        ["MD5-CAM-1.0.1"] = <"64A2531DA1AAA321CFB848D75BEF8882">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For the recording of details of the Health Assessment Questionnaire used to assess how a subject's arthritis affects his or her ability to function in daily life.">
+            keywords = <"HAQ", "Health Assessment", "Questionnaire", "Arthritis">
+            use = <"To record the details of the Health Assessment Questionnaire used in Rare Diseases management settings to assess how a subject's arthritis affects his or her ability to function in daily life.">
+            misuse = <"">
+            copyright = <"© Clinical Models UK">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Health Assessment Questionnaire
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] occurrences matches {0..1} matches {    -- Point in time
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    CLUSTER[at0008] occurrences matches {0..1} matches {    -- Dressing and grooming
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Dress
+                                                value matches {
+                                                    DV_CODED_TEXT[at9023] matches {
+                                                        defining_code matches {[ac9000]}    -- Dress (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Shampoo
+                                                value matches {
+                                                    DV_CODED_TEXT[at9024] matches {
+                                                        defining_code matches {[ac9001]}    -- Shampoo (synthesised)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0029] occurrences matches {0..1} matches {    -- Arising
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0030] occurrences matches {0..1} matches {    -- Stand up
+                                                value matches {
+                                                    DV_CODED_TEXT[at9025] matches {
+                                                        defining_code matches {[ac9002]}    -- Stand up (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0036] occurrences matches {0..1} matches {    -- Get in and out of bed
+                                                value matches {
+                                                    DV_CODED_TEXT[at9026] matches {
+                                                        defining_code matches {[ac9003]}    -- Get in and out of bed (synthesised)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0042] occurrences matches {0..1} matches {    -- Eating
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0043] occurrences matches {0..1} matches {    -- Cut meat
+                                                value matches {
+                                                    DV_CODED_TEXT[at9027] matches {
+                                                        defining_code matches {[ac9004]}    -- Cut meat (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0049] occurrences matches {0..1} matches {    -- Lift up cup or glass to mouth
+                                                value matches {
+                                                    DV_CODED_TEXT[at9028] matches {
+                                                        defining_code matches {[ac9005]}    -- Lift up cup or glass to mouth (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0055] occurrences matches {0..1} matches {    -- Open new carton of milk
+                                                value matches {
+                                                    DV_CODED_TEXT[at9029] matches {
+                                                        defining_code matches {[ac9006]}    -- Open new carton of milk (synthesised)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0061] occurrences matches {0..1} matches {    -- Walking
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0062] occurrences matches {0..1} matches {    -- Walk outdoors on flat ground
+                                                value matches {
+                                                    DV_CODED_TEXT[at9030] matches {
+                                                        defining_code matches {[ac9007]}    -- Walk outdoors on flat ground (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0068] occurrences matches {0..1} matches {    -- Climb up five steps
+                                                value matches {
+                                                    DV_CODED_TEXT[at9031] matches {
+                                                        defining_code matches {[ac9008]}    -- Climb up five steps (synthesised)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0087] occurrences matches {0..1} matches {    -- Hygiene
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0088] occurrences matches {0..1} matches {    -- Wash and dry entire body
+                                                value matches {
+                                                    DV_CODED_TEXT[at9032] matches {
+                                                        defining_code matches {[ac9009]}    -- Wash and dry entire body (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0094] occurrences matches {0..1} matches {    -- Take a bath
+                                                value matches {
+                                                    DV_CODED_TEXT[at9033] matches {
+                                                        defining_code matches {[ac9010]}    -- Take a bath (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0097] occurrences matches {0..1} matches {    -- Get on and off toilet
+                                                value matches {
+                                                    DV_CODED_TEXT[at9034] matches {
+                                                        defining_code matches {[ac9011]}    -- Get on and off toilet (synthesised)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0118] occurrences matches {0..1} matches {    -- Reach
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0119] occurrences matches {0..1} matches {    -- Reach and get down 5lb object
+                                                value matches {
+                                                    DV_CODED_TEXT[at9035] matches {
+                                                        defining_code matches {[ac9012]}    -- Reach and get down 5lb object (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0125] occurrences matches {0..1} matches {    -- Bend down to pick up
+                                                value matches {
+                                                    DV_CODED_TEXT[at9036] matches {
+                                                        defining_code matches {[ac9013]}    -- Bend down to pick up (synthesised)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0143] occurrences matches {0..1} matches {    -- Grip
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0150] occurrences matches {0..1} matches {    -- Open car doors
+                                                value matches {
+                                                    DV_CODED_TEXT[at9037] matches {
+                                                        defining_code matches {[ac9014]}    -- Open car doors (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0156] occurrences matches {0..1} matches {    -- Open jars
+                                                value matches {
+                                                    DV_CODED_TEXT[at9038] matches {
+                                                        defining_code matches {[ac9015]}    -- Open jars (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0162] occurrences matches {0..1} matches {    -- Turn taps on and off
+                                                value matches {
+                                                    DV_CODED_TEXT[at9039] matches {
+                                                        defining_code matches {[ac9016]}    -- Turn taps on and off (synthesised)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0174] occurrences matches {0..1} matches {    -- Activities
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0175] occurrences matches {0..1} matches {    -- Run errands and shop
+                                                value matches {
+                                                    DV_CODED_TEXT[at9040] matches {
+                                                        defining_code matches {[ac9017]}    -- Run errands and shop (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0177] occurrences matches {0..1} matches {    -- Get in and out of car
+                                                value matches {
+                                                    DV_CODED_TEXT[at9041] matches {
+                                                        defining_code matches {[ac9018]}    -- Get in and out of car (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0193] occurrences matches {0..1} matches {    -- Do household chores
+                                                value matches {
+                                                    DV_CODED_TEXT[at9042] matches {
+                                                        defining_code matches {[ac9019]}    -- Do household chores (synthesised)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0205] matches {    -- Devices used
+                                        value matches {
+                                            DV_CODED_TEXT[at9043] matches {
+                                                defining_code matches {[ac9020]}    -- Devices used (synthesised)
+                                            }
+                                            DV_TEXT[at9044]
+                                        }
+                                    }
+                                    ELEMENT[at0212] occurrences matches {0..1} matches {    -- Needs help from other person
+                                        value matches {
+                                            DV_CODED_TEXT[at9045] matches {
+                                                defining_code matches {[ac9021]}    -- Needs help from other person (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0217] occurrences matches {0..1} matches {    -- Pain score
+                                        value matches {
+                                            DV_QUANTITY[at9046] matches {
+                                                property matches {[at9022]}    -- Qualified real
+                                                magnitude matches {|0.0..100.0|}
+                                                units matches {"1"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0233] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9047]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0229] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0230] matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9048]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0231] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0232] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Health Assessment Questionnaire">
+                description = <"The Health Assessment Questionnaire for arthritis.">
+            >
+            ["at0002"] = <
+                text = <"Point in time">
+                description = <"A specific date and/or time which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Dress">
+                description = <"Assessment of subject's ability to dress, including tying shoelaces and doing buttons.">
+            >
+            ["at0005"] = <
+                text = <"Shampoo">
+                description = <"Assessment of the subject's ability to shampoo his or her hair.">
+            >
+            ["at0008"] = <
+                text = <"Dressing and grooming">
+                description = <"Assessment of subject's ability to perform functions related to dressing and grooming.">
+            >
+            ["at0009"] = <
+                text = <"Without any difficulty">
+                description = <"The subject is able to dress without any difficulty.">
+            >
+            ["at0010"] = <
+                text = <"With some difficulty">
+                description = <"The subject is able to dress with some difficulty.">
+            >
+            ["at0011"] = <
+                text = <"With much difficulty">
+                description = <"The subject is able to dress with much difficulty.">
+            >
+            ["at0012"] = <
+                text = <"Unable to do">
+                description = <"The subject is unable to dress.">
+            >
+            ["at0014"] = <
+                text = <"Without any difficulty">
+                description = <"The subject is able to shampoo his or her hair without any difficulty.">
+            >
+            ["at0015"] = <
+                text = <"With some difficulty">
+                description = <"The subject is able to shampoo his or her hair with some difficulty.">
+            >
+            ["at0016"] = <
+                text = <"With much difficulty">
+                description = <"The subject is able to shampoo his or her hair with much difficulty.">
+            >
+            ["at0017"] = <
+                text = <"Unable to do">
+                description = <"The subject is unable to shampoo his or her hair.">
+            >
+            ["at0029"] = <
+                text = <"Arising">
+                description = <"Assessment of the subject's ability to stand up from low chair or floor or get in and out of bed.">
+            >
+            ["at0030"] = <
+                text = <"Stand up">
+                description = <"Assessment of subject's ability to stand up from low chair or floor.">
+            >
+            ["at0031"] = <
+                text = <"Without any difficulty">
+                description = <"The subject is able to stand up from low chair or floor without any difficulty.">
+            >
+            ["at0032"] = <
+                text = <"With some difficulty">
+                description = <"The subject is able to stand up from low chair or floor with some difficulty.">
+            >
+            ["at0033"] = <
+                text = <"With much difficulty">
+                description = <"The subject is able to stand up from low chair or floor with much difficulty.">
+            >
+            ["at0034"] = <
+                text = <"Unable to do">
+                description = <"The subject is unable to stand up from low chair or floor.">
+            >
+            ["at0036"] = <
+                text = <"Get in and out of bed">
+                description = <"Assessment of the subject's ability to get in and out of bed.">
+            >
+            ["at0037"] = <
+                text = <"Without any difficulty">
+                description = <"The subject is able to get in and out of bed without any difficulty.">
+            >
+            ["at0038"] = <
+                text = <"With some difficulty">
+                description = <"The subject is able to get in and out of bed with some difficulty.">
+            >
+            ["at0039"] = <
+                text = <"With much difficulty">
+                description = <"The subject is able to get in and out of bed with much difficulty.">
+            >
+            ["at0040"] = <
+                text = <"Unable to do">
+                description = <"The subject is unable to get in and out of bed .">
+            >
+            ["at0042"] = <
+                text = <"Eating">
+                description = <"Assessment of the subject's ability to perform functions related to eating.">
+            >
+            ["at0043"] = <
+                text = <"Cut meat">
+                description = <"Assessment of the subject's ability to cut his or her own meat.">
+            >
+            ["at0044"] = <
+                text = <"Without any difficulty">
+                description = <"The subject is able to cut his or her own meat without any difficulty.">
+            >
+            ["at0045"] = <
+                text = <"With some difficulty">
+                description = <"The subject is able to cut his or her own meat with some difficulty.">
+            >
+            ["at0046"] = <
+                text = <"With much difficulty">
+                description = <"The subject is able to cut his or her own meat with much difficulty.">
+            >
+            ["at0047"] = <
+                text = <"Unable to do">
+                description = <"The subject is unable to cut his or her own meat.">
+            >
+            ["at0049"] = <
+                text = <"Lift up cup or glass to mouth">
+                description = <"Assessment of the subject's ability to lift a full cup or glass to mouth.">
+            >
+            ["at0050"] = <
+                text = <"Without any difficulty">
+                description = <"The subject is able to lift a cup or glass to mouth without any difficulty.">
+            >
+            ["at0051"] = <
+                text = <"With some difficulty">
+                description = <"The subject is able to lift a cup or glass to mouth with some difficulty.">
+            >
+            ["at0052"] = <
+                text = <"With much difficulty">
+                description = <"The subject is able to lift a cup or glass to mouth with much difficulty.">
+            >
+            ["at0053"] = <
+                text = <"Unable to do">
+                description = <"The subject is unable to lift a cup or glass to mouth.">
+            >
+            ["at0055"] = <
+                text = <"Open new carton of milk">
+                description = <"Assessment of the subject's ability to open a new carton of milk.">
+            >
+            ["at0056"] = <
+                text = <"Without any difficulty">
+                description = <"The subject is able to open a new carton of milk without any difficulty.">
+            >
+            ["at0057"] = <
+                text = <"WIth some difficulty">
+                description = <"The subject is able to open a new carton of milk with some difficulty.">
+            >
+            ["at0058"] = <
+                text = <"With much difficulty">
+                description = <"The subject is able to open a new carton of milk with much difficulty.">
+            >
+            ["at0059"] = <
+                text = <"Unable to do">
+                description = <"The subject is unable to open a new carton of milk.">
+            >
+            ["at0061"] = <
+                text = <"Walking">
+                description = <"Assessment of the subject's ability to perform functions related to walking.">
+            >
+            ["at0062"] = <
+                text = <"Walk outdoors on flat ground">
+                description = <"Assessment of the subject's ability to walk outdoors on flat ground.">
+            >
+            ["at0063"] = <
+                text = <"Without any difficulty">
+                description = <"The subject is able to walk outdoors on flat ground without any difficulty.">
+            >
+            ["at0064"] = <
+                text = <"With some difficulty">
+                description = <"The subject is able to walk outdoors on flat ground with some difficulty.">
+            >
+            ["at0065"] = <
+                text = <"With much difficulty">
+                description = <"The subject is able to walk outdoors on flat ground with much difficulty.">
+            >
+            ["at0066"] = <
+                text = <"Unable to do">
+                description = <"The subject is unable to walk outdoors on flat ground.">
+            >
+            ["at0068"] = <
+                text = <"Climb up five steps">
+                description = <"Assessment of the subject's ability to climb up five steps.">
+            >
+            ["at0069"] = <
+                text = <"Without any difficulty">
+                description = <"The subject is able to climb up five steps without any difficulty.">
+            >
+            ["at0070"] = <
+                text = <"With some difficulty">
+                description = <"The subject is able to climb up five steps with some difficulty.">
+            >
+            ["at0071"] = <
+                text = <"With much difficulty">
+                description = <"The subject is able to climb up five steps with much difficulty.">
+            >
+            ["at0072"] = <
+                text = <"Unable to do">
+                description = <"The subject is unable to climb up five steps.">
+            >
+            ["at0087"] = <
+                text = <"Hygiene">
+                description = <"Assessment of the subject's ability to perform functions related to hygiene.">
+            >
+            ["at0088"] = <
+                text = <"Wash and dry entire body">
+                description = <"Assessment of the subject's ability to wash and dry entire body.">
+            >
+            ["at0089"] = <
+                text = <"Without any difficulty">
+                description = <"The subject is able to wash and dry his or her entire body without any difficulty.">
+            >
+            ["at0090"] = <
+                text = <"With some difficulty">
+                description = <"The subject is able to wash and dry his or her entire body with some difficulty.">
+            >
+            ["at0091"] = <
+                text = <"With much difficulty">
+                description = <"The subject is able to wash and dry his or her entire body with much difficulty.">
+            >
+            ["at0092"] = <
+                text = <"Unable to do">
+                description = <"The subject is unable to wash and dry his or her entire body.">
+            >
+            ["at0094"] = <
+                text = <"Take a bath">
+                description = <"Assessment of the subject's ability to take a tub bath including getting in and out of the tub).">
+            >
+            ["at0095"] = <
+                text = <"Without any difficulty">
+                description = <"The subject is able to take a tub bath without any difficulty.">
+            >
+            ["at0096"] = <
+                text = <"With some difficulty">
+                description = <"The subject is able to take a tub bath with some difficulty.">
+            >
+            ["at0097"] = <
+                text = <"Get on and off toilet">
+                description = <"Assessment of the subject's ability to get on and off the toilet or potty chair.">
+            >
+            ["at0098"] = <
+                text = <"With much difficulty">
+                description = <"The subject is able to take a tub bath with much difficulty.">
+            >
+            ["at0099"] = <
+                text = <"Unable to do">
+                description = <"The subject is unable to take a tub bath.">
+            >
+            ["at0102"] = <
+                text = <"Without any difficulty">
+                description = <"The subject is able to get on and off toilet or potty chair without any difficulty.">
+            >
+            ["at0103"] = <
+                text = <"With some difficulty">
+                description = <"The subject is able to get on and off toilet or potty chair with some difficulty.">
+            >
+            ["at0104"] = <
+                text = <"With much difficulty">
+                description = <"The subject is able to get on and off toilet or potty chair with much difficulty.">
+            >
+            ["at0105"] = <
+                text = <"Unable to do">
+                description = <"The subject is unable to get on and off toilet or potty chair.">
+            >
+            ["at0118"] = <
+                text = <"Reach">
+                description = <"Assessment of the subject's ability to perform functions related to reaching.">
+            >
+            ["at0119"] = <
+                text = <"Reach and get down 5lb object">
+                description = <"Assessment of the subject's ability to reach and get down a 5lb object from just above his/her head.">
+            >
+            ["at0120"] = <
+                text = <"Without any difficulty">
+                description = <"The subject is able to reach and get down a 5lb object from just above his/her head without any difficulty.">
+            >
+            ["at0121"] = <
+                text = <"With some difficulty">
+                description = <"The subject is able to reach and get down a 5lb object from just above his/her head with some difficulty.">
+            >
+            ["at0122"] = <
+                text = <"With much difficulty">
+                description = <"The subject is able to reach and get down a 5lb object from just above his/her head with much difficulty.">
+            >
+            ["at0123"] = <
+                text = <"Unable to do">
+                description = <"The subject is unable to reach and get down a 5lb object from just above his/her head.">
+            >
+            ["at0125"] = <
+                text = <"Bend down to pick up">
+                description = <"Assessment of the subject's ability to bend down to pick up clothing or a piece of paper from the floor.">
+            >
+            ["at0126"] = <
+                text = <"Without any difficulty">
+                description = <"The subject is able to bend down to pick up clothing or a piece of paper from the floor without any difficulty.">
+            >
+            ["at0127"] = <
+                text = <"With some difficulty">
+                description = <"The subject is able to bend down to pick up clothing or a piece of paper from the floor with some difficulty.">
+            >
+            ["at0128"] = <
+                text = <"With much difficulty">
+                description = <"The subject is able to bend down to pick up clothing or a piece of paper from the floor with much difficulty.">
+            >
+            ["at0129"] = <
+                text = <"Unable to do">
+                description = <"The subject is unable to bend down to pick up clothing or a piece of paper from the floor.">
+            >
+            ["at0143"] = <
+                text = <"Grip">
+                description = <"Assessment of the subject's ability to perform functions relating to gripping or handling.">
+            >
+            ["at0150"] = <
+                text = <"Open car doors">
+                description = <"Assessment of the subject's ability to open car doors.">
+            >
+            ["at0151"] = <
+                text = <"Without any difficulty">
+                description = <"The subject is able to open car doors without any difficulty.">
+            >
+            ["at0152"] = <
+                text = <"With some difficulty">
+                description = <"The subject is able to open car doors with some difficulty.">
+            >
+            ["at0153"] = <
+                text = <"With much difficulty">
+                description = <"The subject is able to open car doors with much difficulty.">
+            >
+            ["at0154"] = <
+                text = <"Unable to do">
+                description = <"The subject is unable to open car doors.">
+            >
+            ["at0156"] = <
+                text = <"Open jars">
+                description = <"Assessment of subject's ability to open jars that have been previously opened.">
+            >
+            ["at0157"] = <
+                text = <"Without any difficulty">
+                description = <"The subject is able to open jars that have been previously opened without any difficulty.">
+            >
+            ["at0158"] = <
+                text = <"With some difficulty">
+                description = <"The subject is able to open jars that have been previously opened with some difficulty.">
+            >
+            ["at0159"] = <
+                text = <"With much difficulty">
+                description = <"The subject is able to open jars that have been previously opened with much difficulty.">
+            >
+            ["at0160"] = <
+                text = <"Unable to do">
+                description = <"The subject is unable to open jars that have been previously opened.">
+            >
+            ["at0162"] = <
+                text = <"Turn taps on and off">
+                description = <"Assessment of subject's ability to turn taps on and off.">
+            >
+            ["at0163"] = <
+                text = <"Without any difficulty">
+                description = <"The subject is able to turn taps on and off without any difficulty.">
+            >
+            ["at0164"] = <
+                text = <"With some difficulty">
+                description = <"The subject is able to turn taps on and off with some difficulty.">
+            >
+            ["at0165"] = <
+                text = <"With much difficulty">
+                description = <"The subject is able to turn taps on and off with much difficulty.">
+            >
+            ["at0166"] = <
+                text = <"Unable to do">
+                description = <"The subject is unable to turn taps on and off.">
+            >
+            ["at0174"] = <
+                text = <"Activities">
+                description = <"Assessment of the subject's ability to perform general activities.">
+            >
+            ["at0175"] = <
+                text = <"Run errands and shop">
+                description = <"Assessment of the subject's ability to run errands and shop.">
+            >
+            ["at0176"] = <
+                text = <"Without any difficulty">
+                description = <"The subject is able to run errands and shop without any difficulty.">
+            >
+            ["at0177"] = <
+                text = <"Get in and out of car">
+                description = <"Assessment of the subject's ability to get in and out of a car.">
+            >
+            ["at0178"] = <
+                text = <"With some difficulty">
+                description = <"The subject is able to run errands and shop with some difficulty.">
+            >
+            ["at0179"] = <
+                text = <"With much difficulty">
+                description = <"The subject is able to run errands and shop with much difficulty.">
+            >
+            ["at0180"] = <
+                text = <"Unable to do">
+                description = <"The subject is unable to run errands and shop.">
+            >
+            ["at0182"] = <
+                text = <"Without any difficulty">
+                description = <"The subject is able to get in and out of car without any difficulty.">
+            >
+            ["at0183"] = <
+                text = <"With some difficulty">
+                description = <"The subject is able to get in and out of car with some difficulty.">
+            >
+            ["at0184"] = <
+                text = <"With much difficulty">
+                description = <"The subject is able to get in and out of car with much difficulty.">
+            >
+            ["at0185"] = <
+                text = <"Unable to do">
+                description = <"The subject is unable to get in and out of car.">
+            >
+            ["at0193"] = <
+                text = <"Do household chores">
+                description = <"Assessment of the subject's ability to do household chores (e.g. wash dishes, take out trash, vacuuming, yardwork, make bed, clean room).">
+            >
+            ["at0194"] = <
+                text = <"Without any difficulty">
+                description = <"The subject is able to do household chores without any difficulty.">
+            >
+            ["at0195"] = <
+                text = <"With some difficulty">
+                description = <"The subject is able to do household chores with some difficulty.">
+            >
+            ["at0196"] = <
+                text = <"With much difficulty">
+                description = <"The subject is able to do household chores with much difficulty.">
+            >
+            ["at0197"] = <
+                text = <"Unable to do">
+                description = <"The subject is unable to do household chores.">
+            >
+            ["at0205"] = <
+                text = <"Devices used">
+                description = <"Statement about the aids or devices usually used by the subject for hygiene, reach, grip and activities.">
+            >
+            ["at0206"] = <
+                text = <"Raised toilet seat">
+                description = <"The subject usually uses a raised toilet seat.">
+            >
+            ["at0207"] = <
+                text = <"Bath seat">
+                description = <"The subject usually uses a bath seat.">
+            >
+            ["at0208"] = <
+                text = <"Jar opener">
+                description = <"The subject usually uses a jar opener for jars that have been previously opened.">
+            >
+            ["at0209"] = <
+                text = <"Bath rail">
+                description = <"The subject usually uses a bath rail.">
+            >
+            ["at0210"] = <
+                text = <"Long-handled appliances for reach">
+                description = <"The subject usually uses long-handled appliances for reach.">
+            >
+            ["at0212"] = <
+                text = <"Needs help from other person">
+                description = <"Statement of which activity categories (hygiene, reach, gripping and opening and errands and chores) usually require help for the subject from another person because of the subject's illness.">
+            >
+            ["at0213"] = <
+                text = <"Hygiene">
+                description = <"The subject usually needs help from another person for hygiene because of his or her illness.">
+            >
+            ["at0214"] = <
+                text = <"Reach">
+                description = <"The subject usually needs help from another person for reaching because of his or her illness.">
+            >
+            ["at0215"] = <
+                text = <"Gripping and opening things">
+                description = <"The subject usually needs help from another person for gripping and opening things because of his or her illness.">
+            >
+            ["at0216"] = <
+                text = <"Errands and chores">
+                description = <"The subject usually needs help from another person for errands and chores because of his or her illness.">
+            >
+            ["at0217"] = <
+                text = <"Pain score">
+                description = <"Rating of how much pain the  subject has had because of his/her illness in the past week on a scale of 0 (no pain) to 100 (very severe pain).">
+            >
+            ["at0219"] = <
+                text = <"Canes">
+                description = <"The subject usually uses canes.">
+            >
+            ["at0220"] = <
+                text = <"Walker">
+                description = <"The subject usually uses a walker.">
+            >
+            ["at0221"] = <
+                text = <"Crutches">
+                description = <"The subject usually uses crutches.">
+            >
+            ["at0222"] = <
+                text = <"Wheelchair or scooter">
+                description = <"The subject usualy uses a wheelchair or scooter.">
+            >
+            ["at0223"] = <
+                text = <"Special or built-up utensils">
+                description = <"The subject usually uses special or built-up utensils.">
+            >
+            ["at0224"] = <
+                text = <"Special or built-up chair">
+                description = <"The subject usually uses a special or built-up chair.">
+            >
+            ["at0225"] = <
+                text = <"Dressing and grooming">
+                description = <"The subject usually needs help from another person for dressing and grooming because of his or her illness.">
+            >
+            ["at0226"] = <
+                text = <"Eating">
+                description = <"The subject usually needs help from another person for eating because of his or her illness.">
+            >
+            ["at0227"] = <
+                text = <"Walking">
+                description = <"The subject usually needs help from another person for walking because of his or her illness.">
+            >
+            ["at0228"] = <
+                text = <"Rising">
+                description = <"The subject usually needs help from another person for rising because of his or her illness.">
+            >
+            ["at0230"] = <
+                text = <"Confounding factors">
+                description = <"Record any issues or factors that may impact on the assessment.">
+            >
+            ["at0232"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"e.g. Local hospital departmental infomation or additional metadata to align with HL7 or CDISC equivalents.">
+            >
+            ["at0233"] = <
+                text = <"Comment">
+                description = <"Narrative description of overall assessment by the subject.">
+            >
+            ["at9022"] = <
+                text = <"Qualified real">
+                description = <"Qualified real">
+            >
+            ["ac9000"] = <
+                text = <"Dress (synthesised)">
+                description = <"Assessment of subject's ability to dress, including tying shoelaces and doing buttons. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Shampoo (synthesised)">
+                description = <"Assessment of the subject's ability to shampoo his or her hair. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Stand up (synthesised)">
+                description = <"Assessment of subject's ability to stand up from low chair or floor. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Get in and out of bed (synthesised)">
+                description = <"Assessment of the subject's ability to get in and out of bed. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Cut meat (synthesised)">
+                description = <"Assessment of the subject's ability to cut his or her own meat. (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Lift up cup or glass to mouth (synthesised)">
+                description = <"Assessment of the subject's ability to lift a full cup or glass to mouth. (synthesised)">
+            >
+            ["ac9006"] = <
+                text = <"Open new carton of milk (synthesised)">
+                description = <"Assessment of the subject's ability to open a new carton of milk. (synthesised)">
+            >
+            ["ac9007"] = <
+                text = <"Walk outdoors on flat ground (synthesised)">
+                description = <"Assessment of the subject's ability to walk outdoors on flat ground. (synthesised)">
+            >
+            ["ac9008"] = <
+                text = <"Climb up five steps (synthesised)">
+                description = <"Assessment of the subject's ability to climb up five steps. (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"Wash and dry entire body (synthesised)">
+                description = <"Assessment of the subject's ability to wash and dry entire body. (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"Take a bath (synthesised)">
+                description = <"Assessment of the subject's ability to take a tub bath including getting in and out of the tub). (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Get on and off toilet (synthesised)">
+                description = <"Assessment of the subject's ability to get on and off the toilet or potty chair. (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"Reach and get down 5lb object (synthesised)">
+                description = <"Assessment of the subject's ability to reach and get down a 5lb object from just above his/her head. (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"Bend down to pick up (synthesised)">
+                description = <"Assessment of the subject's ability to bend down to pick up clothing or a piece of paper from the floor. (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Open car doors (synthesised)">
+                description = <"Assessment of the subject's ability to open car doors. (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Open jars (synthesised)">
+                description = <"Assessment of subject's ability to open jars that have been previously opened. (synthesised)">
+            >
+            ["ac9016"] = <
+                text = <"Turn taps on and off (synthesised)">
+                description = <"Assessment of subject's ability to turn taps on and off. (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Run errands and shop (synthesised)">
+                description = <"Assessment of the subject's ability to run errands and shop. (synthesised)">
+            >
+            ["ac9018"] = <
+                text = <"Get in and out of car (synthesised)">
+                description = <"Assessment of the subject's ability to get in and out of a car. (synthesised)">
+            >
+            ["ac9019"] = <
+                text = <"Do household chores (synthesised)">
+                description = <"Assessment of the subject's ability to do household chores (e.g. wash dishes, take out trash, vacuuming, yardwork, make bed, clean room). (synthesised)">
+            >
+            ["ac9020"] = <
+                text = <"Devices used (synthesised)">
+                description = <"Statement about the aids or devices usually used by the subject for hygiene, reach, grip and activities. (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"Needs help from other person (synthesised)">
+                description = <"Statement of which activity categories (hygiene, reach, gripping and opening and errands and chores) usually require help for the subject from another person because of the subject's illness. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9022"] = <http://openehr.org/id/380>
+        >
+    >
+    value_sets = <
+        ["ac9013"] = <
+            id = <"ac9013">
+            members = <"at0126", "at0127", "at0128", "at0129">
+        >
+        ["ac9012"] = <
+            id = <"ac9012">
+            members = <"at0120", "at0121", "at0122", "at0123">
+        >
+        ["ac9011"] = <
+            id = <"ac9011">
+            members = <"at0102", "at0103", "at0104", "at0105">
+        >
+        ["ac9010"] = <
+            id = <"ac9010">
+            members = <"at0095", "at0096", "at0098", "at0099">
+        >
+        ["ac9017"] = <
+            id = <"ac9017">
+            members = <"at0176", "at0178", "at0179", "at0180">
+        >
+        ["ac9016"] = <
+            id = <"ac9016">
+            members = <"at0163", "at0164", "at0165", "at0166">
+        >
+        ["ac9015"] = <
+            id = <"ac9015">
+            members = <"at0157", "at0158", "at0159", "at0160">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0151", "at0152", "at0153", "at0154">
+        >
+        ["ac9009"] = <
+            id = <"ac9009">
+            members = <"at0089", "at0090", "at0091", "at0092">
+        >
+        ["ac9008"] = <
+            id = <"ac9008">
+            members = <"at0069", "at0070", "at0071", "at0072">
+        >
+        ["ac9007"] = <
+            id = <"ac9007">
+            members = <"at0063", "at0064", "at0065", "at0066">
+        >
+        ["ac9020"] = <
+            id = <"ac9020">
+            members = <"at0219", "at0220", "at0221", "at0222", "at0206", "at0207", "at0208", "at0223", "at0224", "at0209", "at0210">
+        >
+        ["ac9021"] = <
+            id = <"ac9021">
+            members = <"at0216", "at0214", "at0215", "at0225", "at0226", "at0227", "at0228", "at0213">
+        >
+        ["ac9019"] = <
+            id = <"ac9019">
+            members = <"at0194", "at0195", "at0196", "at0197">
+        >
+        ["ac9018"] = <
+            id = <"ac9018">
+            members = <"at0182", "at0183", "at0184", "at0185">
+        >
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0031", "at0032", "at0033", "at0034">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0014", "at0015", "at0016", "at0017">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0009", "at0010", "at0011", "at0012">
+        >
+        ["ac9006"] = <
+            id = <"ac9006">
+            members = <"at0056", "at0057", "at0058", "at0059">
+        >
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0050", "at0051", "at0052", "at0053">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0044", "at0045", "at0046", "at0047">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0037", "at0038", "at0039", "at0040">
+        >
+    >
