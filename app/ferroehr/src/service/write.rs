@@ -25,6 +25,10 @@ use crate::error::ServiceError;
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;
 use crate::service::version_update::WriteRequest;
+use crate::system_log::event::{
+    AccessDomain, AuditEvent, EventActionCode, EventOutcome, EventType, ObjectClass,
+};
+use crate::versioning::Kind;
 use crate::versioning::audit::AuditInput;
 use crate::versioning::change::{Committed, Write, WriteEnvelope, commit, record_commit};
 use crate::versioning::lifecycle;
@@ -136,26 +140,98 @@ impl FerroEhrService {
         Box::pin(async move {
             let signing_ctx = self.signing_ctx();
             let mut conn = acquire(pool).await?;
-            let committed = match mode {
+            let (ehr_id, committed) = match mode {
                 Mode::Statement => {
                     let write = prepare(&mut conn).await?;
-                    commit(&mut conn, write, &signing_ctx).await?
+                    let ehr_id = write.ehr_id;
+                    (ehr_id, commit(&mut conn, write, &signing_ctx).await?)
                 }
                 Mode::Transaction | Mode::SyncSubject(..) => {
                     let mut tx = conn.begin().await?;
                     let write = prepare(&mut tx).await?;
+                    let ehr_id = write.ehr_id;
                     let committed = commit(&mut tx, write, &signing_ctx).await?;
                     if let Mode::SyncSubject(ehr_id, status) = mode {
                         self.sync_ehr_subject(&mut tx, ehr_id, status).await?;
                     }
                     tx.commit().await?;
-                    committed
+                    (ehr_id, committed)
                 }
             };
-            if !committed.skipped {
+            if committed.skipped {
+                self.record_resend(ehr_id, &committed)?;
+            } else {
                 record_commit(&committed);
             }
             Ok(committed)
         })
     }
+}
+
+impl FerroEhrService {
+    /// Records a skipped identical re-send (`[versioning] skip_identical_resend`,
+    /// #4415) on the access log: one `resend` record naming the version the
+    /// content matched, its content digest, the committer and the time, and
+    /// no commit audit, contribution or outbox event.
+    ///
+    /// NOTE: Cadasto/FerroHEALTH-backlog#23 (comment 6602171517) answers an
+    /// identical re-send with "a log entry which basically is saying that the
+    /// last version was saved one more time", and this record is that entry.
+    ///
+    /// # Errors
+    /// [`ServiceError::Unrecorded`] when the audit sender rejected the record
+    /// under `[audit] fail_mode = "closed"`.
+    fn record_resend(
+        &self,
+        ehr_id: Option<EhrId>,
+        committed: &Committed,
+    ) -> Result<(), ServiceError> {
+        if !self.audit_enabled() {
+            return Ok(());
+        }
+        let (object, domain) = match committed.kind {
+            Kind::Composition => (ObjectClass::Composition, AccessDomain::Ehr),
+            Kind::EhrStatus | Kind::EhrAccess => (ObjectClass::Ehr, AccessDomain::Ehr),
+            Kind::Folder => (ObjectClass::Directory, AccessDomain::Ehr),
+            Kind::Agent
+            | Kind::Group
+            | Kind::Organisation
+            | Kind::Person
+            | Kind::Role
+            | Kind::PartyRelationship => (ObjectClass::Demographic, AccessDomain::Demographic),
+        };
+        let mut event = AuditEvent::new(EventActionCode::Update, object, EventOutcome::Success);
+        event.event_type = Some(EventType::rest(crate::config::versioning::RESEND_OPERATION));
+        event.domain = domain;
+        event.ehr_id = ehr_id.map(|id| id.to_string());
+        // The record names the version matched and the digest the content and
+        // that version share; the access record carries no field for a hash,
+        // so the digest follows the uid in the resource id.
+        let digest = match committed.content_digest {
+            Some(bytes) => {
+                hex(&bytes).map_err(|e| ServiceError::internal("render the content digest", e))?
+            }
+            None => String::new(),
+        };
+        event.object_id = Some(format!("{}#sha256:{digest}", committed.version_uid()));
+        event.result_count = Some(1);
+        event.purpose = crate::system_log::access_context::current_purpose();
+        event.permit = crate::system_log::access_context::current_permit();
+        event.legal_basis = self.audit_legal_basis().map(str::to_owned);
+        self.record_access(event)
+    }
+}
+
+/// `bytes` as lowercase hexadecimal.
+///
+/// # Errors
+/// The formatter's [`std::fmt::Error`], which writing to a `String` never
+/// raises; it is propagated rather than swallowed.
+fn hex(bytes: &[u8]) -> Result<String, std::fmt::Error> {
+    use std::fmt::Write as _;
+    bytes
+        .iter()
+        .try_fold(String::with_capacity(bytes.len() * 2), |mut out, byte| {
+            write!(out, "{byte:02x}").map(|()| out)
+        })
 }

@@ -512,11 +512,18 @@ answer to a repeated send of the same content.
 | `skip_identical_resend` | bool | `false` | When `true`, a `PUT` whose content equals the current version's commits nothing and answers like a successful update with the existing version: `200` (or `204` under `Prefer: return=minimal`), and that version's `ETag` and `Location`. |
 
 Turn it on only for the integration that needs it: with the rule on, the
-repeated send leaves no commit audit and no contribution, so who confirmed
-the content and when is not recorded, where the default records every
-committal as the RM asks (RM common `master06` §Committal and Audits). The
-openEHR REST API does not govern skipping an identical commit; the answer
-is FerroEHR's own, chosen to match what a client sees from Cadasto.
+repeated send leaves no commit audit and no contribution, so the version
+history does not record that the content was confirmed again, where the
+default records every committal as the RM asks (RM common `master06`
+§Committal and Audits). What the repeated send does leave is one record on
+the access log (`[audit]`), operation `resend`, naming the version the
+content matched and its content digest (`<version uid>#sha256:<digest>`),
+the committer and the time: the entry Cadasto writes for a skipped send,
+which says the last version was saved one more time. The content is matched
+against the current version only, the one `If-Match` names; content equal to
+an earlier version's is committed as a new version. The openEHR REST API
+does not govern skipping an identical commit; the answer is FerroEHR's own,
+chosen to match what a client sees from Cadasto.
 
 ```toml
 [versioning]

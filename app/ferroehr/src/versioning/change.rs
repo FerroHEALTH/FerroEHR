@@ -82,6 +82,11 @@ pub struct Committed {
     /// current version's and `[versioning] skip_identical_resend` answered
     /// with that version (#4415). The fields then name the existing version.
     pub skipped: bool,
+    /// SHA-256 over the canonical body with the root `uid` removed
+    /// (`version.content_digest`); `None` on a logical delete and on an
+    /// attestation. On a skipped re-send it is the digest the content and the
+    /// existing version share.
+    pub content_digest: Option<[u8; 32]>,
 }
 
 /// The outcome of one CONTRIBUTION commit.
@@ -928,6 +933,7 @@ async fn commit_resolved(
             root_archetype: root_archetype(&r.rows),
             time_committed,
             skipped: false,
+            content_digest: r.content_digest,
         },
         contribution_id,
     ))
@@ -935,8 +941,10 @@ async fn commit_resolved(
 
 /// The opt-in answer to an identical re-send (#4415): the existing version
 /// `r` shares its content with, and no commit, when `r` is a modify whose
-/// content equalled the preceding tip's; `None` otherwise. ITS-REST does not
-/// govern skipping an identical commit: our own design.
+/// content equalled the preceding tip's; `None` otherwise. The tip is the
+/// one version the `If-Match` names, so an earlier version's content is
+/// never matched. ITS-REST does not govern skipping an identical commit: our
+/// own design, after what Cadasto answers.
 fn skipped_resend(r: &ResolvedWrite, audit: &AuditInput) -> Option<Committed> {
     let (Some(preceding), Some(_)) = (&r.preceding, r.shared_from) else {
         return None;
@@ -952,6 +960,7 @@ fn skipped_resend(r: &ResolvedWrite, audit: &AuditInput) -> Option<Committed> {
         root_archetype: root_archetype(&r.rows),
         time_committed: preceding.committed_at,
         skipped: true,
+        content_digest: r.content_digest,
     })
 }
 

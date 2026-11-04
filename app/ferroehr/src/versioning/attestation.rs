@@ -151,6 +151,7 @@ pub(crate) async fn attest(
         // version, so this is the instant the attestation itself committed.
         time_committed,
         skipped: false,
+        content_digest: None,
     })
 }
 

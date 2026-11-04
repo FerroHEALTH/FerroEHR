@@ -11,17 +11,21 @@
 //! every version by uid, through the node rows and through AQL, copies the
 //! shared rows back under each sharer's own key and reads again (the same
 //! bytes), and holds the tree across a delete, an archive, a restore and the
-//! node rebuild. The opt-in re-send rule is proved to commit nothing and to
-//! name the existing version. No openEHR spec governs the physical sharing of
-//! stored content: our own design.
+//! node rebuild. The opt-in re-send rule is proved to commit nothing, to name
+//! the existing version, to leave one `resend` record on the access log and
+//! to match the current version only. No openEHR spec governs the physical
+//! sharing of stored content: our own design.
 
 use serde_json::Value;
 use sqlx::PgPool;
 
+use ferroehr::config::versioning::RESEND_OPERATION;
 use ferroehr::ids::{EhrId, VoId};
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::query::request::AqlQueryRequest;
 use ferroehr::storage::integrity::StorageParityScope;
+use ferroehr::system_log::config::{AuditConfig, StoreConfig};
+use ferroehr::system_log::sender;
 
 use crate::fixtures::{base_composition, create_ehr, uv};
 
@@ -428,11 +432,55 @@ async fn a_rebuilt_sharing_version_reads_its_own_rows_again() {
     assert_eq!(before, after);
 }
 
+/// The `resend` records on the access log, as `(resource_id,
+/// resource_class)`, polled until `expected` of them have landed or the
+/// deadline passes: the sender drains in the background.
+async fn resend_records(pool: &PgPool, expected: usize) -> Vec<(String, String)> {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
+    loop {
+        let rows: Vec<(String, String)> = sqlx::query_as(
+            "SELECT resource_id, resource_class FROM audit.audit_event \
+             WHERE operation = $1 ORDER BY recorded_at",
+        )
+        .bind(RESEND_OPERATION)
+        .fetch_all(pool)
+        .await
+        .expect("read the access log");
+        if rows.len() >= expected || std::time::Instant::now() > deadline {
+            return rows;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+}
+
+/// With `[versioning] skip_identical_resend` on, an update whose content
+/// equals the current version's commits nothing and answers with that version;
+/// the access log keeps exactly one `resend` record naming the version matched
+/// and its content digest (the entry Cadasto writes for a skipped send,
+/// FerroHEALTH-backlog#23); a changed update commits as before; and content
+/// equal to an EARLIER version's is matched against the current version only,
+/// so it commits a new version.
 #[tokio::test]
 async fn the_opt_in_rule_answers_a_resend_with_the_existing_version() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
+    let config = AuditConfig {
+        enabled: true,
+        store: StoreConfig {
+            enabled: true,
+            retention_days: 0,
+            retention_years: None,
+            sgb_v_309_controller: false,
+            verify_interval_seconds: 0,
+            full_verify_interval_seconds: 0,
+        },
+        ..AuditConfig::default()
+    };
+    let (audit, _handle) = sender::start(config, None, Some(pool.clone()))
+        .await
+        .expect("the audit sender");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
+        .with_audit(audit)
         .with_skip_identical_resend(true);
     let ehr_id = create_ehr(&svc).await;
     let v1 = svc
@@ -467,6 +515,25 @@ async fn the_opt_in_rule_answers_a_resend_with_the_existing_version() {
     .await
     .expect("count the versions");
     assert_eq!((versions, audits), (1, 1), "nothing was committed");
+    let (digest, hex): (Vec<u8>, String) = sqlx::query_as(
+        "SELECT content_digest, encode(content_digest, 'hex') FROM version \
+         WHERE vo_id = $1 AND sys_version = 1",
+    )
+    .bind(vo_id)
+    .fetch_one(&pool)
+    .await
+    .expect("the stored digest");
+    assert_eq!(
+        resend.content_digest.map(Vec::from),
+        Some(digest),
+        "the skipped send carries the digest the content and the version share"
+    );
+    let records = resend_records(&pool, 1).await;
+    assert_eq!(
+        records,
+        vec![(format!("{uid}#sha256:{hex}"), "composition".to_owned())],
+        "one resend record names the version matched and the digest"
+    );
 
     let changed = svc
         .update_composition(
@@ -481,4 +548,33 @@ async fn the_opt_in_rule_answers_a_resend_with_the_existing_version() {
     let stored = stored_versions(&pool, vo_id).await;
     assert_eq!(stored.len(), 2);
     assert!(stored[1].1 > 1 && stored[1].2.is_none());
+
+    // The content of v1 again, against the current version v2: the rule
+    // matches the current version only, so this commits v3 (sharing nothing,
+    // since v2 differs), and the log gains no resend record.
+    let earlier = svc
+        .update_composition(
+            ehr_id,
+            vo_id,
+            uv(
+                &composition("same", 120.0),
+                "251",
+                Some(&changed.version_uid()),
+            ),
+        )
+        .await
+        .expect("content equal to an earlier version's commits");
+    assert!(!earlier.skipped);
+    assert_eq!(earlier.sys_version, 3);
+    let stored = stored_versions(&pool, vo_id).await;
+    assert_eq!(stored.len(), 3);
+    assert!(
+        stored[2].1 > 1 && stored[2].2.is_none(),
+        "v3 holds its own rows"
+    );
+    assert_eq!(
+        resend_records(&pool, 2).await.len(),
+        1,
+        "still the one resend record"
+    );
 }

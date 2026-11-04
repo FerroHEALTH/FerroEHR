@@ -891,7 +891,8 @@ hours = 0
 # the same content. OFF by default: every committal is recorded (RM common
 # master06 §Committal and Audits). ON, a PUT whose content equals the current
 # version's commits nothing and answers like a successful update with the
-# existing version's ETag and Location, so no commit audit and no contribution
-# record who re-sent the content and when.
+# existing version's ETag and Location; the access log keeps one `resend`
+# record naming the version matched and the content digest, and no commit
+# audit and no contribution record the send.
 [versioning]
 skip_identical_resend = false
