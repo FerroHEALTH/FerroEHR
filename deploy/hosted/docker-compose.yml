@@ -140,7 +140,7 @@ services:
   # below its only callers. Its database is on the DB box; the URL and the
   # sealing key are compose secrets read from `.env`.
   ferropix:
-    image: ${FERROPIX_IMAGE:-ghcr.io/ferrohealth/ferropix:0.0.14@sha256:389f40d144fe2ef3d79c1c1628e9a662a058961b1650c5541e601addc27112d8}
+    image: ${FERROPIX_IMAGE:-ghcr.io/ferrohealth/ferropix:0.0.15@sha256:5572f80a3a17fe83228a2a6fcf40f1dcaf8cacc48275136927286ba6ded5c74b}
     container_name: ferroehr-sandbox-ferropix
     restart: unless-stopped
     network_mode: service:identity-issuer
@@ -229,7 +229,7 @@ services:
   # 1536m cap also fits the Netherlands edition (889 MB).
   # The CDR's cap moved from 4096m to 3072m to make room on the 8 GB box.
   ferroterm:
-    image: ${FERROTERM_IMAGE:-ghcr.io/ferrohealth/ferroterm:0.4.0@sha256:efaa80152721c3738e0d0c0695cadbfefe89c1cf6df3567b9d3bc1788767e047}
+    image: ${FERROTERM_IMAGE:-ghcr.io/ferrohealth/ferroterm:0.4.1@sha256:b7f10609992377a7b8bca666254bceca79fe4366e2e54fc5fbce079eb9abf619}
     container_name: ferroehr-sandbox-ferroterm
     restart: unless-stopped
     # The image is its own health probe (`ferroterm healthcheck`, readiness

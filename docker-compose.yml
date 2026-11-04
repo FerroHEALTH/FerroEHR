@@ -393,7 +393,7 @@ services:
   # below names the client `ferroehr`). Pinned by tag and by the digest of its
   # image index.
   ferropix:
-    image: ghcr.io/ferrohealth/ferropix:0.0.14@sha256:389f40d144fe2ef3d79c1c1628e9a662a058961b1650c5541e601addc27112d8
+    image: ghcr.io/ferrohealth/ferropix:0.0.15@sha256:5572f80a3a17fe83228a2a6fcf40f1dcaf8cacc48275136927286ba6ded5c74b
     network_mode: service:identity-issuer
     depends_on:
       identity-issuer:
