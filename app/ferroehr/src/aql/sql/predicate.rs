@@ -403,7 +403,12 @@ impl Builder<'_> {
 
     pub(super) fn std_cond(&self, node: &str, sp: &StdPredicate) -> Result<Expr, AqlError> {
         let jp = jsonpath(&sp.path);
-        let lhs = as_text(jsonb_path(fragment_source(node, Some(&jp)), &jp, None));
+        let root = self.root_version_alias(node);
+        let lhs = as_text(jsonb_path(
+            fragment_source(node, Some(&jp), root.as_deref()),
+            &jp,
+            None,
+        ));
         let rhs = cast(Expr::val(self.bind_value(&sp.value)?), "text");
         Ok(lhs.binary(binoper(sp.op), rhs))
     }

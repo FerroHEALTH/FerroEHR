@@ -187,10 +187,15 @@ async fn node_fragment_rebuilds_every_row_the_decomposer_cut() {
         let body: Value = serde_json::from_str(&body).expect("a stored body is JSON");
         let expected = ferroehr::storage::codec::decompose(body).expect("a stored body decomposes");
         let stored: Vec<(i32, Value)> = sqlx::query_as(
-            "SELECT num, ext.node_fragment(data, rm_type, archetype, name, name_code, \
-                    name_terminology, value_type, value_num, value_text, value_code, \
-                    value_terminology, rm_version, language, encoding) \
-               FROM node WHERE vo_id = $1 AND sys_version = $2 ORDER BY num",
+            "SELECT n.num, ext.node_fragment(n.data, n.rm_type, n.archetype, n.name, \
+                    n.name_code, n.name_terminology, n.value_type, n.value_num, n.value_text, \
+                    n.value_code, n.value_terminology, n.rm_version, n.language, n.encoding, \
+                    n.origin_compact, n.time_compact, n.party_self, n.uid_derived, \
+                    ext.version_uid(v.vo_id, v.creating_system_id, v.trunk_version, \
+                    v.branch_number, v.branch_version), \
+                CASE WHEN n.num = 0 THEN v.template_id END) \
+               FROM node n JOIN version v ON v.vo_id = n.vo_id AND v.sys_version = n.sys_version \
+               WHERE n.vo_id = $1 AND n.sys_version = $2 ORDER BY n.num",
         )
         .bind(vo_id)
         .bind(sys_version)
@@ -1252,11 +1257,17 @@ async fn stored_demographic_body(pool: &PgPool, vo_id: VoId, sys_version: i32) -
 /// codec reassembles from.
 async fn stored_demographic_rows(pool: &PgPool, vo_id: VoId, sys_version: i32) -> Vec<ReadRow> {
     let rows: Vec<(i32, i32, i32, String, Value)> = sqlx::query_as(
-        "SELECT num, num_cap, parent_num, path, \
-                ext.node_fragment(data, rm_type, archetype, name, name_code, name_terminology, \
-                value_type, value_num, value_text, value_code, value_terminology, rm_version, \
-                language, encoding) FROM party.node \
-         WHERE vo_id = $1 AND sys_version = $2 ORDER BY num",
+        "SELECT n.num, n.num_cap, n.parent_num, n.path, \
+                ext.node_fragment(n.data, n.rm_type, n.archetype, n.name, n.name_code, \
+                n.name_terminology, n.value_type, n.value_num, n.value_text, n.value_code, \
+                n.value_terminology, n.rm_version, n.language, n.encoding, n.origin_compact, \
+                n.time_compact, n.party_self, n.uid_derived, \
+                ext.version_uid(v.vo_id, v.creating_system_id, v.trunk_version, \
+                v.branch_number, v.branch_version), \
+                CASE WHEN n.num = 0 THEN v.template_id END) \
+         FROM party.node n JOIN party.version v ON v.vo_id = n.vo_id \
+              AND v.sys_version = n.sys_version \
+         WHERE n.vo_id = $1 AND n.sys_version = $2 ORDER BY n.num",
     )
     .bind(vo_id.0)
     .bind(sys_version)
@@ -1451,7 +1462,8 @@ async fn node_search_text_reads_the_same_text_from_the_columns_and_the_fragment(
                     IS DISTINCT FROM ext.node_search_text(NULL, NULL, \
                         ext.node_fragment(data, rm_type, archetype, name, name_code, \
                             name_terminology, value_type, value_num, value_text, value_code, \
-                            value_terminology, rm_version, language, encoding))) \
+                            value_terminology, rm_version, language, encoding, origin_compact, \
+                            time_compact, party_self, uid_derived, NULL, NULL))) \
            FROM node WHERE rm_type = 'ELEMENT'",
     )
     .fetch_one(&pool)

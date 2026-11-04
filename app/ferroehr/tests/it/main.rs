@@ -75,6 +75,7 @@ mod legal_marks;
 mod licence_stamp;
 mod manufacturer;
 mod multimedia_s3;
+mod node_compact;
 mod node_header;
 mod one_schema_per_statement;
 mod opt_resource_meta;

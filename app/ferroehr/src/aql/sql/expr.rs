@@ -21,7 +21,9 @@ use sea_query::{Alias, BinOper, Expr, ExprTrait as _, Func, IntoIden, Value};
 use openehr_query::lexer::CompOp;
 
 use crate::aql::ir::{Coercion, EhrField, LeafPath, PathTarget, TypeSet, TypedLit, VersionField};
-use crate::db::iden::Node;
+use crate::db::iden::{CommitAudit, Node, VersionRow};
+
+use super::compact::{marked_member, root_columns, version_uid_text};
 
 /// A typed `"alias"."column"` reference, the column named through the schema
 /// catalog ([`crate::db::iden`]) rather than as a string.
@@ -89,49 +91,23 @@ fn first_member(jp: &str) -> Option<&str> {
 ///
 /// `value` comes from the typed value columns when the row has them, `name`,
 /// `archetype_node_id`, `archetype_details`, `language` and `encoding` from
-/// their columns when `data` lacks them, `_type` from `rm_type`, and every
-/// other member from `data` as stored. Without a fragment path the whole
-/// rebuilt fragment is read (`node_fragment`). No openEHR spec governs
-/// storage: our own design.
-pub(super) fn fragment_source(alias: &str, jp: Option<&str>) -> Expr {
+/// their columns when `data` lacks them, `_type` from `rm_type`, `origin`,
+/// `time`, `subject` and the root's `uid` from the compact markers
+/// (`crate::storage::compact`), and every other member from `data` as
+/// stored. `root` is the `version` alias of a node that can be a versioned
+/// object's root, which its `uid` and template come back from. Without a
+/// fragment path the whole rebuilt fragment is read (`node_fragment`). No
+/// openEHR spec governs storage: our own design.
+pub(super) fn fragment_source(alias: &str, jp: Option<&str>, root: Option<&str>) -> Expr {
     let data = col(alias, Node::Data);
-    let value = || {
-        call(
-            "node_value",
-            vec![
-                col(alias, Node::ValueType),
-                col(alias, Node::ValueNum),
-                col(alias, Node::ValueText),
-                col(alias, Node::ValueCode),
-                col(alias, Node::ValueTerminology),
-            ],
-        )
-    };
+    let (version_uid, template_id) = root_columns(alias, root);
     let Some(jp) = jp else {
-        return call(
-            "node_fragment",
-            vec![
-                data,
-                col(alias, Node::RmType),
-                col(alias, Node::Archetype),
-                col(alias, Node::Name),
-                col(alias, Node::NameCode),
-                col(alias, Node::NameTerminology),
-                col(alias, Node::ValueType),
-                col(alias, Node::ValueNum),
-                col(alias, Node::ValueText),
-                col(alias, Node::ValueCode),
-                col(alias, Node::ValueTerminology),
-                col(alias, Node::RmVersion),
-                col(alias, Node::Language),
-                col(alias, Node::Encoding),
-            ],
-        );
+        return whole_fragment(alias, version_uid, template_id);
     };
     match first_member(jp) {
         Some("value") => Expr::cust_with_exprs(
             "CASE WHEN $1 IS NULL THEN $2 ELSE jsonb_build_object('value', $3) END",
-            [col(alias, Node::ValueType), data, value()],
+            [col(alias, Node::ValueType), data, node_value(alias)],
         ),
         Some("name") => Expr::cust_with_exprs(
             "CASE WHEN $1 IS NULL OR ($2 -> 'name') IS NOT NULL THEN $3 \
@@ -157,13 +133,14 @@ pub(super) fn fragment_source(alias: &str, jp: Option<&str>) -> Expr {
         ),
         Some("archetype_details") => Expr::cust_with_exprs(
             "CASE WHEN $1 IS NULL OR ($2 -> 'archetype_details') IS NOT NULL THEN $3 \
-             ELSE jsonb_build_object('archetype_details', node_archetype_details($4, $5)) END",
+             ELSE jsonb_build_object('archetype_details', node_archetype_details($4, $5, $6)) END",
             [
                 col(alias, Node::RmVersion),
                 data.clone(),
                 data,
                 col(alias, Node::Archetype),
                 col(alias, Node::RmVersion),
+                template_id,
             ],
         ),
         Some(member @ ("language" | "encoding")) => {
@@ -186,12 +163,68 @@ pub(super) fn fragment_source(alias: &str, jp: Option<&str>) -> Expr {
                 ],
             )
         }
+        Some(member @ ("origin" | "time" | "subject")) => marked_member(alias, data, member),
+        Some("uid") if root.is_some() => Expr::cust_with_exprs(
+            "CASE WHEN $1 AND $2 IS NOT NULL THEN jsonb_build_object('uid', \
+             jsonb_build_object('_type', 'OBJECT_VERSION_ID', 'value', $3)) ELSE $4 END",
+            [
+                col(alias, Node::UidDerived),
+                version_uid.clone(),
+                version_uid,
+                data,
+            ],
+        ),
         Some("_type") => Expr::cust_with_exprs(
             "jsonb_build_object('_type', $1)",
             [col(alias, Node::RmType)],
         ),
         _ => data,
     }
+}
+
+/// The `ELEMENT` value the typed value columns of `alias` hold
+/// (`ext.node_value`).
+fn node_value(alias: &str) -> Expr {
+    call(
+        "node_value",
+        vec![
+            col(alias, Node::ValueType),
+            col(alias, Node::ValueNum),
+            col(alias, Node::ValueText),
+            col(alias, Node::ValueCode),
+            col(alias, Node::ValueTerminology),
+        ],
+    )
+}
+
+/// The whole rebuilt fragment of `alias` (`ext.node_fragment`), with the
+/// version's uid and template of a root row.
+fn whole_fragment(alias: &str, version_uid: Expr, template_id: Expr) -> Expr {
+    call(
+        "node_fragment",
+        vec![
+            col(alias, Node::Data),
+            col(alias, Node::RmType),
+            col(alias, Node::Archetype),
+            col(alias, Node::Name),
+            col(alias, Node::NameCode),
+            col(alias, Node::NameTerminology),
+            col(alias, Node::ValueType),
+            col(alias, Node::ValueNum),
+            col(alias, Node::ValueText),
+            col(alias, Node::ValueCode),
+            col(alias, Node::ValueTerminology),
+            col(alias, Node::RmVersion),
+            col(alias, Node::Language),
+            col(alias, Node::Encoding),
+            col(alias, Node::OriginCompact),
+            col(alias, Node::TimeCompact),
+            col(alias, Node::PartySelf),
+            col(alias, Node::UidDerived),
+            version_uid,
+            template_id,
+        ],
+    )
 }
 
 /// The member and the read of the `node` columns that hold the scalar a
@@ -378,6 +411,96 @@ pub(super) fn aql_like_to_sql(pattern: &str) -> String {
         }
     }
     out
+}
+
+// ── VERSION fields ──────────────────────────────────────────────────────────
+
+/// The typed SQL for a VERSION metadata field, off the `version`/`audit`
+/// aliases. The `uid` is synthesized as
+/// `vo_id::creating_system_id::version_tree_id` from the STORED per-version
+/// identity columns (never the live config `system_id` — the creating system
+/// is immutable per version, RM common master06 §Distributed versioning) via
+/// the typed `PgExpr::concatenate` `||` operator; the tree id renders
+/// `trunk[.branch.version]`.
+///
+/// `audit` summons the audit-table join LAZILY: only the commit-audit
+/// fields read it, so a `uid`/`contribution_id`/`lifecycle_state` path
+/// never pays the join (the same pay-per-use rule as `ensure_audit`'s
+/// doc — the first live plan autopsy found the ward query joining `audit`
+/// it never projected).
+pub(super) fn version_field_expr(
+    voa: &str,
+    audit: impl FnOnce() -> String,
+    field: VersionField,
+) -> Expr {
+    match field {
+        VersionField::Uid => version_uid_text(voa),
+        VersionField::ObjectUid => cast(col(voa, VersionRow::VoId), "text"),
+        VersionField::OwnerId => cast(col(voa, VersionRow::EhrId), "text"),
+        VersionField::TimeCommitted => col(&audit(), CommitAudit::TimeCommitted),
+        VersionField::SystemId => col(&audit(), CommitAudit::SystemId),
+        VersionField::ChangeType => col(&audit(), CommitAudit::ChangeType),
+        // The rubric renders from the openEHR terminology group at SQL-build
+        // time — the bundle is the authority, never a hardcoded rubric.
+        VersionField::ChangeTypeRubric => {
+            coded_rubric_case(&col(&audit(), CommitAudit::ChangeType), "audit_change_type")
+        }
+        VersionField::Committer => col(&audit(), CommitAudit::Committer),
+        // The stored description is the whole canonical DV_TEXT fragment, so
+        // the addressed representation is a jsonb extraction: the bare
+        // attribute is the object (as `committer` is), each scalar sub-path a
+        // `->>` text read that is NULL when the description is uncoded.
+        VersionField::Description => col(&audit(), CommitAudit::Description),
+        VersionField::DescriptionValue => sea_query::extension::postgres::PgExpr::cast_json_field(
+            col(&audit(), CommitAudit::Description),
+            Expr::val("value"),
+        ),
+        VersionField::DescriptionCode => sea_query::extension::postgres::PgExpr::cast_json_field(
+            sea_query::extension::postgres::PgExpr::get_json_field(
+                col(&audit(), CommitAudit::Description),
+                Expr::val("defining_code"),
+            ),
+            Expr::val("code_string"),
+        ),
+        VersionField::DescriptionTerminology => {
+            sea_query::extension::postgres::PgExpr::cast_json_field(
+                sea_query::extension::postgres::PgExpr::get_json_field(
+                    sea_query::extension::postgres::PgExpr::get_json_field(
+                        col(&audit(), CommitAudit::Description),
+                        Expr::val("defining_code"),
+                    ),
+                    Expr::val("terminology_id"),
+                ),
+                Expr::val("value"),
+            )
+        }
+        VersionField::ContributionId => cast(col(voa, VersionRow::ContributionId), "text"),
+        VersionField::LifecycleState => col(voa, VersionRow::LifecycleState),
+        VersionField::LifecycleStateRubric => coded_rubric_case(
+            &col(voa, VersionRow::LifecycleState),
+            "version_lifecycle_state",
+        ),
+        // Both coded version fields belong to the constant `openehr`
+        // terminology.
+        VersionField::ChangeTypeTerminology | VersionField::LifecycleStateTerminology => {
+            Expr::val("openehr")
+        }
+    }
+}
+
+/// `CASE <code_col> WHEN '<code>' THEN '<rubric>' … END` over an openEHR
+/// terminology group, generated from the vendored TERM bundle (TERM 3.1.0
+/// `openehr_terminology.xml`) — the coded version fields store the numeric
+/// group code; their `…/value` sub-path compares against the rubric.
+fn coded_rubric_case(code_col: &Expr, group_id: &str) -> Expr {
+    let mut case = sea_query::CaseStatement::new();
+    for concept in openehr_term::bundle::openehr().concepts_in_group(group_id) {
+        case = case.case(
+            code_col.clone().eq(Expr::val(concept.id.clone())),
+            Expr::val(concept.rubric.clone()),
+        );
+    }
+    case.into()
 }
 
 #[cfg(test)]

@@ -38,8 +38,8 @@ use crate::aql::ir::{
 };
 use crate::db::iden::{CommitAudit, Ehr, Node, VersionRow, VoHead};
 
+use super::expr::version_field_expr;
 use super::expr::{cast, col, hot, type_cond};
-use super::value::version_field_expr;
 use super::{Builder, EhrAccessScope, VoGroup, subject};
 
 /// The correlation anchor for an `OR` / `NOT CONTAINS` `EXISTS` subquery.

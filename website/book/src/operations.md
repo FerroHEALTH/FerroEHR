@@ -619,7 +619,14 @@ encoding in columns: the same driver, PostgreSQL image and settings, against a
 server built from the source, with 500 EHRs and 5 000 vital signs
 compositions and 100 EHRs and 500 International Patient Summaries. That change
 took a vital signs version from 21.6 KB to 17.1 KB and an International
-Patient Summary from 159 KB to 131 KB.
+Patient Summary from 159 KB to 131 KB. They were measured once more, with
+the same driver and settings (300 EHRs, 3 000 vital signs compositions, 750
+updates, 300 deletes and 6 000 reads; 100 EHRs and 500 International Patient
+Summaries), after storage generation 5 let a node row store a plain
+`DV_DATE_TIME` origin or time as its value string, leave out a bare
+`PARTY_SELF` subject, and leave the root's uid and archetype header with the
+version row: a vital signs version went from 17.1 KB to 15.5 KB and an
+International Patient Summary from 131 KB to 128 KB.
 
 ### Measuring your own figures
 
@@ -648,12 +655,12 @@ a few percent. Its WAL figures include the full-page images each phase's
 
 | Per committed version | Vital signs (10.8 KB of JSON) | International Patient Summary (87 KB of JSON) |
 |---|---|---|
-| Node rows | 43 rows of 238 B heap and 85 B of index, 13.9 KB | 395 rows of 209 B heap and 93 B of index, 119 KB |
+| Node rows | 43 rows of 201 B heap and 83 B of index, 12.2 KB | 395 rows of 199 B heap and 92 B of index, 115 KB |
 | `version` row, with the body compressed (lz4) | 2.5 KB, in the row | 10.9 KB, in TOAST |
 | `commit_audit`, `contribution` and `vo_head` | 0.7 KB | 0.7 KB |
-| **Clinical storage per create or update** | **16.0 to 17.1 KB (1.5 to 1.6 × the JSON)** | **131 to 141 KB (1.5 to 1.6 × the JSON)** |
-| A delete (a version with no body and no nodes) | 0.9 KB | 1.1 KB |
-| WAL written per create | 34 KB | 272 KB |
+| **Clinical storage per create or update** | **14.6 to 15.5 KB (1.4 × the JSON)** | **128 to 138 KB (1.5 to 1.6 × the JSON)** |
+| A delete (a version with no body and no nodes) | 1.4 KB | 2.5 KB |
+| WAL written per create | 30 KB | 242 KB |
 
 The node rows hold about 80 % of the clinical bytes, so the size of a version
 follows the number of RM nodes in the composition more closely than the
@@ -678,14 +685,14 @@ clinical data: 40 000 composition reads add about 38 MiB, as much as about
 Add up, for the period you size for:
 
 - the composition versions you expect, times the bytes per version of your
-  own templates (17 KB for one like vital signs, 0.3 to 0.4 KB per RM node
+  own templates (15 KB for one like vital signs, 0.3 to 0.4 KB per RM node
   as a first estimate);
 - the audited requests, times about 1.0 KB, for as long as the
   [audit retention](audit.md#retention-and-who-chooses-it) keeps them;
 - `pg_wal`, up to `max_wal_size` (below);
 - your backups and WAL archive, which this database does not hold.
 
-One million vital-signs-sized versions take about 17 GB, and ten million
+One million vital-signs-sized versions take about 15 GB, and ten million
 audited requests about 10 GB.
 
 ### Audit retention
@@ -710,7 +717,7 @@ data unless you move it. `max_wal_size` is a soft limit: a failing
 behind holds more (PostgreSQL 18 docs,
 [WAL Configuration](https://www.postgresql.org/docs/18/wal-configuration.html)).
 Budget it as a fixed amount beside the database, not as growth. A commit
-writes about twice its stored size to the WAL (34 KB for a 17.1 KB vital signs
+writes about twice its stored size to the WAL (30 KB for a 15.5 KB vital signs
 version), which is what a WAL archive for point-in-time recovery receives.
 
 ### Vacuum and fillfactor

@@ -15,7 +15,7 @@
 //! never disagree on the mapping:
 //! - **Write** ([`crate::storage::codec`] → [`extract`]): at decomposition time,
 //!   for a versioned-object root, the raw leaf text is captured onto the row and
-//!   written into the column ([`crate::storage::node_repo::write_nodes`]).
+//!   written into the column ([`crate::storage::node_write::write_nodes`]).
 //! - **Read** (`crate::aql::sql::value`): a lowered `LeafPath` whose flattened
 //!   attribute path equals a registry entry's `path` (and whose source is the
 //!   matching versioned-object root) substitutes `node.<column>` for the

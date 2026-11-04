@@ -92,7 +92,7 @@ use crate::storage::dump_repo::{
 };
 use crate::storage::error::StorageError;
 use crate::storage::identifier_repo::{self, IdentifierRepoError, SealedRow};
-use crate::storage::{node_repo, version_repo};
+use crate::storage::{node_write, version_repo};
 use crate::versioning::audit::AuditInput;
 use crate::versioning::object_version_id::{TreeId, object_version_id};
 use crate::versioning::wire::{OriginalVersionParts, build_original_version, contribution_ref};
@@ -1739,7 +1739,7 @@ fn restore_refusal(refusal: StoreError) -> Result<Option<String>, ServiceError> 
 /// the storage codec) — batched per relation: ONE `version` `unnest`
 /// insert ([`crate::storage::version_repo::import::insert_versions_verbatim`])
 /// and ONE `node` `unnest` insert
-/// ([`crate::storage::node_repo::write_nodes_batch`]), never a round trip per
+/// ([`crate::storage::node_write::write_nodes_batch`]), never a round trip per
 /// version. Consumes the records so each body is decomposed by move, without
 /// a per-version clone. A deleted version (null body) stores no node rows.
 ///
@@ -1798,11 +1798,22 @@ async fn load_versions(
         if v.body.is_null() {
             continue;
         }
-        let vo_id = v.vo_id;
-        let sys_version = v.sys_version;
-        node_batches.push((vo_id, sys_version, ehr_id, decompose(v.body)?));
+        node_batches.push(node_write::VersionNodes {
+            vo_id: v.vo_id,
+            sys_version: v.sys_version,
+            ehr_id,
+            version_uid: crate::storage::compact::version_uid(
+                v.vo_id,
+                &v.creating_system_id,
+                v.trunk_version,
+                v.branch_number,
+                v.branch_version,
+            ),
+            template_id: v.template_id,
+            rows: decompose(v.body)?,
+        });
     }
-    node_repo::write_nodes_batch(tx, &node_batches).await?;
+    node_write::write_nodes_batch(tx, &node_batches).await?;
     Ok(())
 }
 

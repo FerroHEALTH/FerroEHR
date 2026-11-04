@@ -122,22 +122,33 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   value columns `value_type`, `value_num`, `value_text`, `value_code` and
   `value_terminology` hold instead (DV_QUANTITY, DV_COUNT, DV_ORDINAL,
   DV_CODED_TEXT, DV_IDENTIFIER, DV_BOOLEAN and the string-valued types, each in
-  its basic shape only). Below the root (#4525), an archetype root's
-  `archetype_details` and `archetype_node_id` leave together when the details
+  its basic shape only). An archetype root's
+  `archetype_details` and `archetype_node_id` leave together (#4525) when the details
   are exactly its own archetype id and an `rm_version` and the id is the
   recased `archetype` (`openEHR-` and the class part in capitals), with
   `rm_version` in its column, and a `language` in `ISO_639-1` and an
   `encoding` in `IANA_character-sets` leave for the `language` and `encoding`
-  columns; the root row keeps its fragment, so the root reads that go around
-  `ext.node_fragment` are unchanged. A key is left out only when the columns
+  columns. The versioned object's root (storage generation 5, #4904) takes
+  the same header rule with the version row's `template_id` as the template
+  its header may name, and leaves out its `uid` when it is exactly the
+  `OBJECT_VERSION_ID` the version row's identity columns render
+  (`ext.version_uid`). A `HISTORY.origin`, `EVENT.time` or `ACTION.time` of
+  exactly `_type: DV_DATE_TIME` and a `value` is stored as that string, and a
+  `subject` of exactly `{"_type": "PARTY_SELF"}` leaves. Four nullable
+  boolean markers, `origin_compact`, `time_compact`, `party_self` and
+  `uid_derived`, say which of those keys a row left out
+  (`crate::storage::compact`): the rebuild reads a marker, never an absent key
+  or a JSON shape, so a fragment of any other shape reads back as stored and
+  a row written before the markers reads as it did. A key is left out only when the columns
   rebuild it exactly; everything else stays in `data` verbatim, and `data` is NULL when
   nothing remains (two thirds of the rows). `ext.node_name`, `ext.node_value`,
   `ext.node_archetype_node_id`, `ext.node_archetype_details`,
-  `ext.node_code_phrase` and `ext.node_fragment`, inlined `LANGUAGE sql`
+  `ext.node_code_phrase`, `ext.node_date_time` and `ext.node_fragment`, inlined `LANGUAGE sql`
   functions, rebuild the omitted keys, so every reader sees the canonical
   fragment (`crate::storage::slim` is the write half; its Rust rebuild puts a
-  restored header key where jsonb key order placed it, so a served fragment
-  keeps its bytes). The AQL emitter reads a fragment
+  restored key where jsonb key order placed it, so a served fragment
+  keeps its bytes). A root row's fragment is read with its version row
+  beside it, which is where its uid and template come back from. The AQL emitter reads a fragment
   through the first member its path names, and the scalar paths into a typed
   value (`value/magnitude`, `value/value`, `value/units`, the defining code)
   read the typed column directly. No index sits on the typed columns: no

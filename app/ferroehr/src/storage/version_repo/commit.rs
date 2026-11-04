@@ -337,7 +337,7 @@ fn folded_statement(shape: Shape) -> String {
                 committed_at: "$22",
             }
             .sql(),
-            crate::storage::node_repo::node_insert_cte("$8", "$10", "$7", 25)
+            crate::storage::node_write::node_insert_cte("$8", "$10", "$7", 25)
         )
     } else {
         String::new()
@@ -418,8 +418,20 @@ pub async fn commit_folded(
                 .bind(v.time_committed.to_string())
                 .bind(serde_json::json!(v.origins))
                 .bind(super::optional_json_array(v.other_input_version_uids));
-            let node_refs: Vec<&crate::storage::row::NodeRow> = v.rows.iter().collect();
-            crate::storage::node_repo::bind_node_arrays(query, &node_refs)
+            let version_uid = crate::storage::compact::version_uid(
+                v.vo_id,
+                v.creating_system_id,
+                v.trunk_version,
+                v.branch_number,
+                v.branch_version,
+            );
+            let root = crate::storage::compact::RootIdentity {
+                version_uid: &version_uid,
+                template_id: v.template_id,
+            };
+            let node_refs: Vec<(&crate::storage::row::NodeRow, _)> =
+                v.rows.iter().map(|row| (row, &root)).collect();
+            crate::storage::node_write::bind_node_arrays(query, &node_refs)
                 .fetch_one(&mut *tx)
                 .await?
         }

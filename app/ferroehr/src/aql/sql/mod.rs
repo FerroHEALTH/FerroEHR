@@ -49,6 +49,7 @@
 //! test rather than a runtime SQL error.
 
 mod archetype;
+mod compact;
 mod condition;
 mod expr;
 mod from;

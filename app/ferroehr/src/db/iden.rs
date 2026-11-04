@@ -279,6 +279,18 @@ pub enum Node {
     Language,
     /// `encoding` — the code of an `encoding` the fragment leaves out.
     Encoding,
+    /// `origin_compact` — `TRUE` when `data` holds `origin` as the value
+    /// string of its `DV_DATE_TIME` ([`crate::storage::compact::Compact`]).
+    OriginCompact,
+    /// `time_compact` — `TRUE` when `data` holds `time` as the value string
+    /// of its `DV_DATE_TIME`.
+    TimeCompact,
+    /// `party_self` — `TRUE` when `data` leaves out a `subject` of exactly
+    /// `PARTY_SELF`.
+    PartySelf,
+    /// `uid_derived` — `TRUE` when the root row's `data` leaves out the `uid`
+    /// of its version.
+    UidDerived,
 }
 
 #[cfg(test)]
@@ -318,6 +330,7 @@ mod tests {
         include_str!("../../migrations/clinical/0019_node_values.sql"),
         include_str!("../../migrations/clinical/0028_node_header.sql"),
         include_str!("../../migrations/clinical/0029_access_opt_out.sql"),
+        include_str!("../../migrations/clinical/0031_node_compact.sql"),
     ];
 
     /// Whether a later migration adds `col` to `table`.

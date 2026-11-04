@@ -50,7 +50,8 @@ use crate::service::FerroEhrService;
 use crate::service::admin::integrity::{StorageDomain, StorageParityDefect, StorageParityEvent};
 use crate::storage::codec::decompose;
 use crate::storage::integrity::{self, StorageParityScope};
-use crate::storage::node_repo::{delete_version_nodes, read_version_canonical, write_nodes};
+use crate::storage::node_repo::{delete_version_nodes, read_version_canonical};
+use crate::storage::node_write::write_nodes;
 use crate::storage::version_repo::tier;
 
 /// How many rebuild records the returned report carries in full.
@@ -147,6 +148,11 @@ struct VersionBody {
     /// `master06-change_control_package.adoc` §Logical Deletion), which
     /// rebuilds to zero node rows.
     body: Option<String>,
+    /// The version's `OBJECT_VERSION_ID` text, which the root row's fragment
+    /// is slimmed against.
+    version_uid: String,
+    /// `version.template_id`, the other half of that identity.
+    template_id: Option<String>,
 }
 
 impl FerroEhrService {
@@ -337,7 +343,11 @@ async fn rebuild_in_tx(
     // The row set is replaced wholesale: a nested-set numbering is only
     // meaningful as a whole (`crate::storage::codec`).
     delete_version_nodes(tx, vo_id, sys_version).await?;
-    write_nodes(tx, vo_id, sys_version, version.ehr_id, &rows).await?;
+    let root = crate::storage::compact::RootIdentity {
+        version_uid: &version.version_uid,
+        template_id: version.template_id.as_deref(),
+    };
+    write_nodes(tx, vo_id, sys_version, version.ehr_id, &root, &rows).await?;
 
     // The parity comparison the sweep runs, over the rows just written and
     // before they are committed. A rebuild that did not restore parity must
@@ -364,7 +374,12 @@ async fn locked_body(
 ) -> Result<Option<VersionBody>, ServiceError> {
     Ok(integrity::locked_body(tx, vo_id, sys_version)
         .await?
-        .map(|(ehr_id, body)| VersionBody { ehr_id, body }))
+        .map(|locked| VersionBody {
+            ehr_id: locked.ehr_id,
+            body: locked.body,
+            version_uid: locked.version_uid,
+            template_id: locked.template_id,
+        }))
 }
 
 #[cfg(test)]

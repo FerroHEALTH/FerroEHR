@@ -160,9 +160,13 @@ erDiagram
         text value_text
         text value_code
         text value_terminology
-        text rm_version "archetype header, below the root"
-        text language "ISO_639-1 code, below the root"
-        text encoding "IANA_character-sets code, below the root"
+        text rm_version "archetype header"
+        text language "ISO_639-1 code"
+        text encoding "IANA_character-sets code"
+        boolean origin_compact "origin stored as its value string"
+        boolean time_compact "time stored as its value string"
+        boolean party_self "a bare PARTY_SELF subject left out"
+        boolean uid_derived "the root uid left with the version"
     }
 ```
 
@@ -247,14 +251,23 @@ not hold. `_type` is the `rm_type` column, a lowercase `archetype_node_id` is
 `archetype`, a plain or simply coded `name` is `name` with its code columns,
 and an ELEMENT value in one of the common basic shapes (a quantity, a count,
 an ordinal, a coded or plain text, a date, time or duration, an identifier, a
-boolean, a URI) sits in typed value columns. Below the root, an entry's
+boolean, a URI) sits in typed value columns. An entry's
 `language` and `encoding` codes and an archetype root's RM version sit in the
 `language`, `encoding` and `rm_version` columns, and its `archetype_details`
-and mixed-case `archetype_node_id` are rebuilt from the `archetype` column.
+and mixed-case `archetype_node_id` are rebuilt from the `archetype` column,
+the composition root's together with the template the version row names. The
+root's `uid` is the version's `OBJECT_VERSION_ID`, so it is rebuilt from the
+version row; a history's `origin` and an event's or action's `time` of the
+plain `DV_DATE_TIME` shape are stored as their value string, and an entry's
+`subject` that is a bare `PARTY_SELF` is left out. Four boolean markers on
+the row (`origin_compact`, `time_compact`, `party_self`, `uid_derived`) say
+which of those keys it left out, so the rebuild never has to guess from an
+absent key: a fragment of any other shape stays as written, and a row written
+before the markers reads as it did.
 Everything else stays in `node.data` verbatim, and `data` is empty on two rows
 in three. The database functions `ext.node_fragment`, `ext.node_name`,
-`ext.node_value`, `ext.node_archetype_node_id`, `ext.node_archetype_details`
-and `ext.node_code_phrase` put the omitted keys back, so every reader, AQL included, sees exactly the fragment
+`ext.node_value`, `ext.node_archetype_node_id`, `ext.node_archetype_details`,
+`ext.node_code_phrase`, `ext.node_date_time` and `ext.version_uid` put the omitted keys back, so every reader, AQL included, sees exactly the fragment
 the API would serve. A filter or projection on a quantity's magnitude or a
 code reads the typed column directly.
 

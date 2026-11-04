@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The header keys a node below the versioned object's root repeats, and the
-//! columns that hold them instead (#4525).
+//! The header keys a node repeats, and the columns that hold them instead
+//! (#4525, and the root since #4904).
 //!
 //! Every archetype root repeats its `archetype_node_id` inside
 //! `archetype_details`, with the same `rm_version` throughout a version, and
@@ -11,6 +11,9 @@
 //! when the columns rebuild them byte for byte, and `restore` puts them back
 //! where they stood; `ext.node_archetype_node_id`,
 //! `ext.node_archetype_details` and `ext.node_code_phrase` are the SQL twins.
+//! The versioned object's root names its template in the header (RM common
+//! `ARCHETYPED.template_id`), which the version row holds as `template_id`,
+//! so the root's header leaves when the template is the version's.
 //!
 //! No openEHR spec governs storage layout: our own design (RM common
 //! `master06-change_control_package.adoc` §Overview admits any physical
@@ -24,16 +27,17 @@
 
 use serde_json::{Map, Value};
 
+use crate::storage::compact::RootIdentity;
 use crate::storage::slim::{has_keys, object, string};
 
-/// The `archetype_details`, `language` and `encoding` of a node below the
-/// root, as the row's `rm_version`, `language` and `encoding` columns hold
-/// them.
+/// The `archetype_details`, `language` and `encoding` of a node, as the
+/// row's `rm_version`, `language` and `encoding` columns hold them.
 ///
 /// `rm_version` is set when the fragment's `archetype_details` was an
 /// `ARCHETYPED` of exactly its `archetype_id` and `rm_version`, naming the
-/// node's own `archetype_node_id` in the casing [`recased`] gives back; both
-/// keys then leave the fragment. `language` and `encoding` hold the code of a
+/// node's own `archetype_node_id` in the casing [`recased`] gives back, and
+/// on the root row a `template_id` exactly the version's or none; both keys
+/// then leave the fragment. `language` and `encoding` hold the code of a
 /// `CODE_PHRASE` in the openEHR `languages` (`ISO_639-1`) and `character
 /// sets` (`IANA_character-sets`) code sets (TERM
 /// `openehr_external_terminologies.xml`).
@@ -54,10 +58,13 @@ pub const LANGUAGE_TERMINOLOGY: &str = "ISO_639-1";
 pub const ENCODING_TERMINOLOGY: &str = "IANA_character-sets";
 
 /// Removes the header keys the [`Header`] columns rebuild exactly from a
-/// non-root fragment, and returns what the columns hold of them.
-pub(crate) fn slim_header(map: &mut Map<String, Value>) -> Header {
+/// fragment, and returns what the columns hold of them.
+///
+/// `root` is the version identity of a root row (`num = 0`), whose header may
+/// name the version's template, and `None` below it.
+pub(crate) fn slim_header(map: &mut Map<String, Value>, root: Option<&RootIdentity<'_>>) -> Header {
     let mut header = Header::default();
-    if let Some(rm_version) = derived_archetype_details(map) {
+    if let Some(rm_version) = derived_archetype_details(map, root) {
         map.shift_remove("archetype_details");
         map.shift_remove("archetype_node_id");
         header.rm_version = Some(rm_version);
@@ -82,15 +89,27 @@ pub(crate) fn slim_header(map: &mut Map<String, Value>) -> Header {
 /// The `rm_version` of an `archetype_details` that [`archetyped`] rebuilds
 /// from the row's `archetype` column: an `ARCHETYPED` of exactly
 /// `archetype_id` and `rm_version`, naming the fragment's own
-/// `archetype_node_id`, which [`recased`] rebuilds from its lowercase form.
-fn derived_archetype_details(map: &Map<String, Value>) -> Option<String> {
+/// `archetype_node_id`, which [`recased`] rebuilds from its lowercase form,
+/// and on a root row a `template_id` that is exactly the version's, or none
+/// when the version has none.
+fn derived_archetype_details(
+    map: &Map<String, Value>,
+    root: Option<&RootIdentity<'_>>,
+) -> Option<String> {
     let node_id = map.get("archetype_node_id").and_then(Value::as_str)?;
     if recased(&node_id.to_ascii_lowercase()).as_deref() != Some(node_id) {
         return None;
     }
     let details = map.get("archetype_details").and_then(Value::as_object)?;
-    if !has_keys(details, &["_type", "archetype_id", "rm_version"])
+    let template = root.and_then(|root| root.template_id);
+    let keys: &[&str] = if template.is_some() {
+        &["_type", "archetype_id", "rm_version", "template_id"]
+    } else {
+        &["_type", "archetype_id", "rm_version"]
+    };
+    if !has_keys(details, keys)
         || details.get("_type").and_then(Value::as_str) != Some("ARCHETYPED")
+        || details.get("template_id") != template.map(template_id).as_ref()
     {
         return None;
     }
@@ -143,19 +162,29 @@ pub fn recased(archetype: &str) -> Option<String> {
 }
 
 /// Puts the header keys the [`Header`] columns hold back into `map`, each
-/// where it stood while `data` still held it.
+/// where it stood while `data` still held it, together with the keys
+/// `restored` the compact markers left out (`crate::storage::compact`).
 ///
-/// `data` comes back from PostgreSQL in jsonb key order, shorter keys first
-/// and keys of one length bytewise (PostgreSQL 18, §8.14.4 jsonb Indexing),
-/// so the restored keys are placed by that order too; the keys the other
-/// columns rebuild follow them, as they always have.
-pub(crate) fn restore(map: &mut Map<String, Value>, archetype: Option<&str>, header: &Header) {
-    let mut restored: Vec<(&str, Value)> = Vec::new();
+/// `template_id` is the version's template on a root row and `None` below
+/// it. `data` comes back from PostgreSQL in jsonb key order, shorter keys
+/// first and keys of one length bytewise (PostgreSQL 18, §8.14.4 jsonb
+/// Indexing), so the restored keys are placed by that order too; the keys
+/// the other columns rebuild follow them, as they always have.
+pub(crate) fn restore(
+    map: &mut Map<String, Value>,
+    archetype: Option<&str>,
+    header: &Header,
+    template_id: Option<&str>,
+    mut restored: Vec<(&str, Value)>,
+) {
     if let (Some(rm_version), Some(archetype)) = (header.rm_version.as_deref(), archetype)
         && let Some(node_id) = recased(archetype)
     {
         if !map.contains_key("archetype_details") {
-            restored.push(("archetype_details", archetyped(&node_id, rm_version)));
+            restored.push((
+                "archetype_details",
+                archetyped(&node_id, rm_version, template_id),
+            ));
         }
         if !map.contains_key("archetype_node_id") {
             restored.push(("archetype_node_id", Value::from(node_id)));
@@ -190,19 +219,37 @@ pub(crate) fn jsonb_key_order(a: &str, b: &str) -> std::cmp::Ordering {
         .then_with(|| a.as_bytes().cmp(b.as_bytes()))
 }
 
-/// The `ARCHETYPED` of `archetype_id` and `rm_version`, as
-/// `ext.node_archetype_details` builds it, its keys in jsonb order.
-fn archetyped(archetype_id: &str, rm_version: &str) -> Value {
-    object([
+/// The `ARCHETYPED` of `archetype_id`, `rm_version` and, on a root with a
+/// template, `template_id`, as `ext.node_archetype_details` builds it, its
+/// keys in jsonb order.
+fn archetyped(archetype_id: &str, rm_version: &str, template: Option<&str>) -> Value {
+    let mut fields = vec![
         ("_type", Value::from("ARCHETYPED")),
         ("rm_version", Value::from(rm_version)),
-        (
-            "archetype_id",
-            object([
-                ("_type", Value::from("ARCHETYPE_ID")),
-                ("value", Value::from(archetype_id)),
-            ]),
-        ),
+    ];
+    if let Some(template) = template {
+        fields.push(("template_id", template_id(template)));
+    }
+    fields.push((
+        "archetype_id",
+        object([
+            ("_type", Value::from("ARCHETYPE_ID")),
+            ("value", Value::from(archetype_id)),
+        ]),
+    ));
+    Value::Object(
+        fields
+            .into_iter()
+            .map(|(key, value)| (key.to_owned(), value))
+            .collect(),
+    )
+}
+
+/// The `TEMPLATE_ID` of `value`, as the version's root names it.
+fn template_id(value: &str) -> Value {
+    object([
+        ("_type", Value::from("TEMPLATE_ID")),
+        ("value", Value::from(value)),
     ])
 }
 
@@ -240,30 +287,64 @@ mod tests {
             "encoding": {"_type": "CODE_PHRASE", "code_string": "UTF-8",
                 "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "IANA_character-sets"}},
             "subject": {"_type": "PARTY_SELF"}});
-        let stored = slim("OBSERVATION", false, entry.clone());
+        let stored = slim("OBSERVATION", None, entry.clone());
+        assert_eq!(stored.data, None);
+        assert!(stored.compact.party_self);
+        let header = Header {
+            rm_version: Some("1.0.4".to_owned()),
+            language: Some("en".to_owned()),
+            encoding: Some("UTF-8".to_owned()),
+        };
+        assert_eq!(stored.header, header);
+        // A root row moves them on the same terms when its header names no
+        // template and the version has none.
+        let root = RootIdentity {
+            version_uid: "a::b::1",
+            template_id: None,
+        };
         assert_eq!(
-            stored.data,
-            Some(json!({"subject": {"_type": "PARTY_SELF"}}))
+            slim("OBSERVATION", Some(&root), entry.clone()).header,
+            header
         );
-        assert_eq!(
-            stored.header,
-            Header {
-                rm_version: Some("1.0.4".to_owned()),
-                language: Some("en".to_owned()),
-                encoding: Some("UTF-8".to_owned()),
-            }
+        // A version with a template the header does not name keeps the header.
+        let templated = RootIdentity {
+            version_uid: "a::b::1",
+            template_id: Some("t"),
+        };
+        let kept = slim("OBSERVATION", Some(&templated), entry);
+        assert_eq!(kept.header.rm_version, None);
+        assert!(
+            kept.data
+                .is_some_and(|d| d.get("archetype_details").is_some())
         );
-        // The root row keeps them: its root reads go around the columns.
-        let root = slim("OBSERVATION", true, entry);
-        assert_eq!(root.header, Header::default());
-        let kept = root.data.expect("the root keeps its header keys");
-        for key in [
-            "archetype_node_id",
-            "archetype_details",
-            "language",
-            "encoding",
-        ] {
-            assert!(kept.get(key).is_some(), "{key}");
+    }
+
+    #[test]
+    fn the_root_header_leaves_with_the_version_template() {
+        let root = json!({"_type": "COMPOSITION",
+            "archetype_node_id": "openEHR-EHR-COMPOSITION.encounter.v1",
+            "archetype_details": {"_type": "ARCHETYPED", "rm_version": "1.1.0",
+                "archetype_id": {"_type": "ARCHETYPE_ID",
+                    "value": "openEHR-EHR-COMPOSITION.encounter.v1"},
+                "template_id": {"_type": "TEMPLATE_ID", "value": "Vital signs"}}});
+        let identity = RootIdentity {
+            version_uid: "a::b::1",
+            template_id: Some("Vital signs"),
+        };
+        let stored = slim("COMPOSITION", Some(&identity), root.clone());
+        assert_eq!(stored.data, None);
+        assert_eq!(stored.header.rm_version.as_deref(), Some("1.1.0"));
+        // Another template, or none, keeps the header verbatim.
+        for template_id in [Some("Other"), None] {
+            let other = RootIdentity {
+                version_uid: "a::b::1",
+                template_id,
+            };
+            let kept = slim("COMPOSITION", Some(&other), root.clone());
+            assert_eq!(kept.header, Header::default());
+            let mut expected = root.clone();
+            expected.as_object_mut().map(|m| m.shift_remove("_type"));
+            assert_eq!(kept.data, Some(expected));
         }
     }
 
@@ -293,7 +374,7 @@ mod tests {
                     "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "IANA_character-sets"}}}),
         ];
         for fragment in cases {
-            let stored = slim("SECTION", false, fragment.clone());
+            let stored = slim("SECTION", None, fragment.clone());
             assert_eq!(stored.header, Header::default(), "{fragment}");
             assert_eq!(stored.data, Some(fragment));
         }

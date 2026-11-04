@@ -77,9 +77,9 @@ async fn migrations_apply_cleanly_and_idempotently() {
     };
     // One file per concern, numbered per domain with no gaps, so
     // `_sqlx_migrations` reads as the set's table of contents.
-    assert_eq!(applied("ext").await, 9);
-    assert_eq!(applied("clinical").await, 30);
-    assert_eq!(applied("party").await, 23);
+    assert_eq!(applied("ext").await, 11);
+    assert_eq!(applied("clinical").await, 31);
+    assert_eq!(applied("party").await, 24);
     assert_eq!(applied("audit").await, 22);
 
     let tables = |schema: &'static str| {
@@ -1280,11 +1280,16 @@ async fn write_nodes_survives_more_than_4095_rows() {
         });
     }
     let mut tx = pool.begin().await.expect("begin");
-    ferroehr::storage::node_repo::write_nodes(
+    let root = ferroehr::storage::compact::RootIdentity {
+        version_uid: "a::b::1",
+        template_id: None,
+    };
+    ferroehr::storage::node_write::write_nodes(
         &mut tx,
         ferroehr::ids::VoId(vo),
         1,
         Some(ferroehr::ids::EhrId(ehr_id)),
+        &root,
         &rows,
     )
     .await

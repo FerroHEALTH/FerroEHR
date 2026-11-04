@@ -100,12 +100,26 @@ pub async fn stored_bodies(
     .await?)
 }
 
-/// The owning EHR and the stored body of one primary-tier version, read under
-/// its row lock.
+/// One primary-tier version as the node rebuild reads it under its row lock:
+/// the owning EHR, the stored body, and the identity the root row's fragment
+/// is slimmed against.
+#[derive(Debug, Clone, PartialEq, Eq, sqlx::FromRow)]
+pub struct LockedVersion {
+    /// The owning EHR, `None` for a demographic party.
+    pub ehr_id: Option<EhrId>,
+    /// The stored canonical body, `None` for a logical delete (data Void, RM
+    /// common `master06-change_control_package.adoc` §Logical Deletion).
+    pub body: Option<String>,
+    /// The version's `OBJECT_VERSION_ID` text (`ext.version_uid`).
+    pub version_uid: String,
+    /// `version.template_id`.
+    pub template_id: Option<String>,
+}
+
+/// One primary-tier version, read under its row lock.
 ///
 /// The lock keeps a concurrent commit on the same version from interleaving
-/// with the replacement of its rows. `None` when no such version exists, and a
-/// `None` body for a logical delete.
+/// with the replacement of its rows. `None` when no such version exists.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
@@ -113,10 +127,13 @@ pub async fn locked_body(
     tx: &mut PgConnection,
     vo_id: VoId,
     sys_version: i32,
-) -> Result<Option<(Option<EhrId>, Option<String>)>, StorageError> {
+) -> Result<Option<LockedVersion>, StorageError> {
     Ok(sqlx::query_as(
-        "SELECT ehr_id, body FROM version \
-         WHERE vo_id = $1 AND sys_version = $2 FOR UPDATE",
+        "SELECT ehr_id, body, \
+                ext.version_uid(vo_id, creating_system_id, trunk_version, branch_number, \
+                                branch_version) AS version_uid, \
+                template_id \
+         FROM version WHERE vo_id = $1 AND sys_version = $2 FOR UPDATE",
     )
     .bind(vo_id)
     .bind(sys_version)

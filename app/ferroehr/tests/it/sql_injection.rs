@@ -27,7 +27,8 @@
 //!   plus `storage::promoted::PROMOTED_LEAVES[..].column`, whose fields are
 //!   `&'static str`. `IDENTIFIERS` below pins the whole vocabulary against the
 //!   clinical migrations that define those relations
-//!   (`migrations/clinical/0002_ehr.sql` through `0006_definitions.sql`).
+//!   (`migrations/clinical/0002_ehr.sql` through `0006_definitions.sql`, and
+//!   the node compact markers of `0031_node_compact.sql`).
 //! * **Table aliases** — `format!` over an integer source id or the builder's
 //!   own counter, never over query text: `n{sid}`, `v{sid}`, `e{sid}`,
 //!   `x{ctr}`, `xv{ctr}`, `s{ctr}`, `w{ctr}`, `b{ctr}`, `p{ctr}`, `qg{ctr}`,
@@ -562,6 +563,11 @@ const IDENTIFIERS: &[&str] = &[
     "path",
     "data",
     "context_start",
+    // the compact markers (`migrations/clinical/0031_node_compact.sql`)
+    "origin_compact",
+    "time_compact",
+    "party_self",
+    "uid_derived",
     // version
     "kind",
     "trunk_version",

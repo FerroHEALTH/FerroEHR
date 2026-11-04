@@ -46,8 +46,10 @@ use uuid::Uuid;
 use crate::error::{ServiceError, Violation};
 use crate::ids::{EhrId, VoId};
 use crate::storage::codec::{decompose, reassemble};
+use crate::storage::compact::RootIdentity;
+use crate::storage::node_write::write_nodes;
 use crate::versioning::audit::AuditInput;
-use crate::versioning::object_version_id::TreeId;
+use crate::versioning::object_version_id::{TreeId, object_version_id};
 use crate::versioning::{Kind, SigningCtx};
 
 /// A lineage key: the trunk (`("", 0, 0)`) or one specific branch of one system
@@ -622,10 +624,17 @@ async fn import_one_version(
         },
     )
     .await?;
-    // A `523|deleted|` version stores no node rows (data is Void).
+    // A `523|deleted|` version stores no node rows (data is Void); an
+    // imported row carries no `template_id`, so the root's header is slimmed
+    // against none.
     if !rows.is_empty() {
-        crate::storage::node_repo::write_nodes(tx, cursor.vo_id, ordinal, act.ehr_id, &rows)
-            .await?;
+        let version_uid =
+            object_version_id(cursor.vo_id, &version.creating_system_id, version.tree);
+        let root = RootIdentity {
+            version_uid: &version_uid,
+            template_id: None,
+        };
+        write_nodes(tx, cursor.vo_id, ordinal, act.ehr_id, &root, &rows).await?;
     }
     for attestation in &version.attestations {
         crate::storage::version_repo::attestation::insert_attestation(
