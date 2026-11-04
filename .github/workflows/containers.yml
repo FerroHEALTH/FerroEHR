@@ -330,7 +330,7 @@ jobs:
         org.opencontainers.image.authors=Cadasto B.V. <https://www.cadasto.com/contact/>
         org.opencontainers.image.licenses=BUSL-1.1
         org.opencontainers.image.base.name=gcr.io/distroless/cc-debian13:nonroot
-        org.opencontainers.image.base.digest=sha256:3ee00291cf386ec52a552e6a858d555debd74776eb4bfa53fa3df2cd6677515e
+        org.opencontainers.image.base.digest=sha256:08476c244888bfb425bae1ae4dd7c17f093e972aab8426883d97f3c6f280f7c1
 
   # ── Viewer: server binary per arch ──────────────────────────────────────────
   # The binary carries the FerroUI stylesheet, theme and scripts it serves, so
@@ -426,7 +426,7 @@ jobs:
         org.opencontainers.image.authors=Cadasto B.V. <https://www.cadasto.com/contact/>
         org.opencontainers.image.licenses=BUSL-1.1
         org.opencontainers.image.base.name=gcr.io/distroless/cc-debian13:nonroot
-        org.opencontainers.image.base.digest=sha256:3ee00291cf386ec52a552e6a858d555debd74776eb4bfa53fa3df2cd6677515e
+        org.opencontainers.image.base.digest=sha256:08476c244888bfb425bae1ae4dd7c17f093e972aab8426883d97f3c6f280f7c1
 
   # ── PostgreSQL image (only on docker/postgres changes or tags; multi-arch) ──
   # One RUN layer (the Debian security upgrade, #2408, and the GnuPG purge,
