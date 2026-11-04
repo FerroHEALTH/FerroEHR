@@ -700,14 +700,13 @@ jobs:
     name: spec-citations
     if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          fetch-depth: 0
       - name: Every cited openEHR spec file exists
         run: bash scripts/checks/spec-citations.sh --all
       - name: The migration-citation detector catches what it claims to
@@ -1038,14 +1037,13 @@ jobs:
     name: default-style
     if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          fetch-depth: 0
       # `--all` since #2033 swept the pre-existing sites: the tree is clean, so
       # the guard covers the whole of it rather than only the changed files.
       - name: Default values live in the struct's Default impl
@@ -1094,14 +1092,13 @@ jobs:
     name: docs-claims
     if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          fetch-depth: 0
       - name: Documented keys resolve in their source
         run: bash scripts/checks/docs-claims.sh --all
       # Image metadata (#2146): the OCI keys are declared in two places — the
@@ -1234,14 +1231,13 @@ jobs:
     name: sql-string-building
     if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          fetch-depth: 0
       - name: The exemption list honours a needle with spaces
         run: bash scripts/checks/sql-string-building.sh --self-test
       - name: No string-built SQL in the query engine
@@ -1946,7 +1942,11 @@ jobs:
       - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
           tool: cargo-machete
-      - run: cargo machete
+      # The binary itself, not the `cargo` proxy: through the proxy,
+      # rust-toolchain.toml makes rustup download the pinned toolchain first,
+      # and a stalled download ate the whole timeout (#4924). Machete reads
+      # the manifests and sources and needs no toolchain.
+      - run: cargo-machete
 
   # ── The CDR binary the ui-e2e battery runs against (issue #335) ─────────────
   # It used to be compiled INSIDE the image: `docker/Dockerfile --target
