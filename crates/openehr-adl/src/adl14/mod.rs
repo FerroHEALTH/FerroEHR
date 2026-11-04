@@ -54,6 +54,7 @@
 //! 4. **Conversion log** ([`log`]) — records every synthesised code/value set so
 //!    a re-conversion consulting the same log yields identical codes.
 
+pub(crate) mod authored_flat;
 mod code_shift;
 pub mod convert;
 pub mod differ;
