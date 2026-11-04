@@ -164,8 +164,9 @@ COPY deploy/hosted/docker-compose.yml deploy/hosted/Caddyfile \
 # The licence-free shaped terminology seed (docker/terminology/seed/) travels the
 # same way: the sandbox and the terminology overlay mount this directory into
 # FerroTERM straight from this image (a Compose `type: image` volume of the
-# whole image, FERROTERM_CODESYSTEMS naming this directory in it), so a box that
-# holds no checkout still serves the code systems the seed binds to.
+# whole image, FERROTERM__TERMINOLOGY__CODE_SYSTEMS naming this directory in
+# it), so a box that holds no checkout still serves the code systems the seed
+# binds to.
 COPY docker/terminology/seed/ /opt/sandbox-posture/terminology/
 
 # ── runtime-from-source: compose/local (COPY the in-image build) ───────────────

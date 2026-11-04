@@ -229,7 +229,7 @@ services:
   # 1536m cap also fits the Netherlands edition (889 MB).
   # The CDR's cap moved from 4096m to 3072m to make room on the 8 GB box.
   ferroterm:
-    image: ${FERROTERM_IMAGE:-ghcr.io/ferrohealth/ferroterm:0.3.1@sha256:ca034ec8488697fe7ebe357ac67f2a3e10028f3e288514125a3156208bb1e67f}
+    image: ${FERROTERM_IMAGE:-ghcr.io/ferrohealth/ferroterm:0.3.3@sha256:f25ddad886fd218ae1eb82af6b81b8ed16651333f5bd802e621c5ae83b0913f1}
     container_name: ferroehr-sandbox-ferroterm
     restart: unless-stopped
     # The image is its own health probe (`ferroterm healthcheck`, readiness

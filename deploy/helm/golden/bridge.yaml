@@ -1037,7 +1037,7 @@ spec:
         supplementalGroupsPolicy: Strict
       containers:
         - name: terminology
-          image: "ghcr.io/ferrohealth/ferroterm@sha256:7ec4c9622e88e3028faf7c74a2384fb02e57dc3163c282b21274121a26aa3d5b"
+          image: "ghcr.io/ferrohealth/ferroterm@sha256:f25ddad886fd218ae1eb82af6b81b8ed16651333f5bd802e621c5ae83b0913f1"
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -1057,22 +1057,17 @@ spec:
           env:
             # The code-system directory, mounted read-only from the ConfigMap
             # above (or the operator's).
-            - name: FERROTERM_CODESYSTEMS
+            - name: FERROTERM__TERMINOLOGY__CODE_SYSTEMS
               value: "/etc/ferroterm/codesystems"
-            # FerroTERM's own browsing UI. Off, because the workload has no
-            # Ingress and the CDR does not use it; turning it on only widens
-            # what a caller inside the cluster can do with the release.
-            - name: FERROTERM_UI
-              value: "off"
-            - name: FERROTERM_LOG_FORMAT
+            - name: FERROTERM__TELEMETRY__FORMAT
               value: "json"
-            - name: FERROTERM_DEFAULT_LANGUAGE
+            - name: FERROTERM__TERMINOLOGY__DEFAULT_LANGUAGE
               value: "en"
             - name: RUST_LOG
               value: "info"
             # The usage report: terminology.usageReport.enabled, or the
-            # top-level switch when that is empty. A release before 0.1.8
-            # sends none and reads neither variable.
+            # top-level switch when that is empty. With no state directory
+            # mounted, FerroTERM keeps the report off.
             - name: FERROTERM__USAGE_REPORT__ENABLED
               value: "true"
             - name: FERROTERM__USAGE_REPORT__DEPLOYMENT

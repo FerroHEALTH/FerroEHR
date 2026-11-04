@@ -1038,7 +1038,7 @@ serving what they read at boot. Restart the workload after such an edit
 `ferroterm-build --rf2 <release.zip> --out <dir>` on a machine that holds the
 archive, put the output on a PersistentVolume, and name that claim in
 `terminology.index.persistentVolumeClaim`. The chart mounts it **read-only** at
-`terminology.index.mountPath` and sets `FERROTERM_INDEX`; with no claim named,
+`terminology.index.mountPath` and sets `FERROTERM__TERMINOLOGY__INDEX`; with no claim named,
 the variable is absent and the seed is served alone. The chart provisions no
 storage and renders no build Job, for the same reason it provisions no database:
 unpacking a licensed archive is a step whose licence terms are yours, not a step

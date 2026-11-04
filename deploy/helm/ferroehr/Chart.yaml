@@ -213,7 +213,7 @@ annotations:
     # the digest to `terminology.image.digest` in values.yaml. Bumping FerroTERM
     # is those two edits; this line is then checked, not maintained.
     - name: ferroterm
-      image: ghcr.io/ferrohealth/ferroterm:0.1.6@sha256:7ec4c9622e88e3028faf7c74a2384fb02e57dc3163c282b21274121a26aa3d5b  # party: third
+      image: ghcr.io/ferrohealth/ferroterm:0.3.3@sha256:f25ddad886fd218ae1eb82af6b81b8ed16651333f5bd802e621c5ae83b0913f1  # party: third
       platforms:
         - linux/amd64
         - linux/arm64

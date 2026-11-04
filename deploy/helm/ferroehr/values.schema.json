@@ -1361,7 +1361,7 @@
               "type": "string"
             },
             "mountPath": {
-              "description": "Absolute path the code systems are mounted at; FERROTERM_CODESYSTEMS names it.",
+              "description": "Absolute path the code systems are mounted at; FERROTERM__TERMINOLOGY__CODE_SYSTEMS names it.",
               "type": "string",
               "pattern": "^/.+"
             }
@@ -1376,15 +1376,11 @@
               "type": "string"
             },
             "mountPath": {
-              "description": "Absolute path the index claim is mounted at; FERROTERM_INDEX names it, and is rendered only when a claim is named.",
+              "description": "Absolute path the index claim is mounted at; FERROTERM__TERMINOLOGY__INDEX names it, and is rendered only when a claim is named.",
               "type": "string",
               "pattern": "^/.+"
             }
           }
-        },
-        "ui": {
-          "description": "Serve FerroTERM's own browsing UI.",
-          "type": "boolean"
         },
         "defaultLanguage": {
           "type": "string",

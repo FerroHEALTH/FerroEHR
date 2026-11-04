@@ -1409,14 +1409,14 @@ terminology:
     # -- Pull policy.
     pullPolicy: IfNotPresent
     # -- Image tag. Empty falls back to the FerroTERM release this chart is
-    # pinned to (0.1.6) — never `.Chart.appVersion`, which is FerroEHR's line.
+    # pinned to (0.3.3) — never `.Chart.appVersion`, which is FerroEHR's line.
     # A tag other than that pin is REFUSED while `digest` below is non-empty:
     # the digest wins, so the tag would be inert while the values file claimed
     # otherwise. Clear `digest` to deploy a tag.
     tag: ""
     # -- Image digest (`sha256:…`); wins over `tag`. Pinned by default, so an
     # install runs the exact image this chart was validated against.
-    digest: sha256:7ec4c9622e88e3028faf7c74a2384fb02e57dc3163c282b21274121a26aa3d5b
+    digest: sha256:f25ddad886fd218ae1eb82af6b81b8ed16651333f5bd802e621c5ae83b0913f1
   service:
     # -- Service type. ClusterIP deliberately: the CDR is the only caller.
     type: ClusterIP
@@ -1432,7 +1432,7 @@ terminology:
     # edit (`kubectl rollout restart deployment/<release>-terminology`).
     existingConfigMap: ""
     # -- Directory the code systems are mounted at, read-only; it is what
-    # `FERROTERM_CODESYSTEMS` names.
+    # `FERROTERM__TERMINOLOGY__CODE_SYSTEMS` names.
     mountPath: /etc/ferroterm/codesystems
   index:
     # -- Name of an EXISTING PersistentVolumeClaim holding a built index for a
@@ -1442,14 +1442,11 @@ terminology:
     # and fill the claim from that output.
     persistentVolumeClaim: ""
     # -- Directory the index claim is mounted at, read-only. Rendered as
-    # `FERROTERM_INDEX` only when a claim is named.
+    # `FERROTERM__TERMINOLOGY__INDEX` only when a claim is named.
     mountPath: /data/index
-  # -- Serve FerroTERM's own browsing UI. Off: the workload has no Ingress and
-  # the CDR does not use it.
-  ui: false
   # -- Display language FerroTERM prefers when a concept carries several.
   defaultLanguage: en
-  # -- Log format (`json` or `pretty`).
+  # -- Log format (`json` or `pretty`), passed as `FERROTERM__TELEMETRY__FORMAT`.
   logFormat: json
   # -- `RUST_LOG` filter for the terminology container.
   logLevel: info
@@ -1528,7 +1525,8 @@ terminology:
     # -- FerroTERM's usage report. Empty follows the top-level
     # `usageReport.enabled`; true or false decides for FerroTERM alone. The
     # chart passes it as `FERROTERM__USAGE_REPORT__ENABLED`, with the
-    # deployment `helm`; the pinned 0.1.6 sends no report and ignores both.
+    # deployment `helm`. The chart mounts no state directory for it, and
+    # without one the pinned 0.3.3 keeps its report off.
     enabled: null
 
 # ─────────────────────────────────────────────────────────────────────────────
