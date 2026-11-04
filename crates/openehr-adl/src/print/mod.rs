@@ -78,6 +78,22 @@ pub enum PrintError {
          reference production requires a path"
     )]
     PathlessValueRef,
+    /// A `C_TERMINOLOGY_CODE` whose constraint or assumed value is no ADL2
+    /// term constraint, such as the ADL 1.4 `terminology::code` encoding an
+    /// unconverted 1.4 source keeps until `adl14::convert` rewrites it.
+    #[error(
+        "terminology constraint {constraint:?} (assumed {assumed_value:?}) of node {node_id} has \
+         no ADL2 syntax: ADL2 spells only [atN], [acN], [acN; atN], [atN@terminology] and \
+         [acN@terminology] (ADL2 master04.5 §Terminology Constraints)"
+    )]
+    TerminologyConstraint {
+        /// The node id of the refused constraint.
+        node_id: String,
+        /// The `C_TERMINOLOGY_CODE.constraint` string.
+        constraint: String,
+        /// The code string of the assumed value, if any.
+        assumed_value: Option<String>,
+    },
 }
 
 /// Serializes an assembled [`Archetype`] to ADL2 source text.

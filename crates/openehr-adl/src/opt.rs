@@ -136,6 +136,10 @@ pub const OVERLAY_PARENTS_KEY: &str = "template_overlay_parents";
 /// resolve (master10 — overlays are local specialised archetypes used as slot
 /// fillers).
 ///
+/// Every constituent in `repo` is an ADL2 artefact, an ADL 1.4 one converted
+/// with [`crate::adl14::convert::convert`] first: the OPT inlines each as it
+/// stands, and [`crate::print::print`] refuses a 1.4 term constraint.
+///
 /// # Errors
 /// [`OptError::Flatten`] if the lineage cannot be flattened,
 /// [`OptError::UnresolvedReference`] if a filler / external reference is absent
