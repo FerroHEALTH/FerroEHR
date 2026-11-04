@@ -73,6 +73,7 @@ conformance|conformance|^(app/ferroehr(-rest|-server|-ext)?/|crates/|tools/|\.ca
 # per line. A dev-dependency is never compiled into a dependant, so it is
 # left out.
 path_dependencies() {
+  local manifest="$1"
   awk '
     /^[ \t]*\[/ {
       section = $0
@@ -86,7 +87,7 @@ path_dependencies() {
       sub(/"$/, "", value)
       print value
     }
-  ' "$1"
+  ' "$manifest"
 }
 
 # fuzz_crates <root>: the directory, relative to <root>, of every crate the

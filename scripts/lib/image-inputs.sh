@@ -39,7 +39,8 @@ readonly NOT_IN_IMAGE=(docker/smoke-test.sh docker-compose.yml .github/workflows
 
 # The pathspecs of the image kind $1, read in the checkout the caller stands in.
 inputs_of() {
-  case "$1" in
+  local kind="$1"
+  case "$kind" in
     server)
       if [[ ! -f docker/Dockerfile ]]; then
         echo "image-inputs: no docker/Dockerfile in $PWD" >&2
@@ -50,7 +51,7 @@ inputs_of() {
       ;;
     postgres) printf '%s\n' "${POSTGRES_INPUTS[@]}" ;;
     *)
-      echo "image-inputs: '$1' is no image kind (server or postgres)" >&2
+      echo "image-inputs: '$kind' is no image kind (server or postgres)" >&2
       return 2
       ;;
   esac
@@ -81,12 +82,13 @@ same() {
 
 # The entries of the named filter in containers.yml, `/**` dropped.
 filter_entries() {
-  awk -v name="$1" '
+  local filter="$1" file="$2"
+  awk -v name="$filter" '
     /^ *filters: \|/ { in_filters = 1; next }
     in_filters && $0 ~ "^ *" name ":$" { on = 1; next }
     in_filters && on && /^ *[a-z]+:$/ { on = 0 }
     on && /^ *- / { sub(/^ *- */, ""); gsub(/\047/, ""); sub(/\/\*\*$/, ""); print }
-  ' "$2"
+  ' "$file"
 }
 
 # The sources docker/Dockerfile copies into the runtime stages from the
@@ -94,6 +96,7 @@ filter_entries() {
 # but its flags, its destination and the binary the context provides, and no
 # COPY --from of another stage.
 dockerfile_sources() {
+  local dockerfile="$1"
   awk '
     / AS runtime-base$/ { on = 1 }
     !on { next }
@@ -108,14 +111,14 @@ dockerfile_sources() {
         if (!staged) for (i = 1; i < n; i++) if (words[i] !~ /^bin\//) { sub(/\/$/, "", words[i]); print words[i] }
       }
     }
-  ' "$1"
+  ' "$dockerfile"
 }
 
 # True when the path $1 lies under one of the inputs on stdin.
 covered() {
-  local input
+  local path="$1" input
   while IFS= read -r input; do
-    [[ "$1" == "$input" || "$1" == "$input"/* ]] && return 0
+    [[ "$path" == "$input" || "$path" == "$input"/* ]] && return 0
   done
   return 1
 }
@@ -156,11 +159,12 @@ self_test() {
   (
     set -e
     commit() {
-      mkdir -p "$(dirname "$1")"
-      printf '%s\n' "$2" >"$1"
-      git add -- "$1"
-      git -c user.name=self-test -c user.email=self-test@invalid -c commit.gpgsign=false commit -qm "$1"
-      git rev-parse HEAD >"$tmp/$3"
+      local path="$1" content="$2" name="$3"
+      mkdir -p "$(dirname "$path")"
+      printf '%s\n' "$content" >"$path"
+      git add -- "$path"
+      git -c user.name=self-test -c user.email=self-test@invalid -c commit.gpgsign=false commit -qm "$path"
+      git rev-parse HEAD >"$tmp/$name"
     }
     git init -q -b main "$tmp/origin"
     cd "$tmp/origin"
