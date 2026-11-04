@@ -20,6 +20,7 @@ mod bmm_package_existence;
 mod el_assertions;
 mod escape_validation;
 mod lexer_equivalence;
+mod lexer_stack;
 mod odin_spec_examples;
 mod p_bmm_keyed_collections;
 mod rm_access;

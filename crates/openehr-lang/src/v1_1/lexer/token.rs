@@ -20,6 +20,9 @@
 
 use logos::Logos;
 
+use super::scan;
+use super::scan::{contained_regexp_rest, embedded_uri_rest, opening_or, plug_in_rest};
+
 /// A token of the shared openEHR lexical superset.
 ///
 /// Text-bearing variants hold the owned source slice verbatim (delimiters
@@ -34,7 +37,7 @@ use logos::Logos;
 /// produced, reading the spelling back out of the source at the token's span.
 #[derive(Logos, Debug, Clone, PartialEq)]
 #[logos(skip r"[ \t\r\n]+")] // WS / LINE (base_lexer.g4)
-#[logos(skip(r"--[^\n]*", allow_greedy = true))] // CMT_LINE `-- … EOL` incl. the `----…` overlay separator (base_lexer.g4)
+#[logos(skip("--", scan::comment))] // CMT_LINE `-- … EOL` incl. the `----…` overlay separator (base_lexer.g4)
 pub enum Token {
     /// A UTF-8 byte-order mark.
     ///
@@ -347,10 +350,9 @@ pub enum Token {
     // ── composed primitives (base_lexer.g4) ──
     /// A delimited contained regexp `{ /re/ }` / `{ ^re^ }` with optional
     /// `;"assumed"` (`CONTAINED_REGEXP`).
-    #[regex(
-        r#"\{[ \t\r]*(/([^/\r\n\\]|\\.)+/|\^([^\^\r\n\\]|\\.)+\^)[ \t\r]*(;[ \t\r]*"([^"\\]|\\.)*")?[ \t\r]*\}"#,
-        |lex| lex.slice().to_owned()
-    )]
+    ///
+    /// The DFA matches only the `{`, and the `{` callback scans the rest in a
+    /// loop, so its length costs no stack.
     ContainedRegexp(String),
     /// A term-code reference `[terminology(ver)?::code]` (`TERM_CODE_REF`).
     #[regex(r"\[[a-zA-Z0-9._\-]+(\([a-zA-Z0-9._\-]+\))?::[a-zA-Z0-9._\-]+\]", |lex| lex.slice().to_owned())]
@@ -383,7 +385,9 @@ pub enum Token {
     /// Characters). ODIN-only — the vendored ADL/BEL grammars have no `#`
     /// production at all, so the other readings refuse the token. The body is
     /// raw foreign text ("expressed in some other syntax"), never lexed.
-    #[regex(r"<#([^#]|#[^>])*#*#>", |lex| lex.slice().to_owned())]
+    ///
+    /// The DFA matches only the `<`, and the `<` callback scans the rest in a
+    /// loop, so its length costs no stack.
     PlugInBlock(String),
     /// An embedded URI `<scheme:…>` (`EMBEDDED_URI`).
     ///
@@ -394,7 +398,9 @@ pub enum Token {
     /// the lexical layer: refusing here would punish real-world authored
     /// data, and URI validity is the consuming model's typed concern
     /// (adjudicated against §7.3).
-    #[regex(r"<[ \t\r\n]*[a-zA-Z][a-zA-Z0-9+.\-]*:[^>]*>", |lex| lex.slice().to_owned())]
+    ///
+    /// The DFA matches only the `<`, and the `<` callback scans the rest in a
+    /// loop, so its length costs no stack.
     EmbeddedUri(String),
     /// An ADL path (`base_lexer.g4 ADL_PATH`), each segment
     /// `ALPHA_*_ID ('[' predicate ']')?`.
@@ -428,7 +434,10 @@ pub enum Token {
     Integer(String),
     /// A double-quoted `STRING` (may span lines); escapes validated per
     /// `master03` (`\r \n \t \\ \" \'` + `\uHHHH`/`\uHHHHHHHH`).
-    #[regex(r#""([^"\\]|\\.)*""#, validate_string)]
+    ///
+    /// The DFA matches only the opening `"`, and a callback finishes the
+    /// literal in a loop, so its length costs no stack.
+    #[token("\"", |lex| scan::string(lex).and_then(|()| validate_string(lex)))]
     String(String),
     /// A single-quoted `CHARACTER`. An escaped character must be one of the
     /// six legal quoted forms (see `validate_char`).
@@ -469,7 +478,7 @@ pub enum Token {
     #[token("]")]
     RBracket,
     /// `{`
-    #[token("{")]
+    #[token("{", |lex| opening_or(lex, &[(contained_regexp_rest, Token::ContainedRegexp)], Token::LCurly))]
     LCurly,
     /// `}`
     #[token("}")]
@@ -510,7 +519,11 @@ pub enum Token {
     #[token(">")]
     SymGt,
     /// `<` (`SYM_LT`).
-    #[token("<")]
+    #[token("<", |lex| opening_or(
+        lex,
+        &[(plug_in_rest, Token::PlugInBlock), (embedded_uri_rest, Token::EmbeddedUri)],
+        Token::SymLt,
+    ))]
     SymLt,
     /// `...` (`SYM_LIST_CONTINUE`).
     #[token("...")]
