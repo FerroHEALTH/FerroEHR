@@ -198,9 +198,12 @@ pub async fn read_version_canonical(
     reassemble(&rows)
 }
 
-/// Makes a version read its own node rows again: clears the
-/// `content_sys_version` a shared-content commit set (#4415), after the node
-/// rebuild wrote the version's own rows.
+/// Makes a version read its own node rows again, after the node rebuild wrote
+/// them.
+///
+/// Clears the `content_sys_version` a shared-content commit set (#4415), and
+/// points the head's content key at the version's own rows when the version
+/// is the trunk head (#4944).
 ///
 /// # Errors
 ///
@@ -211,8 +214,13 @@ pub async fn unshare_content(
     sys_version: i32,
 ) -> Result<(), StorageError> {
     sqlx::query(
-        "UPDATE version SET content_sys_version = NULL \
-         WHERE vo_id = $1 AND sys_version = $2 AND content_sys_version IS NOT NULL",
+        "WITH unshared AS ( \
+             UPDATE version SET content_sys_version = NULL \
+             WHERE vo_id = $1 AND sys_version = $2 AND content_sys_version IS NOT NULL \
+             RETURNING vo_id, sys_version \
+         ) \
+         UPDATE vo_head h SET trunk_head_content_key = u.sys_version FROM unshared u \
+         WHERE h.vo_id = u.vo_id AND h.trunk_head_sys_version = u.sys_version",
     )
     .bind(vo_id)
     .bind(sys_version)

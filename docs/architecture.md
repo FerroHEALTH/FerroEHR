@@ -105,7 +105,8 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   rows: `version.content_sys_version` names the version whose rows hold the
   content, and every read of a version's rows joins `node` on the stored
   `version.content_key`, `coalesce(content_sys_version, sys_version)` kept
-  as a generated column so the planner joins on a plain column (#4415), the
+  as a generated column so the planner joins on a plain column (#4415), or
+  under `LATEST_VERSION` on the head's copy of it (`vo_head` below), the
   root's `uid` and
   header coming back from the reading version's row. Nothing physical is
   ever deleted below the object, so a shared tree is never orphaned; the
@@ -117,7 +118,12 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   primary-key probe: `trunk_head_sys_version` IS `LATEST_VERSION`,
   `head_sys_version` the RM's `latest_version`, plus the lifecycle state, the
   template, the tier, the archive marker and the restriction and retention
-  marks. None of the columns a commit changes appears in an index, which is the
+  marks. `trunk_head_content_key` is the trunk head's `content_key`, and a
+  `LATEST_VERSION` read joins the node rows on it, so a node row an
+  identical-content chain shares links to the one head and reaches the
+  version row through the head's key; the version partitions declare a
+  `vo_id` distinct count of half their rows, so the planner never prices a
+  probe of one object's versions by `vo_id` alone at one row (#4944). None of the columns a commit changes appears in an index, which is the
   condition PostgreSQL 18 §"Heap-Only Tuples (HOT)" states for a heap-only
   update; `fillfactor = 90` reserves the same-page room.
 - **`node`** — one unified table for all versioned-object content

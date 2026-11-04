@@ -99,7 +99,8 @@ impl PredicateMatch<'_> {
 /// archetyped ancestor (case-folded), matched through the nested-set interval
 /// that contains the element. The version predicate is the object's current
 /// trunk version — the head row's own answer — the same currency rule every
-/// other read of this store uses.
+/// other read of this store uses, linked through the head's content key so an
+/// element row shared by a chain of identical versions is read once (#4944).
 macro_rules! predicate_statement {
     ($value_clause:expr) => {
         concat!(
@@ -108,10 +109,8 @@ macro_rules! predicate_statement {
              JOIN node a \
                ON a.tier = e.tier AND a.vo_id = e.vo_id AND a.sys_version = e.sys_version \
                AND e.num BETWEEN a.num AND a.num_cap \
-             JOIN version v \
-               ON v.tier = e.tier AND v.vo_id = e.vo_id AND v.content_key = e.sys_version \
              JOIN vo_head h \
-               ON h.vo_id = v.vo_id AND h.trunk_head_sys_version = v.sys_version \
+               ON h.tier = e.tier AND h.vo_id = e.vo_id AND h.trunk_head_content_key = e.sys_version \
              WHERE e.tier = 'hot' \
                AND e.rm_type = 'ELEMENT' AND e.archetype = $1 AND a.archetype = $2 \
                AND ",
@@ -213,6 +212,8 @@ mod tests {
 
     /// Every statement is the shared skeleton plus its own value clause, and
     /// none of them names another domain's schema or a clinical archetype.
+    /// The skeleton reads the current trunk version by linking the element
+    /// row to the head's content key, one head row per object (#4944).
     #[test]
     fn every_statement_is_a_constant_over_the_demographic_domain() {
         for kind in [
@@ -225,7 +226,7 @@ mod tests {
             assert!(
                 sql.starts_with("SELECT DISTINCT e.vo_id FROM node e ")
                     && sql.contains("e.num BETWEEN a.num AND a.num_cap")
-                    && sql.contains("h.trunk_head_sys_version"),
+                    && sql.contains("h.trunk_head_content_key = e.sys_version"),
                 "{} must share the skeleton: {sql}",
                 kind.as_str()
             );

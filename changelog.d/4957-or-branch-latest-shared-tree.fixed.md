@@ -1,0 +1,1 @@
+- An AQL `OR` containment branch that binds a versioned object under `LATEST_VERSION` answers the object once, with the head's uid, when the head shares its predecessor's node rows; it answered once for every version reading the shared tree.

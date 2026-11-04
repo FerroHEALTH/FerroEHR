@@ -196,7 +196,7 @@ impl Builder<'_> {
 
     /// The EHR-scoped restriction mark on a population query.
     ///
-    /// The per-object predicate (`from::bind_head`) already removes every
+    /// The per-object predicate (`head::bind_head`) already removes every
     /// restricted object; this removes an EHR restricted as a whole, whose
     /// objects carry the mark too but whose `ehr` row is the cheaper place to
     /// decide it once the population gate has already joined it.

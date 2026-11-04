@@ -438,12 +438,13 @@ pub async fn sync_heads(tx: &mut PgConnection, vo_ids: &[VoId]) -> Result<(), St
     }
     sqlx::query(
         "INSERT INTO vo_head (vo_id, kind, ehr_id, tier, head_sys_version, \
-             trunk_head_sys_version, lifecycle_state, template_id, committed_at) \
+             trunk_head_sys_version, trunk_head_content_key, lifecycle_state, template_id, \
+             committed_at) \
          SELECT a.vo_id, t.kind, t.ehr_id, t.tier, a.head_sys_version, t.sys_version, \
-                t.lifecycle_state, t.template_id, t.committed_at \
+                t.content_key, t.lifecycle_state, t.template_id, t.committed_at \
          FROM (SELECT vo_id, max(sys_version) AS head_sys_version \
                FROM version WHERE vo_id = ANY($1) GROUP BY vo_id) a \
-         JOIN LATERAL (SELECT kind, ehr_id, tier, sys_version, lifecycle_state, \
+         JOIN LATERAL (SELECT kind, ehr_id, tier, sys_version, content_key, lifecycle_state, \
                               template_id, committed_at \
                        FROM version \
                        WHERE vo_id = a.vo_id AND branch_number = 0 \
@@ -454,6 +455,7 @@ pub async fn sync_heads(tx: &mut PgConnection, vo_ids: &[VoId]) -> Result<(), St
              tier = EXCLUDED.tier, \
              head_sys_version = EXCLUDED.head_sys_version, \
              trunk_head_sys_version = EXCLUDED.trunk_head_sys_version, \
+             trunk_head_content_key = EXCLUDED.trunk_head_content_key, \
              lifecycle_state = EXCLUDED.lifecycle_state, \
              template_id = EXCLUDED.template_id, \
              committed_at = EXCLUDED.committed_at",

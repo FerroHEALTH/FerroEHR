@@ -164,8 +164,9 @@ pub struct FoldedVersion<'a> {
 /// One mutable row per versioned object, written in the same statement as the
 /// version row it describes. A TRUNK commit advances every column; a BRANCH
 /// commit advances only what a branch changes — the any-lineage head ordinal
-/// and the commit instant — leaving the trunk's own head, lifecycle state and
-/// template alone, because a branch does not supersede the trunk (RM common
+/// and the commit instant — leaving the trunk's own head, its content key
+/// (the version insert's `content_key`, #4944), lifecycle state and template
+/// alone, because a branch does not supersede the trunk (RM common
 /// master06 §The 'Virtual Version Tree').
 ///
 /// `{branch}`, `{ordinal}`, `{lifecycle}` and `{template}` are the caller's
@@ -212,9 +213,11 @@ impl HeadUpsert<'_> {
         } = *self;
         format!(
             "INSERT INTO vo_head (vo_id, kind, ehr_id, head_sys_version, \
-             trunk_head_sys_version, lifecycle_state, template_id, committed_at) \
+             trunk_head_sys_version, trunk_head_content_key, lifecycle_state, template_id, \
+             committed_at) \
          SELECT {vo}, {kind}, {ehr}, {ordinal}, \
                 CASE WHEN {branch} = 0 THEN {ordinal} ELSE NULL END, \
+                CASE WHEN {branch} = 0 THEN v.content_key ELSE NULL END, \
                 {lifecycle}, {template}, {committed_at}::timestamptz \
          FROM v \
          ON CONFLICT (vo_id) DO UPDATE SET \
@@ -222,6 +225,8 @@ impl HeadUpsert<'_> {
              committed_at = EXCLUDED.committed_at, \
              trunk_head_sys_version = CASE WHEN {branch} = 0 \
                  THEN EXCLUDED.head_sys_version ELSE vo_head.trunk_head_sys_version END, \
+             trunk_head_content_key = CASE WHEN {branch} = 0 \
+                 THEN EXCLUDED.trunk_head_content_key ELSE vo_head.trunk_head_content_key END, \
              lifecycle_state = CASE WHEN {branch} = 0 \
                  THEN EXCLUDED.lifecycle_state ELSE vo_head.lifecycle_state END, \
              template_id = CASE WHEN {branch} = 0 \
@@ -331,7 +336,7 @@ fn folded_statement(shape: Shape) -> String {
                         $14, $15, $16, {contribution_id}, a.id, $17, $18, $19, $20, $21, $23, \
                         $22::timestamptz, $24, $25, $26 \
                  FROM {from} \
-                 RETURNING 1 \
+                 RETURNING content_key \
              ), h AS ( {} \
              ), n AS ( {} )",
             HeadUpsert {
