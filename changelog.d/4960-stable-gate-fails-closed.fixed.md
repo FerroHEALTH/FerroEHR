@@ -1,0 +1,1 @@
+- Under `spec_profile = "stable"`, an AQL whole-object result whose stored body the profile gate cannot read is refused with an error naming the version; it was served without the assessment.
