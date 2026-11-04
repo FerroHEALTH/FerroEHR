@@ -348,6 +348,8 @@ async fn rebuild_in_tx(
         template_id: version.template_id.as_deref(),
     };
     write_nodes(tx, vo_id, sys_version, version.ehr_id, &root, &rows).await?;
+    // The version reads its own rows again, whatever it shared before.
+    crate::storage::node_repo::unshare_content(tx, vo_id, sys_version).await?;
 
     // The parity comparison the sweep runs, over the rows just written and
     // before they are committed. A rebuild that did not restore parity must

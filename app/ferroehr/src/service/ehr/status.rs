@@ -34,7 +34,8 @@ use crate::storage::error::StorageError;
 use crate::storage::version_repo::read::VersionAt;
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
-use crate::versioning::change::{Change, Write, ensure_preceding, lock_current, tip_uid};
+use crate::versioning::change::precondition::{ensure_preceding, lock_current, tip_uid};
+use crate::versioning::change::{Change, Write};
 use crate::versioning::object_version_id::{VersionIdError, parse_tree_id};
 use crate::versioning::read::VersionRead;
 use crate::versioning::wire::{revision_history, versioned_object};
@@ -259,7 +260,7 @@ impl FerroEhrService {
     /// pooled read is the direct write paths' fast-fail convenience; the
     /// CONTRIBUTION engine evaluates the flag inside its commit transaction
     /// under a row lock
-    /// ([`crate::versioning::change::ensure_content_writable_tx`]).
+    /// ([`crate::versioning::change::precondition::ensure_content_writable_tx`]).
     ///
     /// NOTE: ITS-REST 1.1.0 enumerates no status code for a write to a
     /// non-modifiable EHR, so `409 Conflict` is used as the closest HTTP
@@ -276,7 +277,7 @@ impl FerroEhrService {
         if self.ehr_is_modifiable(ehr_id).await? {
             Ok(())
         } else {
-            Err(crate::versioning::change::not_modifiable_error(ehr_id))
+            Err(crate::versioning::change::precondition::not_modifiable_error(ehr_id))
         }
     }
 

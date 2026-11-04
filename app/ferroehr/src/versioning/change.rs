@@ -41,6 +41,7 @@ use crate::versioning::lifecycle::{
 use crate::versioning::object_version_id::{TreeId, VersionIdError, object_version_id};
 use crate::versioning::{Kind, SigningCtx, integrity, restriction};
 
+pub(crate) mod precondition;
 mod resolve;
 
 use resolve::{Content, Placing, resolve_create, resolve_delete, resolve_modify};
@@ -77,6 +78,15 @@ pub struct Committed {
     /// master06 §Committal and Audits) — the write response's `Last-Modified`, carried
     /// here so the service layer never re-reads the row it just wrote.
     pub time_committed: jiff::Timestamp,
+    /// `true` when nothing was committed: the update's content equalled the
+    /// current version's and `[versioning] skip_identical_resend` answered
+    /// with that version (#4415). The fields then name the existing version.
+    pub skipped: bool,
+    /// SHA-256 over the canonical body with the root `uid` removed
+    /// (`version.content_digest`); `None` on a logical delete and on an
+    /// attestation. On a skipped re-send it is the digest the content and the
+    /// existing version share.
+    pub content_digest: Option<[u8; 32]>,
 }
 
 /// The outcome of one CONTRIBUTION commit.
@@ -266,6 +276,14 @@ struct PrecedingTip {
     lifecycle_state: String,
     /// Whether this version is still the tip of its own lineage.
     open: bool,
+    /// The tip's storage ordinal.
+    sys_version: i32,
+    /// The tip's commit instant.
+    committed_at: jiff::Timestamp,
+    /// The tip's content digest, `None` when it has no content to share.
+    content_digest: Option<Vec<u8>>,
+    /// The version whose rows hold the tip's content (#4415).
+    content_key: i32,
 }
 
 /// Map a storage tip row onto the versioning value contract ([`PrecedingTip`]).
@@ -282,7 +300,25 @@ fn preceding_tip(
         creating_system_id: row.creating_system_id,
         lifecycle_state: row.lifecycle_state,
         open: row.open,
+        sys_version: row.sys_version,
+        committed_at: row.committed_at,
+        content_digest: row.content_digest,
+        content_key: row.content_key,
     })
+}
+
+/// The preceding tip a modify was placed after, as the shared-content rule
+/// and the opt-in re-send answer need it (#4415).
+#[derive(Debug, Clone)]
+pub(super) struct Preceding {
+    pub(super) sys_version: i32,
+    pub(super) tree: TreeId,
+    pub(super) creating_system_id: String,
+    pub(super) committed_at: jiff::Timestamp,
+    /// The tip's `content_digest`; `None` when it carries no content.
+    pub(super) content_digest: Option<Vec<u8>>,
+    /// The tip's `content_key`: the version whose node rows hold its content.
+    pub(super) content_key: i32,
 }
 
 /// The resolved placement of a new version in the version tree.
@@ -295,6 +331,9 @@ struct NextVersion {
     preceding_lifecycle: String,
     /// The preceding version's place in the version tree.
     preceding_tree: TreeId,
+    /// The preceding tip's identity and content key ([`Preceding`]), boxed
+    /// so the placement's future stays small.
+    preceding: Box<Preceding>,
     /// The transaction timestamp — the commit instant every row of this
     /// transaction stamps, carried by the merged placement read so the
     /// signature is computable before any insert.
@@ -333,7 +372,7 @@ async fn next_version(
     preplaced: Option<crate::storage::version_repo::placement::Placement>,
 ) -> Result<NextVersion, ServiceError> {
     // The caller may already hold the advisory lock and the placement read
-    // ([`lock_current`]); otherwise both run here.
+    // ([`precondition::lock_current`]); otherwise both run here.
     let placement = if let Some(placement) = preplaced {
         placement
     } else {
@@ -417,6 +456,14 @@ async fn next_version(
         ordinal,
         tree,
         preceding_uid,
+        preceding: Box::new(Preceding {
+            sys_version: tip.sys_version,
+            tree: tip.tree,
+            creating_system_id: tip.creating_system_id,
+            committed_at: tip.committed_at,
+            content_digest: tip.content_digest,
+            content_key: tip.content_key,
+        }),
         preceding_lifecycle: tip.lifecycle_state,
         preceding_tree: tip.tree,
         now,
@@ -471,6 +518,16 @@ struct ResolvedWrite {
     origins: Vec<String>,
     /// `UPDATE_VERSION.attestations` committed with this version.
     attestations: Vec<attestation::AttestationInput>,
+    /// SHA-256 over the canonical body with the root `uid` removed
+    /// (`version.content_digest`); `None` on a logical delete.
+    content_digest: Option<[u8; 32]>,
+    /// The version whose node rows this one reads when its content equals the
+    /// preceding tip's (`version.content_sys_version`, #4415); the rows are
+    /// then decomposed for the signature and not written.
+    shared_from: Option<i32>,
+    /// The preceding tip of a modify, which the opt-in re-send answer names
+    /// instead of committing.
+    preceding: Option<Box<Preceding>>,
     /// A newly created FOLDER hierarchy that joins `EHR.folders` (create only).
     is_first_folder: bool,
     /// The transaction timestamp — the commit instant this transaction stamps
@@ -656,6 +713,7 @@ async fn apply_change(
     tx: &mut PgConnection,
     scope: CommitScope<'_>,
     change: Change,
+    skip_identical: bool,
 ) -> Result<(Committed, Uuid), ServiceError> {
     let CommitScope {
         ehr_id,
@@ -690,7 +748,7 @@ async fn apply_change(
                 attestations,
                 other_input_version_uids,
             };
-            resolve_create(tx, ctx, at, content).await?
+            Box::pin(resolve_create(tx, ctx, at, content)).await?
         }
         Change::Modify {
             vo_id,
@@ -712,7 +770,7 @@ async fn apply_change(
                 attestations,
                 other_input_version_uids,
             };
-            resolve_modify(tx, ctx, at, vo_id, expected, content).await?
+            Box::pin(resolve_modify(tx, ctx, at, vo_id, expected, content)).await?
         }
         Change::Delete {
             vo_id,
@@ -721,7 +779,7 @@ async fn apply_change(
             signature,
             other_input_version_uids,
         } => {
-            resolve_delete(
+            Box::pin(resolve_delete(
                 tx,
                 ctx,
                 at,
@@ -730,11 +788,17 @@ async fn apply_change(
                 expected,
                 signature,
                 other_input_version_uids,
-            )
+            ))
             .await?
         }
     };
-    let committed = commit_resolved(tx, ctx, audit, contribution, resolved).await?;
+    if skip_identical && let Some(existing) = skipped_resend(&resolved, audit) {
+        return Ok((existing, Uuid::nil()));
+    }
+    // Boxed: the resolved write and the folded commit hold the whole
+    // version in their state, which would otherwise put every caller's
+    // future over the size the lint allows.
+    let committed = Box::pin(commit_resolved(tx, ctx, audit, contribution, resolved)).await?;
     crate::versioning::access_delay::hold_on_creation(tx, ctx, ehr_id, &committed.0).await?;
     if committed.0.kind.is_party() {
         crate::storage::party_reverse::reindex(tx, committed.0.vo_id).await?;
@@ -811,7 +875,15 @@ async fn commit_resolved(
         origins: &r.origins,
         body: r.canonical_text.as_deref(),
         time_committed: r.time_committed,
-        rows: &r.rows,
+        // A version that shares its predecessor's rows writes none of its
+        // own; the rows still served the signature above.
+        rows: if r.shared_from.is_some() {
+            &[]
+        } else {
+            &r.rows
+        },
+        content_digest: r.content_digest.as_ref().map(<[u8; 32]>::as_slice),
+        content_sys_version: r.shared_from,
         // Nothing is superseded in place: the head row advancing past the
         // previous version inside the SAME statement is what makes this one
         // current (master06 §The 'Virtual Version Tree').
@@ -858,17 +930,48 @@ async fn commit_resolved(
             kind: r.kind,
             change_type: audit.change_type.clone(),
             template_id: r.template_id,
-            root_archetype: r
-                .rows
-                .first()
-                .filter(|root| root.num == 0)
-                .and_then(|root| root.data.get("archetype_node_id"))
-                .and_then(Value::as_str)
-                .map(str::to_owned),
+            root_archetype: root_archetype(&r.rows),
             time_committed,
+            skipped: false,
+            content_digest: r.content_digest,
         },
         contribution_id,
     ))
+}
+
+/// The opt-in answer to an identical re-send (#4415): the existing version
+/// `r` shares its content with, and no commit, when `r` is a modify whose
+/// content equalled the preceding tip's; `None` otherwise. The tip is the
+/// one version the `If-Match` names, so an earlier version's content is
+/// never matched. ITS-REST does not govern skipping an identical commit: our
+/// own design, after what Cadasto answers.
+fn skipped_resend(r: &ResolvedWrite, audit: &AuditInput) -> Option<Committed> {
+    let (Some(preceding), Some(_)) = (&r.preceding, r.shared_from) else {
+        return None;
+    };
+    Some(Committed {
+        vo_id: r.vo_id,
+        sys_version: preceding.sys_version,
+        tree: preceding.tree,
+        creating_system_id: preceding.creating_system_id.clone(),
+        kind: r.kind,
+        change_type: audit.change_type.clone(),
+        template_id: r.template_id.clone(),
+        root_archetype: root_archetype(&r.rows),
+        time_committed: preceding.committed_at,
+        skipped: true,
+        content_digest: r.content_digest,
+    })
+}
+
+/// The root's `archetype_node_id` off the decomposed rows, for the outbox
+/// envelope and the audit record.
+fn root_archetype(rows: &[NodeRow]) -> Option<String> {
+    rows.first()
+        .filter(|root| root.num == 0)
+        .and_then(|root| root.data.get("archetype_node_id"))
+        .and_then(Value::as_str)
+        .map(str::to_owned)
 }
 
 /// Serializes the accepted, uid-stamped canonical value to the body bytes a
@@ -986,129 +1089,6 @@ async fn write_single_outbox(
     Ok(())
 }
 
-/// Create the first version of a new versioned object under its own
-/// contribution.
-///
-/// `known_now` is a database `now()` a caller already fetched on this request
-/// (e.g. piggybacked on a pre-commit gate read); when `Some`, the write
-/// transaction spends no extra round trip on the clock. `None` fetches it
-/// in-transaction.
-///
-/// # Errors
-/// [`ServiceError::Unprocessable`] for an out-of-group / non-first lifecycle
-/// state; the [`commit_resolved`] storage/signing errors; a multimedia offload
-/// failure as [`ServiceError::Internal`].
-/// The `409 Conflict` for a content write to a deactivated EHR
-/// (`EHR_STATUS.is_modifiable = false`) — RM ehr master04 §EHR Active Status
-/// forbids writes to everything except the `EHR_STATUS` object. ITS-REST
-/// 1.1.0 enumerates no status code for this outcome; `409` is the closest
-/// HTTP semantics (RFC 9110 §15.5.10 — the write conflicts with the current
-/// state of the target resource).
-pub(crate) fn not_modifiable_error(ehr_id: EhrId) -> ServiceError {
-    ServiceError::conflict(format!(
-        "EHR {ehr_id} is not modifiable (EHR_STATUS.is_modifiable = false); its \
-         contents cannot be created, updated or deleted (RM ehr master04 §EHR Active \
-         Status). Set EHR_STATUS.is_modifiable = true to reactivate it."
-    ))
-}
-
-/// The content-write gate, evaluated INSIDE the commit transaction.
-///
-/// Reads the promoted `ehr.is_modifiable` under a row lock
-/// ([`crate::storage::ehr_repo::ehr_is_modifiable_locked`]), so a concurrent
-/// `EHR_STATUS` flip either commits first and is seen or waits for this commit.
-/// A missing EHR row reads as modifiable; the existence gate answers 404 on its
-/// own.
-///
-/// NOTE: RM ehr master04 §EHR Active Status defines what the flag forbids and no
-/// released text states when it is evaluated relative to a commit, so the
-/// in-transaction snapshot is our own recorded semantics.
-///
-/// # Errors
-/// [`ServiceError::Conflict`] when the EHR is not modifiable;
-/// [`ServiceError::Database`] if the locked read fails.
-pub(crate) async fn ensure_content_writable_tx(
-    tx: &mut PgConnection,
-    ehr_id: EhrId,
-    exclusive: bool,
-) -> Result<(), ServiceError> {
-    let modifiable = crate::storage::ehr_repo::ehr_is_modifiable_locked(tx, ehr_id, exclusive)
-        .await?
-        .unwrap_or(true);
-    if modifiable {
-        Ok(())
-    } else {
-        Err(not_modifiable_error(ehr_id))
-    }
-}
-
-/// Take the per-object lock of `vo_id` and read its current trunk tip, the
-/// placement a single-object modify or delete then continues
-/// ([`Write::placed`]), so its preconditions are judged against the tip the
-/// write holds.
-///
-/// # Errors
-/// [`ServiceError::NotFound`] when the object has no current version or is
-/// not a `kind` in `ehr_id`; [`ServiceError::Database`] if the read fails.
-pub(crate) async fn lock_current(
-    tx: &mut PgConnection,
-    ehr_id: Option<EhrId>,
-    vo_id: VoId,
-    kind: Kind,
-) -> Result<crate::storage::version_repo::placement::Placement, ServiceError> {
-    crate::storage::version_repo::commit::advisory_lock(tx, vo_id).await?;
-    let placement =
-        crate::storage::version_repo::placement::next_placement(tx, vo_id, None).await?;
-    if placement
-        .tip
-        .as_ref()
-        .is_some_and(|tip| tip.ehr_id == ehr_id && tip.kind == kind.as_str())
-    {
-        Ok(placement)
-    } else {
-        Err(ServiceError::not_found(
-            Missing::VersionedObject,
-            format!("{} {vo_id} in EHR {ehr_id:?}", kind.as_str()),
-        ))
-    }
-}
-
-/// The full `OBJECT_VERSION_ID` of the tip a [`lock_current`] placement holds.
-pub(crate) fn tip_uid(
-    vo_id: VoId,
-    tip: &crate::storage::version_repo::placement::TipRow,
-) -> String {
-    object_version_id(
-        vo_id,
-        &tip.creating_system_id,
-        TreeId::from_columns(tip.trunk_version, tip.branch_number, tip.branch_version),
-    )
-}
-
-/// The `If-Match` precondition of a single-object write, judged once against
-/// the tip the write locked: `preceding` must name that version in full,
-/// compared case-insensitively (ITS-REST overview `Requests_and_responses.md`
-/// §"If-Match and accidental overwrites"; BASE `base_types` master05
-/// §"Composite Identifiers and Case").
-///
-/// # Errors
-/// [`ServiceError::VersionConflict`] (`412`) when `preceding` names another
-/// version.
-pub(crate) fn ensure_preceding(
-    tip_uid: &str,
-    preceding: Option<&ObjectVersionId>,
-) -> Result<(), ServiceError> {
-    match preceding {
-        Some(pre) if !composite_ids_equal(tip_uid, pre.value()) => {
-            Err(ServiceError::version_conflict(format!(
-                "If-Match {:?} does not match the current latest version {tip_uid:?}",
-                pre.value()
-            )))
-        }
-        _ => Ok(()),
-    }
-}
-
 /// One single-object write under its own CONTRIBUTION.
 pub(crate) struct Write {
     /// The owning EHR, or `None` for an ehr-less object (a demographic party).
@@ -1120,7 +1100,7 @@ pub(crate) struct Write {
     /// The transaction timestamp the caller already read, if any.
     pub(crate) known_now: Option<jiff::Timestamp>,
     /// A placement the caller already read under the per-object lock it holds
-    /// ([`lock_current`], or the composition-update mega-read); `None` makes
+    /// ([`precondition::lock_current`], or the composition-update mega-read); `None` makes
     /// the write take the lock and read its own.
     pub(crate) placement: Option<crate::storage::version_repo::placement::Placement>,
 }
@@ -1246,9 +1226,12 @@ pub(crate) async fn commit(
             preplaced: placement,
         },
         change,
+        ctx.skip_identical_resend,
     )
     .await?;
-    write_single_outbox(tx, ctx, contribution_id, ehr_id, &committed).await?;
+    if !committed.skipped {
+        write_single_outbox(tx, ctx, contribution_id, ehr_id, &committed).await?;
+    }
     Ok(committed)
 }
 
@@ -1332,6 +1315,7 @@ pub(crate) async fn commit_contribution(
                 preplaced: None,
             },
             change,
+            false,
         )
         .await?;
         committed.push(change_committed);

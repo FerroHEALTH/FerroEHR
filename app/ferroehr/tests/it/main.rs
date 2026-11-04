@@ -112,6 +112,7 @@ mod service_spec_profile;
 mod service_system_id;
 mod service_template;
 mod service_validation;
+mod shared_content;
 mod signing_pgp;
 mod sql_injection;
 mod storage_parity;

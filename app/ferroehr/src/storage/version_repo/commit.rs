@@ -146,9 +146,17 @@ pub struct FoldedVersion<'a> {
     /// the version row's own `committed_at`.
     pub time_committed: jiff::Timestamp,
     /// The decomposed node rows — inserted by the SAME statement through a
-    /// node CTE ordered after the version row (empty on a logical delete:
-    /// the unnest yields no rows and the CTE writes nothing).
+    /// node CTE ordered after the version row (empty on a logical delete and
+    /// on a version that shares its predecessor's rows: the unnest yields no
+    /// rows and the CTE writes nothing).
     pub rows: &'a [crate::storage::row::NodeRow],
+    /// SHA-256 over the canonical body with the root `uid` removed
+    /// (`version.content_digest`); `None` on a logical delete.
+    pub content_digest: Option<&'a [u8]>,
+    /// The version in the same object whose node rows hold this version's
+    /// content, when its content equalled the preceding tip's
+    /// (`version.content_sys_version`, #4415); `None` for its own rows.
+    pub content_sys_version: Option<i32>,
 }
 
 /// The head upsert both folded commit statements carry.
@@ -288,8 +296,8 @@ enum Shape {
 /// The statement text of one [`Folded`] shape.
 ///
 /// Every shape binds the same parameters in the same order: `$1` to `$5` the
-/// audit, `$6` the CONTRIBUTION uid, `$7` the owning EHR, `$8` to `$24` the
-/// version and `$25` on the node arrays, so one binder serves all three.
+/// audit, `$6` the CONTRIBUTION uid, `$7` the owning EHR, `$8` to `$26` the
+/// version and `$27` on the node arrays, so one binder serves all three.
 fn folded_statement(shape: Shape) -> String {
     let contribution = matches!(shape, Shape::Contribution | Shape::Standalone);
     let version = matches!(shape, Shape::Standalone | Shape::Into);
@@ -318,10 +326,10 @@ fn folded_statement(shape: Shape) -> String {
                     lifecycle_state, creating_system_id, preceding_version_uid, \
                     contribution_id, commit_audit_id, template_id, signature, \
                     signature_client_supplied, stable_compatible, body, origins, committed_at, \
-                    other_input_version_uids) \
+                    other_input_version_uids, content_digest, content_sys_version) \
                  SELECT $8, $9, $7, $10, $11, $12, $13, \
                         $14, $15, $16, {contribution_id}, a.id, $17, $18, $19, $20, $21, $23, \
-                        $22::timestamptz, $24 \
+                        $22::timestamptz, $24, $25, $26 \
                  FROM {from} \
                  RETURNING 1 \
              ), h AS ( {} \
@@ -337,7 +345,7 @@ fn folded_statement(shape: Shape) -> String {
                 committed_at: "$22",
             }
             .sql(),
-            crate::storage::node_write::node_insert_cte("$8", "$10", "$7", 25)
+            crate::storage::node_write::node_insert_cte("$8", "$10", "$7", 27)
         )
     } else {
         String::new()
@@ -417,7 +425,9 @@ pub async fn commit_folded(
                 .bind(v.body)
                 .bind(v.time_committed.to_string())
                 .bind(serde_json::json!(v.origins))
-                .bind(super::optional_json_array(v.other_input_version_uids));
+                .bind(super::optional_json_array(v.other_input_version_uids))
+                .bind(v.content_digest)
+                .bind(v.content_sys_version);
             let version_uid = crate::storage::compact::version_uid(
                 v.vo_id,
                 v.creating_system_id,

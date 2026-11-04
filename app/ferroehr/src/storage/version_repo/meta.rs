@@ -279,7 +279,7 @@ pub async fn content_of(
          coalesce(v.origins, jsonb_build_array(v.creating_system_id)) AS origins \
          FROM version v \
          LEFT JOIN node n ON n.tier = v.tier AND n.vo_id = v.vo_id \
-          AND n.sys_version = v.sys_version AND n.num = 0 \
+          AND n.sys_version = v.content_key AND n.num = 0 \
          WHERE v.vo_id = $1 AND v.trunk_version = $2 AND v.branch_number = $3 \
            AND v.branch_version = $4";
     const CURRENT_SQL: &str = "SELECT v.template_id, n.archetype, \
@@ -287,7 +287,7 @@ pub async fn content_of(
          FROM version v \
          JOIN vo_head h ON h.vo_id = v.vo_id AND h.trunk_head_sys_version = v.sys_version \
          LEFT JOIN node n ON n.tier = v.tier AND n.vo_id = v.vo_id \
-          AND n.sys_version = v.sys_version AND n.num = 0 \
+          AND n.sys_version = v.content_key AND n.num = 0 \
          WHERE v.vo_id = $1";
     let mut conn = acquire(pool).await?;
     let row = if let Some((trunk, branch, branch_version)) = tree {

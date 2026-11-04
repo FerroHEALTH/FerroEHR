@@ -98,7 +98,20 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   (RM common master06 §Committal and Audits): version *i* is valid over
   `[committed_at_i, committed_at_i+1)`, and `version_at_time(t)` is the trunk
   row with the greatest `committed_at` at or before `t`. A BRIN index on
-  `committed_at` serves time-range listing on the append-only heap.
+  `committed_at` serves time-range listing on the append-only heap. A version
+  whose content equals the preceding tip's (SHA-256 over the canonical body
+  with the root `uid` removed, `version.content_digest`) writes its row, its
+  audit, its contribution and its uid-stamped body as any other, and no node
+  rows: `version.content_sys_version` names the version whose rows hold the
+  content, and every read of a version's rows joins `node` on the stored
+  `version.content_key`, `coalesce(content_sys_version, sys_version)` kept
+  as a generated column so the planner joins on a plain column (#4415), the
+  root's `uid` and
+  header coming back from the reading version's row. Nothing physical is
+  ever deleted below the object, so a shared tree is never orphaned; the
+  opt-in `[versioning] skip_identical_resend` answers an identical re-send
+  with the existing version and commits nothing, which ITS-REST does not
+  govern: our own design.
 - **`vo_head`** — the one mutable row per versioned object, and the only row a
   commit updates. It answers every "what is current" question in one
   primary-key probe: `trunk_head_sys_version` IS `LATEST_VERSION`,

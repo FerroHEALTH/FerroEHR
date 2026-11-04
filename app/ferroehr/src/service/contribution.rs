@@ -241,14 +241,18 @@ async fn write_contribution(
     let mut tx = conn.begin().await?;
     // The content-write gate, under a row lock (RM ehr master04 §EHR Active
     // Status; the in-transaction evaluation is our own recorded semantics —
-    // see `change::ensure_content_writable_tx`). A set that itself writes an
+    // see `change::precondition::ensure_content_writable_tx`). A set that itself writes an
     // EHR_STATUS takes the exclusive lock up front (its own commit updates
     // the same row), avoiding a share-then-upgrade deadlock.
     if let Some(ehr_id) = ehr_id
         && write.needs_content_permission
     {
-        change::ensure_content_writable_tx(&mut tx, ehr_id, !write.status_commits.is_empty())
-            .await?;
+        change::precondition::ensure_content_writable_tx(
+            &mut tx,
+            ehr_id,
+            !write.status_commits.is_empty(),
+        )
+        .await?;
     }
     for (_, change) in &write.changes {
         if let Change::Modify {
@@ -483,7 +487,7 @@ async fn refuse_content_into_inactive_ehr(
     let (exists, modifiable, _) =
         crate::storage::ehr_repo::ehr_writability(&mut *acquire(&cx.pool).await?, ehr_id).await?;
     if exists && modifiable == Some(false) {
-        return Err(change::not_modifiable_error(ehr_id));
+        return Err(change::precondition::not_modifiable_error(ehr_id));
     }
     Ok(())
 }

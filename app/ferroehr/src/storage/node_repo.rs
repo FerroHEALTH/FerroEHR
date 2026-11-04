@@ -46,18 +46,25 @@ const ROOT_COLUMNS: &str = "CASE WHEN n.num = 0 THEN ext.version_uid(v.vo_id, \
                             v.branch_version) END AS version_uid, \
                             CASE WHEN n.num = 0 THEN v.template_id END AS template_id";
 
+/// The join from a version row `v` to the node rows that hold its content:
+/// its own rows, or the rows of the version `content_sys_version` names when
+/// its content equalled its predecessor's at commit (#4415), the stored
+/// `content_key`. Every read of a version's rows goes through this key, never
+/// through `v.sys_version`.
+pub(crate) const CONTENT_ROWS_JOIN: &str =
+    "JOIN node n ON n.tier = v.tier AND n.vo_id = v.vo_id AND n.sys_version = v.content_key";
+
 /// The lean read-row statement: **only** the five columns
 /// [`crate::storage::codec::reassemble`] and the nested-set contract need, the
 /// columns the fragment is rebuilt from, and the version row the root's `uid`
-/// and template come back from — the promoted query columns are not read
-/// back.
+/// and template come back from and whose content key the rows are reached
+/// through — the promoted query columns are not read back.
 static READ_ROWS_SQL: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
     format!(
         "SELECT n.num, n.num_cap, n.parent_num, n.path, n.data, {FRAGMENT_COLUMNS}, \
          {ROOT_COLUMNS} \
-         FROM node n JOIN version v ON v.tier = n.tier AND v.vo_id = n.vo_id \
-         AND v.sys_version = n.sys_version \
-         WHERE n.vo_id = $1 AND n.sys_version = $2 ORDER BY n.num"
+         FROM version v {CONTENT_ROWS_JOIN} \
+         WHERE v.vo_id = $1 AND v.sys_version = $2 ORDER BY n.num"
     )
 });
 
@@ -191,6 +198,29 @@ pub async fn read_version_canonical(
     reassemble(&rows)
 }
 
+/// Makes a version read its own node rows again: clears the
+/// `content_sys_version` a shared-content commit set (#4415), after the node
+/// rebuild wrote the version's own rows.
+///
+/// # Errors
+///
+/// Returns [`StorageError::Database`] on any driver/statement failure.
+pub async fn unshare_content(
+    tx: &mut PgConnection,
+    vo_id: VoId,
+    sys_version: i32,
+) -> Result<(), StorageError> {
+    sqlx::query(
+        "UPDATE version SET content_sys_version = NULL \
+         WHERE vo_id = $1 AND sys_version = $2 AND content_sys_version IS NOT NULL",
+    )
+    .bind(vo_id)
+    .bind(sys_version)
+    .execute(tx)
+    .await?;
+    Ok(())
+}
+
 /// Deletes every primary-tier `node` row of one stored version, returning how
 /// many were removed.
 ///
@@ -240,12 +270,11 @@ pub async fn read_version_rows_all(
 ) -> Result<BTreeMap<(VoId, i32), Vec<ReadRow>>, StorageError> {
     static SQL: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
         format!(
-            "SELECT n.vo_id, n.sys_version, n.num, n.num_cap, n.parent_num, n.path, n.data, \
+            "SELECT v.vo_id, v.sys_version, n.num, n.num_cap, n.parent_num, n.path, n.data, \
              {FRAGMENT_COLUMNS}, {ROOT_COLUMNS} \
              FROM unnest($1::uuid[], $2::int[]) AS k(vo_id, sys_version) \
-             JOIN node n ON n.vo_id = k.vo_id AND n.sys_version = k.sys_version \
-             JOIN version v ON v.tier = n.tier AND v.vo_id = n.vo_id \
-             AND v.sys_version = n.sys_version"
+             JOIN version v ON v.vo_id = k.vo_id AND v.sys_version = k.sys_version \
+             {CONTENT_ROWS_JOIN}"
         )
     });
     if keys.is_empty() {
@@ -328,16 +357,16 @@ pub async fn read_subtrees_canonical(
     anchors: &[SubtreeAnchor],
 ) -> Result<HashMap<SubtreeAnchor, Value>, StorageError> {
     // No anchor here is a root (`num = 0`), so no row needs its version's
-    // uid or template: the two root columns are `NULL` and no join is made.
+    // uid or template: the two root columns are `NULL`. The anchor names the
+    // version, whose row resolves the content key the rows are read under.
     static SQL: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
         format!(
             "SELECT a.idx, n.num, n.path, n.data, {FRAGMENT_COLUMNS}, \
                     NULL::text AS version_uid, NULL::text AS template_id \
              FROM unnest($1::int[], $2::uuid[], $3::int[], $4::int[], $5::int[]) \
                   AS a(idx, vo_id, sys_version, anum, acap) \
-             JOIN node n \
-               ON n.vo_id = a.vo_id AND n.sys_version = a.sys_version \
-                  AND n.num BETWEEN a.anum AND a.acap"
+             JOIN version v ON v.vo_id = a.vo_id AND v.sys_version = a.sys_version \
+             {CONTENT_ROWS_JOIN} AND n.num BETWEEN a.anum AND a.acap"
         )
     });
     if anchors.is_empty() {

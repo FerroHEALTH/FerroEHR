@@ -39,7 +39,8 @@ use crate::service::version_update::WriteRequest;
 use crate::service::write::{Mode, Resolved};
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
-use crate::versioning::change::{Change, Write, lock_current};
+use crate::versioning::change::precondition::lock_current;
+use crate::versioning::change::{Change, Write};
 use crate::versioning::object_version_id::{TreeId, object_version_id};
 use crate::versioning::read::{VersionRead, demographic_current, object_kind};
 

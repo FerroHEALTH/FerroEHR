@@ -579,6 +579,7 @@ const IDENTIFIERS: &[&str] = &[
     "contribution_id",
     "commit_audit_id",
     "template_id",
+    "content_key",
     // vo_head
     "trunk_head_sys_version",
     "restricted_at",

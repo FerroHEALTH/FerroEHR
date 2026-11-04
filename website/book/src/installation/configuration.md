@@ -294,6 +294,7 @@ rather than inherit from a quickstart. See
 | `[smart]` | SMART App Launch discovery and scope enforcement | [Authentication & access](config-auth.md) |
 | `[access_delay]` | The EHDS Art. 3(3) delay of the person's own access to new data, off by default | [Authentication & access](config-auth.md#access_delay) |
 | `[signing]` | VERSION signing and read-time verification | [Authentication & access](config-auth.md) |
+| `[versioning]` | The opt-in answer to an update whose content equals the current version's, off by default | [Authentication & access](config-auth.md#versioning) |
 | `[licence]` | The commercial licence token | [Authentication & access](config-auth.md) |
 | `[query]` | AQL execution budgets and result ceilings | [Integrations](config-integrations.md) |
 | `[ehr_index]`, `[ehr_index.oauth]`, `[ehr_index.tls]` | Who holds the patient-to-EHR cross-reference: an IHE patient identity source over PIXm (the default) or the in-instance map | [Integrations](config-integrations.md#ehr_index) |

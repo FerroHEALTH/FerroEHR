@@ -70,6 +70,9 @@ pub(super) async fn resolve_delete(
         client_signature: signature,
         rows: Vec::new(),
         canonical_text: None,
+        content_digest: None,
+        shared_from: None,
+        preceding: None,
         // A deleted version's data is Void (master06 §Logical
         // Deletion): there is no body a generation could fail to
         // express.
@@ -107,6 +110,28 @@ struct Prepared {
     canonical_text: Option<String>,
     stable_compatible: bool,
     origins: Vec<String>,
+    /// SHA-256 over the canonical body with the root `uid` removed
+    /// ([`content_digest`]).
+    content_digest: [u8; 32],
+}
+
+/// SHA-256 over the canonical ITS-JSON bytes of `canonical` with the root
+/// `uid` removed, the digest a version's content is compared with its
+/// predecessor's on (#4415).
+///
+/// NOTE: RM ehr `master05-composition_package.adoc` §Event Context makes
+/// `context` content (a changed `start_time` or `setting` is a clinical
+/// change), and `feeder_audit` is content the version carries, so only the
+/// server-assigned `uid` leaves the digested bytes; the serializer is the one
+/// that writes `version.body`, so equal bodies digest equal.
+fn content_digest(canonical: &Value) -> Result<[u8; 32], ServiceError> {
+    use sha2::Digest as _;
+    let mut without_uid = canonical.clone();
+    if let Some(root) = without_uid.as_object_mut() {
+        root.shift_remove("uid");
+    }
+    let text = canonical_body_text(&without_uid)?;
+    Ok(sha2::Sha256::digest(text.as_bytes()).into())
 }
 
 /// The lifecycle state a content write commits: the large inline
@@ -159,11 +184,13 @@ async fn prepare_body(
     let stable_compatible = profile::stable_compatible(ctx.spec_profile, kind, &canonical);
     let origins = crate::versioning::origins::origins(&ctx.direct_origin, &canonical);
     let canonical_text = Some(canonical_body_text(&canonical)?);
+    let content_digest = content_digest(&canonical)?;
     Ok(Prepared {
         rows: decompose(canonical)?,
         canonical_text,
         stable_compatible,
         origins,
+        content_digest,
     })
 }
 
@@ -199,6 +226,9 @@ pub(super) async fn resolve_create(
         client_signature: content.signature,
         rows: body.rows,
         canonical_text: body.canonical_text,
+        content_digest: Some(body.content_digest),
+        shared_from: None,
+        preceding: None,
         stable_compatible: body.stable_compatible,
         origins: body.origins,
         attestations: content.attestations,
@@ -235,6 +265,11 @@ pub(super) async fn resolve_modify(
     // (master06 §Version Lifecycle state machine).
     validate_transition(Some(&next.preceding_lifecycle), &lifecycle)?;
     let body = prepare_body(tx, ctx, kind, vo_id, next.tree, content.canonical).await?;
+    // Content equal to the preceding tip's is stored once: the new version
+    // reads the tip's rows (its own, or the ones it shares), and nothing of
+    // the commit's own record is skipped (#4415).
+    let shared_from = (next.preceding.content_digest.as_deref() == Some(&body.content_digest[..]))
+        .then_some(next.preceding.content_key);
     Ok(ResolvedWrite {
         kind,
         vo_id,
@@ -248,6 +283,9 @@ pub(super) async fn resolve_modify(
         client_signature: content.signature,
         rows: body.rows,
         canonical_text: body.canonical_text,
+        content_digest: Some(body.content_digest),
+        shared_from,
+        preceding: Some(next.preceding),
         stable_compatible: body.stable_compatible,
         origins: body.origins,
         attestations: content.attestations,

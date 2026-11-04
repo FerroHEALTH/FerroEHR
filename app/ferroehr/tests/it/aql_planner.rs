@@ -2851,8 +2851,9 @@ fn a_value_equality_with_a_parameter_is_anchored_on_the_element_rows() {
     );
     assert!(
         sql.contains(r#""va1"."vo_id" = "v0"."vo_id""#)
-            && sql.contains(r#""va1"."sys_version" = "v0"."sys_version""#),
-        "the anchor is linked to the version row of the path's versioned object"
+            && sql.contains(r#""va1"."sys_version" = "v0"."content_key""#),
+        "the anchor is linked to the version row of the path's versioned object, through \
+         the key of the node rows that version reads (#4415)"
     );
     assert!(
         sql.contains(r#""archetype" = $"#),

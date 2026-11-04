@@ -55,7 +55,7 @@ use crate::aql::ir::{
 use crate::db::iden::{Node, VersionRow};
 
 use super::expr::{binoper, call, col, hot};
-use super::from::{BoundTable, attribute_child, binding_rows};
+use super::from::{BoundTable, attribute_child, binding_rows, content_key};
 use super::predicate::raw_numeric_wanted;
 use super::value::ItemWalk;
 use super::{Builder, StepBinding, ValueMode};
@@ -159,7 +159,7 @@ impl Builder<'_> {
     /// `sid` through `CONTAINS` edges: the nearest source at or above it that
     /// opened a version row, or `None` for a source no version row carries
     /// (an EHR, or a source under `NOT CONTAINS`).
-    fn version_alias_of(&self, sid: usize) -> Option<String> {
+    pub(super) fn version_alias_of(&self, sid: usize) -> Option<String> {
         fn find(
             tree: &ir::ContainsTree,
             roots: &std::collections::BTreeMap<usize, String>,
@@ -661,7 +661,7 @@ impl ValueAnchor {
     pub(super) fn link(&self) -> Expr {
         col(&self.alias, Node::VoId)
             .eq(col(&self.version, VersionRow::VoId))
-            .and(col(&self.alias, Node::SysVersion).eq(col(&self.version, VersionRow::SysVersion)))
+            .and(col(&self.alias, Node::SysVersion).eq(content_key(&self.version)))
     }
 }
 

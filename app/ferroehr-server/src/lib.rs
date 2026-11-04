@@ -600,6 +600,7 @@ fn assemble_service(
         .with_licence(licence)
         .with_deployment(deployment)
         .with_outbox_enabled(outbox_enabled)
+        .with_skip_identical_resend(config.versioning.skip_identical_resend)
         .with_privacy(Arc::new(privacy))
         .with_cohort(config.cohort.clone())
         .with_origins(config.origins.clone())

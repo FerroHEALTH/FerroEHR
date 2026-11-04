@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! FROM-clause + containment lowering (QUERY master03 §Class expressions,
-//! §Containment, §VERSION sources) and the population / scope gates.
+//! §Containment, §VERSION sources); the EHR scope and the population gate are
+//! [`super::scope`].
 //!
 //! No openEHR spec governs the join mechanics — this is our own design: the FROM containment tree becomes a **cross
 //! join of table aliases + typed WHERE conditions** (the planner folds
@@ -27,9 +28,7 @@
 //! QUERY master03 §Variables lets any FROM variable be read and is silent on the
 //! row shape of a disjunction, so that shape is our own design.
 
-use sea_query::extension::postgres::PgFunc;
 use sea_query::{Alias, Asterisk, Expr, ExprTrait as _, JoinType, Query, SelectStatement};
-use uuid::Uuid;
 
 use crate::aql::error::{AqlError, AqlFeatureError, SqlError};
 use crate::aql::ir::{
@@ -40,7 +39,7 @@ use crate::db::iden::{CommitAudit, Ehr, Node, VersionRow, VoHead};
 
 use super::expr::version_field_expr;
 use super::expr::{cast, col, hot, type_cond};
-use super::{Builder, EhrAccessScope, VoGroup, subject};
+use super::{Builder, VoGroup};
 
 /// The correlation anchor for an `OR` / `NOT CONTAINS` `EXISTS` subquery.
 enum ExistsAnchor {
@@ -192,7 +191,7 @@ fn bind_head(
 /// override is the second column: while `research_objection_ground` is set,
 /// the EHR is in the population again and the ground says on whose authority.
 /// No openEHR spec governs the objection — our own design/extension.
-fn research_objection_clear(ehr_alias: &str) -> Expr {
+pub(super) fn research_objection_clear(ehr_alias: &str) -> Expr {
     col(ehr_alias, Ehr::ResearchObjectedAt).is_null().or(col(
         ehr_alias,
         Ehr::ResearchObjectionGround,
@@ -220,6 +219,17 @@ fn trunk_at_instant(version_alias: &str, at: Expr) -> Expr {
     col(version_alias, VersionRow::CommittedAt)
         .lte(at)
         .and(Expr::exists(sub).not())
+}
+
+/// The node rows a version row `voa` reads: its own, or the rows of the
+/// version `content_sys_version` names when its content equalled its
+/// predecessor's at commit, the stored `version.content_key` (#4415). Every
+/// join from a version row to node rows compares `node.sys_version` with this
+/// column, never with `voa.sys_version`, so the planner joins and estimates on
+/// a plain column; a node-to-node join stays on the node key, both rows lying
+/// in one tree.
+pub(super) fn content_key(voa: &str) -> Expr {
+    col(voa, VersionRow::ContentKey)
 }
 
 /// Whether `child` is a STRICT nested-set descendant of `parent` within one
@@ -632,7 +642,7 @@ impl Builder<'_> {
             Ok(vec![
                 hot(inner, VersionRow::Tier),
                 col(inner, VersionRow::VoId).eq(col(&node, Node::VoId)),
-                col(inner, VersionRow::SysVersion).eq(col(&node, Node::SysVersion)),
+                content_key(inner).eq(col(&node, Node::SysVersion)),
             ])
         })?;
         self.node_alias.insert(sid, node.clone());
@@ -878,7 +888,7 @@ impl Builder<'_> {
             self.q
                 .and_where(col(&node, Node::VoId).eq(col(&voa, VersionRow::VoId)));
             self.q
-                .and_where(col(&node, Node::SysVersion).eq(col(&voa, VersionRow::SysVersion)));
+                .and_where(col(&node, Node::SysVersion).eq(content_key(&voa)));
             // A class that occurs only as its object's root is the `num = 0`
             // row, so the node probe is one primary-key row, not a scan of the
             // whole version's nodes filtered by type (#4089).
@@ -1004,9 +1014,7 @@ impl Builder<'_> {
                         sub.from_as(VersionRow::Table, Alias::new(voa.as_str()));
                         sub.and_where(hot(&voa, VersionRow::Tier));
                         sub.and_where(col(alias, Node::VoId).eq(col(&voa, VersionRow::VoId)));
-                        sub.and_where(
-                            col(alias, Node::SysVersion).eq(col(&voa, VersionRow::SysVersion)),
-                        );
+                        sub.and_where(col(alias, Node::SysVersion).eq(content_key(&voa)));
                         match scope {
                             VersionScope::Latest => {
                                 bind_head(sub, &voa, true, self.gates, false);
@@ -1034,9 +1042,7 @@ impl Builder<'_> {
                         sub.from_as(VersionRow::Table, Alias::new(voa.as_str()));
                         sub.and_where(hot(&voa, VersionRow::Tier));
                         sub.and_where(col(alias, Node::VoId).eq(col(&voa, VersionRow::VoId)));
-                        sub.and_where(
-                            col(alias, Node::SysVersion).eq(col(&voa, VersionRow::SysVersion)),
-                        );
+                        sub.and_where(col(alias, Node::SysVersion).eq(content_key(&voa)));
                         match scope {
                             VersionScope::Latest => {
                                 bind_head(sub, &voa, true, self.gates, false);
@@ -1062,7 +1068,7 @@ impl Builder<'_> {
                 sub.from_as(VersionRow::Table, Alias::new(voa.as_str()));
                 sub.and_where(hot(&voa, VersionRow::Tier));
                 sub.and_where(col(alias, Node::VoId).eq(col(&voa, VersionRow::VoId)));
-                sub.and_where(col(alias, Node::SysVersion).eq(col(&voa, VersionRow::SysVersion)));
+                sub.and_where(col(alias, Node::SysVersion).eq(content_key(&voa)));
                 sub.and_where(col(alias, Node::EhrId).eq(col(e, Ehr::Id)));
                 // Same version-spine mirror as the FROM path (see above):
                 // lets the planner bound the EXISTS by the EHR instead of the
@@ -1085,215 +1091,6 @@ impl Builder<'_> {
                 Ok(())
             }
         }
-    }
-
-    /// Restricts every versioned-object root and every EHR source to the EHRs
-    /// the query may read: the whole-EHR restriction, the explicit `ehr_ids`
-    /// scope, the per-EHR access decision and the ABAC patient scope.
-    pub(super) fn apply_ehr_scope(&mut self) {
-        // The whole-EHR restriction, at EVERY scope. The per-object predicate
-        // covers every version spine (a whole-EHR restriction stamps each
-        // `vo_head`), but a bare `FROM EHR e` has no spine, so the `ehr` row
-        // carries it. Unlike the objection below, this is not a population-only
-        // gate: GDPR Art. 18(2) leaves storage as the only processing a
-        // restriction admits (`docs/law/eu/gdpr/text.html`), so naming the
-        // `ehr_id` does not make the content answerable.
-        for alias in self.ehr_alias.values().cloned().collect::<Vec<_>>() {
-            self.q.and_where(col(&alias, Ehr::RestrictedAt).is_null());
-            for predicate in self.gates.on_ehr(&alias) {
-                self.q.and_where(predicate);
-            }
-        }
-        // Multi-EHR scoping restricts every VO root and every EHR source. A
-        // bare `FROM EHR e` (no CONTAINS) has no VO root — the scope
-        // must bind the EHR source itself, or a scoped query would run
-        // over the whole population (ITS-REST query Request.md: `ehr_id`
-        // "used to execute the query within a single EHR context").
-        let roots = self.group_roots.clone();
-        let ehrs = self.ehr_alias.values().cloned().collect::<Vec<_>>();
-        let scoped = roots
-            .iter()
-            .map(|root| col(root, Node::EhrId))
-            .chain(ehrs.iter().map(|alias| col(alias, Ehr::Id)));
-        for cond in scoped
-            .filter_map(|target| self.ehr_ids_cond(target))
-            .collect::<Vec<_>>()
-        {
-            self.q.and_where(cond);
-        }
-        // The per-EHR access decision (RM ehr `ehr_access.adoc` §`EHR_ACCESS`
-        // Class) and the EHDS Art. 10 opt-out bind every VO root and EHR source
-        // the way the explicit scope does, so no query shape reaches either.
-        let accessed = roots
-            .iter()
-            .map(|root| col(root, Node::EhrId))
-            .chain(ehrs.iter().map(|alias| col(alias, Ehr::Id)));
-        for cond in accessed
-            .flat_map(|t| [self.access_cond(t.clone()), self.gates.on_ehr_id(t)])
-            .flatten()
-            .collect::<Vec<_>>()
-        {
-            self.q.and_where(cond);
-        }
-        // The ABAC patient scope binds the same targets: a query with no
-        // versioned-object root (`FROM EHR e`, an `ehr_status` path, an `OR`
-        // under the EHR) still reads the `ehr` row itself.
-        let subject = roots
-            .iter()
-            .map(|root| self.subject_cond(col(root, Node::EhrId)))
-            .chain(ehrs.iter().map(|alias| self.ehr_subject_cond(alias)));
-        for cond in subject.flatten().collect::<Vec<_>>() {
-            self.q.and_where(cond);
-        }
-    }
-
-    /// The explicit `ehr_ids` scope on the EHR id `target`, when the query is
-    /// scoped (`ehr_ids: List<UUID>`; the single-`ehr_id` REST case is the
-    /// one-element set, and an empty set leaves the population gate in charge).
-    ///
-    /// The set is ONE array bind, `ehr_id = ANY($ids)`, so a cohort of any size
-    /// stays inside the 65535-parameter wire limit (`PostgreSQL` 18
-    /// §Frontend/Backend Protocol, Bind, whose parameter count is an `int16`,
-    /// <https://www.postgresql.org/docs/18/protocol-message-formats.html>).
-    fn ehr_ids_cond(&self, target: Expr) -> Option<Expr> {
-        if self.ctx.ehr_ids.is_empty() {
-            return None;
-        }
-        let ids: Vec<Uuid> = self.ctx.ehr_ids.iter().map(|id| id.0).collect();
-        Some(target.eq(Expr::from(PgFunc::any(Expr::val(ids)))))
-    }
-
-    /// The caller's per-EHR access decision on the EHR id `target`, when it
-    /// restricts anything (RM ehr `ehr_access.adoc` §`EHR_ACCESS` Class).
-    fn access_cond(&self, target: Expr) -> Option<Expr> {
-        match &self.ctx.ehr_access {
-            EhrAccessScope::Unrestricted => None,
-            EhrAccessScope::Excluding(ids) => {
-                let ids: Vec<Uuid> = ids.iter().map(|id| id.0).collect();
-                Some(target.ne(Expr::from(PgFunc::all(Expr::val(ids)))))
-            }
-            EhrAccessScope::Only(ids) => {
-                let ids: Vec<Uuid> = ids.iter().map(|id| id.0).collect();
-                Some(target.eq(Expr::from(PgFunc::any(Expr::val(ids)))))
-            }
-        }
-    }
-
-    /// The ABAC patient scope on the EHR id `target` of a versioned-object
-    /// root, when one is set: `target` is the id of an `ehr` row
-    /// [`subject::matches`] admits.
-    fn subject_cond(&self, target: Expr) -> Option<Expr> {
-        // NOTE: the ABAC patient scope restricts every VO root and EHR source to
-        // the caller's patient EHRs whatever the projection (no openEHR spec
-        // governs this — our own extension).
-        let scope = self.ctx.subject_scope.as_ref()?;
-        let mut sub = Query::select();
-        sub.expr(col(subject::SUBJECT_ROW, Ehr::Id))
-            .from_as(Ehr::Table, Alias::new(subject::SUBJECT_ROW))
-            .and_where(subject::matches(subject::SUBJECT_ROW, scope));
-        Some(target.in_subquery(sub))
-    }
-
-    /// The ABAC patient scope on the `ehr` row bound as `alias`, when one is
-    /// set: [`subject::matches`] on that row itself.
-    fn ehr_subject_cond(&self, alias: &str) -> Option<Expr> {
-        let scope = self.ctx.subject_scope.as_ref()?;
-        Some(subject::matches(alias, scope))
-    }
-
-    /// Every [`Self::apply_ehr_scope`] condition a versioned-object root puts
-    /// on its EHR id `target`, for a root no bound EHR alias covers.
-    fn root_scope_conds(&self, target: Expr) -> Vec<Expr> {
-        [
-            self.ehr_ids_cond(target.clone()),
-            self.access_cond(target.clone()),
-            self.gates.on_ehr_id(target.clone()),
-            self.subject_cond(target),
-        ]
-        .into_iter()
-        .flatten()
-        .collect()
-    }
-
-    /// The population gate of [`Self::gate_vo_root`] for the node `root`, as
-    /// one `EXISTS` a left binding can carry; `None` on a query aimed at
-    /// named EHRs ([`super::SqlCtx::population_gated`]).
-    fn population_cond(&mut self, root: &str) -> Option<Expr> {
-        if !self.ctx.population_gated() {
-            return None;
-        }
-        let alias = format!("qg{}", self.next_ctr());
-        let mut sub = Query::select();
-        sub.expr(Expr::val(1))
-            .from_as(Ehr::Table, Alias::new(alias.as_str()))
-            .and_where(col(&alias, Ehr::Id).eq(col(root, Node::EhrId)))
-            .and_where(col(&alias, Ehr::IsQueryable).eq(true))
-            .and_where(col(&alias, Ehr::RestrictedAt).is_null())
-            .and_where(research_objection_clear(&alias));
-        Some(Expr::exists(sub))
-    }
-
-    /// The query-population gate. RM `EHR_STATUS.is_queryable`
-    /// (`org.openehr.rm.ehr.ehr_status.adoc`): "True if this EHR should be
-    /// included in population queries". Every EHR root of a population query,
-    /// bare `EHR` sources (`ehr.id`) and VO roots (`node.ehr_id`) alike, is
-    /// restricted to that set: an unscoped query and a population subset
-    /// ([`super::EhrScopeKind::PopulationSubset`]). A query aimed at EHRs its caller
-    /// named ([`super::EhrScopeKind::Named`]) is not gated.
-    pub(super) fn apply_population_gate(&mut self) {
-        if !self.ctx.population_gated() {
-            return;
-        }
-        // One gate per join-connected component: a VO root linked to
-        // an EHR alias (`node.ehr_id = e.id`) is covered by that alias's gate —
-        // gating both would filter the same EHR twice.
-        for root in self.group_roots.clone() {
-            if self.roots_linked_to_ehr.contains(&root) {
-                continue;
-            }
-            self.gate_vo_root(&root);
-        }
-        // An EHR source already has its `ehr` row in the FROM — filter its
-        // promoted `is_queryable` column directly.
-        for alias in self.ehr_alias.values().cloned().collect::<Vec<_>>() {
-            self.q.and_where(col(&alias, Ehr::IsQueryable).eq(true));
-            self.q.and_where(research_objection_clear(&alias));
-        }
-    }
-
-    /// The EHR-scoped restriction mark on a population query.
-    ///
-    /// The per-object predicate ([`bind_head`]) already removes every
-    /// restricted object; this removes an EHR restricted as a whole, whose
-    /// objects carry the mark too but whose `ehr` row is the cheaper place to
-    /// decide it once the population gate has already joined it.
-    fn gate_ehr_marks(&mut self, alias: &str) {
-        self.q.and_where(col(alias, Ehr::RestrictedAt).is_null());
-        self.q.and_where(research_objection_clear(alias));
-    }
-
-    /// Gate an unlinked versioned-object root (no bound EHR alias covers it):
-    /// join the owning `ehr` row on the node's `ehr_id` and filter the promoted
-    /// [`is_queryable`](crate::db::iden::Ehr::IsQueryable) column. The flag is a
-    /// scalar attribute of the current `EHR_STATUS` (RM ehr master04 §EHR Status,
-    /// `EHR_STATUS.is_queryable` 1..1 Boolean), promoted onto the `ehr` row and
-    /// kept in lockstep by the status write path, so the gate is a boolean-column
-    /// filter over a PK join instead of a per-query `EXISTS` that index-scanned
-    /// every current `EHR_STATUS` root. A full-population
-    /// query runs over every EHR whose status has `is_queryable` set. No openEHR
-    /// spec governs the join mechanics — our own storage design.
-    fn gate_vo_root(&mut self, root: &str) {
-        let alias = format!("qg{}", self.next_ctr());
-        let link = col(&alias, Ehr::Id).eq(col(root, Node::EhrId));
-        if self.streaming {
-            self.q
-                .join_as(JoinType::Join, Ehr::Table, Alias::new(alias.as_str()), link);
-        } else {
-            self.q.from_as(Ehr::Table, Alias::new(alias.as_str()));
-            self.q.and_where(link);
-        }
-        self.q.and_where(col(&alias, Ehr::IsQueryable).eq(true));
-        self.gate_ehr_marks(&alias);
     }
 
     /// Join the EHR's current `EHR_STATUS` versioned-object root node for an EHR
@@ -1319,7 +1116,7 @@ impl Builder<'_> {
         let vo_link = col(&vo, VersionRow::EhrId).eq(col(&ehr, Ehr::Id));
         let node_link = col(&node, Node::VoId)
             .eq(col(&vo, VersionRow::VoId))
-            .and(col(&node, Node::SysVersion).eq(col(&vo, VersionRow::SysVersion)));
+            .and(col(&node, Node::SysVersion).eq(content_key(&vo)));
         if self.streaming {
             self.q.join_as(
                 JoinType::Join,

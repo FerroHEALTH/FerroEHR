@@ -882,3 +882,17 @@ enabled = false
 categories = []
 # The limit of a hold, in hours, 1 to 8784; required while enabled.
 hours = 0
+
+# ── [versioning] — what a repeated commit answers ─────────────────────────────
+# A version whose content equals the current version's is committed like any
+# other, with its own commit audit, contribution, version id and ETag, and the
+# content is stored once (the new version reads its predecessor's node rows);
+# that is not a setting. The one setting is the answer to a repeated send of
+# the same content. OFF by default: every committal is recorded (RM common
+# master06 §Committal and Audits). ON, a PUT whose content equals the current
+# version's commits nothing and answers like a successful update with the
+# existing version's ETag and Location; the access log keeps one `resend`
+# record naming the version matched and the content digest, and no commit
+# audit and no contribution record the send.
+[versioning]
+skip_identical_resend = false

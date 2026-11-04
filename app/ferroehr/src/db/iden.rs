@@ -155,6 +155,12 @@ pub enum VersionRow {
     CommittedAt,
     /// `body` — the canonical openEHR JSON bytes, verbatim.
     Body,
+    /// `content_key` — the version in the same object whose node rows hold
+    /// this version's content: `content_sys_version` where the content
+    /// equalled the preceding tip's at commit, else `sys_version`, stored by
+    /// the generated column; every join from a version row to its node rows
+    /// reads it (#4415).
+    ContentKey,
 }
 
 /// `vo_head` — the one mutable row per versioned object.
@@ -331,6 +337,7 @@ mod tests {
         include_str!("../../migrations/clinical/0028_node_header.sql"),
         include_str!("../../migrations/clinical/0029_access_opt_out.sql"),
         include_str!("../../migrations/clinical/0031_node_compact.sql"),
+        include_str!("../../migrations/clinical/0032_version_content.sql"),
     ];
 
     /// Whether a later migration adds `col` to `table`.

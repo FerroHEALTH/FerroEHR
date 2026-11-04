@@ -86,7 +86,11 @@ async fn seed(svc: &FerroEhrService, pool: &PgPool) -> Seeded {
             .expect("commit the first version");
         let mut latest = created.version_uid();
         let mut committed = created;
-        for _ in 0..2 {
+        // Each supersession carries content of its own, so every version
+        // holds its own node rows: content equal to the preceding tip's would
+        // share that tip's rows (#4415) and leave the seed one tree per object.
+        for supersession in 1..=2 {
+            let body = composition(&format!("plan shapes {index} supersession {supersession}"));
             committed = svc
                 .update_composition(ehr, committed.vo_id, uv(&body, "251", Some(&latest)))
                 .await

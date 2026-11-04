@@ -150,6 +150,8 @@ pub(crate) async fn attest(
         // The contribution's commit-act time — a 666 attestation adds no new
         // version, so this is the instant the attestation itself committed.
         time_committed,
+        skipped: false,
+        content_digest: None,
     })
 }
 

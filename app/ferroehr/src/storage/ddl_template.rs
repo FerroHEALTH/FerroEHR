@@ -66,6 +66,11 @@ pub const NODE_HEADER: &str = include_str!("../../migrations/templates/node_head
 /// keys it leaves out of its fragment with (#4904).
 pub const NODE_COMPACT: &str = include_str!("../../migrations/templates/node_compact.sql.in");
 
+/// The version content template: the digest and the content version a
+/// version whose content equals its predecessor's reads its rows through
+/// (#4415).
+pub const VERSION_CONTENT: &str = include_str!("../../migrations/templates/version_content.sql.in");
+
 /// The version-tree key template: `uq_version_tree` keyed with the object
 /// last, so the foreign-key lookup of a node row reads one version (#4340).
 pub const VERSION_TREE_KEY: &str =
@@ -210,6 +215,16 @@ mod tests {
             "migrations/party/0024_node_compact.sql",
             PARTY,
             NODE_COMPACT,
+        ),
+        (
+            "migrations/clinical/0032_version_content.sql",
+            CLINICAL,
+            VERSION_CONTENT,
+        ),
+        (
+            "migrations/party/0025_version_content.sql",
+            PARTY,
+            VERSION_CONTENT,
         ),
     ];
 

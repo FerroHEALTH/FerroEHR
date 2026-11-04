@@ -55,6 +55,7 @@ mod expr;
 mod from;
 mod gates;
 mod predicate;
+mod scope;
 mod select;
 mod stream;
 pub mod subject;
