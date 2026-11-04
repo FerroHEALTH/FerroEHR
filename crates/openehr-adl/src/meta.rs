@@ -23,7 +23,6 @@ use openehr_am::v2_4::aom2::archetype::authored_archetype::AuthoredArchetype;
 use openehr_am::v2_4::resource::resource_description::ResourceDescription;
 
 use crate::artefact::view;
-use crate::hrid::hrid_to_string;
 use crate::source::ArtefactKind;
 
 /// The identity fields of a parsed ADL2 artefact.
@@ -31,7 +30,7 @@ use crate::source::ArtefactKind;
 pub struct ArtefactSummary {
     /// The full physical `ARCHETYPE_HRID`
     /// (`[ns::]publisher-package-class.concept.vMAJOR.MINOR.PATCH[-status.build]`;
-    /// `AOM2/master07.05`), rendered by `hrid_to_string`.
+    /// `AOM2/master07.05`), rendered by its `Display`.
     pub archetype_id: String,
     /// The concept identifier — the `concept` segment of the HRID
     /// (`AOM2/master07.05` §Physical Archetype Identifier).
@@ -63,7 +62,7 @@ fn kind_keyword(kind: ArtefactKind) -> &'static str {
 pub fn summarize(archetype: &Archetype) -> ArtefactSummary {
     let v = view(archetype);
     ArtefactSummary {
-        archetype_id: hrid_to_string(v.archetype_id),
+        archetype_id: v.archetype_id.to_string(),
         concept_id: v.archetype_id.concept_id.clone(),
         kind: kind_keyword(v.kind),
         parent_archetype_id: v.parent_archetype_id.map(str::to_owned),

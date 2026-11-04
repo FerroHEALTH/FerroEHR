@@ -14,7 +14,7 @@ else; each helper has exactly ONE home.
 | module | role |
 |---|---|
 | `error` | the typed `SyntaxError` + the verbatim `S*` catalogue (`ADL2/master04.6`) |
-| `hrid` | `ARCHETYPE_HRID` parse / print / lookup-key (`AOM2/master07.05`) |
+| `hrid` | `ARCHETYPE_HRID` parse / lookup-key (`AOM2/master07.05`); the physical form is written by `ArchetypeHrid`'s `Display` in `openehr-am` |
 | `odin` | the ODIN reading bridge + literal-delimiter stripping over `openehr_lang::escape` (which owns the `master03` escape semantics for ODIN/BEL/cADL alike) + delimited-regex handling |
 | `codes` | node-code math: `at`/`id`/`ac` prefixes, specialisation depth, redefinition |
 | `paths` | ADL path parse + resolution over the constraint model (`crate::paths::child_path` included) |
