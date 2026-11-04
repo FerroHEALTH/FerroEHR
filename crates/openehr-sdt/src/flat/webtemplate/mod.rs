@@ -21,6 +21,7 @@ mod implicit;
 mod inputs;
 mod interval_v2_4;
 pub mod model;
+mod path_v2_4;
 mod root;
 mod shape;
 

@@ -67,6 +67,7 @@ use super::model::{
     WebTemplateClosedAttribute, WebTemplateCodedValue, WebTemplateExistence, WebTemplateInput,
     WebTemplateInputType, WebTemplateNode, WebTemplateStructuralStub, WebTemplateValidation,
 };
+use super::path_v2_4::{build_path, name_constraint};
 use super::shape;
 
 /// Build a [`WebTemplate`] from a parsed `v2_4` operational template (OPT2).
@@ -359,7 +360,12 @@ fn create_node(
     let (occ_min, max) = occurrences(object_occurrences(co));
     let min = meet_single_existence(occ_min, owner);
 
-    let path = build_path(parent, attr_name, &rm_type, &arch_node_id);
+    let name = if archetyped {
+        name_constraint(co)
+    } else {
+        None
+    };
+    let path = build_path(parent, attr_name, &rm_type, &arch_node_id, name.as_deref());
     let mut node = WebTemplateNode::new(rm_type, path);
     node.node_id = if arch_node_id.is_empty() {
         None
@@ -1538,14 +1544,14 @@ fn co_attribute_tuples(co: &CObject) -> &[CAttributeTuple] {
     }
 }
 
-fn attr_children<'a>(co: &'a CObject, name: &str) -> impl Iterator<Item = &'a CObject> {
+pub(super) fn attr_children<'a>(co: &'a CObject, name: &str) -> impl Iterator<Item = &'a CObject> {
     co_attributes(co)
         .iter()
         .filter(move |a| a.rm_attribute_name == name)
         .flat_map(|a| a.children.iter().flatten())
 }
 
-fn cstring_under<'a>(co: &'a CObject, name: &str) -> Option<&'a CString> {
+pub(super) fn cstring_under<'a>(co: &'a CObject, name: &str) -> Option<&'a CString> {
     attr_children(co, name).find_map(|c| match c {
         CObject::CString(cs) => Some(cs),
         _ => None,
@@ -1724,30 +1730,6 @@ fn meet_single_existence(occurrences_min: Option<i32>, owner: Option<&CAttribute
     };
     let existence_min = occ(existence).0.unwrap_or(0);
     occurrences_min.map(|m| m.min(existence_min))
-}
-
-/// The data path of a node below `parent`. An `[idN]` predicate stands
-/// for `[@archetype_node_id = 'idN']` (ADL2 `master05-paths.adoc` §"Relationship
-/// with W3C Xpath"), which a `DATA_VALUE` lacks, being no `LOCATABLE` (RM
-/// `data_types`; RM `common` §Archetyped Package), so no data-value step takes
-/// one: `COMPOSITION.category` reads `/category`, and a `DV_INTERVAL`'s parts
-/// read `/lower` and `/upper` (ITS-REST
-/// `simplified_formats/master05-rm_mapping.adoc` §DV_INTERVAL).
-fn build_path(
-    parent: Option<&WebTemplateNode>,
-    attr: Option<&str>,
-    rm_type: &str,
-    id: &str,
-) -> String {
-    let (Some(parent), Some(a)) = (parent, attr) else {
-        return String::new();
-    };
-    let path = &parent.aql_path;
-    if id.is_empty() || rm_type.starts_with("DV_") {
-        format!("{path}/{a}")
-    } else {
-        format!("{path}/{a}[{id}]")
-    }
 }
 
 /// Capture the numeric leaf constraints the `inputs` do not carry onto the
