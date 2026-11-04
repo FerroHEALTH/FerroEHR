@@ -1380,6 +1380,18 @@ has no matching section here.
   slots and proxies the parent holds unchanged and keeps only terms of the
   archetype's own specialisation level (VTSD) (#4967).
 
+- `openehr-adl`'s `opt::create_opt` no longer flattens an ADL 1.4
+  specialised archetype over its parent. An ADL 1.4 archetype is authored in
+  flat form (ADL2 `master07.02` §File-naming Convention, AOM2 `master03`
+  §Structural Variants), so overlaying a child such as CKM
+  `openEHR-EHR-COMPOSITION.report-result.v1` on `report.v1` appended every
+  object without a node id a second time: the OPT held two `EVENT_CONTEXT`
+  objects and its Web Template two `/context` nodes. An artefact whose
+  `adl_version` is 1.4 or earlier is now its own flat form, keeps its
+  `parent_archetype_id`, and needs no parent in the repository; its 1.4 term
+  constraints are still rewritten into the ADL2 form. ADL 2 differential
+  flattening is unchanged (#4979).
+
 ### Security
 
 Shipped with functional changes because: both fixes exist only in `ferrohealth-server` releases that carry functional changes in the same serving path beside them (0.3.7 two fixes, 0.3.8 and 0.3.9 the problem details module, the kept listener TLS and the unmasked remedy), so there is no security-only release of the crate for FerroEHR to take, and the client CA refusal ships in the release candidate the advisory names.
