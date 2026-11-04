@@ -9,7 +9,7 @@
 //! (FerroUI `console-ui.md` §5): accepted credentials send the reader on with
 //! a redirect, and refused ones draw the page again with the refusal under
 //! the password and the username kept. The OIDC action is a plain link to
-//! the viewer's own `/auth/oidc/login` route. The page shows the session
+//! `ferrohealth-session`'s `/login` route. The page shows the session
 //! ended (`?expired=1`), signed out (`?signed-out=1`) or refused
 //! (`?refused=1`, the OIDC callback's) from its address. Which methods it
 //! offers comes from [`crate::auth::fetch_login_screen`].
@@ -32,16 +32,18 @@ use crate::locale::{Msg, current, tr, tr_with};
 use crate::markup::{h, t};
 use crate::routes::Drawn;
 
-/// The BFF's OIDC sign-in URL, carrying the post-login destination.
+/// The OpenID Connect sign-in URL of `ferrohealth-session`, carrying the
+/// post-login destination as its `return`.
 ///
 /// The shell root is the route's own fallback, so it is left off. What the
 /// route then accepts is decided on the server by
-/// `crate::auth::same_origin_next`.
+/// `ferrohealth_session::return_path::ReturnPath::parse`.
 fn oidc_login_href(next: &str) -> String {
+    use ferrohealth_session::paths::{LOGIN, RETURN};
     if next == "/" {
-        "/auth/oidc/login".to_owned()
+        LOGIN.to_owned()
     } else {
-        format!("/auth/oidc/login?next={}", urlencoding::encode(next))
+        format!("{LOGIN}?{RETURN}={}", urlencoding::encode(next))
     }
 }
 
@@ -126,7 +128,7 @@ fn card(
                 glyph: Glyph::LOG_IN,
             }),
             basic: basic.then(|| Basic {
-                action: "/login".to_owned(),
+                action: crate::session::SIGN_IN_PAGE.to_owned(),
                 next: next.to_owned(),
                 divider: None,
                 submit: Some(tr(SignInMsg::BasicSubmit)),
@@ -226,10 +228,10 @@ mod tests {
 
     #[test]
     fn the_oidc_link_carries_an_encoded_destination_and_omits_the_default_one() {
-        assert_eq!(oidc_login_href("/"), "/auth/oidc/login");
+        assert_eq!(oidc_login_href("/"), "/login");
         assert_eq!(
             oidc_login_href("/ehrs/01a06375?tab=status"),
-            "/auth/oidc/login?next=%2Fehrs%2F01a06375%3Ftab%3Dstatus"
+            "/login?return=%2Fehrs%2F01a06375%3Ftab%3Dstatus"
         );
     }
 }

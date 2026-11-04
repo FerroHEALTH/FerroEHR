@@ -43,12 +43,13 @@ const SIDEBAR_ID: &str = "sidebar";
 /// The id of the user menu.
 const USER_MENU_ID: &str = "user-menu";
 
-/// The route Sign out posts to.
-pub const SIGN_OUT_ROUTE: &str = "/logout";
+/// The route Sign out posts to, `ferrohealth-session`'s.
+pub const SIGN_OUT_ROUTE: &str = ferrohealth_session::paths::LOGOUT;
 
 /// The session route the session watch asks (FerroUI `docs/consoles.md`,
-/// "The session's end"): `GET` reads what is left, `POST` extends it.
-pub const SESSION_ROUTE: &str = "/api/session";
+/// "The session's end"), `ferrohealth-session`'s: `GET` reads what is left,
+/// `POST` extends it.
+pub const SESSION_ROUTE: &str = ferrohealth_session::paths::SESSION;
 
 /// The path the FerroEHR icon is served at for the lockup.
 pub const MARK_PATH: &str = "/ferroehr-icon.svg";
@@ -403,17 +404,14 @@ fn toasts() -> Html {
 
 /// The sign-in page the session watch leaves for, saying the session ended;
 /// the watch adds the page left as FerroUI's return address.
-const SESSION_ENDED_SIGN_IN: &str = "/login?expired=1";
+const SESSION_ENDED_SIGN_IN: &str = "/sign-in?expired=1";
 
-/// The session watch over the signed-in page's session, from what it has
-/// left once this answer re-seals it (FerroUI `docs/consoles.md`, "The
-/// session's end"); nothing when no session is signed in.
+/// The session watch over the signed-in page's session, from what it had
+/// left as this request found it, its activity counted (FerroUI
+/// `docs/consoles.md`, "The session's end"); nothing when no session is
+/// signed in.
 fn watch(locale: &ferrohealth_ui::i18n::Locale) -> Html {
-    let left = crate::request::state().and_then(|state| {
-        let mut session = crate::session::http_session().ok()?;
-        session.touch();
-        session.left(&state.config.session)
-    });
+    let left = crate::request::session().map(|session| session.left());
     left.map(|left| {
         session_watch(&Watch::new(
             locale,

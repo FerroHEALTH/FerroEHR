@@ -52,11 +52,11 @@ fn composition_path(ehr_id: &str, vo_id: &str) -> String {
 async fn sign_in_without_javascript(h: &Harness) {
     let user = env("UI_E2E_BASIC_USER").unwrap_or_else(|| "ferroehr".to_owned());
     let pass = env("UI_E2E_BASIC_PASS").unwrap_or_else(|| "ferroehr".to_owned());
-    h.goto("/login").await;
+    h.goto("/sign-in").await;
     h.wait_css("#sign-in-username").await.send_keys(&user).await;
     h.wait_css("#sign-in-password").await.send_keys(&pass).await;
     h.wait_css("main button[type=submit]").await.click().await;
-    h.wait_url_not_contains("/login").await;
+    h.wait_url_not_contains("/sign-in").await;
     h.wait_css(common::SHELL_FOOTER).await;
 }
 

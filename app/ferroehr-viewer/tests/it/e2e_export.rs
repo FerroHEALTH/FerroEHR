@@ -155,7 +155,7 @@ async fn session_cookie_header(h: &Harness) -> String {
 /// session cookie.
 ///
 /// Redirects are NOT followed: the route answers an unauthenticated caller with
-/// a redirect to `/login`, and following it would turn a refusal into a `200`
+/// a redirect to `/sign-in`, and following it would turn a refusal into a `200`
 /// carrying a login page.
 ///
 /// # Panics
@@ -370,7 +370,7 @@ async fn the_result_export_serves_the_rows_on_screen() {
     );
     assert_eq!(
         header(&refused, reqwest::header::LOCATION),
-        "/login?expired=1&next=%2F",
+        "/sign-in?expired=1&next=%2F",
         "the refusal sends the caller to sign in"
     );
 

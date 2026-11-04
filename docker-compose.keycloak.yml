@@ -118,19 +118,19 @@ services:
   # The viewer (`--profile viewer`) signs in through the demo realm with the
   # authorization-code flow and PKCE: the browser and the viewer reach the
   # same issuer URL, `https://keycloak.localhost:8443`, and the viewer trusts
-  # the development CA for it (`[auth.oidc.tls] trust_roots_file`, 5.5.0 or
+  # the development CA for it (`[oidc] ca_file`, 5.6.0 or
   # later). The secret is the demo realm's, never a production credential.
   ferroehr-viewer:
     depends_on:
       keycloak:
         condition: service_healthy
     environment:
-      FERROEHR_VIEWER__AUTH__OIDC__ENABLED: "true"
-      FERROEHR_VIEWER__AUTH__OIDC__ISSUER: ${KEYCLOAK_HOSTNAME:-https://keycloak.localhost:8443/auth}/realms/ferroehr
-      FERROEHR_VIEWER__AUTH__OIDC__CLIENT_ID: ferroehr-viewer
-      FERROEHR_VIEWER__AUTH__OIDC__CLIENT_SECRET: ferroehr-viewer-quickstart-secret
-      FERROEHR_VIEWER__AUTH__OIDC__PUBLIC_BASE_URL: http://localhost:${FERROEHR_VIEWER_PORT:-3000}
-      FERROEHR_VIEWER__AUTH__OIDC__TLS__TRUST_ROOTS_FILE: /run/ferroehr-dev-tls/ca/ca.crt
+      FERROEHR_VIEWER__AUTH__OIDC_ENABLED: "true"
+      FERROEHR_VIEWER__OIDC__ISSUER: ${KEYCLOAK_HOSTNAME:-https://keycloak.localhost:8443/auth}/realms/ferroehr
+      FERROEHR_VIEWER__OIDC__CLIENT_ID: ferroehr-viewer
+      FERROEHR_VIEWER__OIDC__CLIENT_SECRET: ferroehr-viewer-quickstart-secret
+      FERROEHR_VIEWER__AUTH__PUBLIC_BASE_URL: http://localhost:${FERROEHR_VIEWER_PORT:-3000}
+      FERROEHR_VIEWER__OIDC__CA_FILE: /run/ferroehr-dev-tls/ca/ca.crt
     volumes:
       - keycloak-tls:/run/ferroehr-dev-tls:ro
 

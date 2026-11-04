@@ -1769,17 +1769,17 @@ pub(crate) async fn login_basic(h: &Harness) {
 pub(crate) async fn login_basic_as(h: &Harness, user: &str, pass: &str) {
     let user = user.to_owned();
     let pass = pass.to_owned();
-    h.goto("/login").await;
+    h.goto("/sign-in").await;
     h.wait_css("#sign-in-username").await.send_keys(&user).await;
     h.wait_css("#sign-in-password").await.send_keys(&pass).await;
     // Submit with a bounded retry: a click landing while the scripts attach
-    // can be lost. Each attempt gets a short bounded wait; leaving /login
+    // can be lost. Each attempt gets a short bounded wait; leaving /sign-in
     // ends the loop.
     let mut attempts = 0;
     loop {
         h.wait_css("button[type=submit]").await.click().await;
         let off_login = poll_until_for(Duration::from_secs(3), async || {
-            !h.current_url().await.contains("/login")
+            !h.current_url().await.contains("/sign-in")
         })
         .await;
         if off_login {
@@ -1801,7 +1801,7 @@ pub(crate) async fn login_basic_as(h: &Harness, user: &str, pass: &str) {
             for entry in &log {
                 println!("console[{}]: {}", entry.level, entry.message);
             }
-            panic!("login submit did not leave /login after 3 attempts");
+            panic!("login submit did not leave /sign-in after 3 attempts");
         }
     }
     // The shell footer is the authenticated-chrome marker.
@@ -1941,13 +1941,13 @@ mod tests {
         let started = tokio::time::Instant::now();
         let answer = bounded("current_url()", async {
             tokio::time::sleep(Duration::from_secs(1)).await;
-            Ok::<_, WebDriverError>("http://127.0.0.1:3000/login")
+            Ok::<_, WebDriverError>("http://127.0.0.1:3000/sign-in")
         })
         .await;
 
         assert_eq!(
             answer.expect("the command answered"),
-            "http://127.0.0.1:3000/login"
+            "http://127.0.0.1:3000/sign-in"
         );
         assert!(
             started.elapsed() < COMMAND_BUDGET,

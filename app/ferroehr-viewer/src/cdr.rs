@@ -11,8 +11,8 @@
 mod diagnostic;
 
 use crate::error::ViewerError;
-use crate::session::Credential;
 use diagnostic::{diagnostic_of, without_lead};
+use ferrohealth_session::record::Credential;
 
 /// How many CDR requests one screen's fan-out has in flight at once.
 ///
@@ -398,9 +398,9 @@ impl CdrCall {
         }
         request = match &self.credential {
             Some(Credential::Basic { username, password }) => {
-                request.basic_auth(username, Some(password))
+                request.basic_auth(username, Some(password.expose()))
             }
-            Some(Credential::Bearer { access_token }) => request.bearer_auth(access_token),
+            Some(Credential::Bearer(access_token)) => request.bearer_auth(access_token.expose()),
             None => request,
         };
         let response = request.send().await.map_err(ViewerError::unreachable)?;

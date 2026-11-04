@@ -146,7 +146,7 @@ fn kept_cookie(name: &str, value: &str, secure: bool) -> String {
 
 /// Whether the deployment marks its cookies `Secure`.
 fn secure(state: &crate::state::AppState) -> bool {
-    state.config.session.cookie_secure
+    state.config.session.secure_cookie
 }
 
 /// The redirect to `location` that sets each of `cookies`.

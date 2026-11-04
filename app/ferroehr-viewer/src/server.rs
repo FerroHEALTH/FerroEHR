@@ -28,8 +28,10 @@ use ferrohealth_server::same_origin::{self, SameOrigin};
 use ferrohealth_server::stack::{self, StackPolicy};
 use ferrohealth_telemetry::request_log::RequestLog;
 
+use ferrohealth_session::record::Held;
+
 use crate::scope::Scope;
-use crate::session::{SESSION_KEY, ViewerSession};
+use crate::session::ViewerPages;
 use crate::state::AppState;
 
 /// The viewer as it serves: [`router`] and the health routes inside the
@@ -53,15 +55,15 @@ pub fn app(app_state: AppState, health: Health, request_log: RequestLog) -> axum
 
 /// Assembles the viewer's own routes.
 ///
-/// FerroUI's assets, the OIDC routes, the export post, the preference,
-/// sidebar, paging and sign-out posts, the downloads, the icons, the search
-/// panel's answer route, every page (`page`, for `GET` and its own form
-/// posts), and the layer stack (state → session guard → same-origin check →
-/// console headers). Sessions are a sealed cookie
-/// ([`crate::session`]): no session-store layer exists, so no state is bound
-/// to any one instance.
+/// FerroUI's assets, `ferrohealth-session`'s sign-in, sign-out and
+/// session-watch routes, the export post, the preference, sidebar and paging
+/// posts, the downloads, the icons, the search panel's answer route, every
+/// page (`page`, for `GET` and its own form posts), and the layer stack
+/// (state → `ferrohealth-session`'s middleware, which hands the request its
+/// [`Held`] → session guard → same-origin check → console headers).
 pub fn router(app_state: AppState) -> axum::Router {
     let origin = same_origin_check(&app_state);
+    let sign_in = app_state.sign_in.clone();
     let headers =
         ConsoleHeaders::server_rendered("'self'").with_bundle(ferrohealth_ui::serve::PREFIX);
     axum::Router::new()
@@ -69,11 +71,7 @@ pub fn router(app_state: AppState) -> axum::Router {
             ferrohealth_ui::serve::PREFIX,
             ferrohealth_ui::serve::axum_router::router(),
         )
-        .route("/auth/oidc/login", axum::routing::get(crate::oidc::login))
-        .route(
-            "/auth/oidc/callback",
-            axum::routing::get(crate::oidc::callback),
-        )
+        .merge(ferrohealth_session::routes::router(sign_in.clone()))
         // Result export: a plain form-POST download behind the session guard.
         .route(
             "/export/aql/{format}",
@@ -90,11 +88,6 @@ pub fn router(app_state: AppState) -> axum::Router {
         .route(
             crate::prefs::SIDEBAR_ROUTE,
             axum::routing::post(crate::prefs::choose_sidebar),
-        )
-        .route(crate::shell::SIGN_OUT_ROUTE, axum::routing::post(sign_out))
-        .route(
-            crate::shell::SESSION_ROUTE,
-            axum::routing::get(session_left).post(session_left),
         )
         .route(
             crate::paging::PAGING_ROUTE,
@@ -133,9 +126,13 @@ pub fn router(app_state: AppState) -> axum::Router {
         )
         .fallback(page)
         // Ahead of every page: a document request without a session never
-        // reaches a handler, and an authenticated response leaves with a
-        // refreshed sliding-expiry cookie.
+        // reaches a handler. The crate's middleware before it counts the
+        // request as activity and sets the cookies its store answered.
         .layer(axum::middleware::from_fn(login_guard))
+        .layer(axum::middleware::from_fn_with_state(
+            sign_in,
+            ferrohealth_session::routes::keep_session::<ViewerPages>,
+        ))
         .layer(Extension(app_state))
         .layer(axum::middleware::from_fn(move |request, next| {
             same_origin::only(origin.clone(), request, next)
@@ -147,13 +144,13 @@ pub fn router(app_state: AppState) -> axum::Router {
 
 /// The same-origin check of the viewer's unsafe requests: `Sec-Fetch-Site`
 /// decides, and without it `Origin` or `Referer` must name the public URL
-/// `auth.oidc.public_base_url` gives, when one is set.
+/// `auth.public_base_url` gives, when one is set.
 ///
 /// A public URL that does not parse was refused when the configuration was
 /// read; one built by hand that does not is logged and left out, so only
 /// `Sec-Fetch-Site` passes.
 fn same_origin_check(state: &AppState) -> SameOrigin {
-    let public = state.config.auth.oidc.public_base_url.as_str();
+    let public = state.config.auth.public_base_url.as_str();
     if public.is_empty() {
         return SameOrigin::new();
     }
@@ -334,61 +331,6 @@ async fn download_manifest(Extension(state): Extension<AppState>) -> axum::respo
     }
 }
 
-/// Signs the reader out: the session cookie is cleared and the browser goes
-/// to the sign-in page, which says the reader signed out.
-async fn sign_out(Extension(state): Extension<AppState>) -> axum::response::Response {
-    use axum::response::IntoResponse as _;
-    let mut response = axum::response::Redirect::to("/login?signed-out=1").into_response();
-    match crate::session::set_cookie(
-        &state.session_keys,
-        &crate::session::CookieSession::default(),
-        &state.config.session,
-    ) {
-        Ok(cookie) => {
-            response
-                .headers_mut()
-                .append(http::header::SET_COOKIE, cookie);
-            response
-        }
-        Err(_failed) => http::StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-    }
-}
-
-/// Answers the session watch (FerroUI `docs/consoles.md`, "The session's
-/// end"): what the session has left as JSON, `401` once it is gone.
-///
-/// A `GET` reads without sliding the idle anchor, which the guard leaves
-/// alone on this route; a `POST` is the user's activity and slides it, never
-/// past the absolute lifetime.
-async fn session_left(
-    Extension(state): Extension<AppState>,
-    method: http::Method,
-    headers: http::HeaderMap,
-) -> axum::response::Response {
-    use axum::response::IntoResponse as _;
-    let config = &state.config.session;
-    let mut session = crate::session::unseal(&state.session_keys, &headers, config);
-    let extend = method == http::Method::POST;
-    if extend {
-        session.touch();
-    }
-    let Some(left) = session.left(config) else {
-        return http::StatusCode::UNAUTHORIZED.into_response();
-    };
-    let mut response = axum::Json(left).into_response();
-    if extend {
-        match crate::session::set_cookie(&state.session_keys, &session, config) {
-            Ok(cookie) => {
-                response
-                    .headers_mut()
-                    .append(http::header::SET_COOKIE, cookie);
-            }
-            Err(_failed) => return http::StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-        }
-    }
-    response
-}
-
 /// The path a browser requests the tab icon from when a page links none.
 const FAVICON_ICO_PATH: &str = "/favicon.ico";
 
@@ -416,130 +358,79 @@ fn icon(content_type: &'static str, bytes: &'static [u8]) -> axum::response::Res
 ///
 /// Every request for a guarded path without a live session goes to the
 /// sign-in page. A document request (`GET`/`HEAD`) is returned to the page it
-/// asked for after signing in, and is told the session ended when it carried
-/// a session cookie that no longer opens. Any other method is answered as a
-/// page whose session ended ([`crate::session_client::signed_out_url`]),
-/// returning to the page posted to or, for a post handler, to the dashboard,
-/// so no handler runs a post without a session. An authenticated request
-/// carries its [`ViewerSession`] as an extension, which a route handler takes
-/// as `Extension<ViewerSession>`. An authenticated response leaves with the
-/// sliding idle anchor moved, unless the handler wrote the session itself or
-/// the request is the session watch's own ([`crate::shell::SESSION_ROUTE`]).
+/// asked for after signing in, and is told the session ended when its cookie
+/// names no live session. Any other method is answered as a page whose
+/// session ended ([`crate::session_client::signed_out_url`]), returning to the
+/// page posted to or, for a post handler, to the dashboard, so no handler
+/// runs a post without a session. An authenticated request carries its
+/// `ferrohealth_session::record::Session` as an extension, which a route
+/// handler takes as `Extension<Session>`. The [`Held`] the request carries is
+/// put there by `ferrohealth_session::routes::keep_session`, which also moves
+/// the idle lifetime.
 pub async fn login_guard(
     mut request: axum::extract::Request,
     next: axum::middleware::Next,
 ) -> axum::response::Response {
-    let state = request.extensions().get::<AppState>().cloned();
-    let session = state
-        .as_ref()
-        .map(|s| crate::session::unseal(&s.session_keys, request.headers(), &s.config.session));
-    let viewer = session
-        .as_ref()
-        .and_then(|s| s.get::<ViewerSession>(SESSION_KEY));
-    let authenticated = viewer.is_some();
-
-    if !authenticated && !is_public_path(request.uri().path()) {
-        let method = request.method();
-        if method != http::Method::GET && method != http::Method::HEAD {
-            // NOTE: no specification governs this: our own design; signing in
-            // returns to the page posted to, and a post handler has no page.
-            let path = request.uri().path();
-            let (back, search) = if crate::routes::Page::of(path).is_some() {
-                (path, request.uri().query().unwrap_or_default())
-            } else {
-                ("/", "")
-            };
-            return found(&crate::session_client::signed_out_url(
-                crate::request::return_path(back),
-                search,
-            ));
-        }
-        let had_cookie = carries_session_cookie(request.headers());
-        let path_and_query = request
-            .uri()
-            .path_and_query()
-            .map_or_else(|| "/".to_owned(), ToString::to_string);
-        let location = sign_in_location(&path_and_query, had_cookie);
-        let mut response = axum::response::Response::new(axum::body::Body::empty());
-        *response.status_mut() = http::StatusCode::FOUND;
-        match http::HeaderValue::from_str(&location) {
-            Ok(value) => {
-                response.headers_mut().insert(http::header::LOCATION, value);
-            }
-            Err(_invalid) => {
-                response.headers_mut().insert(
-                    http::header::LOCATION,
-                    http::HeaderValue::from_static("/login"),
-                );
-            }
-        }
-        return response;
+    let held = request
+        .extensions()
+        .get::<Held>()
+        .cloned()
+        .unwrap_or(Held::Absent);
+    if let Held::SignedIn(session) = held {
+        request.extensions_mut().insert(session);
+        return next.run(request).await;
     }
-
-    if let Some(viewer) = viewer {
-        request.extensions_mut().insert(viewer);
+    if is_public_path(request.uri().path()) {
+        return next.run(request).await;
     }
-    let watch_read = request.uri().path() == crate::shell::SESSION_ROUTE;
-    let mut response = next.run(request).await;
-    if authenticated
-        && !watch_read
-        && !sets_session_cookie(response.headers())
-        && let (Some(state), Some(session)) = (state, session)
-        && let Ok(refreshed) =
-            crate::session::set_cookie(&state.session_keys, &session, &state.config.session)
-    {
-        response
-            .headers_mut()
-            .append(http::header::SET_COOKIE, refreshed);
+    let method = request.method();
+    if method != http::Method::GET && method != http::Method::HEAD {
+        // NOTE: no specification governs this: our own design; signing in
+        // returns to the page posted to, and a post handler has no page.
+        let path = request.uri().path();
+        let (back, search) = if crate::routes::Page::of(path).is_some() {
+            (path, request.uri().query().unwrap_or_default())
+        } else {
+            ("/", "")
+        };
+        return found(&crate::session_client::signed_out_url(
+            crate::request::return_path(back),
+            search,
+        ));
     }
-    response
-}
-
-/// Whether a request carries the viewer's session cookie at all.
-fn carries_session_cookie(headers: &http::HeaderMap) -> bool {
-    headers
-        .get_all(http::header::COOKIE)
-        .iter()
-        .filter_map(|value| value.to_str().ok())
-        .any(|cookies| {
-            ferrohealth_ui::theme::cookie(cookies, crate::session::SESSION_COOKIE).is_some()
-        })
+    let ended = !matches!(held, Held::Absent);
+    let path_and_query = request
+        .uri()
+        .path_and_query()
+        .map_or_else(|| "/".to_owned(), ToString::to_string);
+    found(&sign_in_location(&path_and_query, ended))
 }
 
 /// The sign-in page a guarded request without a session goes to: it keeps
 /// the page asked for as `next`, and says the session ended when the request
-/// carried a session cookie.
+/// carried a session that ended.
 #[must_use]
-pub fn sign_in_location(path_and_query: &str, had_cookie: bool) -> String {
+pub fn sign_in_location(path_and_query: &str, ended: bool) -> String {
     let next = crate::auth::same_origin_next(Some(path_and_query));
-    let expired = if had_cookie { "expired=1&" } else { "" };
-    if next == "/" && !had_cookie {
-        "/login".to_owned()
+    let page = crate::session::SIGN_IN_PAGE;
+    let expired = if ended { "expired=1&" } else { "" };
+    if next == "/" && !ended {
+        page.to_owned()
     } else {
-        format!("/login?{expired}next={}", urlencoding::encode(&next))
+        format!("{page}?{expired}next={}", urlencoding::encode(&next))
     }
 }
 
-/// Whether a response already sets our session cookie (the handler wrote the
-/// session itself — its value wins over the guard's sliding refresh).
-fn sets_session_cookie(headers: &http::HeaderMap) -> bool {
-    headers.get_all(http::header::SET_COOKIE).iter().any(|v| {
-        v.to_str()
-            .is_ok_and(|s| s.starts_with(crate::session::SESSION_COOKIE))
-    })
-}
-
-/// Whether a path is served without a viewer session: the sign-in screen,
-/// the OIDC handshake, FerroUI's assets, the icons, and the search panel's
-/// answer route (which answers `401` itself, as its module expects, instead
-/// of a redirect).
+/// Whether a path is served without a viewer session: the sign-in page,
+/// `ferrohealth-session`'s routes, FerroUI's assets, the icons, and the
+/// search panel's answer route (which answers `401` itself, as its module
+/// expects, instead of a redirect).
 fn is_public_path(path: &str) -> bool {
-    path == "/login"
-        || path == crate::shell::SIGN_OUT_ROUTE
+    path == crate::session::SIGN_IN_PAGE
+        || ferrohealth_session::paths::is_own(path)
         || path == FAVICON_ICO_PATH
         || path == crate::app::ICON_PATH
         || path == crate::shell::MARK_PATH
-        || path.starts_with("/auth/")
         || path.starts_with(&format!("{}/", ferrohealth_ui::serve::PREFIX))
         || path.starts_with("/api/")
 }
@@ -583,12 +474,14 @@ mod tests {
     #[test]
     fn the_public_surface_is_exactly_the_sessionless_one() {
         for public in [
+            "/sign-in",
             "/login",
+            "/logout",
+            "/session",
             "/favicon.ico",
             "/favicon.svg",
             "/ferroehr-icon.svg",
-            "/auth/oidc/login",
-            "/auth/oidc/callback",
+            "/auth/callback",
             "/ferrohealth-ui/0.6.0/ferrohealth-ui.css",
             "/ferrohealth-ui/0.6.0/scripts/fui.js",
             "/api/find_answer",
@@ -602,6 +495,7 @@ mod tests {
             "/ehrs",
             "/nonsense",
             "/pkg/x.wasm",
+            "/auth/oidc/callback",
         ] {
             assert!(!is_public_path(guarded), "{guarded} must be guarded");
         }

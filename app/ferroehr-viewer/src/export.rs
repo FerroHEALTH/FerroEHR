@@ -49,7 +49,7 @@ pub struct ExportForm {
 /// download never navigates away on a mid-flight CDR `401`.
 pub async fn export_aql(
     axum::Extension(state): axum::Extension<crate::state::AppState>,
-    axum::Extension(viewer): axum::Extension<crate::session::ViewerSession>,
+    axum::Extension(viewer): axum::Extension<ferrohealth_session::record::Session>,
     axum::extract::Path(format): axum::extract::Path<String>,
     axum::Form(form): axum::Form<ExportForm>,
 ) -> Response {
@@ -67,7 +67,7 @@ pub async fn export_aql(
 
 async fn run(
     state: &crate::state::AppState,
-    admin: &crate::session::ViewerSession,
+    admin: &ferrohealth_session::record::Session,
     form: &ExportForm,
     format: &str,
 ) -> Result<Response, ViewerError> {
@@ -86,7 +86,7 @@ async fn run(
     let body = serde_json::json!({ "q": form.q, "query_parameters": parameters }).to_string();
     let response = state
         .cdr
-        .call(http::Method::POST, &url, &admin.credential)
+        .call(http::Method::POST, &url, admin.credential())
         .body("application/json", body)
         .ok()
         .await?;

@@ -27,14 +27,10 @@ fn module_path() -> String {
 /// The viewer state, its CDR never reached by these requests.
 fn app_state() -> ferroehr_viewer::state::AppState {
     let config = ferroehr_viewer::config::ViewerConfig::default();
-    ferroehr_viewer::state::AppState {
-        cdr: ferroehr_viewer::cdr::CdrClient::new(&config.cdr)
-            .expect("the default CDR client should build"),
-        config: std::sync::Arc::new(config),
-        oidc: None,
-        session_keys: ferroehr_viewer::session::SessionKeys::from_secret("")
-            .expect("an empty secret always yields an ephemeral key"),
-    }
+    let cdr = ferroehr_viewer::cdr::CdrClient::new(&config.cdr)
+        .expect("the default CDR client should build");
+    ferroehr_viewer::state::AppState::new(config, cdr, None)
+        .expect("the default session store should build")
 }
 
 /// `GET path` with no session, as a browser's module loader sends it; the

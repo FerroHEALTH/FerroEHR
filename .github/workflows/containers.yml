@@ -574,11 +574,11 @@ jobs:
             -e FERROEHR_VIEWER__CDR__BASE_URL=http://127.0.0.1:9 \
             ferroehr-viewer:smoke
           for i in $(seq 1 30); do
-            curl -sf -o /dev/null http://127.0.0.1:3000/login && break
+            curl -sf -o /dev/null http://127.0.0.1:3000/sign-in && break
             sleep 1
-            [ "$i" = 30 ] && { echo "viewer never served /login"; docker logs viewer-smoke; exit 1; }
+            [ "$i" = 30 ] && { echo "viewer never served /sign-in"; docker logs viewer-smoke; exit 1; }
           done
-          html=$(curl -sf http://127.0.0.1:3000/login)
+          html=$(curl -sf http://127.0.0.1:3000/sign-in)
           # Every FerroUI asset the page references (the stylesheet, the
           # theme and the script loader) must be served by the artifact
           # serving the page.

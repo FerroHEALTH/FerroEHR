@@ -334,7 +334,7 @@ published port lands, so both sides use one issuer URL with no hosts entry. On
 the first `up`, a one-shot `keycloak-tls` service generates a development CA
 and a certificate for that name into the `keycloak-tls` volume and discards
 the CA's private key; the server (`[auth] ca_file`) and the viewer
-(`[auth.oidc.tls] trust_roots_file`) trust that CA beside the public ones.
+(`[oidc] ca_file`) trust that CA beside the public ones.
 `docker compose down --volumes` deletes the volume, and the next `up`
 generates a new CA. Keycloak also answers plain HTTP on port 8081 for the token
 call below, and the tokens it mints there name the HTTPS issuer. Keycloak's

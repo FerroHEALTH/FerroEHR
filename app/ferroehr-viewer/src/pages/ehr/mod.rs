@@ -229,7 +229,7 @@ fn subject_facts(ehr_id: &str, status: &EhrStatusState) -> SubjectFacts {
         Who::Nobody
     } else if crate::request::query("reveal").is_some() {
         let reader = crate::request::session()
-            .map(|session| session.identity)
+            .map(|session| crate::session::identity(&session))
             .unwrap_or_default();
         tracing::info!(reader = %reader, ehr = %ehr_id, "revealed an EHR's subject id");
         Who::Revealed {

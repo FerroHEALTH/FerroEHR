@@ -182,24 +182,42 @@ async fn replayed_cdr_with(stubs: Vec<Value>) -> String {
     format!("http://{addr}")
 }
 
-/// The viewer's state, pointed at `cdr`, with a fixed session key.
+/// The viewer's state, pointed at `cdr`, with a sealed session store.
 fn app_state(cdr: &str) -> ferroehr_viewer::state::AppState {
+    let defaults = ferroehr_viewer::config::ViewerConfig::default();
     let config = ferroehr_viewer::config::ViewerConfig {
         cdr: ferroehr_viewer::config::CdrConfig {
             base_url: cdr.to_owned(),
             management_base_url: format!("{cdr}/management"),
             ..Default::default()
         },
-        ..Default::default()
+        // The sealed store a scaled deployment runs, with a synthetic key.
+        session: ferrohealth_session::config::SessionSection {
+            store: ferrohealth_session::config::StoreKind::Sealed,
+            key: Some(ferrohealth_secret::secret::Secret::new(SESSION_KEY)),
+            ..defaults.session.clone()
+        },
+        ..defaults
     };
-    ferroehr_viewer::state::AppState {
-        cdr: ferroehr_viewer::cdr::CdrClient::new(&config.cdr)
-            .expect("the CDR client should build from a well-formed base URL"),
-        config: Arc::new(config),
-        oidc: None,
-        session_keys: ferroehr_viewer::session::SessionKeys::from_secret("")
-            .expect("an empty secret always yields an ephemeral key"),
-    }
+    let cdr = ferroehr_viewer::cdr::CdrClient::new(&config.cdr)
+        .expect("the CDR client should build from a well-formed base URL");
+    ferroehr_viewer::state::AppState::new(config, cdr, None)
+        .expect("the default session store should build")
+}
+
+/// The sealing key of the test viewer's store: base64 of 64 synthetic bytes.
+const SESSION_KEY: &str =
+    "c3ludGhldGljLXZpZXdlci1zZXNzaW9uLWtleS1mb3ItdGVzdHMtb25seS0wMTIzNDU2Nzg5YWJjZGVmZ2hpag==";
+
+/// Whether `cookie` is the viewer's session cookie, `__Host-` prefixed as a
+/// `Secure` one is.
+fn is_session_cookie(cookie: &str) -> bool {
+    cookie
+        .trim_start_matches(ferrohealth_session::cookies::HOST_PREFIX)
+        .starts_with(&format!(
+            "{}=",
+            ferroehr_viewer::session::cookie_names().session()
+        ))
 }
 
 /// The viewer's service over the replayed CDR.
@@ -339,7 +357,7 @@ impl Viewer {
         let answer = self
             .send(
                 http::Method::POST,
-                "/login",
+                "/sign-in",
                 None,
                 Some(&[
                     ("username", "ferroehr"),
@@ -352,7 +370,7 @@ impl Viewer {
         answer
             .cookies()
             .into_iter()
-            .find(|cookie| cookie.starts_with(ferroehr_viewer::session::SESSION_COOKIE))
+            .find(|cookie| is_session_cookie(cookie))
             .expect("an accepted sign-in sets the session cookie")
     }
 
@@ -365,12 +383,12 @@ impl Viewer {
 #[tokio::test]
 async fn the_sign_in_page_is_served_without_a_session_and_posts_its_own_fields() {
     let viewer = Viewer::start().await;
-    let page = viewer.send(http::Method::GET, "/login", None, None).await;
+    let page = viewer.send(http::Method::GET, "/sign-in", None, None).await;
     assert_eq!(page.status, http::StatusCode::OK);
     for field in [r#"name="username""#, r#"name="password""#, r#"name="next""#] {
         assert!(page.body.contains(field), "{field} in {}", page.body);
     }
-    assert!(page.body.contains(r#"action="/login""#), "{}", page.body);
+    assert!(page.body.contains(r#"action="/sign-in""#), "{}", page.body);
 }
 
 #[tokio::test]
@@ -379,7 +397,7 @@ async fn a_wrong_password_draws_the_refusal_and_sets_no_session() {
     let answer = viewer
         .send(
             http::Method::POST,
-            "/login",
+            "/sign-in",
             None,
             Some(&[
                 ("username", "ferroehr"),
@@ -400,7 +418,7 @@ async fn a_wrong_password_draws_the_refusal_and_sets_no_session() {
         answer
             .cookies()
             .iter()
-            .all(|cookie| !cookie.starts_with(ferroehr_viewer::session::SESSION_COOKIE)),
+            .all(|cookie| !is_session_cookie(cookie)),
         "a refused sign-in sets no session"
     );
     assert!(
@@ -415,7 +433,7 @@ async fn an_accepted_sign_in_lands_on_a_same_origin_destination_only() {
     let kept = viewer
         .send(
             http::Method::POST,
-            "/login",
+            "/sign-in",
             None,
             Some(&[
                 ("username", "ferroehr"),
@@ -428,7 +446,7 @@ async fn an_accepted_sign_in_lands_on_a_same_origin_destination_only() {
     let dropped = viewer
         .send(
             http::Method::POST,
-            "/login",
+            "/sign-in",
             None,
             Some(&[
                 ("username", "ferroehr"),
@@ -445,7 +463,7 @@ async fn a_guarded_page_without_a_session_redirects_to_the_sign_in_keeping_its_a
     let viewer = Viewer::start().await;
     let answer = viewer.send(http::Method::GET, "/ehrs", None, None).await;
     assert!(answer.status.is_redirection(), "{}", answer.status);
-    assert_eq!(answer.location(), "/login?next=%2Fehrs");
+    assert_eq!(answer.location(), "/sign-in?next=%2Fehrs");
 }
 
 /// A post without a session is answered by the session guard before any
@@ -457,7 +475,7 @@ async fn a_post_without_a_session_gets_the_sign_in_answer_on_every_page() {
     let viewer = Viewer::start().await;
     let pages = ferroehr_viewer::routes::ROUTES
         .iter()
-        .filter(|route| **route != "/login")
+        .filter(|route| **route != "/sign-in")
         .map(|route| {
             route
                 .split('/')
@@ -497,7 +515,7 @@ async fn a_post_without_a_session_gets_the_sign_in_answer_on_every_page() {
         let next = urlencoding::encode(back).into_owned();
         assert_eq!(
             answer.location(),
-            format!("/login?expired=1&next={next}"),
+            format!("/sign-in?expired=1&next={next}"),
             "{path}"
         );
     }
@@ -1012,8 +1030,8 @@ async fn a_signed_in_page_carries_the_session_watch() {
     assert_eq!(page.status, http::StatusCode::OK, "{}", page.body);
     for drawn in [
         r#"data-fui="session""#,
-        r#"data-fui-status="/api/session""#,
-        r#"data-fui-sign-in="/login?expired=1""#,
+        r#"data-fui-status="/session""#,
+        r#"data-fui-sign-in="/sign-in?expired=1""#,
         r#"data-fui-idle="3600""#,
     ] {
         assert!(page.body.contains(drawn), "{drawn} missing: {}", page.body);
@@ -1029,7 +1047,7 @@ async fn a_signed_in_page_carries_the_session_watch() {
         (43_190..=43_200).contains(&absolute),
         "the lifetime counts from the sign-in: {absolute}"
     );
-    let login = viewer.send(http::Method::GET, "/login", None, None).await;
+    let login = viewer.send(http::Method::GET, "/sign-in", None, None).await;
     assert!(
         !login.body.contains(r#"data-fui="session""#),
         "the sign-in page carries no watch"
@@ -1079,7 +1097,7 @@ async fn the_session_route_reads_extends_and_refuses() {
         extended
             .cookies()
             .iter()
-            .any(|cookie| cookie.starts_with(ferroehr_viewer::session::SESSION_COOKIE)),
+            .any(|cookie| is_session_cookie(cookie)),
         "an extend re-seals the session"
     );
 
@@ -1106,7 +1124,7 @@ async fn the_sign_in_page_after_the_watch_returns_to_the_page_left() {
     let page = viewer
         .send(
             http::Method::GET,
-            "/login?expired=1&return=/templates%3Fpage%3D2",
+            "/sign-in?expired=1&return=/templates%3Fpage%3D2",
             None,
             None,
         )
@@ -1133,7 +1151,7 @@ async fn sign_out_ends_the_session_and_says_so() {
         .await;
     assert!(answer.status.is_redirection(), "{}", answer.status);
     assert!(
-        answer.location().starts_with("/login?signed-out=1"),
+        answer.location().starts_with("/sign-in?signed-out=1"),
         "{}",
         answer.location()
     );
@@ -1141,7 +1159,7 @@ async fn sign_out_ends_the_session_and_says_so() {
         answer
             .cookies()
             .iter()
-            .any(|cookie| cookie.starts_with(ferroehr_viewer::session::SESSION_COOKIE)),
+            .any(|cookie| is_session_cookie(cookie)),
         "the session cookie is cleared"
     );
 }

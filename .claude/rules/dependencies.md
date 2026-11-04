@@ -34,8 +34,8 @@ Async runtime: `tokio` 1, `tokio-util` 0.7, `tokio-stream` 0.1, `futures`
 
 Auth & authz (never hand-roll): `ferrohealth-smart` 0.2 (token checking,
 Basic verification, SMART scopes, outbound client credentials),
-`jsonwebtoken` 11 (test fixtures only), `openidconnect` 4 (the viewer's
-login), `argon2` 0.5 +
+`jsonwebtoken` 11 (test fixtures only), `ferrohealth-session` 0.2 (the
+viewer's sign-in and session), `argon2` 0.5 +
 `password-hash` 0.5 (password hashing), `tower-sessions` 0.15 *(verify)*,
 `axum-login` 0.18 *(verify)*, `secrecy` 0.10, `zeroize` 1. RBAC/ABAC is
 shipped (`ferroehr-rest::access`, incl. a `cedar-policy` path).

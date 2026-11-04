@@ -90,14 +90,11 @@ pub async fn healthcheck(section: &ServerSection) -> Outcome {
 }
 
 /// Builds every client the viewer serves with, short of reaching a remote:
-/// the CDR client, the issuer client and the session key.
+/// the CDR client and the session store. `[oidc]` and `[session]` were
+/// checked when the configuration loaded.
 fn check_clients(config: &ViewerConfig) -> anyhow::Result<()> {
-    crate::cdr::CdrClient::new(&config.cdr)?;
-    if config.auth.oidc.enabled {
-        crate::oidc::issuer_client(&config.auth.oidc)?;
-    }
-    crate::session::SessionKeys::from_secret(&config.session.secret)
-        .map_err(|error| anyhow::anyhow!("{error}"))?;
+    let cdr = crate::cdr::CdrClient::new(&config.cdr)?;
+    crate::state::AppState::new(config.clone(), cdr, None)?;
     Ok(())
 }
 
@@ -105,21 +102,16 @@ fn check_clients(config: &ViewerConfig) -> anyhow::Result<()> {
 /// `server.shutdown_timeout_ms`, with the request log on `telemetry`.
 async fn serve(config: ViewerConfig, telemetry: &Telemetry) -> anyhow::Result<()> {
     let request_log = crate::telemetry::request_log(&config, telemetry);
-    let config = Arc::new(config);
     let cdr = crate::cdr::CdrClient::new(&config.cdr)?;
-    let oidc = if config.auth.oidc.enabled {
-        Some(Arc::new(crate::oidc::discover(&config.auth.oidc).await?))
+    // NOTE: ferrohealth-session 0.2.1 `config::OidcSettings::relying_party`: the provider's
+    // metadata is discovered at the start, so a broken provider refuses it.
+    let party = if config.auth.oidc_enabled {
+        Some(config.oidc.check()?.relying_party().await?)
     } else {
         None
     };
-    let session_keys = crate::session::SessionKeys::from_secret(&config.session.secret)
-        .map_err(|error| anyhow::anyhow!("{error}"))?;
-    let app_state = crate::state::AppState {
-        config: Arc::clone(&config),
-        cdr,
-        oidc,
-        session_keys,
-    };
+    let app_state = crate::state::AppState::new(config, cdr, party)?;
+    let config = Arc::clone(&app_state.config);
 
     let lifecycle = Lifecycle::default();
     let health = Health::new(Registry::default(), lifecycle.clone());

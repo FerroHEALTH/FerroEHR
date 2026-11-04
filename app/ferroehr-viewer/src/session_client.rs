@@ -2,12 +2,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The backstop that turns "this session is over" into the sign-in page, and
-//! the `/login` URL the signed-out transition lands on.
+//! the sign-in URL the signed-out transition lands on.
 //!
 //! Every page reaches the CDR through the viewer's own reads, and every one
 //! of them refuses a dead session the same two ways:
-//! [`ViewerError::Unauthenticated`] (the viewer's own sealed cookie is gone
-//! or idle-expired) and [`ViewerError::CdrUnauthorized`] (the CDR answered
+//! [`ViewerError::Unauthenticated`] (the request holds no live session) and [`ViewerError::CdrUnauthorized`] (the CDR answered
 //! `401` to the credential the session carries). Each is noted in the
 //! request's scope as it is met ([`note_if_over`]), and the page handler then
 //! answers with the sign-in page ([`signed_out_url`]) in place of the page,
@@ -19,7 +18,7 @@
 
 use crate::error::ViewerError;
 
-/// The `/login` URL the signed-out transition lands on.
+/// The sign-in URL the signed-out transition lands on.
 ///
 /// `expired=1` is what makes the login screen say the session ended instead of
 /// presenting a bare sign-in card, and `next` carries the screen the user was
@@ -33,7 +32,11 @@ pub fn signed_out_url(path: &str, search: &str) -> String {
     } else {
         format!("{path}?{search}")
     };
-    format!("/login?expired=1&next={}", urlencoding::encode(&next))
+    format!(
+        "{}?expired=1&next={}",
+        crate::session::SIGN_IN_PAGE,
+        urlencoding::encode(&next)
+    )
 }
 
 /// Whether `error` says the session is over: the viewer's own session is
@@ -63,9 +66,9 @@ mod tests {
     fn the_signed_out_url_carries_the_expiry_flag_and_the_encoded_destination() {
         assert_eq!(
             signed_out_url("/ehrs/abc", "tab=status&page=2"),
-            "/login?expired=1&next=%2Fehrs%2Fabc%3Ftab%3Dstatus%26page%3D2"
+            "/sign-in?expired=1&next=%2Fehrs%2Fabc%3Ftab%3Dstatus%26page%3D2"
         );
-        assert_eq!(signed_out_url("/", ""), "/login?expired=1&next=%2F");
+        assert_eq!(signed_out_url("/", ""), "/sign-in?expired=1&next=%2F");
     }
 
     #[test]

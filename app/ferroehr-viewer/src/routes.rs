@@ -153,7 +153,7 @@ pub enum Page {
     Access,
     /// `/about`.
     About,
-    /// `/login`.
+    /// `/sign-in`.
     Login,
 }
 
@@ -215,7 +215,7 @@ impl Page {
             "/preferences" | "/preferences/:section" => Self::Preferences,
             "/access" => Self::Access,
             "/about" => Self::About,
-            "/login" => Self::Login,
+            "/sign-in" => Self::Login,
             _ => return None,
         })
     }
@@ -355,7 +355,7 @@ pub static ROUTES: &[&str] = &[
     "/preferences/:section",
     "/access",
     "/about",
-    "/login",
+    "/sign-in",
 ];
 
 /// Draws the page the request being answered names, or the page that is not
