@@ -3,16 +3,16 @@
 | | |
 | --- | --- |
 | **Server** | http://127.0.0.1:8080/ferroehr/rest/openehr/v1 |
-| **Instrument** | veredictum 0.4.0, pre-approval: not yet approved by the openEHR SEC |
+| **Instrument** | veredictum 0.4.1, pre-approval: not yet approved by the openEHR SEC |
 | **Document** | `catalogue` |
 
 ## Summary
 
 | Part | Passed | Failed | Warning | Errored | Skipped | Total |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| BASE | 2616 | 0 | 0 | 0 | 81 | 2697 |
+| BASE | 2619 | 0 | 0 | 0 | 81 | 2700 |
 | OPTIONS | 256 | 0 | 0 | 0 | 118 | 374 |
-| **Every row** | **2872** | **0** | **0** | **0** | **199** | **3071** |
+| **Every row** | **2875** | **0** | **0** | **0** | **199** | **3074** |
 
 > [!NOTE]
 > A **failed** row counts against the server. A **warning** row is a SHOULD the server did not follow, and it never counts against the server. An **errored** row is inconclusive when its record names the instrument, which could not judge it, and counts against the server when its record names the server or no one. A **skipped** row was not run.
@@ -104,7 +104,7 @@ What every claimant of a capability must do. A case no option arm names is BASE.
 
 | Band | Passed | Failed | Warning | Errored | Skipped |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| AQL and stored queries | 189 | 0 | 0 | 0 | 7 |
+| AQL and stored queries | 192 | 0 | 0 | 0 | 7 |
 
 #### AQL and stored queries
 
@@ -112,7 +112,7 @@ What every claimant of a capability must do. A case no option arm names is BASE.
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Ad-hoc AQL execution | 12 | 0 | 0 | 0 | 0 |
 | AQL semantics | 82 | 0 | 0 | 0 | 7 |
-| AQL conformance corpus | 48 | 0 | 0 | 0 | 0 |
+| AQL conformance corpus | 51 | 0 | 0 | 0 | 0 |
 | Stored queries | 25 | 0 | 0 | 0 | 0 |
 | Refusals | 22 | 0 | 0 | 0 | 0 |
 
