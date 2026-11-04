@@ -47,6 +47,7 @@ use openehr_am::v2_4::aom2::terminology::archetype_terminology::ArchetypeTermino
 use openehr_base::prelude::MultiplicityInterval;
 use openehr_lang::nesting::{MAX_NESTING_DEPTH, Nesting};
 
+use crate::adl14::authored_flat::flattening_parent;
 use crate::aom::access::{
     child_occurrences, complex_attributes, complex_node_id, object_node_id, sibling_order,
     strip_sibling_order,
@@ -129,8 +130,8 @@ pub fn flatten(
 /// specialisation lineage top-down (`master08` §Flattening: "process each
 /// parent in order from the top").
 ///
-/// A non-specialised archetype is its own flat form (`master09.02`
-/// §Differential and Flat Forms). Results are memoised per repo lookup key
+/// A non-specialised or ADL 1.4 archetype is its own flat form, its parent id
+/// kept (`ADL2/master07.02` §File-naming). Results are memoised per repo lookup key
 /// for the duration of the call graph.
 ///
 /// # Errors
@@ -153,9 +154,8 @@ fn flat_form_memo(
     stack: &mut Vec<String>,
 ) -> Result<Archetype, FlattenError> {
     let v = view(archetype);
-    let Some(parent_id) = v.parent_archetype_id else {
-        // Level-0: the flat form is the differential form as-is, but stamped
-        // `is_differential = false` so downstream consumers see a flat artefact.
+    let Some(parent_id) = flattening_parent(&v) else {
+        // Level-0 or ADL 1.4: the authored form, stamped not differential.
         return Ok(mark_flat(archetype));
     };
     let namespace = v.archetype_id.namespace.as_deref();

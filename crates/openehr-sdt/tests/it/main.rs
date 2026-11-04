@@ -46,4 +46,5 @@ mod validation_rules;
 mod value_alternatives;
 mod webtemplate;
 mod webtemplate_v2_4;
+mod webtemplate_v2_4_adl14_specialised;
 mod webtemplate_v2_4_siblings;
