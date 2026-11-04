@@ -210,6 +210,59 @@ async fn an_unstamped_row_is_assessed_on_the_fly() {
     );
 }
 
+/// An unstamped version whose content equals its predecessor's reads the
+/// predecessor's node rows (#4415), and the `stable` gate assesses it on that
+/// tree: the candidate read finds the version's root through its content key,
+/// so a development-only body is refused. Without the root the gate is handed
+/// no body and would serve one it never assessed (#4945).
+#[tokio::test]
+async fn an_unstamped_version_sharing_its_predecessors_tree_is_assessed_on_that_tree() {
+    let (db, svc) = crate::fixtures::service().await;
+    let pool = db.pool();
+    let body = development_only_composition();
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
+    let first = svc
+        .create_composition(ehr_id, uv(&body, "249", None))
+        .await
+        .expect("composition create");
+    let preceding = first.version_uid();
+    svc.update_composition(ehr_id, first.vo_id, uv(&body, "251", Some(&preceding)))
+        .await
+        .expect("an identical update commits");
+    let shared: Option<i32> = sqlx::query_scalar(
+        "SELECT content_sys_version FROM version WHERE vo_id = $1 AND sys_version = 2",
+    )
+    .bind(first.vo_id)
+    .fetch_one(&pool)
+    .await
+    .expect("read the second version's content pointer");
+    assert_eq!(shared, Some(1), "the second version reads the first's rows");
+    sqlx::query("UPDATE version SET stable_compatible = NULL WHERE vo_id = $1")
+        .bind(first.vo_id)
+        .execute(&pool)
+        .await
+        .expect("unstamp both versions");
+
+    let query = "SELECT c FROM EHR e CONTAINS COMPOSITION c";
+    svc.execute_aql(query, None, &AqlQueryRequest::default())
+        .await
+        .expect("served under the development profile that accepted it");
+    let refused = stable_service(&pool)
+        .execute_aql(query, None, &AqlQueryRequest::default())
+        .await
+        .map(|r| r.result_set);
+    assert!(
+        matches!(
+            refused,
+            Err(ServiceError::Conflict(Refusal {
+                kind: Clash::State,
+                ..
+            }))
+        ),
+        "the shared development-only tree is assessed and refused, got {refused:?}"
+    );
+}
+
 /// The stamp travels with the rows through the cold archival tier: archiving
 /// and restoring an EHR must not change a version's profile compatibility.
 #[tokio::test]
