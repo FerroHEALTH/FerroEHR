@@ -57,25 +57,27 @@
 
 services:
   ferroterm:
-    # Digest-pinned FerroTERM 0.1.6 (resolved 2026-10-01); no `:latest`.
-    image: ghcr.io/ferrohealth/ferroterm:0.1.6@sha256:7ec4c9622e88e3028faf7c74a2384fb02e57dc3163c282b21274121a26aa3d5b
+    # Digest-pinned FerroTERM 0.3.3 (resolved 2026-11-04); no `:latest`.
+    image: ghcr.io/ferrohealth/ferroterm:0.3.3@sha256:f25ddad886fd218ae1eb82af6b81b8ed16651333f5bd802e621c5ae83b0913f1
+    # FerroTERM 0.3 reads its configuration tree only (`FERROTERM__…`), and
+    # serves no UI of its own: its console is a separate image.
     environment:
       # The shaped seed, read straight out of the ferroehr image: the whole
       # image is mounted read-only at /image (a Compose `type: image` volume,
       # Compose 2.35+, Docker Engine 28+) and this names the directory in it.
       # Whole-image rather than a subpath mount because subpath support is
       # newer than the engines a runner or a box may carry.
-      FERROTERM_CODESYSTEMS: /image/opt/sandbox-posture/terminology
-      # Passed through from YOUR shell, declared with no value on purpose: unset
-      # it is removed from the container environment and the server serves the
+      FERROTERM__TERMINOLOGY__CODE_SYSTEMS: /image/opt/sandbox-posture/terminology
+      # FERROTERM_INDEX from YOUR shell: unset or empty the server serves the
       # shaped seed alone; set to /data/index after a ferroterm-build run.
-      FERROTERM_INDEX:
-      FERROTERM_UI: ${FERROTERM_UI:-on}
-      FERROTERM_LOG_FORMAT: ${FERROTERM_LOG_FORMAT:-pretty}
-      FERROTERM_DEFAULT_LANGUAGE: ${FERROTERM_DEFAULT_LANGUAGE:-en}
+      FERROTERM__TERMINOLOGY__INDEX: ${FERROTERM_INDEX:-}
+      FERROTERM__TELEMETRY__FORMAT: ${FERROTERM_LOG_FORMAT:-pretty}
+      FERROTERM__TERMINOLOGY__DEFAULT_LANGUAGE: ${FERROTERM_DEFAULT_LANGUAGE:-en}
       RUST_LOG: ${RUST_LOG:-info}
-      # A FerroTERM release that sends a usage report follows FerroEHR's switch,
-      # so one variable stops both; 0.1.6 sends none and ignores the key.
+      # FerroTERM's usage report follows FerroEHR's switch, so one variable
+      # stops both. With the root read-only and no state directory mounted,
+      # 0.3.3 keeps the report off either way (FerroTERM's configuration page,
+      # `usage_report.state_dir`).
       FERROTERM__USAGE_REPORT__ENABLED: ${FERROEHR__USAGE_REPORT__ENABLED:-true}
     volumes:
       # docs.docker.com/reference/compose-file/services/#volumes, type image.
@@ -89,9 +91,9 @@ services:
         read_only: true
     ports:
       - "${FERROEHR_BIND_HOST:-127.0.0.1}:${FERROEHR_TERMINOLOGY_PORT:-8090}:8080"
-    # The image is its own health probe (`ferroterm healthcheck`, FerroTERM
-    # 0.1.6): the distroless base carries no shell and no HTTP client, so the
-    # binary sends the one GET /health itself and exits 0 on 200. The values
+    # The image is its own health probe (`ferroterm healthcheck`): the
+    # distroless base carries no shell and no HTTP client, so the binary sends
+    # one GET /health/readiness itself and exits 0 on 200. The values
     # restate the image's HEALTHCHECK, and the 60 s start period is for a large
     # edition's load; `healthy` means the code systems are served.
     healthcheck:
@@ -119,7 +121,7 @@ services:
   # never starts it. Same image; the release archive you hold a licence for is
   # mounted read-only and the index lands in the volume the server reads.
   ferroterm-build:
-    image: ghcr.io/ferrohealth/ferroterm:0.1.6@sha256:7ec4c9622e88e3028faf7c74a2384fb02e57dc3163c282b21274121a26aa3d5b
+    image: ghcr.io/ferrohealth/ferroterm:0.3.3@sha256:f25ddad886fd218ae1eb82af6b81b8ed16651333f5bd802e621c5ae83b0913f1
     profiles: [terminology-build]
     entrypoint: ["/usr/local/bin/ferroterm-build"]
     command: ["--rf2", "/rf2/release.zip", "--out", "/data/index"]

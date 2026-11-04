@@ -17,9 +17,9 @@
 //!
 //! The container is `ghcr.io/ferrohealth/ferroterm` at the release the compose
 //! overlay pins, started through `testcontainers` with `docker/terminology/seed`
-//! mounted as its `FERROTERM_CODESYSTEMS`; the harness's `PostgreSQL` 18 backs
-//! the service. Serialized with the other container suites by the nextest
-//! `containers` group.
+//! mounted as its `FERROTERM__TERMINOLOGY__CODE_SYSTEMS`; the harness's
+//! `PostgreSQL` 18 backs the service. Serialized with the other container suites
+//! by the nextest `containers` group.
 
 use crate::fixtures::provider;
 use std::path::PathBuf;
@@ -38,7 +38,7 @@ const FERROTERM_IMAGE: &str = "ghcr.io/ferrohealth/ferroterm";
 /// Tag AND index digest, the reference the overlay carries: the digest is what
 /// is pulled, so this suite measures the exact bytes a deployment runs.
 const FERROTERM_TAG: &str =
-    "0.1.6@sha256:7ec4c9622e88e3028faf7c74a2384fb02e57dc3163c282b21274121a26aa3d5b";
+    "0.3.3@sha256:f25ddad886fd218ae1eb82af6b81b8ed16651333f5bd802e621c5ae83b0913f1";
 const FERROTERM_PORT: ContainerPort = ContainerPort::Tcp(8080);
 /// The shaped code system the seed serves (`docker/terminology/seed/`).
 const SHAPED_SYSTEM: &str = "http://cnf.example.test/fhir/CodeSystem/sct-shaped";
@@ -63,9 +63,8 @@ impl FerroTerm {
             .expect("the shaped terminology seed directory exists");
         let container = GenericImage::new(FERROTERM_IMAGE, FERROTERM_TAG)
             .with_exposed_port(FERROTERM_PORT)
-            .with_env_var("FERROTERM_CODESYSTEMS", "/data/codesystems")
-            .with_env_var("FERROTERM_UI", "off")
-            .with_env_var("FERROTERM_LOG_FORMAT", "json")
+            .with_env_var("FERROTERM__TERMINOLOGY__CODE_SYSTEMS", "/data/codesystems")
+            .with_env_var("FERROTERM__TELEMETRY__FORMAT", "json")
             .with_env_var("FERROTERM__USAGE_REPORT__ENABLED", "false")
             .with_mount(Mount::bind_mount(
                 seed.to_string_lossy().into_owned(),

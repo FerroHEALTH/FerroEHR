@@ -41,7 +41,7 @@ terminology:
   enabled: true
   # A claim NAME, not a claim: the chart provisions no storage, so this is a
   # render fixture exactly as the backup overlays' claims are. It exercises the
-  # branch that mounts a built index and renders FERROTERM_INDEX; the
+  # branch that mounts a built index and renders FERROTERM__TERMINOLOGY__INDEX; the
   # all-features overlay covers the other branch, where the shaped seed is
   # served alone.
   index:

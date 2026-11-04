@@ -273,7 +273,7 @@ backup:
 
 # FerroTERM beside the CDR — this overlay's contract is every optional
 # integration on, and it is where the seed-only branch reaches a golden: no
-# index claim, so the shaped seed is served alone and FERROTERM_INDEX is not
+# index claim, so the shaped seed is served alone and FERROTERM__TERMINOLOGY__INDEX is not
 # rendered (the terminology overlay covers the claim branch). The CDR's egress
 # policy above gains its rule to these pods from the chart rather than from
 # `rules`, since the chart chose the destination.

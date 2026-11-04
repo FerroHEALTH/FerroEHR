@@ -299,8 +299,8 @@ opt-in that adds FerroTERM to it.
 
 > [!TIP]
 > Serving your own content is the same shape: FerroTERM loads every FHIR
-> `CodeSystem` and `ValueSet` in the directory `FERROTERM_CODESYSTEMS` names,
-> and serves them read-only. A value set it does not hold is an unresolved
+> `CodeSystem` and `ValueSet` in the directory
+> `FERROTERM__TERMINOLOGY__CODE_SYSTEMS` names, and serves them read-only. A value set it does not hold is an unresolved
 > binding, which your `fail_on_error` setting then decides the fate of.
 
 ## On Kubernetes

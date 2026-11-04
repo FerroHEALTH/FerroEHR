@@ -168,30 +168,25 @@ spec:
           env:
             # The code-system directory, mounted read-only from the ConfigMap
             # above (or the operator's).
-            - name: FERROTERM_CODESYSTEMS
+            - name: FERROTERM__TERMINOLOGY__CODE_SYSTEMS
               value: {{ .Values.terminology.codeSystems.mountPath | quote }}
             {{- if .Values.terminology.index.persistentVolumeClaim }}
             # A built index for a licensed release. Rendered ONLY when a claim
             # names one: with the variable unset FerroTERM serves the shaped
             # seed alone, and pointing it at an empty directory is not the same
             # thing.
-            - name: FERROTERM_INDEX
+            - name: FERROTERM__TERMINOLOGY__INDEX
               value: {{ .Values.terminology.index.mountPath | quote }}
             {{- end }}
-            # FerroTERM's own browsing UI. Off, because the workload has no
-            # Ingress and the CDR does not use it; turning it on only widens
-            # what a caller inside the cluster can do with the release.
-            - name: FERROTERM_UI
-              value: {{ ternary "on" "off" .Values.terminology.ui | quote }}
-            - name: FERROTERM_LOG_FORMAT
+            - name: FERROTERM__TELEMETRY__FORMAT
               value: {{ .Values.terminology.logFormat | quote }}
-            - name: FERROTERM_DEFAULT_LANGUAGE
+            - name: FERROTERM__TERMINOLOGY__DEFAULT_LANGUAGE
               value: {{ .Values.terminology.defaultLanguage | quote }}
             - name: RUST_LOG
               value: {{ .Values.terminology.logLevel | quote }}
             # The usage report: terminology.usageReport.enabled, or the
-            # top-level switch when that is empty. A release before 0.1.8
-            # sends none and reads neither variable.
+            # top-level switch when that is empty. With no state directory
+            # mounted, FerroTERM keeps the report off.
             - name: FERROTERM__USAGE_REPORT__ENABLED
               value: {{ include "ferroehr.siblingUsageReport" (dict "values" .Values.terminology "root" .) | quote }}
             - name: FERROTERM__USAGE_REPORT__DEPLOYMENT
