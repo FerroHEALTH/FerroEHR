@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # Whether an image built from one commit holds what another commit would
-# build (#4547): the server or postgres image's inputs at the image's
+# build (#4547): the server, viewer or postgres image's inputs at the image's
 # org.opencontainers.image.revision against those of the tree under test.
 #
 # Conformance on a push to main that rebuilt no image judges the `:main`
@@ -11,18 +11,28 @@
 # describe that commit's server. conformance.yml asks this script before it
 # judges an image and refuses one whose inputs differ from the tree's.
 #
+# containers.yml asks it too, before it decides what to build (#4977): GitHub
+# keeps only the newest pending run of its concurrency group, so the changes
+# of a dropped run reach no paths filter, and only the image at `:main` says
+# which inputs were built.
+#
 # The server inputs are the paths the app filter of containers.yml rebuilds
 # the image on, less the ones no image holds (the self-test holds the list to
 # that filter), and the files docker/Dockerfile copies into the runtime stage,
-# read from the tree's Dockerfile.
+# read from the tree's Dockerfile. The viewer and postgres inputs are their
+# filters' paths less the ones no image holds.
 #
 # Usage:
-#   scripts/lib/image-inputs.sh paths <server|postgres>
+#   scripts/lib/image-inputs.sh paths <server|viewer|postgres>
 #       print the pathspecs of the image's inputs
-#   scripts/lib/image-inputs.sh same <server|postgres> <revision> <tree>
+#   scripts/lib/image-inputs.sh same <kind> <revision> <tree>
 #       exit 0 when the inputs at <revision> equal those at <tree>, 1 when
 #       they differ (the differing paths on stdout), 2 when it cannot tell;
 #       a <revision> the checkout lacks is fetched from origin, trees only
+#   scripts/lib/image-inputs.sh rebuild <kind> <revision> <tree>
+#       print `true` when an image built from <revision> (empty: no image or
+#       no label was read) lacks the inputs of <tree> or cannot be compared
+#       with it, `false` when it holds them; the reason goes to stderr
 #   scripts/lib/image-inputs.sh --self-test
 #
 # No specification governs this: our own design.
@@ -32,10 +42,16 @@ readonly SERVER_INPUTS=(
   crates app/ferroehr app/ferroehr-rest app/ferroehr-server tools
   Cargo.toml Cargo.lock rust-toolchain.toml .cargo docker/Dockerfile
 )
+readonly VIEWER_INPUTS=(
+  crates app/ferroehr-viewer Cargo.toml Cargo.lock rust-toolchain.toml .cargo docker/viewer
+)
 readonly POSTGRES_INPUTS=(docker/postgres)
 # The app filter entries of containers.yml that rebuild the image and that
 # no image holds: the smoke lane's script and compose file, and the workflow.
 readonly NOT_IN_IMAGE=(docker/smoke-test.sh docker-compose.yml .github/workflows/containers.yml)
+# The viewer filter's entries no image holds: its smoke lane's battery and
+# compose file, and the workflow.
+readonly VIEWER_NOT_IN_IMAGE=(scripts/ui-e2e.sh docker-compose.yml .github/workflows/containers.yml)
 
 # The pathspecs of the image kind $1, read in the checkout the caller stands in.
 inputs_of() {
@@ -49,9 +65,10 @@ inputs_of() {
       printf '%s\n' "${SERVER_INPUTS[@]}"
       dockerfile_sources docker/Dockerfile
       ;;
+    viewer) printf '%s\n' "${VIEWER_INPUTS[@]}" ;;
     postgres) printf '%s\n' "${POSTGRES_INPUTS[@]}" ;;
     *)
-      echo "image-inputs: '$kind' is no image kind (server or postgres)" >&2
+      echo "image-inputs: '$kind' is no image kind (server, viewer or postgres)" >&2
       return 2
       ;;
   esac
@@ -80,13 +97,42 @@ same() {
   return 1
 }
 
-# The entries of the named filter in containers.yml, `/**` dropped.
+# Prints whether the image kind $1 built from $2 must be rebuilt for the tree
+# $3. An image that cannot be compared is rebuilt, since a build costs time
+# and a stale `:main` costs the record.
+rebuild() {
+  local kind="$1" revision="$2" tree="$3" changed status=0
+  inputs_of "$kind" >/dev/null || return 2
+  if [[ -z "$revision" ]]; then
+    echo "image-inputs: no revision was read for the $kind image at :main; it is rebuilt" >&2
+    echo true
+    return 0
+  fi
+  changed="$(same "$kind" "$revision" "$tree")" || status=$?
+  case "$status" in
+    0)
+      echo "image-inputs: the $kind image at :main, built from $revision, holds the inputs of $tree" >&2
+      echo false
+      ;;
+    1)
+      echo "image-inputs: the $kind image at :main, built from $revision, differs from $tree in $(grep -c . <<<"$changed") input file(s); it is rebuilt" >&2
+      echo true
+      ;;
+    *)
+      echo "image-inputs: the $kind image at :main, labelled $revision, cannot be compared with $tree; it is rebuilt" >&2
+      echo true
+      ;;
+  esac
+}
+
+# The entries of the named filter in containers.yml, `/**` dropped: the list
+# items deeper than the filter's name, up to the next line that is not.
 filter_entries() {
   local filter="$1" file="$2"
   awk -v name="$filter" '
     /^ *filters: \|/ { in_filters = 1; next }
-    in_filters && $0 ~ "^ *" name ":$" { on = 1; next }
-    in_filters && on && /^ *[a-z]+:$/ { on = 0 }
+    in_filters && $0 ~ "^ *" name ":$" { on = 1; match($0, /^ */); depth = RLENGTH; next }
+    on && $0 !~ /^ *$/ { match($0, /^ */); if (RLENGTH <= depth) on = 0 }
     on && /^ *- / { sub(/^ *- */, ""); gsub(/\047/, ""); sub(/\/\*\*$/, ""); print }
   ' "$file"
 }
@@ -142,6 +188,15 @@ self_test() {
     printf '%s\n' "${SERVER_INPUTS[@]}" "$got" | covered "$entry" || fail "containers.yml rebuilds the app image on $entry, which the server inputs miss"
   done < <(filter_entries app "$repo/.github/workflows/containers.yml")
   while IFS= read -r entry; do
+    printf '%s\n' "${VIEWER_NOT_IN_IMAGE[@]}" | covered "$entry" && continue
+    printf '%s\n' "${VIEWER_INPUTS[@]}" | covered "$entry" || fail "containers.yml rebuilds the viewer image on $entry, which the viewer inputs miss"
+  done < <(filter_entries viewer "$repo/.github/workflows/containers.yml")
+  local viewer_filter
+  viewer_filter="$(filter_entries viewer "$repo/.github/workflows/containers.yml")"
+  for entry in "${VIEWER_INPUTS[@]}"; do
+    covered "$entry" <<<"$viewer_filter" || fail "the viewer input $entry is no entry of the viewer filter of containers.yml"
+  done
+  while IFS= read -r entry; do
     [[ "$entry" == .github/workflows/containers.yml ]] && continue
     printf '%s\n' "${POSTGRES_INPUTS[@]}" | covered "$entry" || fail "containers.yml rebuilds the postgres image on $entry, which the postgres inputs miss"
   done < <(filter_entries postgres "$repo/.github/workflows/containers.yml")
@@ -177,14 +232,17 @@ self_test() {
     commit crates/a/src/lib.rs three crates
     commit docker/postgres/initdb/1.sql four postgres
     commit docker/terminology/seed/codes.json five seed
+    commit app/ferroehr-viewer/src/main.rs six viewer
+    commit docs/readme.md seven quiet
     git clone -q --depth=1 "file://$tmp/origin" "$tmp/checkout"
   ) >/dev/null 2>&1 || {
     echo "image-inputs: SELF-TEST FAILED: could not build the miniature repository" >&2
     exit 1
   }
-  local base docs crates postgres seed status
+  local base docs crates postgres seed viewer quiet status
   base="$(cat "$tmp/base")" docs="$(cat "$tmp/docs")" crates="$(cat "$tmp/crates")"
   postgres="$(cat "$tmp/postgres")" seed="$(cat "$tmp/seed")"
+  viewer="$(cat "$tmp/viewer")" quiet="$(cat "$tmp/quiet")"
   run() {
     status=0
     (cd "$tmp/checkout" && same "$@") >"$tmp/answer" 2>&1 || status=$?
@@ -200,24 +258,50 @@ self_test() {
   [[ "$(run postgres "$base" "$crates")" == 0 ]] || fail "a postgres image was refused for a crate change: $(cat "$tmp/answer")"
   [[ "$(run server "$(printf '%040d' 0)" "$seed")" == 2 ]] || fail "a revision origin does not serve was not a failure"
   [[ "$(run server unknown "$seed")" == 2 ]] || fail "a label that is no commit id was not a failure"
-  [[ "$(run viewer "$seed" "$seed")" == 2 ]] || fail "an unknown image kind was not a failure"
+  [[ "$(run console "$seed" "$seed")" == 2 ]] || fail "an unknown image kind was not a failure"
+  [[ "$(run viewer "$seed" "$viewer")" == 1 ]] || fail "a viewer image older than a viewer change passed"
+  [[ "$(run viewer "$crates" "$seed")" == 0 ]] || fail "a viewer image was refused for a seed and a postgres change: $(cat "$tmp/answer")"
+
+  # The rebuild decision: the image at `:main` against the tree of the run.
+  decide() { (cd "$tmp/checkout" && rebuild "$@") 2>"$tmp/reason"; }
+  # Runs for every commit from crates to viewer were dropped while :main was
+  # built from docs; the run that survived pushed a docs change alone.
+  [[ "$(decide server "$docs" "$quiet")" == true ]] || fail "a server image behind dropped crate and seed changes was kept"
+  [[ "$(decide postgres "$docs" "$quiet")" == true ]] || fail "a postgres image behind a dropped postgres change was kept"
+  [[ "$(decide viewer "$docs" "$quiet")" == true ]] || fail "a viewer image behind dropped crate and viewer changes was kept"
+  # Every image at :main built from a commit with the tree's inputs is kept.
+  [[ "$(decide server "$viewer" "$quiet")" == false ]] || fail "a server image holding the tree's inputs was rebuilt: $(cat "$tmp/reason")"
+  [[ "$(decide postgres "$seed" "$quiet")" == false ]] || fail "a postgres image holding the tree's inputs was rebuilt: $(cat "$tmp/reason")"
+  [[ "$(decide viewer "$viewer" "$quiet")" == false ]] || fail "a viewer image holding the tree's inputs was rebuilt: $(cat "$tmp/reason")"
+  [[ "$(decide server "$quiet" "$quiet")" == false ]] || fail "an image of the tree itself was rebuilt"
+  # An image that cannot be compared is rebuilt; an unknown kind is refused.
+  [[ "$(decide server "" "$quiet")" == true ]] || fail "a :main with no revision label was kept"
+  [[ "$(decide server unknown "$quiet")" == true ]] || fail "a label that is no commit id was kept"
+  [[ "$(decide server "$(printf '%040d' 0)" "$quiet")" == true ]] || fail "a revision origin does not serve was kept"
+  status=0
+  decide console "$docs" "$quiet" >/dev/null || status=$?
+  [[ "$status" == 2 ]] || fail "an unknown image kind was decided"
 
   [[ "$failures" -eq 0 ]] || exit 1
-  echo "image-inputs: self-test OK (the lists against containers.yml and docker/Dockerfile, same and differing inputs per image, a fetched revision, and the failures)."
+  echo "image-inputs: self-test OK (the lists against containers.yml and docker/Dockerfile, same and differing inputs per image, a fetched revision, the rebuild decision after dropped runs, and the failures)."
 }
 
 case "${1:-}" in
   paths)
-    [[ "$#" -eq 2 ]] || { echo "usage: $0 paths <server|postgres>" >&2; exit 2; }
+    [[ "$#" -eq 2 ]] || { echo "usage: $0 paths <server|viewer|postgres>" >&2; exit 2; }
     inputs_of "$2"
     ;;
   same)
-    [[ "$#" -eq 4 ]] || { echo "usage: $0 same <server|postgres> <revision> <tree>" >&2; exit 2; }
+    [[ "$#" -eq 4 ]] || { echo "usage: $0 same <kind> <revision> <tree>" >&2; exit 2; }
     same "$2" "$3" "$4"
+    ;;
+  rebuild)
+    [[ "$#" -eq 4 ]] || { echo "usage: $0 rebuild <kind> <revision> <tree>" >&2; exit 2; }
+    rebuild "$2" "$3" "$4"
     ;;
   --self-test) self_test ;;
   *)
-    echo "usage: $0 paths <kind> | same <kind> <revision> <tree> | --self-test" >&2
+    echo "usage: $0 paths <kind> | same <kind> <revision> <tree> | rebuild <kind> <revision> <tree> | --self-test" >&2
     exit 2
     ;;
 esac
