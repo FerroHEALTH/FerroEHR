@@ -6,8 +6,9 @@
 //! code the source already uses. No openEHR spec governs the numbering: it is
 //! pinned by the ADL 2 reference conversion fixtures.
 
-use openehr_am::v2_4::aom2::archetype::authored_archetype::AuthoredArchetypeData;
+use openehr_am::v2_4::aom2::constraint_model::c_complex_object::CComplexObject;
 use openehr_am::v2_4::aom2::definitions::adl_code_definitions::AdlCodeDefinitionsData;
+use openehr_am::v2_4::aom2::terminology::archetype_terminology::ArchetypeTerminology;
 
 use crate::adl14::walk::walk_constraints;
 
@@ -16,7 +17,10 @@ use crate::adl14::walk::walk_constraints;
 ///
 /// Synthesised and minted acs must allocate ABOVE the shifted range, so a
 /// fresh `acN` never collides with an existing `ac000(N-1)` → `acN`.
-pub(super) fn highest_ac_number(data: &AuthoredArchetypeData) -> i64 {
+pub(super) fn highest_ac_number(
+    definition: &CComplexObject,
+    terminology: &ArchetypeTerminology,
+) -> i64 {
     let mut highest = 0i64;
     let mut track = |code: &str| {
         if AdlCodeDefinitionsData::is_value_set_code(code)
@@ -26,12 +30,12 @@ pub(super) fn highest_ac_number(data: &AuthoredArchetypeData) -> i64 {
             highest = highest.max(n);
         }
     };
-    for terms in data.terminology.term_definitions.values() {
+    for terms in terminology.term_definitions.values() {
         for code in terms.keys() {
             track(code);
         }
     }
-    walk_constraints(&data.definition, &mut |raw, _| {
+    walk_constraints(definition, &mut |raw, _| {
         let body = raw.split_once(';').map_or(raw, |(b, _)| b);
         if !body.contains("::") {
             track(body.trim());

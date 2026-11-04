@@ -14,7 +14,7 @@
 //! dADL domain blocks (lowered by [`crate::adl14::domain`]) become a
 //! `DV_ORDINAL` / `DV_QUANTITY` `C_COMPLEX_OBJECT` with an attribute tuple.
 //! The READ side — the pass that rewrites that encoding into spec-valid
-//! ADL2 — is `crate::adl14::convert::convert_constraint`.
+//! ADL2 — is `crate::adl14::term_constraint`.
 //!
 //! The one construct with a spec target rather than a spec source is the
 //! ordinal shorthand: `ADL2/master04.4-cadl_second_order.adoc` §Tuple

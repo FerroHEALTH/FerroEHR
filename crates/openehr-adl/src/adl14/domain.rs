@@ -17,7 +17,7 @@
 //! The block itself is read by [`crate::adl14::lower`] (which spans the
 //! `<…>` token run and hands the parsed `openehr_lang::v1_1::odin` value here); the
 //! READ side of the encoding produced here is
-//! `crate::adl14::convert::convert_constraint`.
+//! `crate::adl14::term_constraint`.
 
 use openehr_am::v2_4::aom2::constraint_model::c_attribute::CAttribute;
 use openehr_am::v2_4::aom2::constraint_model::c_attribute_tuple::CAttributeTuple;
