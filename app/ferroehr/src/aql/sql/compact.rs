@@ -69,7 +69,7 @@ pub(super) fn root_columns(alias: &str, root: Option<&str>) -> (Expr, Expr) {
 pub(super) fn marked_member(alias: &str, data: Expr, member: &str) -> Expr {
     if member == "subject" {
         return Expr::cust_with_exprs(
-            "CASE WHEN $1 THEN jsonb_build_object('subject', '{\"_type\": \"PARTY_SELF\"}'::jsonb) \
+            "CASE WHEN $1 THEN jsonb_build_object('subject', jsonb_build_object('_type', 'PARTY_SELF')) \
              ELSE $2 END",
             [col(alias, Node::PartySelf), data],
         );
