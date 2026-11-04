@@ -11,7 +11,7 @@ import server, delivers the events to an AMQP broker such as RabbitMQ from 0.0.1
 on: its `[events]` lane reads this feed and publishes each event with its own
 exchange, routing keys and queues, and moves its cursor only after the broker
 confirmed the event
-([FerroBRIDGE#1367](https://github.com/FerroHEALTH/FerroBRIDGE/issues/1367)).
+([FerroBRIDGE issue 1367](https://github.com/FerroHEALTH/FerroBRIDGE/issues/1367)).
 
 <!-- toc -->
 

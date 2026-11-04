@@ -444,7 +444,7 @@ cut, after the texts in scope have been read.
 | 2026-10-24 | 5.4.1, after `9fdd36091` | 2 claims, in two book pages: the compliance index named `[terminology.external]` and a terminology route, and the crates page pinned `0.0.97` | nothing |
 | 2026-10-25 | 5.4.2, after `2333f98ba` | none; the changes of this release updated their own pages in the pull requests that made them | nothing |
 | 2026-10-27 | 5.5.0, after `bed3543e3` | 1 claim, in the hazard log: H2 named a middleware test renamed by #4192 | the conformance chapter bars counted the CNF TDD cases until the Veredictum 0.3.3 record, which carries none, replaced them (#4204) |
-| 2026-11-04 | 5.6.0, after `25db5c69c` | 4 claims, in the README, the landing page and two book pages: each said FerroBRIDGE's broker delivery was in progress, which FerroBRIDGE 0.0.15 ships | the canonical-XML `reverse_relationships` left open by the 5.6.0-rc8 review is served (#4778); a v2-namespace OPT 1.4 ordinal list stays tracked on #4777 |
+| 2026-11-04 | 5.6.0, after `25db5c69c` | 4 claims, in the README, the landing page and two book pages: each said FerroBRIDGE's broker delivery was in progress, which FerroBRIDGE 0.0.15 ships | the canonical-XML `reverse_relationships` left open by the 5.6.0-rc8 review shipped (#4778); a v2-namespace OPT 1.4 ordinal list stays tracked on #4777 |
 
 ## The review of 2026-10-20, for 5.2.0
 
