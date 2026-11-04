@@ -51,7 +51,7 @@ probes_original_state() {
   fi
 
   # Step 1: stop the stack and delete its volumes, with the profile it runs.
-  probe "P-RESET-VOLUME" "working" "compose" "#3637" \
+  probe "P-RESET-VOLUME" "$PROBE_WORKING" "compose" "#3637" \
     "docker compose down --volumes deletes the database volume"
   dc -f docker-compose.yml --profile s3 down --volumes >/dev/null 2>&1
   if docker volume inspect "$volume" >/dev/null 2>&1; then
@@ -71,7 +71,7 @@ probes_original_state() {
     dc -f docker-compose.yml up -d --wait ferroehr >/dev/null 2>&1
   ) || up_status=$?
 
-  probe "P-RESET-BOOT" "working" "compose" "#3637" \
+  probe "P-RESET-BOOT" "$PROBE_WORKING" "compose" "#3637" \
     "the reset stack boots on a fresh volume and migrates it"
   if [[ "$up_status" -ne 0 ]] || ! wait_http "$CDR/health/readiness" 90; then
     probe_fail "a ready CDR after docker compose up -d --wait" "exit $up_status" \
@@ -83,14 +83,14 @@ probes_original_state() {
     || probe_fail "a recreated $volume" "no such volume"
   probe_done
 
-  probe "P-RESET-DATA" "working" "database" "#3637" \
+  probe "P-RESET-DATA" "$PROBE_WORKING" "database" "#3637" \
     "an EHR written before the reset is gone after it"
   assert_eq "404" "$(http_code -u "$BASIC" "$API/ehr/$ehr_id")" \
     "GET /ehr/$ehr_id must find nothing on the reset database"
   probe_done
 
   # Step 4: the server's own reading of its configuration.
-  probe "P-RESET-CONFIG" "working" "compose" "#3637" \
+  probe "P-RESET-CONFIG" "$PROBE_WORKING" "compose" "#3637" \
     "the reset server runs the shipped configuration"
   local effective
   effective="$(dc exec -T ferroehr /usr/local/bin/ferroehr config check 2>&1)"
@@ -128,7 +128,7 @@ probes_decommission() {
     return
   fi
 
-  probe "P-ERASE-DRYRUN" "working" "image" "#3642" \
+  probe "P-ERASE-DRYRUN" "$PROBE_WORKING" "image" "#3642" \
     "without --confirm the erase is a dry run that names its confirmation and deletes nothing"
   out="$(dc exec -T ferroehr /usr/local/bin/ferroehr db erase 2>&1)" || status=$?
   assert_eq "1" "$status" "a dry run exits 1"
@@ -139,7 +139,7 @@ probes_decommission() {
   token="$(printf '%s\n' "$out" | sed -nE 's/^to erase, run: ferroehr db erase --confirm (.+)$/\1/p' | tr -d '\r')"
   probe_done
 
-  probe "P-ERASE-WRONG" "working" "image" "#3642" \
+  probe "P-ERASE-WRONG" "$PROBE_WORKING" "image" "#3642" \
     "a confirmation naming another instance refuses and deletes nothing"
   status=0
   dc exec -T ferroehr /usr/local/bin/ferroehr db erase --confirm not-this-instance >/dev/null 2>&1 || status=$?
@@ -149,7 +149,7 @@ probes_decommission() {
     "the EHR survives a refused erase"
   probe_done
 
-  probe "P-ERASE-CONFIRM" "working" "database" "#3642" \
+  probe "P-ERASE-CONFIRM" "$PROBE_WORKING" "database" "#3642" \
     "the confirmed erase removes the data, and the restarted server starts empty"
   if [[ -z "$token" ]]; then
     probe_fail "a confirmation token in the dry run's output" "none" "$out"

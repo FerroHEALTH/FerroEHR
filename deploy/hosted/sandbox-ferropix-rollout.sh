@@ -183,13 +183,14 @@ readonly NO_CLIENT_IMAGE="no-psql-client-image"
 # The pinned image is the psql client, and `docker run` would pull it, so
 # under --check the login runs only when the image is already on the box.
 ferropix_login() {
+  local password="$1" host="$2"
   app > "$WORK/login" <<EOF || true
 if [ $CHECK -eq 1 ] && ! docker image inspect $(printf '%q' "$DB_IMAGE") > /dev/null 2>&1; then
   echo $NO_CLIENT_IMAGE
   exit 0
 fi
-printf '%s' $(printf '%q' "$1") | docker run -i --rm --entrypoint sh $(printf '%q' "$DB_IMAGE") -c \
-  'PGPASSWORD="\$(cat)" psql -h ${DB_DIAL_HOST:-$2} -p $DB_PORT -U ferropix -d ferropix -At -F " " -c "SELECT current_user, current_database(), rolsuper FROM pg_roles WHERE rolname = current_user"'
+printf '%s' $(printf '%q' "$password") | docker run -i --rm --entrypoint sh $(printf '%q' "$DB_IMAGE") -c \
+  'PGPASSWORD="\$(cat)" psql -h ${DB_DIAL_HOST:-$host} -p $DB_PORT -U ferropix -d ferropix -At -F " " -c "SELECT current_user, current_database(), rolsuper FROM pg_roles WHERE rolname = current_user"'
 EOF
   cat "$WORK/login"
 }
@@ -877,10 +878,16 @@ EOF
 }
 
 # 0 when the image reference $1 a container records names the pin.
-runs_pin() { [[ "$1" == "$DB_IMAGE" || "$1" == "${DB_IMAGE%%:*}@${DB_IMAGE#*@}" ]]; }
+runs_pin() {
+  local image="$1"
+  [[ "$image" == "$DB_IMAGE" || "$image" == "${DB_IMAGE%%:*}@${DB_IMAGE#*@}" ]]
+}
 
 # The value of `$1=` in the box output $2.
-field() { sed -n "s/^$1=//p" <<<"$2" | tail -n 1; }
+field() {
+  local name="$1" output="$2"
+  sed -n "s/^$name=//p" <<<"$output" | tail -n 1
+}
 
 step6() {
   step 6 "DB box: PostgreSQL onto the pinned ferroehr-postgres image"

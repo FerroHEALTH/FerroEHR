@@ -106,7 +106,7 @@ probes_shipped_config_boots() {
 
   # #2159: validate.sh rendered and linted; nothing ever STARTED what it
   # rendered, and none of the shipped values files produced a bootable server.
-  probe "P-BOOT-01" "working" "compose" "#2159" \
+  probe "P-BOOT-01" "$PROBE_WORKING" "compose" "#2159" \
     "the quickstart compose file boots to a serving CDR"
   if wait_http "$CDR/ferroehr/rest/status" 90; then
     local status; status="$(curl -s "$CDR/ferroehr/rest/status")"
@@ -117,7 +117,7 @@ probes_shipped_config_boots() {
   fi
   probe_done
 
-  probe "P-BOOT-02" "working" "image" "-" \
+  probe "P-BOOT-02" "$PROBE_WORKING" "image" "-" \
     "the health family answers without authentication, statuses only"
   assert_eq "200" "$(http_code "$CDR/health/liveness")"
   assert_eq "200" "$(http_code "$CDR/health/readiness")"
@@ -134,7 +134,7 @@ probes_deployment_posture() {
   # and the two compatibility defaults. Nothing observed that a stack the
   # project ships reports any of it. Far end: the SERVER's own status documents
   # (/rest/status and the authenticated /management/status), not the configuration that was supposed to produce it.
-  probe "P-POSTURE-01" "working" "image" "#3226" \
+  probe "P-POSTURE-01" "$PROBE_WORKING" "image" "#3226" \
     "/rest/status carries the declared deployment posture"
   local status full_status
   status="$(curl -s "$CDR/ferroehr/rest/status")"
@@ -155,7 +155,7 @@ probes_deployment_posture() {
   # measured like the other three: its cluster is read from its own connection
   # (docs/law/ch/dpo/text-de.html Art. 4 Abs. 5 keeps the log "getrennt vom
   # System, in welchem die Personendaten bearbeitet werden").
-  probe "P-POSTURE-02" "working" "image" "#3398" \
+  probe "P-POSTURE-02" "$PROBE_WORKING" "image" "#3398" \
     "the co-located quickstart reports its separation gaps"
   assert_contains "$full_status" '"shared_credential"' \
     "one DSN for four domains is a shared credential"
@@ -168,7 +168,7 @@ probes_deployment_posture() {
   # The shipped defaults are deliberate and disclosed, which is only true if
   # the running server actually discloses them (GDPR Art. 25(2),
   # docs/law/eu/gdpr/text.html).
-  probe "P-POSTURE-03" "working" "image" "#3323" \
+  probe "P-POSTURE-03" "$PROBE_WORKING" "image" "#3323" \
     "the two compatibility defaults are reported as open gaps"
   assert_contains "$full_status" '"open_ehr_access_default"' \
     "the open EHR_ACCESS default is disclosed rather than silent"
@@ -193,7 +193,7 @@ probes_multimedia() {
 
   # #2169: the documented recipe exports FERROEHR__MULTIMEDIA__* in a shell.
   # Far end: the SERVER's own effective configuration, not the compose file.
-  probe "P-MM-ENV" "working" "compose" "#2169" \
+  probe "P-MM-ENV" "$PROBE_WORKING" "compose" "#2169" \
     "exported FERROEHR__MULTIMEDIA__* reaches the server"
   local env_doc; env_doc="$(curl -s -u "$BASIC" "$CDR/management/env")"
   assert_contains "$env_doc" '"endpoint":"http://seaweedfs:8333"' \
@@ -203,7 +203,7 @@ probes_multimedia() {
 
   # #2168: the gateway ships with no bucket, and an S3 write into a missing one
   # answers 403 (not 404), so it reads as a credentials problem.
-  probe "P-MM-BUCKET" "working" "compose" "#2168" \
+  probe "P-MM-BUCKET" "$PROBE_WORKING" "compose" "#2168" \
     "the bucket exists with no manual step"
   assert_eq "200" "$(http_code -I "$S3/openehr-multimedia")" \
     "seaweedfs-init must create the bucket once the gateway is healthy"
@@ -211,7 +211,7 @@ probes_multimedia() {
 
   # The far-end observation the issue asks for: the blob is IN THE BUCKET,
   # under its content hash, and the stored record references it.
-  probe "P-MM-OFFLOAD" "working" "server" "-" \
+  probe "P-MM-OFFLOAD" "$PROBE_WORKING" "server" "-" \
     "a large DV_MULTIMEDIA is externalized and the blob lands in the bucket"
   local uri
   PROBE_MEDIA_EHR="$(probe_commit_media_status)"
@@ -233,7 +233,7 @@ probes_multimedia() {
 
   # #2197: offload runs for every versioned object; re-inlining was wired to the
   # COMPOSITION read alone, so EHR_STATUS content had no way back.
-  probe "P-MM-EXPAND" "working" "server" "#2197" \
+  probe "P-MM-EXPAND" "$PROBE_WORKING" "server" "#2197" \
     "?expand_multimedia=true returns the bytes on an EHR_STATUS read"
   if [[ -n "${ehr:-}" ]]; then
     local expanded data digest
@@ -274,7 +274,7 @@ probes_multimedia_restart() {
   # fresh one, because the property under test is that THAT content survived —
   # a new commit after the restart would prove only that the feature still
   # works, which is a different and weaker claim.
-  probe "P-MM-RESTART" "working" "server" "-" \
+  probe "P-MM-RESTART" "$PROBE_WORKING" "server" "-" \
     "externalized content survives a server restart, byte-for-byte"
   if [[ -z "${PROBE_MEDIA_EHR:-}" ]] || [[ -z "${PROBE_MEDIA_KEY:-}" ]]; then
     probe_fail "a record committed earlier in this run" "none was recorded" \
@@ -319,7 +319,7 @@ probes_multimedia_off() {
   #
   # Re-ups the CDR with the switch off; everything else is unchanged, so a
   # difference here is the switch and nothing else.
-  probe "P-MM-OFF" "off" "server" "-" \
+  probe "P-MM-OFF" "$PROBE_OFF" "server" "-" \
     "with externalization off, a large DV_MULTIMEDIA is stored inline"
   FERROEHR__MULTIMEDIA__ENABLED=false compose_up ferroehr
   if ! wait_http "$CDR/health/readiness" 90; then
@@ -354,7 +354,7 @@ probes_multimedia_broken() {
   # The state least often tested, and where a system either fails loudly or
   # loses data quietly. With the store gone, a commit that must offload has to
   # be REFUSED, not half-stored.
-  probe "P-MM-BROKEN" "broken" "server" "-" \
+  probe "P-MM-BROKEN" "$PROBE_BROKEN" "server" "-" \
     "with the object store stopped, a commit that must offload is refused"
   dc stop seaweedfs >/dev/null 2>&1
   local code; code="$(probe_commit_media_status_code)"
@@ -373,7 +373,7 @@ probes_health_broken() {
 
   # Readiness genuinely going unready. A probe that only ever returns UP is
   # worse than none, and this is the shape that keeps a dead pod in rotation.
-  probe "P-HEALTH-BROKEN" "broken" "server" "-" \
+  probe "P-HEALTH-BROKEN" "$PROBE_BROKEN" "server" "-" \
     "database stopped: readiness 503, liveness still 200, no restart"
   dc stop ferroehr-postgres >/dev/null 2>&1
   if wait_status "$CDR/health/readiness" "503" 30; then
@@ -404,7 +404,7 @@ probes_management() {
   #
   # A guard that applied the most permissive configured level to every route —
   # or the strictest — passes a one-endpoint-at-a-time test and fails here.
-  probe "P-MGMT-LEVELS" "working" "server" "#2177" \
+  probe "P-MGMT-LEVELS" "$PROBE_WORKING" "server" "#2177" \
     "each management endpoint answers at its own level, anonymous and authenticated"
   assert_eq "200" "$(http_code "$CDR/management/prometheus")" \
     "a public endpoint is served OUTSIDE authentication"
@@ -420,7 +420,7 @@ probes_management() {
   # An endpoint that names no level is not mounted — 404, not 401. Its absence
   # is not a credential problem, and there is no global default that could open
   # it by accident.
-  probe "P-MGMT-OFF" "off" "server" "#2177" \
+  probe "P-MGMT-OFF" "$PROBE_OFF" "server" "#2177" \
     "an endpoint naming no level is not mounted, even for an admin"
   assert_eq "404" "$(http_code -u "$BASIC" "$CDR/management/flamegraph")" \
     "an unnamed endpoint must answer 404 rather than fall back to a server default"
@@ -454,7 +454,7 @@ services:
     profiles: [probe]
 YAML
 
-  probe "P-MGMT-PORT" "working" "server" "#2162" \
+  probe "P-MGMT-PORT" "$PROBE_WORKING" "server" "#2162" \
     "with management.port set, the surface is served from its own listener"
   dc -f docker-compose.yml -f "$overlay" up -d ferroehr >/dev/null 2>&1
   if ! wait_http "$CDR/health/readiness" 120; then
@@ -480,7 +480,7 @@ YAML
   probe_done
 
   # The half that makes the option worth having.
-  probe "P-MGMT-PORT-MOVED" "broken" "server" "#2162" \
+  probe "P-MGMT-PORT-MOVED" "$PROBE_BROKEN" "server" "#2162" \
     "the surface is NO LONGER on the API listener once it has its own port"
   local on_api
   on_api="$(http_code "$CDR/management/prometheus")"
@@ -597,7 +597,7 @@ probes_domain_roles() {
   # when the migrator holds CREATEROLE, and skip them with a NOTICE otherwise,
   # which is silent. Far end: the DATABASE's own catalogue, not the compose
   # file that was supposed to arrange it.
-  probe "P-ROLE-EXIST" "working" "compose" "#3179" \
+  probe "P-ROLE-EXIST" "$PROBE_WORKING" "compose" "#3179" \
     "every domain role exists in the database the stack booted against"
   local roles role
   roles="$(dc exec -T ferroehr-postgres psql -qtAX -U ferroehr -d ferroehr -c \
@@ -609,7 +609,7 @@ probes_domain_roles() {
 
   # A role that could inherit the other domain's grants would make the boundary
   # a naming convention (PostgreSQL 18, CREATE ROLE).
-  probe "P-ROLE-NOINHERIT" "working" "compose" "#3179" \
+  probe "P-ROLE-NOINHERIT" "$PROBE_WORKING" "compose" "#3179" \
     "each domain role is NOINHERIT"
   local inheriting
   inheriting="$(dc exec -T ferroehr-postgres psql -qtAX -U ferroehr -d ferroehr -c \
@@ -630,7 +630,7 @@ probes_domain_roles() {
   # schemas, which is the same barrier table the server enforces at boot. The
   # roles are taken through `pg_roles` so an absent role is skipped rather than
   # raising — P-ROLE-EXIST above is what keeps that from turning into silence.
-  probe "P-ROLE-BOUNDARY" "working" "database" "#3179" \
+  probe "P-ROLE-BOUNDARY" "$PROBE_WORKING" "database" "#3179" \
     "no domain's roles can read another domain's relations"
   local record name others other_record breach
   for record in "${PROBE_DOMAINS[@]}"; do
@@ -660,7 +660,7 @@ probes_domain_roles() {
   # And the honest half: this stack runs ONE login credential, so the schema
   # separation is demonstrated and the credential separation is not. Recorded
   # as a measurement rather than left to the reader to assume either way.
-  probe "P-ROLE-ONE-CREDENTIAL" "working" "compose" "#3179" \
+  probe "P-ROLE-ONE-CREDENTIAL" "$PROBE_WORKING" "compose" "#3179" \
     "the compose stack is single-credential by design, and says so"
   local party_dsn
   party_dsn="$(curl -s -u "$BASIC" "$CDR/management/env" | grep -o '"party":{[^}]*}' || true)"
@@ -721,7 +721,7 @@ probes_backup_restore() {
   local dumps="$PROBE_TMP/backup"
   export_backup_dirs "$dumps"
 
-  probe "P-BACKUP-SPLIT" "working" "compose" "#3157" \
+  probe "P-BACKUP-SPLIT" "$PROBE_WORKING" "compose" "#3157" \
     "the backup profile writes one dump per pseudonymisation domain"
   # The recipe's own output is KEPT: a dump job that fails is the finding, and
   # discarding its stderr would report the missing file without the reason.
@@ -784,7 +784,7 @@ probes_backup_restore() {
   # apart (GDPR Art. 4(5)), and it would do so silently. Checked PAIRWISE, so
   # the third domain is covered against both of the others rather than only
   # against the one it was added beside.
-  probe "P-BACKUP-DISJOINT" "working" "compose" "#3157" \
+  probe "P-BACKUP-DISJOINT" "$PROBE_WORKING" "compose" "#3157" \
     "no dump carries another domain's relations"
   local -a tocs=()
   local i j marker
@@ -813,7 +813,7 @@ probes_backup_restore() {
   # The restore, judged by the server rather than by the restore's own exit
   # code: `ferroehr db verify` is the boot self-check (the migrations this
   # build carries, then the domain-isolation gate over the runtime roles).
-  probe "P-BACKUP-RESTORE" "working" "database" "#3157" \
+  probe "P-BACKUP-RESTORE" "$PROBE_WORKING" "database" "#3157" \
     "a database restored from every domain's dump passes the boot self-check"
   local restored=ferroehr_restored
   # The database is created by the BOOTSTRAP superuser and owned by the
@@ -878,7 +878,7 @@ probes_backup_restore() {
   # The self-check has to REFUSE a restore whose grants came back wrong. A
   # runbook that re-applies access with a blanket GRANT is the realistic way
   # that happens.
-  probe "P-BACKUP-GRANTS-REFUSED" "broken" "database" "#3157" \
+  probe "P-BACKUP-GRANTS-REFUSED" "$PROBE_BROKEN" "database" "#3157" \
     "the self-check refuses a restore whose grants cross the domain boundary"
   dc exec -T ferroehr-postgres psql -qtAX -U "${PG_INIT_USER:-ferroehr}" -d "$restored" -c \
     "GRANT USAGE ON SCHEMA party TO ferroehr_clinical_reader;

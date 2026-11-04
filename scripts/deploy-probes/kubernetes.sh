@@ -361,7 +361,7 @@ probes_k8s_boot() {
   # mode that costs an afternoon is a pod that starts, crash-loops, and explains
   # itself only in a log nobody has tailed yet. So the chart refuses at RENDER —
   # and the refusal has to name the ways out, or it is just a different wall.
-  probe "P-K8S-AUTH-GUARD" "broken" "chart" "-" \
+  probe "P-K8S-AUTH-GUARD" "$PROBE_BROKEN" "chart" "-" \
     "a stock install is refused at render, naming every configured way forward"
   local guard
   guard="$(helm template "$K8S_RELEASE" deploy/helm/ferroehr -n "$K8S_NS" \
@@ -380,7 +380,7 @@ probes_k8s_boot() {
   # #2159's class on this platform: our own values files rendered and linted for
   # a whole release cycle while none of them produced a bootable configuration.
   # Rendering is not installing, and only one of the two is what an operator does.
-  probe "P-K8S-BOOT" "working" "chart" "#2159" \
+  probe "P-K8S-BOOT" "$PROBE_WORKING" "chart" "#2159" \
     "the chart's default values install and the Deployment rolls out"
   if ! k8s_install; then
     probe_fail "a successful helm upgrade --install" "$K8S_HELM_REFUSED" \
@@ -399,7 +399,7 @@ probes_k8s_boot() {
 
   # The proof an operator cares about: not that pods are Running, but that the
   # deployment answers openEHR. Everything below this needs the port-forward.
-  probe "P-K8S-SERVE" "working" "server" "-" \
+  probe "P-K8S-SERVE" "$PROBE_WORKING" "server" "-" \
     "the deployed CDR serves a real openEHR write and read"
   if ! k8s_pf_start; then
     probe_fail "a reachable Service" "port-forward never answered /health/liveness"
@@ -454,7 +454,7 @@ probes_k8s_runtime_posture() {
     return 0
   fi
 
-  probe "P-K8S-RUNTIME" "working" "chart" "-" \
+  probe "P-K8S-RUNTIME" "$PROBE_WORKING" "chart" "-" \
     "the runtime applied non-root, no-new-privileges, no capabilities, read-only root, seccomp"
   local cid spec
   cid="$(docker exec "$node" crictl ps --name ferroehr -q 2>/dev/null | sed -n 1p)"
@@ -472,7 +472,7 @@ probes_k8s_runtime_posture() {
   # and `/etc/ferroehr-secrets` holding key material must both be read-only:
   # a writable configuration mount is a way to change the server's behaviour
   # from inside a compromised container.
-  probe "P-K8S-MOUNTS" "working" "chart" "-" \
+  probe "P-K8S-MOUNTS" "$PROBE_WORKING" "chart" "-" \
     "configuration and secret mounts are read-only in the runtime spec"
   local writable
   writable="$(printf '%s' "$spec" | jq -r '
@@ -492,7 +492,7 @@ probes_k8s_runtime_posture() {
 probes_k8s_psa() {
   bold "Pod Security admission (the API server judges, not us)"
 
-  probe "P-K8S-PSA" "working" "chart" "-" \
+  probe "P-K8S-PSA" "$PROBE_WORKING" "chart" "-" \
     "the chart's pods are admitted under the Restricted profile"
   kubectl label namespace "$K8S_NS" \
     pod-security.kubernetes.io/enforce=restricted --overwrite >/dev/null 2>&1
@@ -508,7 +508,7 @@ probes_k8s_psa() {
   # ignored, the probe above would pass on a cluster enforcing nothing. So a pod
   # that MUST be refused is offered, and its refusal is what proves the judge
   # was awake.
-  probe "P-K8S-PSA-ARMED" "broken" "compose" "-" \
+  probe "P-K8S-PSA-ARMED" "$PROBE_BROKEN" "compose" "-" \
     "a privileged pod is REFUSED, proving enforcement is really on"
   local out
   out="$(kc run probe-privileged --image=busybox:1.37 --restart=Never \
@@ -530,7 +530,7 @@ probes_k8s_psa() {
 probes_k8s_service_links() {
   bold "service-link injection (the trap that stops this server booting)"
 
-  probe "P-K8S-SVCLINKS" "working" "chart" "-" \
+  probe "P-K8S-SVCLINKS" "$PROBE_WORKING" "chart" "-" \
     "a new ferroehr-named Service does not poison the pod's environment"
   kc create service clusterip ferroehr-probe-link --tcp=8080:8080 >/dev/null 2>&1 || true
   kc rollout restart "deploy/$K8S_RELEASE" >/dev/null 2>&1
@@ -549,7 +549,7 @@ probes_k8s_secrets() {
   # A DSN is a credential. It must reach the process as a PATH, never as a value
   # in the pod spec — `kubectl describe pod` and every controller that logs a
   # spec would otherwise carry it.
-  probe "P-K8S-SECRET-ENV" "working" "chart" "-" \
+  probe "P-K8S-SECRET-ENV" "$PROBE_WORKING" "chart" "-" \
     "no credential value appears in the pod environment or the ConfigMap"
   local env_dump cm_dump
   env_dump="$(kc get pod "$(k8s_pod)" \
@@ -568,7 +568,7 @@ probes_k8s_secrets() {
   # Mounted and READ are different claims, and only one of them is worth
   # anything. Breaking the path is the only way to tell them apart: a secret
   # that is projected and never opened looks identical from outside.
-  probe "P-K8S-SECRET-READ" "broken" "chart" "-" \
+  probe "P-K8S-SECRET-READ" "$PROBE_BROKEN" "chart" "-" \
     "a *_file key pointing at a missing path makes the boot REFUSE, naming the file"
   k8s_install --set config.signing.enabled=true \
               --set config.signing.mode=pgp \
@@ -595,7 +595,7 @@ probes_k8s_secrets() {
 probes_k8s_readiness() {
   bold "readiness under a broken dependency (the state least often tested)"
 
-  probe "P-K8S-READY-GATES" "broken" "server" "-" \
+  probe "P-K8S-READY-GATES" "$PROBE_BROKEN" "server" "-" \
     "with the database gone, readiness fails, the pod leaves the Service, and liveness does not restart it"
   local pod restarts_before
   pod="$(k8s_pod)"
@@ -667,7 +667,7 @@ probes_k8s_viewer() {
 
   # The OFF state, on the release the probes above have been measuring: the gate
   # must render nothing at all, not merely a scaled-down viewer.
-  probe "P-K8S-UI-OFF" "off" "chart" "-" \
+  probe "P-K8S-UI-OFF" "$PROBE_OFF" "chart" "-" \
     "the shipped default renders no viewer object at all"
   local off
   off="$(kc get deploy,svc,serviceaccount,networkpolicy -l "$K8S_UI_LABEL" \
@@ -680,7 +680,7 @@ probes_k8s_viewer() {
   # ingress while naming no peer must be REFUSED at render, because the
   # alternative is a NetworkPolicy that reads as default-deny and admits every
   # source to a login page.
-  probe "P-K8S-UI-NETPOL-GUARD" "broken" "chart" "-" \
+  probe "P-K8S-UI-NETPOL-GUARD" "$PROBE_BROKEN" "chart" "-" \
     "a viewer with ingressAllowAll=false and no ingressFrom is refused at render"
   local guard
   guard="$(helm template "$K8S_RELEASE" deploy/helm/ferroehr -n "$K8S_NS" \
@@ -691,7 +691,7 @@ probes_k8s_viewer() {
     "a refusal that does not name the key that narrows the sources is just a wall"
   probe_done
 
-  probe "P-K8S-UI-BOOT" "working" "chart" "-" \
+  probe "P-K8S-UI-BOOT" "$PROBE_WORKING" "chart" "-" \
     "viewer.enabled installs the viewer workload and it rolls out"
   if ! k8s_ui_install; then
     probe_fail "a successful helm upgrade --install with the viewer on" \
@@ -731,7 +731,7 @@ probes_k8s_ui_runtime() {
       "this cluster node is not a local container, so its runtime spec is not readable from here"
     return 0
   fi
-  probe "P-K8S-UI-RUNTIME" "working" "chart" "-" \
+  probe "P-K8S-UI-RUNTIME" "$PROBE_WORKING" "chart" "-" \
     "the viewer container runs under the same hardened posture as the server"
   cid="$(docker exec "$node" crictl ps --name viewer -q 2>/dev/null | sed -n 1p)"
   if [[ -z "$cid" ]]; then
@@ -747,7 +747,7 @@ probes_k8s_ui_runtime() {
 # says nothing about the viewer: the profile is judged per pod, and the viewer
 # carries its own security context rather than inheriting the server's.
 probes_k8s_ui_psa() {
-  probe "P-K8S-UI-PSA" "working" "chart" "-" \
+  probe "P-K8S-UI-PSA" "$PROBE_WORKING" "chart" "-" \
     "the viewer pod is admitted under the Restricted profile"
   kubectl label namespace "$K8S_NS" \
     pod-security.kubernetes.io/enforce=restricted --overwrite >/dev/null 2>&1
@@ -764,7 +764,7 @@ probes_k8s_ui_psa() {
 }
 
 probes_k8s_ui_serve() {
-  probe "P-K8S-UI-SERVE" "working" "server" "-" \
+  probe "P-K8S-UI-SERVE" "$PROBE_WORKING" "server" "-" \
     "the viewer serves its login page through its Service, to a client inside the cluster"
   local page
   page="$(k8s_ui_get /sign-in)"
@@ -797,7 +797,7 @@ viewer:
             ${K8S_UI_CLIENT_LABEL%=*}: ${K8S_UI_CLIENT_LABEL#*=}
 YAML
 
-  probe "P-K8S-UI-NETPOL-NARROW" "working" "chart" "-" \
+  probe "P-K8S-UI-NETPOL-NARROW" "$PROBE_WORKING" "chart" "-" \
     "the narrowed viewer ingress installs, is stored as written, and still admits the peer it names"
   if ! k8s_ui_install -f "$PROBE_TMP/viewer-narrow.yaml"; then
     probe_fail "an install with ingressAllowAll=false and a non-empty ingressFrom" \
@@ -903,7 +903,7 @@ probes_k8s_terminology() {
   # The OFF state, on the release the probes above have been measuring. The
   # ConfigMap is named separately: a seed left behind by a disabled workload is
   # a mount nobody is watching.
-  probe "P-K8S-TERM-OFF" "off" "chart" "#3328" \
+  probe "P-K8S-TERM-OFF" "$PROBE_OFF" "chart" "#3328" \
     "the shipped default renders no terminology object at all"
   local off
   off="$(kc get deploy,svc,configmap,networkpolicy,serviceaccount -l "$K8S_TERM_LABEL" \
@@ -912,7 +912,7 @@ probes_k8s_terminology() {
     "terminology.enabled defaults to false, so anything found here means the gate leaks"
   probe_done
 
-  probe "P-K8S-TERM-BOOT" "working" "chart" "#3328" \
+  probe "P-K8S-TERM-BOOT" "$PROBE_WORKING" "chart" "#3328" \
     "terminology.enabled installs the FerroTERM workload and it rolls out"
   if ! k8s_term_install; then
     probe_fail "a successful helm upgrade --install with terminology on" \
@@ -965,7 +965,7 @@ probes_k8s_term_runtime() {
       "this cluster node is not a local container, so its runtime spec is not readable from here"
     return 0
   fi
-  probe "P-K8S-TERM-RUNTIME" "working" "chart" "#3328" \
+  probe "P-K8S-TERM-RUNTIME" "$PROBE_WORKING" "chart" "#3328" \
     "the terminology container runs under the same hardened posture as the server"
   cid="$(docker exec "$node" crictl ps --name terminology -q 2>/dev/null | sed -n 1p)"
   if [[ -z "$cid" ]]; then
@@ -983,7 +983,7 @@ probes_k8s_term_runtime() {
 # and "the process is serving what is in it" are different claims, and only the
 # second is worth a row.
 probes_k8s_term_seed() {
-  probe "P-K8S-TERM-SEED" "working" "server" "#3328" \
+  probe "P-K8S-TERM-SEED" "$PROBE_WORKING" "server" "#3328" \
     "the shaped seed reaches the process from the ConfigMap volume and is served"
   if ! k8s_term_pf_start; then
     probe_fail "a reachable terminology Service" "port-forward never answered /health"
@@ -1015,7 +1015,7 @@ probes_k8s_term_seed() {
 # cannot pass vacuously on a cluster enforcing nothing: an unenforcing CNI turns
 # both calls below into exit=0 and fails the row.
 probes_k8s_term_netpol() {
-  probe "P-K8S-TERM-NETPOL" "working" "chart" "#3328" \
+  probe "P-K8S-TERM-NETPOL" "$PROBE_WORKING" "chart" "#3328" \
     "the terminology port refuses a pod outside the CDR's selector, in this namespace and in another, while the CDR itself is admitted"
   local ip
   ip="$(kc get pod -l "$K8S_TERM_LABEL" -o jsonpath='{.items[0].status.podIP}' 2>/dev/null)"
@@ -1045,7 +1045,7 @@ probes_k8s_term_netpol() {
 # set excludes is refused — which is only answerable if the binding was resolved
 # through FerroTERM.
 probes_k8s_term_resolve() {
-  probe "P-K8S-TERM-RESOLVE" "working" "server" "#3328" \
+  probe "P-K8S-TERM-RESOLVE" "$PROBE_WORKING" "server" "#3328" \
     "the CDR resolves a value-set binding through the terminology Service: a member commits, a non-member is refused"
   if ! k8s_term_template; then
     probe_fail "the binding template accepted by the deployed CDR" \
@@ -1076,7 +1076,7 @@ probes_k8s_term_index() {
     return 0
   fi
 
-  probe "P-K8S-TERM-INDEX-STRATEGY" "working" "chart" "#3328" \
+  probe "P-K8S-TERM-INDEX-STRATEGY" "$PROBE_WORKING" "chart" "#3328" \
     "a named index claim makes the Deployment Recreate, so a ReadWriteOnce volume cannot wedge the rollout"
   if ! k8s_term_install --set "terminology.index.persistentVolumeClaim=$K8S_TERM_INDEX_CLAIM"; then
     probe_fail "an install with an index claim named" "$K8S_HELM_REFUSED"
@@ -1097,7 +1097,7 @@ probes_k8s_term_index() {
     return 0
   fi
 
-  probe "P-K8S-TERM-INDEX-MOUNT" "working" "chart" "#3328" \
+  probe "P-K8S-TERM-INDEX-MOUNT" "$PROBE_WORKING" "chart" "#3328" \
     "the index arrives read-only under the requested fsGroup, and what the kubelet did to its ownership is recorded"
   local pod fsg fspol
   pod="$(kc get pod -l "$K8S_TERM_LABEL" -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)"
@@ -1125,7 +1125,7 @@ probes_k8s_term_index() {
   # The ordering question, answered from the log rather than from a stopwatch:
   # if the line reporting the listener follows the line reporting the index,
   # /health cannot have answered before the index was open.
-  probe "P-K8S-TERM-INDEX-READY" "working" "server" "#3328" \
+  probe "P-K8S-TERM-INDEX-READY" "$PROBE_WORKING" "server" "#3328" \
     "the health route starts answering only after the mounted index has finished opening"
   local logs idx_line listen_line
   logs="$(kc logs -l "$K8S_TERM_LABEL" --tail=200 --all-containers 2>/dev/null)"
@@ -1268,7 +1268,7 @@ k8s_bridge_get() {
 probes_k8s_bridge() {
   bold "the bridge workload (bridge.enabled)"
 
-  probe "P-K8S-BRIDGE-OFF" "off" "chart" "#3713" \
+  probe "P-K8S-BRIDGE-OFF" "$PROBE_OFF" "chart" "#3713" \
     "the shipped default renders no bridge object at all"
   local off
   off="$(kc get deploy,svc,configmap,networkpolicy,serviceaccount -l "$K8S_BRIDGE_LABEL" \
@@ -1279,7 +1279,7 @@ probes_k8s_bridge() {
 
   # The BROKEN states, at render: no peer named, and no credential named. Both
   # must be refusals that say which key fixes them.
-  probe "P-K8S-BRIDGE-GUARD" "broken" "chart" "#3713" \
+  probe "P-K8S-BRIDGE-GUARD" "$PROBE_BROKEN" "chart" "#3713" \
     "bridge.enabled with no ingressFrom peer, or with no CDR credential Secret, is refused at render"
   local guard
   guard="$(helm template "$K8S_RELEASE" deploy/helm/ferroehr -n "$K8S_NS" \
@@ -1295,7 +1295,7 @@ probes_k8s_bridge() {
     "a bridge with no credential cannot reach a CDR that requires one, and the refusal must say where it goes"
   probe_done
 
-  probe "P-K8S-BRIDGE-BOOT" "working" "chart" "#3713" \
+  probe "P-K8S-BRIDGE-BOOT" "$PROBE_WORKING" "chart" "#3713" \
     "bridge.enabled installs FerroBRIDGE beside the CDR and FerroTERM, and it rolls out"
   k8s_bridge_values
   k8s_pf_stop
@@ -1360,7 +1360,7 @@ probes_k8s_bridge_runtime() {
       "this cluster node is not a local container, so its runtime spec is not readable from here"
     return 0
   fi
-  probe "P-K8S-BRIDGE-RUNTIME" "working" "chart" "#3713" \
+  probe "P-K8S-BRIDGE-RUNTIME" "$PROBE_WORKING" "chart" "#3713" \
     "the bridge container runs under the same hardened posture as the server"
   cid="$(docker exec "$node" crictl ps --name bridge -q 2>/dev/null | sed -n 1p)"
   if [[ -z "$cid" ]]; then
@@ -1373,7 +1373,7 @@ probes_k8s_bridge_runtime() {
 }
 
 probes_k8s_bridge_psa() {
-  probe "P-K8S-BRIDGE-PSA" "working" "chart" "#3713" \
+  probe "P-K8S-BRIDGE-PSA" "$PROBE_WORKING" "chart" "#3713" \
     "the bridge pod is admitted under the Restricted profile"
   kubectl label namespace "$K8S_NS" \
     pod-security.kubernetes.io/enforce=restricted --overwrite >/dev/null 2>&1
@@ -1395,7 +1395,7 @@ probes_k8s_bridge_psa() {
 # what the per-key mounts are for: a whole-ConfigMap volume would have loaded
 # each file three times and refused the start.
 probes_k8s_bridge_cred() {
-  probe "P-K8S-BRIDGE-CRED" "working" "server" "#3713" \
+  probe "P-K8S-BRIDGE-CRED" "$PROBE_WORKING" "server" "#3713" \
     "the bridge authenticates to the CDR with the Secret's credential and compiles the mounted mapping set"
   local logs
   logs="$(kc logs -l "$K8S_BRIDGE_LABEL" --tail=200 --all-containers 2>/dev/null)"
@@ -1412,7 +1412,7 @@ probes_k8s_bridge_cred() {
 # Service, and the readiness body it gets back is FerroBRIDGE's own report that
 # the CDR and FerroTERM answered it, so the egress rules carried those calls.
 probes_k8s_bridge_serve() {
-  probe "P-K8S-BRIDGE-SERVE" "working" "server" "#3713" \
+  probe "P-K8S-BRIDGE-SERVE" "$PROBE_WORKING" "server" "#3713" \
     "an admitted peer reaches FerroBRIDGE's Service, and FerroBRIDGE reaches the CDR and FerroTERM"
   local body
   body="$(k8s_bridge_get /health/readiness)"
@@ -1429,7 +1429,7 @@ probes_k8s_bridge_serve() {
 # both calls into exit=0 and fails the row, which is the honest outcome: the
 # policy is the only thing standing in for authentication here.
 probes_k8s_bridge_netpol() {
-  probe "P-K8S-BRIDGE-NETPOL" "working" "chart" "#3713" \
+  probe "P-K8S-BRIDGE-NETPOL" "$PROBE_WORKING" "chart" "#3713" \
     "the bridge port refuses a pod outside ingressFrom, in this namespace and in another"
   local ip
   ip="$(kc get pod -l "$K8S_BRIDGE_LABEL" -o jsonpath='{.items[0].status.podIP}' 2>/dev/null)"
@@ -1469,7 +1469,7 @@ probes_k8s_original_state() {
     return
   fi
 
-  probe "P-K8S-RESET-UNINSTALL" "working" "chart" "#3677" \
+  probe "P-K8S-RESET-UNINSTALL" "$PROBE_WORKING" "chart" "#3677" \
     "helm uninstall removes the release and keeps the DSN Secret the operator created"
   helm uninstall "$K8S_RELEASE" -n "$K8S_NS" --wait >/dev/null 2>&1 \
     || probe_fail "a clean helm uninstall" "helm uninstall failed"
@@ -1480,7 +1480,7 @@ probes_k8s_original_state() {
       "the book's step 1 says the Secrets you created survive the uninstall"
   probe_done
 
-  probe "P-K8S-RESET-DATABASE" "working" "database" "#3677" \
+  probe "P-K8S-RESET-DATABASE" "$PROBE_WORKING" "database" "#3677" \
     "the database is dropped and recreated as the book's step 2 writes it"
   out="$(docker compose -p "$COMPOSE_PROJECT" exec -T ferroehr-postgres \
     psql -v ON_ERROR_STOP=1 -U "$superuser" -d postgres \
@@ -1489,7 +1489,7 @@ probes_k8s_original_state() {
     || probe_fail "DROP DATABASE … WITH (FORCE) and CREATE DATABASE succeed" "$out"
   probe_done
 
-  probe "P-K8S-RESET-REINSTALL" "working" "chart" "#3677" \
+  probe "P-K8S-RESET-REINSTALL" "$PROBE_WORKING" "chart" "#3677" \
     "a reinstall with the minimal values migrates the empty database and serves none of the old data"
   if k8s_install && k8s_rollout 240s && k8s_pf_start; then
     assert_eq "404" "$(curl -s -u "$K8S_BASIC" -o /dev/null -w "$K8S_HTTP_CODE" "$K8S_API/ehr/$ehr")" \

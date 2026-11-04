@@ -34,14 +34,16 @@ die() {
 
 # unpack PACKAGE DIR: the package's files under DIR, or a refusal naming it.
 unpack() {
-  mkdir -p "$2"
-  tar -xzf "$1" -C "$2" --no-same-owner --no-same-permissions 2>/dev/null \
-    || die "$1 is not a readable chart package"
+  local package="$1" dir="$2"
+  mkdir -p "$dir"
+  tar -xzf "$package" -C "$dir" --no-same-owner --no-same-permissions 2>/dev/null \
+    || die "$package is not a readable chart package"
 }
 
 # files DIR: every regular file and symbolic link under DIR, relative, sorted.
 files() {
-  (cd "$1" && find . \( -type f -o -type l \) -print | LC_ALL=C sort)
+  local dir="$1"
+  (cd "$dir" && find . \( -type f -o -type l \) -print | LC_ALL=C sort)
 }
 
 # compare PUBLISHED PACKAGED, in a subshell of its own, so a refusal ends the

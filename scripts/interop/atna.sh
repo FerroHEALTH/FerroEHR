@@ -42,6 +42,7 @@ readonly SYSLOG_IMAGE="docker.io/balabit/syslog-ng:4.11.0@sha256:c652345a1438437
 readonly BALP_VERSION=1.1.4
 readonly OPERATION_SYSTEM="urn:openehr:its-rest:operation"
 readonly USER_PASS="ferroehr:ferroehr"
+readonly ACCEPT_FHIR="Accept: application/fhir+json"
 
 usage() {
   echo "usage: $0 <image> <postgres-image> <out-dir>" >&2
@@ -180,8 +181,14 @@ end="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 sleep 1
 window="date=ge${start}&date=le${end}"
 
-ours_total() { curl -fsS -u "$USER_PASS" -H 'Accept: application/fhir+json' "$base/fhir/r4/AuditEvent?${window}${1:+&$1}&_count=0" | jq -r .total; }
-hapi_total() { curl -fsS -H 'Accept: application/fhir+json' "$hapi/AuditEvent?${window}${1:+&$1}&_summary=count" | jq -r .total; }
+ours_total() {
+  local filter="$1"
+  curl -fsS -u "$USER_PASS" -H "$ACCEPT_FHIR" "$base/fhir/r4/AuditEvent?${window}${filter:+&$filter}&_count=0" | jq -r .total
+}
+hapi_total() {
+  local filter="$1"
+  curl -fsS -H "$ACCEPT_FHIR" "$hapi/AuditEvent?${window}${filter:+&$filter}&_summary=count" | jq -r .total
+}
 
 echo "==> waiting for the FHIR feed to deliver the window's records"
 want="$(ours_total "")"
@@ -199,14 +206,14 @@ fail() { failures+=("$1"); echo "  DISAGREEMENT: $1"; }
 # ── ITI-20, FHIR feed: accepted, and valid by HAPI's validator ───────────────
 echo "==> ITI-20 FHIR feed: $want records in the window, $got delivered to HAPI"
 [[ "$got" == "$want" ]] || fail "the FHIR feed delivered $got of the window's $want records to HAPI"
-curl -fsS -H 'Accept: application/fhir+json' "$hapi/AuditEvent?${window}&_count=1000" >"$out/validation/delivered.json"
+curl -fsS -H "$ACCEPT_FHIR" "$hapi/AuditEvent?${window}&_count=1000" >"$out/validation/delivered.json"
 invalid=0
 while IFS= read -r event; do
   id="$(jq -r .id <<<"$event")"
   profile="$(jq -r '.meta.profile[0] // empty' <<<"$event")"
   query=""
   [[ -n "$profile" ]] && query="?profile=$(jq -rn --arg p "$profile" '$p|@uri')"
-  curl -sS -H 'Content-Type: application/fhir+json' -H 'Accept: application/fhir+json' \
+  curl -sS -H 'Content-Type: application/fhir+json' -H "$ACCEPT_FHIR" \
     -X POST --data "$event" "$hapi/AuditEvent/\$validate${query}" >"$out/validation/$id.json"
   errors="$(jq '[.issue[]? | select(.severity == "error" or .severity == "fatal")] | length' "$out/validation/$id.json")"
   if [[ "$errors" != 0 ]]; then
@@ -256,14 +263,17 @@ searches=(
   "entity-type=http://terminology.hl7.org/CodeSystem/audit-entity-type|2"
 )
 # key FILE: each record of a searchset as recorded|action|subtypes, sorted.
-key() { jq -r '[.entry[]?.resource | "\(.recorded)|\(.action)|\([.subtype[]? | "\(.system)|\(.code)"] | sort | join(","))"] | sort[]' "$1"; }
+key() {
+  local file="$1"
+  jq -r '[.entry[]?.resource | "\(.recorded)|\(.action)|\([.subtype[]? | "\(.system)|\(.code)"] | sort | join(","))"] | sort[]' "$file"
+}
 i=0
 for q in "${searches[@]}"; do
   i=$((i + 1))
   enc="$(jq -rn --arg q "$q" '$q | sub("\\|"; "%7C")')"
-  curl -fsS -u "$USER_PASS" -H 'Accept: application/fhir+json' \
+  curl -fsS -u "$USER_PASS" -H "$ACCEPT_FHIR" \
     "$base/fhir/r4/AuditEvent?${window}${enc:+&$enc}&_count=1000" >"$out/searches/$i-ferroehr.json"
-  curl -fsS -H 'Accept: application/fhir+json' \
+  curl -fsS -H "$ACCEPT_FHIR" \
     "$hapi/AuditEvent?${window}${enc:+&$enc}&_count=1000" >"$out/searches/$i-hapi.json"
   ours="$(key "$out/searches/$i-ferroehr.json")"
   theirs="$(key "$out/searches/$i-hapi.json")"

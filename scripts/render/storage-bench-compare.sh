@@ -318,6 +318,12 @@ $b[0].storage as $base | $m[0].storage as $meas |
 | "\($verdict[0])\t| \($label) | \($shown[0]) | \($shown[1]) | \($d|pc) | \($verdict[1]) |"
 '
 
+# class_of <record.json>: the bench class the record was measured on.
+class_of() {
+  local record="$1"
+  jq -r '.bench_class' "$record"
+}
+
 # One line naming a record: what it measured, where, and when.
 # measured_at <record.json>: when the record was measured.
 measured_at() {
@@ -380,8 +386,8 @@ compare() {
   local generation measured_class baseline_class compare_flag rows regressed=0 grew=0
 
   generation="$(jq -r '.schema_generation' "$measured")"
-  measured_class="$(jq -r '.bench_class' "$measured")"
-  baseline_class="$(jq -r '.bench_class' "$baseline")"
+  measured_class="$(class_of "$measured")"
+  baseline_class="$(class_of "$baseline")"
   compare_flag=true
   [[ "$measured_class" == "$baseline_class" ]] || compare_flag=false
 
@@ -493,6 +499,7 @@ compare_ab() {
 
   # Both programs read the rounds the same way, so they run over one input.
   ab_jq() {
+    local program="$1"
     jq -r -n \
       --slurpfile b <(jq -s '.' "${base[@]}") \
       --slurpfile m <(jq -s '.' "${cand[@]}") \
@@ -500,7 +507,7 @@ compare_ab() {
       --argjson page_tolerance "$page_tolerance" \
       --argjson page_floor "$PAGE_FLOOR" \
       --argjson compare "$compare_flag" \
-      "$AB_DEFS_JQ | $1"
+      "$AB_DEFS_JQ | $program"
   }
 
   emit "## Storage benchmark, baseline against candidate on one runner" ""
@@ -533,6 +540,10 @@ compare_ab() {
     case "$verdict" in
       round) emit "$plan" ;;
       build) build_verdict="$plan"; build_rise="$row" ;;
+      *)
+        echo "storage-bench-compare: internal: the rounds program wrote the line kind '$verdict'" >&2
+        return 2
+        ;;
     esac
   done < <(ab_jq "$ROUNDS_AB_JQ")
   emit ""
@@ -547,6 +558,7 @@ compare_ab() {
     case "$verdict" in
       regressed) regressed=$((regressed + 1)); red+=("$row") ;;
       noise) noise=$((noise + 1)) ;;
+      *) ;; # within, faster and the unmeasured or uncompared rows are reported, never counted.
     esac
     if [[ "$plan" == "more-pages" ]]; then
       paged=$((paged + 1))
@@ -559,14 +571,14 @@ compare_ab() {
   done
 
   if [[ -z "$committed" ]]; then
-    missing_baseline "$generation" "docs/benchmarks/storage/$generation/$(jq -r '.bench_class' "${cand[0]}")/record.json" || return $?
+    missing_baseline "$generation" "docs/benchmarks/storage/$generation/$(class_of "${cand[0]}")/record.json" || return $?
   fi
   emit "Storage per composition version, the candidate against the committed record" \
        "(\`$(describe_record "$committed")\`), a growth beyond ${budget}% fails the run:" "" \
        "| Fact | Committed | Candidate | Delta | Verdict |" \
        "|---|---|---|---|---|"
   local size_compare=true
-  [[ "$(jq -r '.bench_class' "$committed")" == "$(jq -r '.bench_class' "${cand[0]}")" ]] || size_compare=false
+  [[ "$(class_of "$committed")" == "$(class_of "${cand[0]}")" ]] || size_compare=false
   while IFS=$'\t' read -r verdict row; do
     [[ -n "$row" ]] || continue
     emit "$row"
@@ -590,6 +602,10 @@ compare_ab() {
       emit "**The candidate build ran ${build_rise} against the baseline across the board, in every round.**" ""
       echo "storage-bench-compare: the candidate build ran ${build_rise} across the board, beyond the ${tolerance}% tolerance." >&2
       failed=1 ;;
+    *)
+      echo "storage-bench-compare: internal: the rounds program gave the build verdict '$build_verdict'" >&2
+      return 2
+      ;;
   esac
   if [[ "$paged" -gt 0 ]]; then
     emit "$paged operation(s) read more than ${page_tolerance}% more pages per call than the baseline's highest round: a plan change." ""
@@ -625,12 +641,17 @@ record_fixture() {
   # other operations' times, the way a slow machine moves every operation.
   local pages="${10:-20}" scale="${11:-1}"
   mkdir -p "$(dirname "$path")"
+  scaled() {
+    local value="$1"
+    awk -v v="$value" -v s="$scale" 'BEGIN { print v * s }'
+  }
   fixed_op() {
-    local name="$1" p50_ns="$2" p99_ns="$3" per_call="$4"
+    local name="$1" p50_ns="$2" p99_ns="$3" per_call="$4" p50 p99
+    p50="$(scaled "$p50_ns")"
+    p99="$(scaled "$p99_ns")"
     printf '        { "name": "%s", "iterations": 100, "samples": 10, "mean_ns": %s, "median_ns": %s,\n' \
-      "$name" "$(awk -v v="$p50_ns" -v s="$scale" 'BEGIN { print v * s }')" "$(awk -v v="$p50_ns" -v s="$scale" 'BEGIN { print v * s }')"
-    printf '          "p50_ns": %s, "p95_ns": %s, "p99_ns": %s,\n' \
-      "$(awk -v v="$p50_ns" -v s="$scale" 'BEGIN { print v * s }')" "$(awk -v v="$p99_ns" -v s="$scale" 'BEGIN { print v * s }')" "$(awk -v v="$p99_ns" -v s="$scale" 'BEGIN { print v * s }')"
+      "$name" "$p50" "$p50"
+    printf '          "p50_ns": %s, "p95_ns": %s, "p99_ns": %s,\n' "$p50" "$p99" "$p99"
     printf '          "database": { "blks_hit_delta": %s, "blks_read_delta": 0 } }' "$((per_call * 100))"
   }
   cat > "$path" <<EOF
@@ -767,11 +788,13 @@ self_test() {
   # 9. The A/B mode. Two rounds a side; the committed record holds the sizes.
   local ab="$tmp/ab"
   ab_case() {
+    local base1_p50="$1" base1_p99="$2" base2_p50="$3" base2_p99="$4"
+    local cand1_p50="$5" cand1_p99="$6" cand2_p50="$7" cand2_p99="$8"
     rm -rf "$ab" && mkdir -p "$ab"
-    record_fixture "$ab/baseline-1.json" generation-1 poc 20 "$1" "$2" 2026-09-15T12:00:00Z
-    record_fixture "$ab/baseline-2.json" generation-1 poc 20 "$3" "$4" 2026-09-15T12:20:00Z
-    record_fixture "$ab/candidate-1.json" generation-1 poc 20 "$5" "$6" 2026-09-15T12:10:00Z
-    record_fixture "$ab/candidate-2.json" generation-1 poc 20 "$7" "$8" 2026-09-15T12:30:00Z
+    record_fixture "$ab/baseline-1.json" generation-1 poc 20 "$base1_p50" "$base1_p99" 2026-09-15T12:00:00Z
+    record_fixture "$ab/baseline-2.json" generation-1 poc 20 "$base2_p50" "$base2_p99" 2026-09-15T12:20:00Z
+    record_fixture "$ab/candidate-1.json" generation-1 poc 20 "$cand1_p50" "$cand1_p99" 2026-09-15T12:10:00Z
+    record_fixture "$ab/candidate-2.json" generation-1 poc 20 "$cand2_p50" "$cand2_p99" 2026-09-15T12:30:00Z
   }
   # 9a. The same code twice, rounds a few percent apart: within tolerance.
   ab_case 1000000 2000000 1040000 2060000 1020000 2040000 980000 1990000
@@ -917,7 +940,7 @@ if [[ -n "$AB_DIR" ]]; then
   [[ -d "$AB_DIR" ]] || { echo "error: no such directory: $AB_DIR" >&2; exit 2; }
   first="$(find "$AB_DIR" -maxdepth 1 -name 'candidate-*.json' | sort | sed -n 1p)"
   [[ -n "$first" ]] || { echo "error: $AB_DIR holds no candidate-*.json round record" >&2; exit 2; }
-  committed="docs/benchmarks/storage/$(jq -r '.schema_generation' "$first")/$(jq -r '.bench_class' "$first")/record.json"
+  committed="docs/benchmarks/storage/$(jq -r '.schema_generation' "$first")/$(class_of "$first")/record.json"
   committed_tmp=""
   if git cat-file -e "HEAD:$committed" 2>/dev/null; then
     committed_tmp="$(mktemp)"
@@ -939,7 +962,7 @@ generation="$(jq -r '.schema_generation' "$MEASURED")"
 # The baseline is the COMMITTED record: the run overwrote the working-tree copy.
 baseline_tmp=""
 if [[ -z "$BASELINE" ]]; then
-  committed="docs/benchmarks/storage/$generation/$(jq -r '.bench_class' "$MEASURED")/record.json"
+  committed="docs/benchmarks/storage/$generation/$(class_of "$MEASURED")/record.json"
   if git cat-file -e "HEAD:$committed" 2>/dev/null; then
     baseline_tmp="$(mktemp)"
     trap 'rm -f "$baseline_tmp"' EXIT

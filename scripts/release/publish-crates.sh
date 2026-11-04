@@ -91,8 +91,9 @@ manifest_version() {
 # number can never be uploaded again. A failed request is fatal, because an
 # unknown answer must not read as "not published".
 versions_body() {
-  retry_read "https://crates.io/api/v1/crates/$1/versions" -H "$AGENT" \
-    || die "crates.io did not answer for $1"
+  local crate="$1"
+  retry_read "https://crates.io/api/v1/crates/$crate/versions" -H "$AGENT" \
+    || die "crates.io did not answer for $crate"
 }
 
 # The commit <crate> <version> was packaged from, out of the archive crates.io
@@ -369,14 +370,16 @@ stamp_in() {
 
 # The count of lines in <file> that match <pattern> (fixed string).
 count_of() {
-  grep -cF -- "$2" "$1" || true
+  local file="$1" pattern="$2"
+  grep -cF -- "$pattern" "$file" || true
 }
 
 self_test() {
-  local fails=0 work root crate lock bin tool new=1.2.3 old=0.0.7 want
+  local fails=0 work root crate lock bin tool new=1.2.3 old=0.0.7
   expect() {
-    if [[ "$2" != "$3" ]]; then
-      echo "self-test: $1: got '$2', want '$3'" >&2
+    local what="$1" got="$2" want="$3"
+    if [[ "$got" != "$want" ]]; then
+      echo "self-test: $what: got '$got', want '$want'" >&2
       fails=$((fails + 1))
     fi
   }
@@ -443,7 +446,8 @@ self_test() {
 
 # The `[package]` version of <crate> under <root>, read the way the stamp reads it.
 manifest_version_in() {
-  awk -F'"' '/^\[package\]/{p=1} p && /^version = /{print $2; exit}' "$1/crates/$2/Cargo.toml"
+  local root="$1" crate="$2"
+  awk -F'"' '/^\[package\]/{p=1} p && /^version = /{print $2; exit}' "$root/crates/$crate/Cargo.toml"
 }
 
 case "${1:-}" in

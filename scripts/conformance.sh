@@ -167,11 +167,20 @@ export VEREDICTUM_CDR_ADMIN_PASSWORD="${VEREDICTUM_CDR_ADMIN_PASSWORD:-ferroehr}
 # read-only; the caller adds its own mounts and network before the image.
 instrument() {
   local -a opts=()
-  while [[ $# -gt 0 ]] && [[ "$1" != -- ]]; do
-    opts+=("$1")
+  local separated=0
+  while [[ $# -gt 0 ]]; do
+    local arg="$1"
     shift
+    if [[ "$arg" == -- ]]; then
+      separated=1
+      break
+    fi
+    opts+=("$arg")
   done
-  shift
+  if [[ "$separated" -eq 0 ]]; then
+    echo "conformance: instrument takes its docker options, then --, then the engine arguments" >&2
+    return 2
+  fi
   "$ENGINE" run --rm "${opts[@]}" \
     -v "$STATEMENT:/work/input/statement.json:ro" \
     -v "$IXIT:/work/input/ixit.json:ro" \
@@ -220,8 +229,9 @@ compose_up() {
 
 # Writes the JUnit, CTRF and Markdown views beside the results in $1.
 export_views() {
+  local results="$1"
   echo "==> Exporting the JUnit, CTRF and Markdown views"
-  instrument --network none --user "$(id -u):$(id -g)" -v "$1:/work/out" -- \
+  instrument --network none --user "$(id -u):$(id -g)" -v "$results:/work/out" -- \
     export --results /work/out/results.json --junit /work/out/junit.xml \
     --ctrf /work/out/ctrf.json --markdown /work/out/summary.md
 }
@@ -286,6 +296,7 @@ case "$STAGE" in
     compose_down
     exit 0
     ;;
+  *) ;; # run: the full run below, the stage validated at the top.
 esac
 
 pull_instrument

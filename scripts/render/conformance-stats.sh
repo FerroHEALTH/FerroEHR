@@ -56,7 +56,10 @@ counts=$(jq -r '
     (["UNKNOWN"] + tally($rows | map(select(.part == "UNKNOWN"))))
   | @tsv' "$RECORD")
 
-part() { awk -F'\t' -v p="$1" '$1 == p { print $2, $3, $4, $5, $6, $7 }' <<<"$counts"; }
+part() {
+  local name="$1"
+  awk -F'\t' -v p="$name" '$1 == p { print $2, $3, $4, $5, $6, $7 }' <<<"$counts"
+}
 read -r base_passed base_failed base_warning base_errored base_skipped base_total <<<"$(part BASE)"
 read -r opt_passed opt_failed opt_warning opt_errored opt_skipped opt_total <<<"$(part OPTIONS)"
 read -r all_passed all_failed all_warning all_errored all_skipped all_total <<<"$(part ALL)"
@@ -80,7 +83,8 @@ fi
 
 # The summary's own table, read back as the same six numbers per part.
 summary_row() {
-  awk -F'|' -v p="$1" '
+  local name="$1"
+  awk -F'|' -v p="$name" '
     { name = $2; gsub(/[ *]/, "", name) }
     name == p {
       out = ""

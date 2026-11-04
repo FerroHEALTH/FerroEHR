@@ -82,7 +82,8 @@ compose() {
 }
 
 down() {
-  compose "$1" down -v --remove-orphans >/dev/null 2>&1 || true
+  local side="$1"
+  compose "$side" down -v --remove-orphans >/dev/null 2>&1 || true
 }
 
 # measure SIDE N: one run of SIDE on fresh volumes, its report at SIDE/run-N.json.

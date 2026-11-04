@@ -186,8 +186,9 @@ delta_verdict() {
 
 # read_tracker <out>: the one issue-list read, everything the page needs.
 read_tracker() {
+  local out="$1"
   gh_retry gh issue list --state all --limit "$FETCH_LIMIT" \
-    --json number,title,body,state,stateReason,url > "$1"
+    --json number,title,body,state,stateReason,url > "$out"
 }
 
 # retry_test <dir>: read_tracker against a stub gh on PATH that answers 504
