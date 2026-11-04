@@ -70,6 +70,7 @@ SELECT jsonb_build_object(
 
 # report SNAPSHOTS: the per-unit report of a snapshots file, on stdout.
 report() {
+  local snapshots="$1"
   jq '
     def rel($a; $b; $k): (($b.relations[$k] // {heap: 0, toast: 0, indexes: 0}) as $y
       | ($a.relations[$k] // {heap: 0, toast: 0, indexes: 0}) as $x
@@ -99,7 +100,7 @@ report() {
          | {rows_per_version: (if $w.creates > 0 then ($rows / $w.creates * 10 | round / 10) else null end),
             heap_bytes_per_row: ($g.heap | per($rows)),
             index_bytes_per_row: ($g.indexes | per($rows))})}
-  ' "$1"
+  ' "$snapshots"
 }
 
 # The phase driver. Each request function prints what the next phase needs.
@@ -108,7 +109,8 @@ http() {
 }
 
 header_of() {
-  tr -d '\r' | sed -n "s/^$1: *//Ip" | tail -n 1
+  local name="$1"
+  tr -d '\r' | sed -n "s/^$name: *//Ip" | tail -n 1
 }
 
 create_ehr() {
@@ -131,17 +133,20 @@ update_composition() {
 }
 
 delete_composition() {
-  http -o /dev/null -X DELETE "$SIZING_BASE_URL/ehr/$1/composition/$2"
+  local ehr="$1" uid="$2"
+  http -o /dev/null -X DELETE "$SIZING_BASE_URL/ehr/$ehr/composition/$uid"
 }
 
 read_composition() {
-  http -o /dev/null -H 'Accept: application/json' "$SIZING_BASE_URL/ehr/$1/composition/${2%%::*}"
+  local ehr="$1" uid="$2"
+  http -o /dev/null -H 'Accept: application/json' "$SIZING_BASE_URL/ehr/$ehr/composition/${uid%%::*}"
 }
 
 # parallel FN: FN with the words of each line of stdin, SIZING_WORKERS at a
 # time, each in its own run of this script (the internal `request` command).
 parallel() {
-  xargs -P "$SIZING_WORKERS" -L 1 "${BASH_SOURCE[0]}" request "$1"
+  local fn="$1"
+  xargs -P "$SIZING_WORKERS" -L 1 "${BASH_SOURCE[0]}" request "$fn"
 }
 
 run() {
@@ -171,10 +176,10 @@ run() {
   local -a psql
   read -ra psql <<<"$SIZING_PSQL"
   snapshot() {
-    local s
+    local phase="$1" s
     s="$("${psql[@]}" -At -v ON_ERROR_STOP=1 -c 'ANALYZE' -c 'CHECKPOINT' -c "$SNAPSHOT_SQL" | tail -n 1)"
-    jq -c --arg phase "$1" '{phase: $phase} + .' <<<"$s" >>"$snaps"
-    echo "  $1: database $(jq -r .database_bytes <<<"$s") bytes"
+    jq -c --arg phase "$phase" '{phase: $phase} + .' <<<"$s" >>"$snaps"
+    echo "  $phase: database $(jq -r .database_bytes <<<"$s") bytes"
   }
   snapshot start
   local status

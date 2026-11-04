@@ -272,7 +272,7 @@ case "${SANDBOX_TERMINOLOGY:-}:$code" in
     echo "::error::SANDBOX_TERMINOLOGY=without-loinc, but the CDR resolves LOINC $loinc_probe; unset it" >&2
     exit 1
     ;;
-  *:*)
+  *)
     if [[ -n "${SANDBOX_TERMINOLOGY:-}" && "${SANDBOX_TERMINOLOGY}" != without-loinc ]]; then
       echo "::error::SANDBOX_TERMINOLOGY is '$SANDBOX_TERMINOLOGY'; want unset or without-loinc" >&2
       exit 1

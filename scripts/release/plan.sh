@@ -115,7 +115,8 @@ support_end() {
 # stable_below VERSION: reads CHANGELOG.md on stdin and prints the first
 # release heading below [VERSION] that carries no pre-release suffix.
 stable_below() {
-  awk -v heading="## [$1]" '
+  local version="$1"
+  awk -v heading="## [$version]" '
     index($0, heading) == 1 { found = 1; next }
     found && /^## \[[0-9]+\.[0-9]+\.[0-9]+\]/ { sub(/^## \[/, ""); sub(/\].*/, ""); print; exit }
   '
@@ -213,7 +214,10 @@ check_changelog_security() {
 
 # prerelease VERSION: true for a version with a "-" suffix (5.6.0-rc1), the
 # rule .github/actions/release-kind applies to the tag.
-prerelease() { [[ "$1" == *-* ]]; }
+prerelease() {
+  local version="$1"
+  [[ "$version" == *-* ]]
+}
 
 # The cut assembles every fragment under changelog.d/ into the section it
 # writes and deletes them (scripts/release/changelog.sh --assemble), so a
@@ -426,8 +430,9 @@ fragments_self_test() {
       -c commit.gpgsign=false -c core.hooksPath=/dev/null "$@"
   }
   run_fragments() {
+    local version="$1"
     rc=0
-    bash "$stub/scripts/release/plan.sh" fragments "$1" > "$stub/out" 2>&1 || rc=$?
+    bash "$stub/scripts/release/plan.sh" fragments "$version" > "$stub/out" 2>&1 || rc=$?
   }
   stub_git init -q -b main
   stub_git add -A

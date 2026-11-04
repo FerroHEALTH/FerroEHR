@@ -154,7 +154,7 @@ term_ft_api_validate() {
 probes_terminology_ferroterm() {
   bold "terminology — FerroTERM beside the CDR over the shaped seed (the overlay)"
 
-  probe "P-FT-OFF" "off" "server" "#3304" \
+  probe "P-FT-OFF" "$PROBE_OFF" "server" "#3304" \
     "without the overlay a bound value set is not resolved: member and non-member both commit"
   compose_up ferroehr
   if ! wait_http "$CDR/health/readiness" 90 || ! term_ft_template; then
@@ -171,7 +171,7 @@ probes_terminology_ferroterm() {
     "without the overlay the /terminology/* extension API is off, as the base config ships it"
   probe_done
 
-  probe "P-FT-UP" "working" "compose" "#3304" \
+  probe "P-FT-UP" "$PROBE_WORKING" "compose" "#3304" \
     "the overlay starts FerroTERM, waits on its own healthcheck, and it answers its capability statement"
   if ! term_ft_up; then
     probe_fail "a healthy FerroTERM and CDR from \`up --wait\`" "$(dc -f docker-compose.yml -f "$TERM_FT_OVERLAY" logs --tail 5 ferroterm 2>&1 | tail -3)" \
@@ -186,7 +186,7 @@ probes_terminology_ferroterm() {
     "the shaped seed mounted out of the ferroehr image is what the server serves"
   probe_done
 
-  probe "P-FT-RESOLVE" "working" "server" "#3304" \
+  probe "P-FT-RESOLVE" "$PROBE_WORKING" "server" "#3304" \
     "with the overlay on, a value-set member commits and a non-member is refused"
   wait_http "$CDR/health/readiness" 90 >/dev/null || true
   term_ft_template || true
@@ -196,7 +196,7 @@ probes_terminology_ferroterm() {
     "1000003 is in the code system but not in the value set, so the binding refuses it"
   probe_done
 
-  probe "P-FT-API" "working" "compose" "#3476" \
+  probe "P-FT-API" "$PROBE_WORKING" "compose" "#3476" \
     "with the overlay on, the CDR's /terminology/* routes answer membership from FerroTERM, as the overlay header says"
   local member non_member
   member="$(term_ft_api_validate 1000002)"
@@ -209,7 +209,7 @@ probes_terminology_ferroterm() {
     "1000003 is not, so the answer differs and cannot come from a constant"
   probe_done
 
-  probe "P-FT-DOWN-OPEN" "broken" "server" "#3304" \
+  probe "P-FT-DOWN-OPEN" "$PROBE_BROKEN" "server" "#3304" \
     "FerroTERM stopped, fail-open (the shipped default): the member commit is still accepted"
   dc -f docker-compose.yml -f "$TERM_FT_OVERLAY" stop ferroterm >/dev/null 2>&1
   # --no-deps keeps Compose from starting the stopped ferroterm again as the
@@ -223,7 +223,7 @@ probes_terminology_ferroterm() {
     "fail-open accepts a binding the server cannot resolve"
   probe_done
 
-  probe "P-FT-DOWN-CLOSED" "broken" "server" "#3304" \
+  probe "P-FT-DOWN-CLOSED" "$PROBE_BROKEN" "server" "#3304" \
     "FerroTERM stopped, fail-closed: the same commit is refused"
   # Exported, not a prefix assignment: `dc` is a shell function, and only an
   # exported variable reliably reaches the compose interpolation it runs.
@@ -277,7 +277,7 @@ probes_terminology() {
   fi
   dim "    release: $zip"
 
-  probe "P-TERM-UP" "working" "compose" "#2236" \
+  probe "P-TERM-UP" "$PROBE_WORKING" "compose" "#2236" \
     "the overlay's digest-pinned FerroTERM starts and answers its capability statement"
   if ! term_ft_up; then
     probe_fail "a healthy FerroTERM from \`up --wait\`" "$(dc -f docker-compose.yml -f "$TERM_FT_OVERLAY" logs --tail 5 ferroterm 2>&1 | tail -3)" \
@@ -289,7 +289,7 @@ probes_terminology() {
     "the R4B capability statement the CDR's client reads"
   probe_done
 
-  probe "P-TERM-IMPORT" "working" "compose" "#2236" \
+  probe "P-TERM-IMPORT" "$PROBE_WORKING" "compose" "#2236" \
     "ferroterm-build turns the mounted release into an index and the server opens it"
   local started elapsed
   started="$(date +%s)"
@@ -313,7 +313,7 @@ probes_terminology() {
   # The operation a seeded fixture cannot fake: subsumption over a real
   # hierarchy. 73211009 (Diabetes mellitus) subsumes 44054006 (Type 2 diabetes
   # mellitus) in the International Edition.
-  probe "P-TERM-SUBSUMES" "working" "server" "#2236" \
+  probe "P-TERM-SUBSUMES" "$PROBE_WORKING" "server" "#2236" \
     "a real SNOMED hierarchy answers \$subsumes — the check a fixture cannot honestly make"
   # The concepts below are International. A package that carried only national
   # content would not contain them, and reporting that as a subsumption defect
@@ -339,7 +339,7 @@ probes_terminology() {
 
   # The far end that matters for the CDR: a code answered THROUGH the CDR's
   # terminology server, not by its in-process bundle, which carries no SNOMED.
-  probe "P-TERM-VALIDATE" "working" "server" "#2236" \
+  probe "P-TERM-VALIDATE" "$PROBE_WORKING" "server" "#2236" \
     "the CDR answers a real SNOMED code through its terminology server"
   wait_http "$CDR/health/readiness" 90 >/dev/null || true
   local system
@@ -352,7 +352,7 @@ probes_terminology() {
   # answer must not silently let an unvalidated code through. The shaped seed is
   # still mounted beside the index, so the binding template resolves while the
   # server is up and the refusal below is the posture, not a missing value set.
-  probe "P-TERM-BROKEN" "broken" "server" "#2236" \
+  probe "P-TERM-BROKEN" "$PROBE_BROKEN" "server" "#2236" \
     "with the terminology server stopped and fail_on_error set, a bound commit fails CLOSED"
   term_ft_template || true
   dc -f docker-compose.yml -f "$TERM_FT_OVERLAY" stop ferroterm >/dev/null 2>&1

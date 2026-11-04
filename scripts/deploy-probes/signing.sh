@@ -31,7 +31,7 @@ probes_signing() {
   # A committed version must carry a signature the server generated, and the
   # read path must serve it. Digest mode is the shipped default, so this is the
   # posture nearly every deployment runs.
-  probe "P-SIGN-DIGEST" "working" "server" "-" \
+  probe "P-SIGN-DIGEST" "$PROBE_WORKING" "server" "-" \
     "a committed VERSION carries a server signature and reads back cleanly"
   local ehr version
   ehr="$(curl -s -u "$BASIC" -X POST -D - -o /dev/null "$API/ehr" \
@@ -54,7 +54,7 @@ probes_signing() {
   # version.body — the materialized projection every point read serves. The
   # node rows are the storage's OTHER copy, and P-NODE-TAMPER below covers
   # them through the channel that does see them.
-  probe "P-SIGN-TAMPER" "broken" "server" "-" \
+  probe "P-SIGN-TAMPER" "$PROBE_BROKEN" "server" "-" \
     "a tampered stored version is REFUSED on read, not served"
   local before after rows
   before="$(http_code -u "$BASIC" "$API/ehr/$ehr/versioned_ehr_status/version")"
@@ -82,7 +82,7 @@ probes_signing() {
   # read-time signature check recomputes only the first, so a tampered node row
   # is invisible to it; the admin storage-parity sweep is the channel that sees
   # it. Same reach-past-the-API shape, aimed at the other copy.
-  probe "P-NODE-TAMPER" "broken" "server" "-" \
+  probe "P-NODE-TAMPER" "$PROBE_BROKEN" "server" "-" \
     "a tampered node row is reported by the admin storage-parity sweep"
   local node_ehr node_vo node_rows sweep sweep_code
   node_ehr="$(curl -s -u "$BASIC" -X POST -D - -o /dev/null "$API/ehr" \

@@ -34,6 +34,10 @@ green() { printf '\033[32m%s\033[0m\n' "$*"; }
 bold()  { printf '\033[1m%s\033[0m\n' "$*"; }
 dim()   { printf '\033[2m%s\033[0m\n' "$*"; }
 
+# The three states a probe exercises.
+# shellcheck disable=SC2034 # read by the probe families, which the entry scripts source after this file
+readonly PROBE_OFF=off PROBE_WORKING=working PROBE_BROKEN=broken
+
 # probe <id> <state> <layer-when-it-fails> <issue-or--> <title>
 #
 # `state` is one of off | working | broken — the three states #2178 requires,

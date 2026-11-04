@@ -42,7 +42,7 @@ probes_oidc() {
 
   oidc_up
   if ! wait_http "$KC_REALM/.well-known/openid-configuration" 150; then
-    probe "P-OIDC-UP" "working" "$OIDC_LAYER" "-" "the quickstart overlay starts an issuer"
+    probe "P-OIDC-UP" "$PROBE_WORKING" "$OIDC_LAYER" "-" "the quickstart overlay starts an issuer"
     probe_fail "a Keycloak realm answering discovery" "no response after 300s" \
       "the overlay's own healthcheck gates the CDR, so this is the overlay, not the realm"
     probe_done
@@ -60,7 +60,7 @@ probes_oidc() {
   # this server in the audience — a token that omits it is refused by every
   # correct resource server (RFC 7519 §4.1.3), which is what made the shipped
   # quickstart impossible rather than merely misconfigured.
-  probe "P-OIDC-AUD" "working" "$OIDC_LAYER" "#2176" \
+  probe "P-OIDC-AUD" "$PROBE_WORKING" "$OIDC_LAYER" "#2176" \
     "the demo realm mints a token carrying aud=ferroehr"
   if [[ -z "$token" ]]; then
     probe_fail "an access token from the password grant" "the token endpoint returned none" \
@@ -80,7 +80,7 @@ probes_oidc() {
   probe_done
 
   # And the whole point: the documented flow SUCCEEDS.
-  probe "P-OIDC-ACCEPT" "working" "server" "#2176" \
+  probe "P-OIDC-ACCEPT" "$PROBE_WORKING" "server" "#2176" \
     "the API accepts that token — the documented quickstart works end to end"
   if [[ -z "$token" ]]; then
     probe_fail "201 from POST /ehr" "no token to present"
@@ -95,7 +95,7 @@ probes_oidc() {
 
   # A service with no user behind it: the client-credentials grant (RFC 6749
   # §4.4) of the realm's service client, whose service account holds USER.
-  probe "P-OIDC-SERVICE" "working" "$OIDC_LAYER" "#4240" \
+  probe "P-OIDC-SERVICE" "$PROBE_WORKING" "$OIDC_LAYER" "#4240" \
     "a client-credentials token reaches the clinical API and AQL"
   local service
   service="$(curl -s -d client_id=ferroehr-service -d client_secret=ferroehr-service-quickstart-secret \
@@ -118,7 +118,7 @@ probes_oidc() {
   # rather than inferred: a request with NO credential is 401 and the response
   # must carry a challenge naming a scheme the server implements (RFC 9110
   # §11.6.1 — a challenge naming nothing is what makes a 401 unactionable).
-  probe "P-OIDC-CHALLENGE" "working" "server" "-" \
+  probe "P-OIDC-CHALLENGE" "$PROBE_WORKING" "server" "-" \
     "no credential: 401 with a WWW-Authenticate challenge naming Bearer"
   local hdrs
   hdrs="$(curl -s -o /dev/null -D - -X POST "$API/ehr")"
@@ -132,7 +132,7 @@ probes_oidc() {
 
   # A garbage bearer is refused — the negative twin, so the probe above cannot
   # pass because authentication is off altogether.
-  probe "P-OIDC-REFUSE" "working" "server" "-" \
+  probe "P-OIDC-REFUSE" "$PROBE_WORKING" "server" "-" \
     "a bearer token that is not the issuer's is refused"
   assert_eq "401" "$(http_code -X POST -H 'Authorization: Bearer not-a-token' "$API/ehr")" \
     "acceptance means nothing if an invalid token is also accepted"
@@ -165,7 +165,7 @@ probes_oidc_roles() {
   auditor="$(oidc_token_for auditor auditor)"
   nobody="$(oidc_token_for nobody nobody)"
 
-  probe "P-OIDC-IDENTITIES" "working" "$OIDC_LAYER" "#2160" \
+  probe "P-OIDC-IDENTITIES" "$PROBE_WORKING" "$OIDC_LAYER" "#2160" \
     "the demo realm mints a token for each of the four identities"
   local missing=""
   [[ -n "$admin" ]]     || missing="$missing ferroehr"
@@ -181,7 +181,7 @@ probes_oidc_roles() {
   probe_done
 
   # A clinical role may write clinical data.
-  probe "P-OIDC-CLINICAL" "working" "server" "#2160" \
+  probe "P-OIDC-CLINICAL" "$PROBE_WORKING" "server" "#2160" \
     "USER may create an EHR"
   assert_eq "201" "$(http_code -X POST -H "Authorization: Bearer $clinician" "$API/ehr")" \
     "the clinical role must reach the clinical API, or the roles are simply wrong"
@@ -189,7 +189,7 @@ probes_oidc_roles() {
 
   # ...and may NOT reach the admin surface. This is the 403 that a
   # single-user, RBAC-off quickstart could never produce.
-  probe "P-OIDC-CLINICAL-DENIED" "broken" "server" "#2160" \
+  probe "P-OIDC-CLINICAL-DENIED" "$PROBE_BROKEN" "server" "#2160" \
     "USER is REFUSED the admin surface with 403, not 401"
   local code
   # The admin group is nested UNDER the API base path, not beside it. An
@@ -211,21 +211,21 @@ probes_oidc_roles() {
 
   # READONLY overrides a grant it otherwise holds. The auditor carries USER,
   # so without the override this write would succeed.
-  probe "P-OIDC-READONLY" "broken" "server" "#2160" \
+  probe "P-OIDC-READONLY" "$PROBE_BROKEN" "server" "#2160" \
     "READONLY overrides the USER grant: the write is refused 403"
   code="$(http_code -X POST -H "Authorization: Bearer $auditor" "$API/ehr")"
   assert_eq "403" "$code" \
     "READONLY is documented to override any grant, and this user holds USER"
   probe_done
 
-  probe "P-OIDC-READONLY-READS" "working" "server" "#2160" \
+  probe "P-OIDC-READONLY-READS" "$PROBE_WORKING" "server" "#2160" \
     "the same READONLY identity may still read"
   assert_eq "200" "$(http_code -H "Authorization: Bearer $auditor" "$CDR/ferroehr/rest/status")" \
     "read-only must mean read-only, not no access at all"
   probe_done
 
   # Authenticated with no roles at all: still 403, never 401.
-  probe "P-OIDC-NOROLES" "broken" "server" "#2160" \
+  probe "P-OIDC-NOROLES" "$PROBE_BROKEN" "server" "#2160" \
     "a valid token carrying no roles is refused 403, not 401"
   code="$(http_code -X POST -H "Authorization: Bearer $nobody" "$API/ehr")"
   case "$code" in
@@ -238,7 +238,7 @@ probes_oidc_roles() {
 
   # A malformed Authorization header is a 400, not a 401: the server never read
   # a credential, so there is nothing to challenge.
-  probe "P-OIDC-MALFORMED" "broken" "server" "-" \
+  probe "P-OIDC-MALFORMED" "$PROBE_BROKEN" "server" "-" \
     "a malformed Authorization header is 400, not 401"
   assert_eq "400" "$(http_code -X POST -H 'Authorization: NotAScheme' "$API/ehr")" \
     "a 401 here would claim the credential was rejected when none was ever parsed"

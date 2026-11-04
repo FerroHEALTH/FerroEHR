@@ -78,17 +78,19 @@ ORDER BY ?celex'
 
 # Prints the regulation a base CELEX number names.
 base_name() {
-  case "$1" in
+  local celex="$1"
+  case "$celex" in
     32025R0327) echo "Regulation (EU) 2025/327 (EHDS)" ;;
     32024R2847) echo "Regulation (EU) 2024/2847 (CRA)" ;;
-    *) echo "CELEX $1" ;;
+    *) echo "CELEX $celex" ;;
   esac
 }
 
 # Prints a Cellar legal-basis code (`A23P4`, `A02P5L2`) as `Art 23(4)`, any
 # further qualifier kept verbatim in brackets.
 basis_text() {
-  awk -v code="$1" 'BEGIN {
+  local code="$1"
+  awk -v code="$code" 'BEGIN {
     if (!match(code, /^A[0-9]+/)) { print "[" code "]"; exit }
     text = "Art " (substr(code, 2, RLENGTH - 1) + 0); rest = substr(code, RLENGTH + 1)
     if (match(rest, /^P[0-9]+/)) { text = text "(" (substr(rest, 2, RLENGTH - 1) + 0) ")"; rest = substr(rest, RLENGTH + 1) }
@@ -162,7 +164,8 @@ fetch_acts() {
 
 # Prints the CELEX numbers the baseline file `$1` lists.
 known_acts() {
-  awk -F'\t' '!/^#/ && NF { print $1 }' "$1"
+  local baseline="$1"
+  awk -F'\t' '!/^#/ && NF { print $1 }' "$baseline"
 }
 
 # Prints the records on stdin whose CELEX the list `$1` does not hold.
@@ -186,8 +189,8 @@ missing_known() {
 
 # Prints the issue title for an act record and writes its body to file `$2`.
 render_issue() {
-  local celex links date codes title first articles url
-  IFS=$'\t' read -r celex links date codes title <<<"$1"
+  local record="$1" body="$2" celex links date codes title first articles url
+  IFS=$'\t' read -r celex links date codes title <<<"$record"
   first="${links%%,*}"
   articles="$(articles_text "$codes")"
   [[ "$articles" != "-" ]] || articles="Cellar states no legal-basis article"
@@ -207,7 +210,7 @@ render_issue() {
     printf -- '- [ ] File the compliance work it creates\n'
     printf -- '- [ ] Add `%s` to `scripts/watch/eu-acts-known.tsv`\n\n' "$celex"
     printf '_Opened automatically by `.github/workflows/eu-acts-watcher.yml`._\n'
-  } >"$2"
+  } >"$body"
   echo "chore(law): EUR-Lex act $celex, $(link_text "$first")"
 }
 
@@ -217,8 +220,9 @@ self_test() {
   # shellcheck disable=SC2064 # expand $tmp now, while it is still in scope
   trap "rm -rf '$tmp'" RETURN
   expect() {
-    if [[ "$2" != "$1" ]]; then
-      printf 'eu-acts: self-test failed: %s gave "%s", wanted "%s".\n' "$3" "$2" "$1" >&2
+    local want="$1" got="$2" what="$3"
+    if [[ "$got" != "$want" ]]; then
+      printf 'eu-acts: self-test failed: %s gave "%s", wanted "%s".\n' "$what" "$got" "$want" >&2
       failed=1
     fi
   }

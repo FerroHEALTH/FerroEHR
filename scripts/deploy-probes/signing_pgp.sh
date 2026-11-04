@@ -86,7 +86,7 @@ probes_signing_pgp() {
   # server coming up at all is the first assertion — and the documented
   # production shape (a mounted key, a passphrase from its *_file sibling) is
   # what is being mounted here.
-  probe "P-PGP-BOOT" "working" "server" "#2163" \
+  probe "P-PGP-BOOT" "$PROBE_WORKING" "server" "#2163" \
     "the server boots in pgp mode with the key and passphrase from mounted files"
   dc -f docker-compose.yml -f "$overlay" up -d ferroehr >/dev/null 2>&1
   if ! wait_http "$CDR/health/readiness" 120; then
@@ -97,7 +97,7 @@ probes_signing_pgp() {
   fi
   probe_done
 
-  probe "P-PGP-SIGN" "working" "server" "#2163" \
+  probe "P-PGP-SIGN" "$PROBE_WORKING" "server" "#2163" \
     "a version committed under pgp carries a signature and verifies on read"
   local ehr version
   ehr="$(curl -s -u "$BASIC" -X POST -D - -o /dev/null "$API/ehr" \
@@ -118,7 +118,7 @@ probes_signing_pgp() {
   probe_done
 
   # Detection, in the mode where it is hardest to fake.
-  probe "P-PGP-TAMPER" "broken" "server" "#2163" \
+  probe "P-PGP-TAMPER" "$PROBE_BROKEN" "server" "#2163" \
     "a tampered pgp-signed version is REFUSED on read"
   local matched after
   probe_psql "UPDATE clinical.version
@@ -191,7 +191,7 @@ probes_signing_rotation() {
   # Sign a version with key A.
   dc -f docker-compose.yml -f "$(pgp_overlay "$key_a")" up -d ferroehr >/dev/null 2>&1
   if ! wait_http "$CDR/health/readiness" 120; then
-    probe "P-ROT-SETUP" "working" "server" "#2122" "a version is signed under key A"
+    probe "P-ROT-SETUP" "$PROBE_WORKING" "server" "#2122" "a version is signed under key A"
     probe_fail "a serving CDR under key A" "readiness never returned"
     probe_done
     return 0
@@ -203,7 +203,7 @@ probes_signing_rotation() {
   overlay="$(pgp_rotation_overlay "$key_b" "$key_a")"
   dc -f docker-compose.yml -f "$overlay" up -d ferroehr >/dev/null 2>&1
 
-  probe "P-ROT-BOOT" "working" "server" "#2122" \
+  probe "P-ROT-BOOT" "$PROBE_WORKING" "server" "#2122" \
     "the server boots after a rotation with the retired key kept for verification"
   if ! wait_http "$CDR/health/readiness" 120; then
     probe_fail "a serving CDR after rotation" "$(dc logs --tail 5 ferroehr 2>&1 | tail -3)" \
@@ -215,7 +215,7 @@ probes_signing_rotation() {
 
   # #2122's third criterion, verbatim: sign with A, rotate to B, read the
   # key-A version back under strict verification without an integrity failure.
-  probe "P-ROT-HISTORY" "working" "server" "#2122" \
+  probe "P-ROT-HISTORY" "$PROBE_WORKING" "server" "#2122" \
     "a version signed by the RETIRED key still verifies after rotation"
   if [[ -z "$ehr_a" ]]; then
     probe_fail "a version signed under key A" "no EHR was committed before the rotation"
@@ -228,7 +228,7 @@ probes_signing_rotation() {
   # The other half of #2122's second criterion: keeping history verifiable must
   # not make verification permissive. A keyring that accepts anything would pass
   # the probe above and be worthless.
-  probe "P-ROT-STILL-STRICT" "broken" "server" "#2122" \
+  probe "P-ROT-STILL-STRICT" "$PROBE_BROKEN" "server" "#2122" \
     "a tampered version still fails after rotation — the keyring is not permissive"
   local matched after
   probe_psql "UPDATE clinical.version

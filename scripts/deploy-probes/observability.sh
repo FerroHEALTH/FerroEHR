@@ -96,7 +96,7 @@ observability_family() {
 
   obs_up
   if ! wait_http "$CDR/health/readiness" 150; then
-    probe "P-OBS-UP" "working" "compose" "-" "the observability overlay starts"
+    probe "P-OBS-UP" "$PROBE_WORKING" "compose" "-" "the observability overlay starts"
     probe_fail "a serving CDR under the observability overlay" "readiness never returned"
     probe_done
     return 0
@@ -117,7 +117,7 @@ observability_family() {
 
   # #2173: metrics reaching the stack AT ALL. The server answering 200 on its
   # own scrape endpoint proved nothing — that was true throughout the defect.
-  probe "P-OBS-METRICS" "working" "server" "#2173" \
+  probe "P-OBS-METRICS" "$PROBE_WORKING" "server" "#2173" \
     "FerroEHR metrics arrive in the collector's Prometheus"
   if [[ -z "$prom_uid" ]]; then
     probe_fail "a Prometheus datasource in Grafana" "none found" \
@@ -134,7 +134,7 @@ observability_family() {
   # #2175: the specific family that went missing while others arrived. A probe
   # asserting "some metrics arrived" would have passed throughout that defect,
   # so this one names the family.
-  probe "P-OBS-BUILDINFO" "working" "server" "#2175" \
+  probe "P-OBS-BUILDINFO" "$PROBE_WORKING" "server" "#2175" \
     "ferroehr_build_info reaches the collector, not just the local scrape"
   if [[ -z "$prom_uid" ]]; then
     probe_fail "a Prometheus datasource" "none found"
@@ -149,7 +149,7 @@ observability_family() {
 
   # A span in the collector — the trace half, which no server-side check can
   # confirm either.
-  probe "P-OBS-TRACES" "working" "server" "-" \
+  probe "P-OBS-TRACES" "$PROBE_WORKING" "server" "-" \
     "a span for this service arrives in the collector's trace store"
   local tempo_uid found
   tempo_uid="$(obs_datasource_uid tempo)"
