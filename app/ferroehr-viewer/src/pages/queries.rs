@@ -15,12 +15,13 @@
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
+use ferrohealth_ui::table::versions::{Standing, version_cell};
 use ferrohealth_ui::table::view::{
-    Body, Column, DataTable, Role, Sorting, cell, data_table, group_row, menu_cell, title_cell,
+    Body, Column, DataTable, Role, cell, data_table, group_row, menu_cell, title_cell,
 };
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::action_menu::{Act, Action, Item, Menu, row_menu};
-use ferrohealth_ui::view::dialog::{ConfirmForm, Confirmation, danger_form_dialog};
+use ferrohealth_ui::view::dialog::{ConfirmForm, Confirmation, Stakes, confirm_dialog};
 use ferrohealth_ui::view::form::Field;
 use ferrohealth_ui::view::segmented::choice_group;
 use ferrohealth_ui::view::surface::{Crumb, Header, definitions, page_heading};
@@ -28,7 +29,6 @@ use ferrohealth_ui::view::tabs::{Tab, binder};
 use ferrohealth_ui::view::template::list::{
     ActiveFilters, FilterChip, ListCard, active_filters, list_card, list_empty,
 };
-use ferrohealth_ui::view::versions::{Standing, version_cell};
 
 use crate::flash::{Done, redirect_with};
 use crate::locale::queries::QueriesMsg;
@@ -268,7 +268,7 @@ fn table(groups: Vec<Group>) -> Html {
             );
             body.push(h(format!(
                 "<tr>{}{}{}{}</tr>",
-                title_cell(Some(&href), t(bare_name_of(&row.name)), sub),
+                title_cell(None, Some(&href), t(bare_name_of(&row.name)), sub),
                 cell(&columns[1], t(&row.version)),
                 cell(&columns[2], parameters(&row.parameters)),
                 menu_cell(menu)
@@ -277,12 +277,11 @@ fn table(groups: Vec<Group>) -> Html {
         }
     }
     let caption = tr(Msg::NavStoredQueries);
-    data_table(DataTable {
-        caption: &caption,
-        columns: &columns,
-        sorting: Sorting::default(),
-        body: Body::Rows(Html::join(body)),
-    })
+    data_table(DataTable::new(
+        &caption,
+        &columns,
+        Body::Rows(Html::join(body)),
+    ))
 }
 
 /// Stored queries' list page.
@@ -348,7 +347,7 @@ pub async fn list_page() -> Drawn {
             badge: None,
             subtitle_view: None,
         },
-        ActionGroup::none(),
+        ActionGroup::default(),
     );
     let body = listed(read_listing().await);
     Drawn::page(tr(Msg::NavStoredQueries), heading.then(body))
@@ -561,7 +560,7 @@ fn page_view<T>(page: Page<T>, tab: QueryTab, body: impl FnOnce(&str, &str, T) -
         .more(more),
     );
     let confirm = confirm.then(|| delete_form(&name, &version));
-    let dialog = danger_form_dialog(
+    let dialog = confirm_dialog(
         &current(),
         Confirmation {
             id: DELETE_DIALOG.into(),
@@ -575,10 +574,11 @@ fn page_view<T>(page: Page<T>, tab: QueryTab, body: impl FnOnce(&str, &str, T) -
             .into(),
             message: tr(QueriesMsg::QueriesDeleteMessage).into(),
         },
-        ConfirmForm {
+        Stakes::Danger,
+        Some(ConfirmForm {
             action: stored_query_href(&name, &version),
             fields: delete_fields(&version),
-        },
+        }),
         delete_submit(&version),
     );
     let acted = acted.map(|refusal| refusal.view());
@@ -1002,6 +1002,7 @@ fn versions(name: &str, _version: &str, versions: Vec<VersionRow>) -> Html {
             h(format!(
                 "<tr>{}{}{}</tr>",
                 title_cell(
+                    None,
                     Some(&href),
                     version_cell(&current(), &row.version, standing),
                     None
@@ -1012,12 +1013,7 @@ fn versions(name: &str, _version: &str, versions: Vec<VersionRow>) -> Html {
         })
         .collect();
     let caption = tr(Msg::CompositionVersions);
-    let table = data_table(DataTable {
-        caption: &caption,
-        columns: &columns,
-        sorting: Sorting::default(),
-        body: Body::Rows(rows),
-    });
+    let table = data_table(DataTable::new(&caption, &columns, Body::Rows(rows)));
     panel(section(
         Some(tr(Msg::CompositionVersions)),
         u64::try_from(total).ok(),

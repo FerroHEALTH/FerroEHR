@@ -19,6 +19,7 @@
 use std::collections::BTreeSet;
 
 mod adl2;
+mod delete;
 mod upload;
 
 use ferrohealth_ui::highlight::Language;
@@ -31,7 +32,6 @@ use ferrohealth_ui::view::action_menu::{Act, Action, Item, Menu};
 use ferrohealth_ui::view::browser::{BrowserPane, Heading, Panes, PathNode, browser, path_node};
 use ferrohealth_ui::view::coding::{Coding, Layout, coding};
 use ferrohealth_ui::view::diagnostics::diagnostics;
-use ferrohealth_ui::view::dialog::{ConfirmForm, Confirmation, danger_form_dialog};
 use ferrohealth_ui::view::form::Field;
 use ferrohealth_ui::view::segmented::segmented_links;
 use ferrohealth_ui::view::surface::{
@@ -45,14 +45,11 @@ use ferrohealth_ui::view::tree::{Tree, TreeKind, TreeNode, TreeWords, tree_view}
 
 use crate::adl2::TemplateFamily;
 use crate::bff::template_detail::{TemplateDetail, fetch_example, fetch_template_detail};
-use crate::bff::templates::{
-    TemplateRow, delete_adl2_artefact, list_adl2_templates, list_templates,
-};
+use crate::bff::templates::{TemplateRow, list_adl2_templates, list_templates};
 use crate::builder::catalog::CatalogNode;
 use crate::components::source_upload;
 use crate::error::ViewerError;
 use crate::example_options::{ExampleDetail, ExampleType};
-use crate::flash::{Done, redirect_with};
 use crate::format::ReprFormat;
 use crate::locale::definitions::DefinitionsMsg;
 use crate::locale::{Msg, current, message, tr, tr_with};
@@ -66,6 +63,7 @@ use crate::pages::template_releases::{CompareAsk, Releases, lineage_table, read_
 use crate::routes::Drawn;
 use crate::template_releases::{Lineage, lineages};
 use adl2::{Adl2Body, Adl2Template, adl2_tabs, read_adl2_template};
+use delete::{delete_dialog, delete_posted, delete_refused, inline_confirm};
 use upload::{Uploaded, read_upload};
 
 /// The id of Delete template's confirmation dialog.
@@ -106,97 +104,6 @@ fn asked_family() -> TemplateFamily {
     crate::request::query("family")
         .as_deref()
         .map_or(TemplateFamily::Adl14, TemplateFamily::from_query)
-}
-
-/// The confirmation of deleting the template `template_id` of `family`,
-/// posting to `action`.
-fn delete_dialog(
-    family: TemplateFamily,
-    template_id: &str,
-    id: &'static str,
-    action: &str,
-) -> Html {
-    danger_form_dialog(
-        &current(),
-        Confirmation {
-            id: id.into(),
-            title: tr_with(
-                DefinitionsMsg::TemplateDeleteTitle,
-                &[("name", template_id.to_owned().into())],
-            )
-            .into(),
-            message: tr(DefinitionsMsg::TemplateDeleteMessage).into(),
-        },
-        ConfirmForm {
-            action: action.to_owned(),
-            fields: delete_fields(family, template_id),
-        },
-        delete_submit(),
-    )
-}
-
-/// The fields a template's delete posts: its intent, its family and its id.
-fn delete_fields(family: TemplateFamily, template_id: &str) -> Html {
-    h(format!(
-        r#"<input type="hidden" name="intent" value="delete-template"><input type="hidden" name="family" value="{}"><input type="hidden" name="template" value="{}">"#,
-        family.as_query(),
-        t(template_id)
-    ))
-}
-
-/// The submit of a template's delete.
-fn delete_submit() -> Html {
-    h(format!(
-        r#"<button type="submit" class="fui-button fui-button-danger">{}{}</button>"#,
-        ferrohealth_ui::icon::icon(Glyph::TRASH, "16"),
-        t(tr(DefinitionsMsg::TemplateDeleteConfirm))
-    ))
-}
-
-/// The delete confirmation drawn in the page, for a reader who came from a
-/// list row's Delete… (the address's `confirm=delete`).
-// NOTE: FerroUI `view::dialog::Confirmation::id` is `&'static str`, so a list draws no dialog per row.
-fn inline_confirm(family: TemplateFamily, template_id: &str, action: &str) -> Option<Html> {
-    (crate::request::query("confirm").as_deref() == Some("delete")).then(|| {
-        crate::pages::common::warn_note(h(format!(
-            r#"<p><strong>{title}</strong> {message}</p><form method="post" action="{action}" class="fui-cluster">{fields}{submit}<a class="fui-button fui-button-secondary" href="{action}">{cancel}</a></form>"#,
-            title = t(tr_with(
-                DefinitionsMsg::TemplateDeleteTitle,
-                &[("name", template_id.to_owned().into())],
-            )),
-            message = t(tr(DefinitionsMsg::TemplateDeleteMessage)),
-            action = t(action),
-            fields = delete_fields(family, template_id),
-            submit = delete_submit(),
-            cancel = t(tr(Msg::Cancel)),
-        )))
-    })
-}
-
-/// Deletes the template a post names and sends the browser to `back`; `Some`
-/// holds the CDR's refusal.
-async fn delete_posted(back: &str) -> Option<ViewerError> {
-    let posted = crate::posted::posted_for("delete-template")?;
-    let template = posted.text("template");
-    let done = match TemplateFamily::from_query(&posted.text("family")) {
-        TemplateFamily::Adl14 => crate::admin::admin_delete_template(template.clone()).await,
-        TemplateFamily::Adl2 => delete_adl2_artefact(template.clone()).await,
-    };
-    match done {
-        Ok(()) => {
-            redirect_with(
-                back,
-                &Done::ok(tr(DefinitionsMsg::TemplateDeleted)).line(template),
-            );
-            None
-        }
-        Err(error) => Some(error),
-    }
-}
-
-/// The refusal of a delete the page answered.
-fn delete_refused(acted: Option<&ViewerError>) -> Option<Html> {
-    acted.map(|error| refused(tr(DefinitionsMsg::TemplateDeleteRefused), error, None))
 }
 
 /// What Templates read: the delete it answered and both families' lists.
@@ -431,7 +338,7 @@ pub async fn upload_page() -> Drawn {
             badge: None,
             subtitle_view: None,
         },
-        ActionGroup::none(),
+        ActionGroup::default(),
     );
     let upload = source_upload(
         &source,
@@ -817,7 +724,7 @@ fn template_header(
                 Act::Link(query_href(template_id, None)),
             ))
         } else {
-            ActionGroup::none()
+            ActionGroup::default()
         }
         .more(more),
     )

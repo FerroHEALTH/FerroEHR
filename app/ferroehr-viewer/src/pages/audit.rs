@@ -20,9 +20,7 @@ use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::table::filter::{Find, find_form};
 use ferrohealth_ui::table::model::{Paging, StateSource, Window};
 use ferrohealth_ui::table::pager::{Listing as PagerListing, PostTo, post_pager};
-use ferrohealth_ui::table::view::{
-    Body, Column, DataTable, Role, Sorting, cell, data_table, title_cell,
-};
+use ferrohealth_ui::table::view::{Body, Column, DataTable, Role, cell, data_table, title_cell};
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::flow::FlowState;
 use ferrohealth_ui::view::form::Field;
@@ -300,7 +298,7 @@ fn table(page: &Listed, filters: &Filters) -> Html {
             };
             h(format!(
                 "<tr>{}{}{}{}{}</tr>",
-                title_cell(Some(&href), t(event(row)), None),
+                title_cell(None, Some(&href), t(event(row)), None),
                 cell(&columns[1], ago(&row.recorded)),
                 cell(&columns[2], principal),
                 cell(&columns[3], patient(row)),
@@ -309,12 +307,7 @@ fn table(page: &Listed, filters: &Filters) -> Html {
         })
         .collect();
     let caption = tr(ConsoleMsg::AuditRecords);
-    data_table(DataTable {
-        caption: &caption,
-        columns: &columns,
-        sorting: Sorting::default(),
-        body: Body::Rows(rows),
-    })
+    data_table(DataTable::new(&caption, &columns, Body::Rows(rows)))
 }
 
 /// The heading of the Audit log.
@@ -329,7 +322,7 @@ fn heading() -> Html {
             badge: None,
             subtitle_view: None,
         },
-        ActionGroup::none(),
+        ActionGroup::default(),
     )
 }
 
@@ -526,7 +519,7 @@ fn record(row: &AuditRow, masked: String) -> Html {
             badge: None,
             subtitle_view: None,
         },
-        ActionGroup::none(),
+        ActionGroup::default(),
     );
     let panel = card_panel(
         section(Some(tr(ConsoleMsg::AuditTheEvent)), None, None, facts).then(document_section(

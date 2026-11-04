@@ -15,13 +15,15 @@
 //! `version`, so every view keeps its own address. No openEHR spec governs
 //! the viewer's pages: our own design.
 
+mod delete;
+
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
+use ferrohealth_ui::table::versions::older_version;
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::action_menu::{Act, Action, Item, Menu};
 use ferrohealth_ui::view::coding::{Coding, Layout, coding};
-use ferrohealth_ui::view::dialog::{ConfirmForm, Confirmation, danger_form_dialog};
 use ferrohealth_ui::view::flow::FlowState;
 use ferrohealth_ui::view::form::Field;
 use ferrohealth_ui::view::reading::{Element, Level, Reading, Section, Value as Shown, reading};
@@ -30,7 +32,6 @@ use ferrohealth_ui::view::surface::{
     Crumb, Header, Mode, definitions, editor_heading, page_heading,
 };
 use ferrohealth_ui::view::tabs::{Tab, binder};
-use ferrohealth_ui::view::versions::older_version;
 
 use crate::bff::composition::{
     delete_composition, fetch_composition, fetch_version_at_time, fetch_versioned_composition,
@@ -59,6 +60,7 @@ use crate::pages::item_tags::{TagAct, tag_act, tag_done};
 use crate::pages::item_tags::{TagPanel, tag_panel};
 use crate::pages::versions::History;
 use crate::routes::Drawn;
+use delete::delete_dialog;
 
 /// The id of Delete composition's confirmation dialog.
 const DELETE_DIALOG: &str = "delete-composition";
@@ -597,45 +599,6 @@ fn header(
     )
 }
 
-/// The confirmation of Delete composition.
-fn delete_dialog(ehr_id: &str, uid: &str, name: &str, latest: &str, count: usize) -> Html {
-    let next = version_number(latest).parse::<u32>().map_or_else(
-        |_| String::new(),
-        |number| number.saturating_add(1).to_string(),
-    );
-    danger_form_dialog(
-        &current(),
-        Confirmation {
-            id: DELETE_DIALOG.into(),
-            title: tr_with(
-                RecordsMsg::CompositionDeleteTitle,
-                &[("name", name.to_owned().into())],
-            )
-            .into(),
-            message: tr_with(
-                RecordsMsg::CompositionDeleteMessage,
-                &[
-                    ("next", next.into()),
-                    ("count", crate::pages::common::count(count)),
-                ],
-            )
-            .into(),
-        },
-        ConfirmForm {
-            action: composition_href(ehr_id, uid),
-            fields: h(format!(
-                r#"<input type="hidden" name="intent" value="delete-composition"><input type="hidden" name="version" value="{}">"#,
-                t(latest)
-            )),
-        },
-        h(format!(
-            r#"<button type="submit" class="fui-button fui-button-danger">{}{}</button>"#,
-            ferrohealth_ui::icon::icon(Glyph::TRASH, "16"),
-            t(tr(RecordsMsg::CompositionDeleteConfirm))
-        )),
-    )
-}
-
 /// The composition id the route names.
 fn uid_param() -> String {
     crate::routes::params().get("uid").unwrap_or_default()
@@ -836,7 +799,7 @@ fn missing(ehr_id: &str, uid: &str, refusal: &Refused) -> (String, Html) {
             badge: None,
             subtitle_view: None,
         },
-        ActionGroup::none(),
+        ActionGroup::default(),
     );
     (
         tr(RecordsMsg::CompositionRefused),
@@ -1217,7 +1180,7 @@ fn edit_page(ehr_id: &str, uid: &str, editor: Editor) -> (String, Html) {
             badge: None,
             subtitle_view: None,
         },
-        ActionGroup::none(),
+        ActionGroup::default(),
     );
     let form = h(format!(
         r#"<form id="{EDIT_FORM}" method="post" action="{action}"><input type="hidden" name="version" value="{version}">{editor}</form>"#,
@@ -1421,7 +1384,7 @@ fn new_form(ehr_id: &str, form: NewForm) -> Html {
             badge: None,
             subtitle_view: None,
         },
-        ActionGroup::none(),
+        ActionGroup::default(),
     );
     let language = if format == ReprFormat::CanonicalXml {
         EditorLanguage::Xml

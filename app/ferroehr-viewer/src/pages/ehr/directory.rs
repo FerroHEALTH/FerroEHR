@@ -28,16 +28,17 @@
 
 use std::collections::BTreeSet;
 
+mod dialogs;
+
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
-use ferrohealth_ui::view::action::ActionGroup;
-use ferrohealth_ui::view::action_menu::{Act, Action, Item, Menu, row_menu};
-use ferrohealth_ui::view::dialog::{ConfirmForm, Confirmation, confirm_dialog, danger_form_dialog};
-use ferrohealth_ui::view::surface::{Crumb, Header, Mode, editor_heading};
-use ferrohealth_ui::view::tree::{Edit, Mark, Tree, TreeKind, TreeNode, TreeWords, tree_view};
-use ferrohealth_ui::view::versions::{
+use ferrohealth_ui::table::versions::{
     Standing, Version, VersionHistory, older_version, version_history,
 };
+use ferrohealth_ui::view::action::ActionGroup;
+use ferrohealth_ui::view::action_menu::{Act, Action, Item, Menu, row_menu};
+use ferrohealth_ui::view::surface::{Crumb, Header, Mode, editor_heading};
+use ferrohealth_ui::view::tree::{Edit, Mark, Tree, TreeKind, TreeNode, TreeWords, tree_view};
 use serde_json::Value;
 
 use crate::bff::ehr_detail::directory::edit::{
@@ -62,6 +63,7 @@ use crate::pages::ehr::EhrModel;
 use crate::pages::ehr::{EhrTab, crumbs, ehr_id_param, ehr_view, tab_href};
 use crate::pages::form::Form;
 use crate::routes::Drawn;
+use dialogs::dialogs;
 
 /// The id of Delete the directory's confirmation dialog.
 const DELETE_DIALOG: &str = "delete-directory";
@@ -319,70 +321,6 @@ fn directory_menu(version_uid: &str) -> Html {
             Act::Dialog(DELETE_DIALOG.to_owned()),
         ))]),
     )
-}
-
-/// The confirmations of the tab: delete the directory whose latest version
-/// is `latest_uid`, and restore the version `restoring` names, whose
-/// document it holds.
-fn dialogs(ehr_id: &str, latest_uid: &str, restoring: Option<(&str, &str)>) -> Html {
-    let action = tab_href(ehr_id, EhrTab::Directory);
-    let delete = danger_form_dialog(
-        &current(),
-        Confirmation {
-            id: DELETE_DIALOG.into(),
-            title: tr(RecordsMsg::DirectoryDeleteTitle).into(),
-            message: tr(RecordsMsg::DirectoryDeleteMessage).into(),
-        },
-        ConfirmForm {
-            action: action.clone(),
-            fields: h(format!(
-                r#"<input type="hidden" name="intent" value="delete-directory"><input type="hidden" name="version" value="{}">"#,
-                t(latest_uid)
-            )),
-        },
-        h(format!(
-            r#"<button type="submit" class="fui-button fui-button-danger">{}{}</button>"#,
-            ferrohealth_ui::icon::icon(Glyph::TRASH, "16"),
-            t(tr(RecordsMsg::DirectoryDeleteConfirm))
-        )),
-    );
-    let restore = restoring.map(|(number, body)| {
-        let next = version_number(latest_uid)
-            .parse::<u32>()
-            .map_or_else(|_| String::new(), |latest| (latest + 1).to_string());
-        let form = h(format!(
-            r#"<form method="post" action="{action}"><input type="hidden" name="intent" value="restore"><input type="hidden" name="version" value="{version}"><input type="hidden" name="body" value="{body}"><button type="submit" class="fui-button fui-button-primary">{glyph}{words}</button></form>"#,
-            action = t(&action),
-            version = t(latest_uid),
-            body = t(body),
-            glyph = ferrohealth_ui::icon::icon(Glyph::ROTATE_CCW, "16"),
-            words = t(tr_with(
-                RecordsMsg::DirectoryRestoreAs,
-                &[("next", next.clone().into())]
-            )),
-        ));
-        confirm_dialog(
-            &current(),
-            Confirmation {
-                id: RESTORE_DIALOG.into(),
-                title: tr_with(
-                    RecordsMsg::DirectoryRestoreTitle,
-                    &[("version", number.to_owned().into())],
-                )
-                .into(),
-                message: tr_with(
-                    RecordsMsg::DirectoryRestoreMessage,
-                    &[
-                        ("version", number.to_owned().into()),
-                        ("next", next.into()),
-                    ],
-                )
-                .into(),
-            },
-            form,
-        )
-    });
-    delete.then(opt(restore))
 }
 
 /// A write the CDR refused.
@@ -1165,7 +1103,7 @@ pub async fn edit_page() -> Drawn {
             badge: None,
             subtitle_view: None,
         },
-        ActionGroup::none(),
+        ActionGroup::default(),
     );
     Drawn::page(
         tr(RecordsMsg::DirectoryEditTitle),

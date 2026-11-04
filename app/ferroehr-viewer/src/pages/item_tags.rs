@@ -13,9 +13,7 @@
 
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
-use ferrohealth_ui::table::view::{
-    Body, Column, DataTable, Role, Sorting, cell, data_table, menu_cell,
-};
+use ferrohealth_ui::table::view::{Body, Column, DataTable, Role, cell, data_table, menu_cell};
 use ferrohealth_ui::view::form::Field;
 use ferrohealth_ui::view::template::list::list_empty;
 
@@ -161,12 +159,7 @@ pub fn tag_panel(panel: TagPanel) -> Html {
                 })
                 .collect();
             let caption = tr(RecordsMsg::EhrTabTags);
-            let table = data_table(DataTable {
-                caption: &caption,
-                columns: &columns,
-                sorting: Sorting::default(),
-                body: Body::Rows(rows),
-            });
+            let table = data_table(DataTable::new(&caption, &columns, Body::Rows(rows)));
             (table, Some(total))
         }
         Err(error) => (refused(tr(RecordsMsg::TagsRefused), &error, None), None),

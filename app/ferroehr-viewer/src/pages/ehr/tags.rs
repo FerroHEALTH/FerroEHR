@@ -14,9 +14,7 @@
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::table::filter::{Find, find_form};
 use ferrohealth_ui::table::model::StateSource;
-use ferrohealth_ui::table::view::{
-    Body, Column, DataTable, Role, Sorting, cell, data_table, group_row,
-};
+use ferrohealth_ui::table::view::{Body, Column, DataTable, Role, cell, data_table, group_row};
 use ferrohealth_ui::view::template::list::{ActiveFilters, FilterChip, active_filters, list_empty};
 
 use crate::bff::ehr_tags::{EhrTargetKind, ehr_tags_path, resolve_ehr_target};
@@ -281,12 +279,11 @@ fn table(groups: Vec<Tagged>) -> Html {
         }
     }
     let caption = tr(RecordsMsg::TagsCaption);
-    data_table(DataTable {
-        caption: &caption,
-        columns: &columns,
-        sorting: Sorting::default(),
-        body: Body::Rows(Html::join(rows)),
-    })
+    data_table(DataTable::new(
+        &caption,
+        &columns,
+        Body::Rows(Html::join(rows)),
+    ))
 }
 
 /// The tab's panel.

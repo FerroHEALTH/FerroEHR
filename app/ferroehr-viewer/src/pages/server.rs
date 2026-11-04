@@ -17,17 +17,14 @@ use ferrohealth_health::document::State;
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
-use ferrohealth_ui::table::view::{
-    Body, Column, DataTable, Role, Sorting, cell, data_table, group_row,
-};
+use ferrohealth_ui::table::view::{Body, Column, DataTable, Role, cell, data_table, group_row};
 use ferrohealth_ui::view::action::ActionGroup;
-use ferrohealth_ui::view::dialog::{Confirmation, confirm_dialog};
+use ferrohealth_ui::view::dialog::{Confirmation, Stakes, confirm_dialog};
 use ferrohealth_ui::view::flow::FlowState;
 use ferrohealth_ui::view::form::Field;
+use ferrohealth_ui::view::layout::Arrangement;
 use ferrohealth_ui::view::scope::scope_grants;
-use ferrohealth_ui::view::surface::{
-    Header, Stat, definitions, page_heading, stat_card, stat_grid,
-};
+use ferrohealth_ui::view::surface::{Header, Stat, definitions, page_heading, stat_card};
 use ferrohealth_ui::view::tabs::{Tab, binder};
 
 use crate::bff::system::Endpoint;
@@ -167,7 +164,7 @@ fn server_page<T>(tab: ServerTab, tabbed: Tabbed<T>, draw: impl FnOnce(T) -> Htm
             badge: None,
             subtitle_view: None,
         },
-        ActionGroup::none(),
+        ActionGroup::default(),
     );
     let intro = if tab == ServerTab::Smart {
         smart_intro()
@@ -326,12 +323,7 @@ fn overview(model: Overview) -> Html {
             total,
             None,
             ferrohealth_ui::view::surface::section_intro(tr(ConsoleMsg::ServerSandboxIntro)).then(
-                data_table(DataTable {
-                    caption: &caption,
-                    columns: &columns,
-                    sorting: Sorting::default(),
-                    body: Body::Rows(rows),
-                }),
+                data_table(DataTable::new(&caption, &columns, Body::Rows(rows))),
             ),
         )
     });
@@ -454,12 +446,11 @@ fn health(read: Result<ReadinessView, Refused>) -> Html {
                 None,
                 opt((!readiness.detailed)
                     .then(|| info_note(t(tr(ConsoleMsg::ServerPublicReadiness)))))
-                .then(data_table(DataTable {
-                    caption: &caption,
-                    columns: &columns,
-                    sorting: Sorting::default(),
-                    body: Body::Rows(rows),
-                })),
+                .then(data_table(DataTable::new(
+                    &caption,
+                    &columns,
+                    Body::Rows(rows),
+                ))),
             )
         }
         Err(refusal) => plain_section(refusal.view()),
@@ -520,7 +511,7 @@ fn metrics(model: Metrics) -> Html {
             Some(tr(ConsoleMsg::ServerNow)),
             None,
             None,
-            stat_grid(
+            Arrangement::StatGrid.wrap(
                 tiles
                     .into_iter()
                     .map(|tile| {
@@ -592,12 +583,11 @@ fn metrics(model: Metrics) -> Html {
                 r#"<p class="fui-small fui-muted">{}</p>"#,
                 t(&detail.help)
             ))
-            .then(data_table(DataTable {
-                caption: &caption,
-                columns: &columns,
-                sorting: Sorting::default(),
-                body: Body::Rows(rows),
-            }))
+            .then(data_table(DataTable::new(
+                &caption,
+                &columns,
+                Body::Rows(rows),
+            )))
         }
         Some(Ok(None)) => info_note(t(tr(ConsoleMsg::ServerNoMetric))),
         Some(Err(refusal)) => refusal.view(),
@@ -720,6 +710,8 @@ fn apply_dialog() -> Html {
             title: tr(ConsoleMsg::ServerApplyTitle).into(),
             message: tr(ConsoleMsg::ServerApplyMessage).into(),
         },
+        Stakes::Plain,
+        None,
         h(format!(
             r#"<button type="submit" form="{LOG_FORM}" name="intent" value="apply-filter" class="fui-button fui-button-primary">{}{}</button>"#,
             ferrohealth_ui::icon::icon(Glyph::CHECK, "16"),
@@ -912,12 +904,11 @@ fn api(model: Api) -> Html {
                 Some(caption.clone()),
                 u64::try_from(total).ok(),
                 None,
-                data_table(DataTable {
-                    caption: &caption,
-                    columns: &columns,
-                    sorting: Sorting::default(),
-                    body: Body::Rows(Html::join(rows)),
-                }),
+                data_table(DataTable::new(
+                    &caption,
+                    &columns,
+                    Body::Rows(Html::join(rows)),
+                )),
             )
             .then(document_section(
                 tr(ConsoleMsg::ServerOpenApi),

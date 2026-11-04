@@ -160,12 +160,15 @@ Service (and at the chart's FerroTERM when `terminology.enabled` is set). It
 needs two things the render refuses to go without: `bridge.cdr.existingSecret`,
 a Secret holding its CDR credential (`user` and `password`, a Basic user of the
 CDR whose `scopes` grant what FerroBRIDGE calls), and at least one peer in
-`bridge.networkPolicy.ingressFrom`. FerroBRIDGE authenticates no caller yet
-([FerroBRIDGE#400](https://github.com/FerroHEALTH/FerroBRIDGE/issues/400)), so
-the chart keeps it cluster-internal: a ClusterIP Service, no Ingress, and a
-NetworkPolicy that admits only the peers you name. Its mapping files come from a
-ConfigMap of yours (`bridge.mappings.existingConfigMap` plus the keys in
-`bridge.mappings.files`); FerroBRIDGE's own documentation is at
+`bridge.networkPolicy.ingressFrom`. FerroBRIDGE checks the caller of its
+FHIRconnect operations, FHIR facade and operator API through `[auth]`
+(`bridge.config.auth`), and a mapping set needs `auth.issuer` and
+`auth.audience` or `auth.enabled = false` before it starts. A caller it admits
+acts on the CDR with its credential, so the chart keeps it cluster-internal: a
+ClusterIP Service, no Ingress, and a NetworkPolicy that admits only the peers
+you name. Its mapping files come from a ConfigMap of yours
+(`bridge.mappings.existingConfigMap` plus the keys in `bridge.mappings.files`);
+FerroBRIDGE's own documentation is at
 <https://ferrobridge.eu/docs/>.
 
 {{ template "chart.requirementsSection" . }}

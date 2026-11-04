@@ -399,7 +399,7 @@ csv = "1.4"                        # RESULT_SET → CSV export (viewer BFF; veri
 # after looking at its own screens. 0.6.0 renders every part on the server and
 # depends on no Leptos crate (FerroUI `docs/migration-0.6.md`; verified on
 # crates.io 2026-10-30).
-ferrohealth-ui = "=0.6.0"
+ferrohealth-ui = "=0.6.6"
 # The viewer's string catalogs (#300): Project Fluent messages embedded at
 # build time from app/ferroehr-viewer/locales/, the crate and version
 # ferrohealth-ui catalogs its own words with, so one locale drives both.

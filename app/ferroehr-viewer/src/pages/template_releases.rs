@@ -15,13 +15,13 @@
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::i18n::Word;
 use ferrohealth_ui::icon::Glyph;
+use ferrohealth_ui::table::change::change_table;
 use ferrohealth_ui::table::view::{
-    Body, Column, DataTable, Role, Sorting, cell, data_table, menu_cell, title_cell,
+    Body, Column, DataTable, Role, cell, data_table, menu_cell, title_cell,
 };
 use ferrohealth_ui::view::action_menu::{
     Act, Action, Choice, Item, Listbox, Menu, Pick, listbox, row_menu,
 };
-use ferrohealth_ui::view::change::change_table;
 use ferrohealth_ui::view::form::Field;
 use ferrohealth_ui::view::tag::Tag;
 
@@ -126,7 +126,7 @@ pub fn lineage_table(family: TemplateFamily, lineages: &[Lineage]) -> Html {
                     };
                     let drawn = h(format!(
                         "<tr>{}{}{}{}{}</tr>",
-                        title_cell(Some(&href), release_name(family, row), Some(sub)),
+                        title_cell(None, Some(&href), release_name(family, row), Some(sub)),
                         cell(
                             &columns[1],
                             h(format!("<code>{}</code>", t(&row.archetype_id)))
@@ -145,12 +145,7 @@ pub fn lineage_table(family: TemplateFamily, lineages: &[Lineage]) -> Html {
         })
         .collect();
     let caption = tr(family.label());
-    data_table(DataTable {
-        caption: &caption,
-        columns: &columns,
-        sorting: Sorting::default(),
-        body: Body::Bodies(bodies),
-    })
+    data_table(DataTable::new(&caption, &columns, Body::Bodies(bodies)))
 }
 
 /// The two releases a comparison asks for, by their labels.
@@ -397,6 +392,7 @@ impl Releases {
                 h(format!(
                     "<tr>{}{}{}</tr>",
                     title_cell(
+                        None,
                         Some(&release_href(family, row)),
                         t(release_label(family, row)),
                         (!marks.is_empty()).then(|| t(marks.join(" · ")))
@@ -411,12 +407,7 @@ impl Releases {
             Some(caption.clone()),
             Some(u64::try_from(lineage.releases().len()).unwrap_or(u64::MAX)),
             None,
-            data_table(DataTable {
-                caption: &caption,
-                columns: &columns,
-                sorting: Sorting::default(),
-                body: Body::Rows(rows),
-            }),
+            data_table(DataTable::new(&caption, &columns, Body::Rows(rows))),
         ))
     }
 
@@ -488,6 +479,7 @@ impl Releases {
                         DefinitionsMsg::TemplateCompareCaption,
                         &[("from", from.into()), ("to", to.into())],
                     ),
+                    None,
                     &change.changes,
                 ),
             ),

@@ -38,7 +38,7 @@ kubectl -n ferroehr create secret generic ferroehr-db \
   --from-literal=FERROEHR__DB__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
 
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 21.0.0-rc11 -n ferroehr \
+  --version 21.0.0-rc12 -n ferroehr \
   --set config.deployment_profile=sandbox \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=5.6.0-rc10 \
@@ -68,7 +68,7 @@ boot would be.
 reference. To read the chart's metadata without installing it:
 
 ```shell
-helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 21.0.0-rc11
+helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 21.0.0-rc12
 ```
 
 ### Pin two versions, not one
@@ -81,7 +81,7 @@ against.
 
 | | Selects | Pin with | Line |
 |---|---|---|---|
-| Chart version | templates, values schema, defaults | `--version 21.0.0-rc11` | SemVer over the chart's own contract |
+| Chart version | templates, values schema, defaults | `--version 21.0.0-rc12` | SemVer over the chart's own contract |
 | Image tag | the server binary | `--set image.tag=5.6.0-rc10` (or `image.digest`) | the application's SemVer line |
 
 Always pin the image to an immutable version or, better, a `@sha256` digest,
@@ -181,7 +181,7 @@ image, and FerroTERM.
 > the image itself as the authority:
 >
 > ```shell
-> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 21.0.0-rc11 \
+> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 21.0.0-rc12 \
 >   -s templates/configmap.yaml --set database.existingSecret=ferroehr-db \
 >   | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/ferroehr.toml
 > docker run --rm -v /tmp/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro \
@@ -334,7 +334,7 @@ are examples.
 Replace them in a values file of your own and pass both:
 
 ```shell
-helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 21.0.0-rc11 --untar
+helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 21.0.0-rc12 --untar
 helm install ferroehr ./ferroehr -n ferroehr \
   -f ./ferroehr/values-production.yaml -f my-site-values.yaml
 ```
@@ -804,7 +804,7 @@ config:
 
 ```shell
 helm upgrade ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 21.0.0-rc11 -n ferroehr --reuse-values \
+  --version 21.0.0-rc12 -n ferroehr --reuse-values \
   --set config.query.plan_cache_capacity=512
 ```
 
@@ -946,7 +946,7 @@ Secret you own through `extraEnv` instead. Another PIX Manager:
 `ferropix.enabled: false` and `config.ehr_index.pixm_url`. A CDR run on its
 own: `ferropix.enabled: false` and `config.ehr_index.provider: local`.
 
-The chart pins FerroPIX 0.0.12 by digest (`ferropix.image`) with the
+The chart pins FerroPIX 0.0.14 by digest (`ferropix.image`) with the
 FerroPIX chart built for it. Since FerroPIX 0.0.8, `public_base_url` is a
 top-level key and the clients that may act as a Patient Identity Source sit
 in the `[[trust.issuer]]` table, apart from the `[[auth.issuer]]` entry that
@@ -975,7 +975,7 @@ running. It is the Helm equivalent of the
 
 ```shell
 helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 21.0.0-rc11 -n ferroehr --reuse-values \
+  --version 21.0.0-rc12 -n ferroehr --reuse-values \
   --set terminology.enabled=true
 ```
 
@@ -1133,11 +1133,18 @@ kubectl -n ferroehr create secret generic ferroehr-bridge-cdr \
 `bridge.mappings.existingConfigMap`, with each key listed in
 `bridge.mappings.files`. The chart mounts every key on its own: a whole
 ConfigMap volume also carries the kubelet's `..data` snapshot directories, and
-FerroBRIDGE 0.0.5 reads those as a second and third copy of every file and
+FerroBRIDGE reads those as a second and third copy of every file and
 refuses the start with a duplicate mapping name. FerroBRIDGE fetches each
 template a mapping context names from the CDR at boot, so upload the templates
 first; a template the CDR does not hold stops the start. Without a mapping set
 FerroBRIDGE still starts, and `$tofhir` and `$toopenehr` answer `503`.
+
+**A mapping set needs `[auth]`.** With mappings FerroBRIDGE serves its
+FHIRconnect operations, and it refuses to start them until FerroBRIDGE's
+`[auth]` keys `issuer` and `audience`, set under `bridge.config`, name the
+authorization server whose tokens its callers present, or until its `enabled`
+is `false`, which serves them to every caller the NetworkPolicy admits. The keys are FerroBRIDGE's own
+([configuration reference](https://ferrobridge.eu/docs/operate/configuration.html)).
 
 ```yaml
 bridge:
@@ -1149,6 +1156,10 @@ bridge:
     files:
       - vital_signs.context.yml
       - blood_pressure.yml
+  config:
+    auth:
+      issuer: https://idp.example.org
+      audience: [https://bridge.example.org/fhir]
   networkPolicy:
     ingressFrom:
       - podSelector:
@@ -1156,10 +1167,8 @@ bridge:
             app.kubernetes.io/name: my-fhir-client
 ```
 
-**It stays inside the cluster until FerroBRIDGE authenticates its callers.**
-FerroBRIDGE has no inbound authentication yet
-([FerroBRIDGE#400](https://github.com/FerroHEALTH/FerroBRIDGE/issues/400)), and
-whoever reaches its port acts on the CDR with the credential above. So the chart
+**It stays inside the cluster.** A caller FerroBRIDGE admits acts on the CDR
+with the credential above. So the chart
 renders no Ingress for it and no value renders one, the Service is always
 ClusterIP, and the NetworkPolicy admits only the peers you list in
 `bridge.networkPolicy.ingressFrom`. An empty list is refused at render, and the
@@ -1309,7 +1318,7 @@ Preview an upgrade against what you have installed with
 `helm diff`, or render the new chart version and read it:
 
 ```shell
-helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 21.0.0-rc11 \
+helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 21.0.0-rc12 \
   -n ferroehr -f my-values.yaml | less
 ```
 

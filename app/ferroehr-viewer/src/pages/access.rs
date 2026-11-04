@@ -226,7 +226,7 @@ pub fn page() -> Drawn {
             badge: None,
             subtitle_view: None,
         },
-        ferrohealth_ui::view::action::ActionGroup::none(),
+        ferrohealth_ui::view::action::ActionGroup::default(),
     );
     Drawn::page(
         tr(Msg::YourAccess),

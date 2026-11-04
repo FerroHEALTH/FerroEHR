@@ -701,7 +701,7 @@ async fn every_screen_draws_its_heading_and_its_reading() {
         ),
         (
             "/about".to_owned(),
-            vec!["ferrohealth-ui 0.6.0", "The conformance manifest"],
+            vec!["ferrohealth-ui 0.6.6", "The conformance manifest"],
         ),
         ("/access".to_owned(), vec!["Signed in as", "ferroehr"]),
         (

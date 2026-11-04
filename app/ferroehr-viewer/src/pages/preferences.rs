@@ -133,7 +133,7 @@ pub fn page() -> Drawn {
                 browser: Locale::negotiate_with(
                     &accepted,
                     <crate::locale::Msg as crate::locale::Catalogued>::catalog(),
-                    Locale::english(),
+                    Locale::default(),
                 ),
                 week_from_language: Weekday::Monday,
                 shortcuts: None,

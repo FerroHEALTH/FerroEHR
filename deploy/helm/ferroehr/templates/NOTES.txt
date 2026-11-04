@@ -176,8 +176,7 @@ SECURITY POSTURE
 {{- end }}
 {{- if .Values.bridge.enabled }}
   FerroBRIDGE:            {{ include "ferroehr.bridgeFullname" . }}:{{ .Values.bridge.service.port }} — reachable from the bridge.networkPolicy.ingressFrom peers only.
-     FerroBRIDGE authenticates no caller yet (FerroHEALTH/FerroBRIDGE#400), and
-     whoever reaches it acts on this CDR with the credential in Secret
+     A caller FerroBRIDGE's [auth] admits acts on this CDR with the credential in Secret
      "{{ .Values.bridge.cdr.existingSecret }}" ({{ .Values.bridge.cdr.auth }}). No Ingress is rendered for it.
      CDR: {{ include "ferroehr.cdrRestUrl" . }}
      {{- if .Values.terminology.enabled }}

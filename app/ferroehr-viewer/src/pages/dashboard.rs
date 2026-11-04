@@ -15,9 +15,7 @@
 
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
-use ferrohealth_ui::table::view::{
-    Body, Column, DataTable, Role, Sorting, cell, data_table, title_cell,
-};
+use ferrohealth_ui::table::view::{Body, Column, DataTable, Role, cell, data_table, title_cell};
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::action_menu::{Act, Action};
 use ferrohealth_ui::view::chart::{ActivityChart, activity_chart};
@@ -260,7 +258,7 @@ fn namespaces_card(tiles: Result<Vec<NamespaceLink>, ViewerError>) -> Html {
                         ),
                     };
                     let sub = h(format!(r#"<span class="fui-row-sub">{}</span>"#, t(sub)));
-                    let title = title_cell(Some(href), t(&tile.label), Some(sub));
+                    let title = title_cell(None, Some(href), t(&tile.label), Some(sub));
                     let matches = cell(&columns[1], matches);
                     h(format!("<tr>{title}{matches}</tr>"))
                 })
@@ -269,12 +267,7 @@ fn namespaces_card(tiles: Result<Vec<NamespaceLink>, ViewerError>) -> Html {
             let caption = tr(OverviewMsg::DashboardByNamespace);
             (
                 Some(total),
-                data_table(DataTable {
-                    caption: &caption,
-                    columns: &columns,
-                    sorting: Sorting::default(),
-                    body: Body::Rows(rows),
-                }),
+                data_table(DataTable::new(&caption, &columns, Body::Rows(rows))),
             )
         }
         Err(error) => (
@@ -323,11 +316,12 @@ pub async fn page() -> Drawn {
                 Some(Glyph::REFRESH_CW),
                 tr(OverviewMsg::TryAgain),
             );
-            let body =
-                heading(tr(OverviewMsg::DashboardNoAnswer), ActionGroup::none()).then(h(format!(
+            let body = heading(tr(OverviewMsg::DashboardNoAnswer), ActionGroup::default()).then(h(
+                format!(
                     r#"<div class="fui-stack">{}<div class="fui-cluster">{retry}</div></div>"#,
                     refused(tr(OverviewMsg::DashboardRefused), &error, None)
-                )));
+                ),
+            ));
             return Drawn::page(tr(Msg::NavDashboard), body);
         }
     };
@@ -346,7 +340,7 @@ pub async fn page() -> Drawn {
             Act::Link("/templates/upload".to_owned()),
         ))
     } else {
-        ActionGroup::none()
+        ActionGroup::default()
     };
     let host = crate::request::settings().cdr_address;
     let subtitle = tr_with(OverviewMsg::DashboardSubtitle, &[("host", host.into())]);

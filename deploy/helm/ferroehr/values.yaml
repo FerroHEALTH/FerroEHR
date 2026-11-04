@@ -1409,14 +1409,14 @@ terminology:
     # -- Pull policy.
     pullPolicy: IfNotPresent
     # -- Image tag. Empty falls back to the FerroTERM release this chart is
-    # pinned to (0.3.3) — never `.Chart.appVersion`, which is FerroEHR's line.
+    # pinned to (0.4.0) — never `.Chart.appVersion`, which is FerroEHR's line.
     # A tag other than that pin is REFUSED while `digest` below is non-empty:
     # the digest wins, so the tag would be inert while the values file claimed
     # otherwise. Clear `digest` to deploy a tag.
     tag: ""
     # -- Image digest (`sha256:…`); wins over `tag`. Pinned by default, so an
     # install runs the exact image this chart was validated against.
-    digest: sha256:f25ddad886fd218ae1eb82af6b81b8ed16651333f5bd802e621c5ae83b0913f1
+    digest: sha256:efaa80152721c3738e0d0c0695cadbfefe89c1cf6df3567b9d3bc1788767e047
   service:
     # -- Service type. ClusterIP deliberately: the CDR is the only caller.
     type: ClusterIP
@@ -1538,9 +1538,10 @@ terminology:
 # and [terminology] points at this release's FerroTERM when terminology.enabled
 # is set. Off by default.
 #
-# CLUSTER-INTERNAL. FerroBRIDGE has no inbound authentication yet
-# (https://github.com/FerroHEALTH/FerroBRIDGE/issues/400), and what it serves
-# writes into and reads from the CDR under the credential below. So no Ingress
+# CLUSTER-INTERNAL. FerroBRIDGE checks the caller of its FHIRconnect
+# operations, FHIR facade and operator API through `[auth]` (`config.auth`
+# below), and a caller it admits writes into and reads from the CDR under the
+# credential below. So no Ingress
 # is rendered and no value renders one, the Service is ClusterIP, and the
 # NetworkPolicy admits only the peers named in networkPolicy.ingressFrom: an
 # empty list is refused at render, and the schema refuses a peer that selects
@@ -1572,13 +1573,13 @@ bridge:
     # -- Pull policy.
     pullPolicy: IfNotPresent
     # -- Image tag. Empty falls back to the FerroBRIDGE release this chart is
-    # pinned to (0.0.5), never `.Chart.appVersion`, which is FerroEHR's line.
+    # pinned to (0.0.17), never `.Chart.appVersion`, which is FerroEHR's line.
     # A tag other than that pin is REFUSED while `digest` below is non-empty:
     # the digest wins, so the tag would be inert. Clear `digest` to deploy a tag.
     tag: ""
     # -- Image digest (`sha256:…`); wins over `tag`. Pinned by default, so an
     # install runs the exact image this chart was validated against.
-    digest: sha256:c92e58dac60d0d1cb94b446e2414ebdc2b209a42c87df3aaf0b18d7c51d5c774
+    digest: sha256:4cdf8d4b4c4d626b99a3929a363198067f87ac70875f4ce6db1d0614884f12af
   service:
     # -- Service port. The Service is always ClusterIP and the container always
     # listens on 8080.
@@ -1602,7 +1603,7 @@ bridge:
     # -- The keys of `existingConfigMap` to mount, one file each. Required with
     # `existingConfigMap`. Each key is mounted on its own (`subPath`), because a
     # whole ConfigMap volume carries the kubelet's `..data` snapshot
-    # directories, which FerroBRIDGE 0.0.5's recursive walk reads as a second
+    # directories, which FerroBRIDGE's recursive walk reads as a second
     # and third copy of every file and refuses as duplicate mapping names. A
     # `subPath` mount does not follow later edits to the ConfigMap; the pod's
     # rollout annotation hashes this list, not the ConfigMap's contents, so
@@ -1616,12 +1617,15 @@ bridge:
   # `server.listen`, `terminology` while `terminology.enabled` is on,
   # `mappings.directory` while `mappings.existingConfigMap` is set, and any
   # secret-shaped key (a password, a token, `cdm.url`), whose `_file` sibling
-  # takes a file you mount with `extraVolumes`.
+  # takes a file you mount with `extraVolumes`. A mapping set turns the
+  # FHIRconnect operations on, and FerroBRIDGE then refuses to start until
+  # `auth.issuer` and `auth.audience` name the issuer of its callers' tokens,
+  # or `auth.enabled` is false.
   config: {}
   networkPolicy:
     # -- The peers admitted to FerroBRIDGE's port. REQUIRED: the render is
     # refused while it is empty, because an ingress rule with no `from` admits
-    # every source and FerroBRIDGE authenticates nobody yet. Raw
+    # every source, and with `config.auth.enabled` false FerroBRIDGE admits every caller. Raw
     # NetworkPolicyPeer entries; the schema refuses an empty peer and an empty
     # selector inside one, which would select every pod or every namespace.
     # There is deliberately no admit-everything key.
@@ -1686,8 +1690,8 @@ bridge:
     # -- FerroBRIDGE's usage report. Empty follows the top-level
     # `usageReport.enabled`; true or false decides for FerroBRIDGE alone. The
     # chart writes it into `[usage_report]` of config.toml, with the deployment
-    # `helm`, for a FerroBRIDGE release from 0.0.7 on; the pinned 0.0.5 sends
-    # no report and refuses the section, so it gets none.
+    # `helm`, for a FerroBRIDGE release from 0.0.7 on; a release before it
+    # sends no report and refuses the section, so it gets none.
     enabled: null
   # -- Extra volumes for the FerroBRIDGE pod, such as a Secret holding a
   # `_file` credential named in `config`.
@@ -1724,10 +1728,10 @@ ferropix:
   image:
     # -- The FerroPIX release the pinned `digest` belongs to. The dependency
     # chart deploys the digest, and the Artifact Hub entry names this tag.
-    tag: "0.0.12"
+    tag: "0.0.14"
     # -- FerroPIX image digest of release `tag`. Pinned here so
     # the image this chart deploys is stated by this chart.
-    digest: "sha256:01adb1e7cc91b46409cc315162200fb99a712a9232508d5c85a228554d22d6d3"
+    digest: "sha256:389f40d144fe2ef3d79c1c1628e9a662a058961b1650c5541e601addc27112d8"
   config:
     server:
       # -- FerroPIX's `[server] base_path`, read here to build the FHIR base the
