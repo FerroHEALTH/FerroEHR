@@ -34,7 +34,8 @@ on:
 # Queued, never cancelled: a run pushes its images by digest before
 # scan-and-tag applies their tags, so a run cancelled in between leaves
 # manifests nothing reaches (the GHCR orphans of #3731). A newer push waits for
-# the running build; GitHub keeps only the newest pending run.
+# the running build; GitHub keeps only the newest pending run, so the `changes`
+# job compares each image at `:main` with the tree as well as the push (#4977).
 concurrency:
   group: containers-${{ github.ref }}
   cancel-in-progress: false
@@ -79,10 +80,12 @@ jobs:
       # A manual dispatch builds everything BY DECLARATION rather than by the
       # filter degrading (dispatch payloads carry no `before`, so paths-filter
       # used to warn and diff the whole tree — same outcome, accidental
-      # mechanism).
-      app: ${{ steps.everything.outputs.all || steps.filter.outputs.app }}
-      viewer: ${{ steps.everything.outputs.all || steps.filter.outputs.viewer }}
-      postgres: ${{ steps.everything.outputs.all || steps.filter.outputs.postgres }}
+      # mechanism). A push builds an image when its own files touch the
+      # image's filter OR the image at `:main` lacks the tree's inputs, which
+      # is how the changes of a dropped pending run still build (#4977).
+      app: ${{ steps.everything.outputs.all || (steps.filter.outputs.app == 'true' || steps.behind.outputs.app == 'true') && 'true' || 'false' }}
+      viewer: ${{ steps.everything.outputs.all || (steps.filter.outputs.viewer == 'true' || steps.behind.outputs.viewer == 'true') && 'true' || 'false' }}
+      postgres: ${{ steps.everything.outputs.all || (steps.filter.outputs.postgres == 'true' || steps.behind.outputs.postgres == 'true') && 'true' || 'false' }}
     steps:
       - name: A dispatch builds everything
         id: everything
@@ -140,6 +143,30 @@ jobs:
             postgres:
               - 'docker/postgres/**'
               - '.github/workflows/containers.yml'
+      # The image each `:main` tag names, by its revision label, against the
+      # inputs of this tree (scripts/lib/image-inputs.sh rebuild): an image
+      # that lacks them or cannot be compared is rebuilt.
+      - name: Whether each image at :main lacks this tree's inputs
+        id: behind
+        if: steps.everything.outcome == 'skipped'
+        env:
+          TREE: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          # The revision label of the image $1, empty when none can be read.
+          revision_of() {
+            docker buildx imagetools inspect "$1" --format '{{json .Image}}' |
+              jq -r '(if has("config") then [.] else [.[]] end)
+                | map(.config.Labels["org.opencontainers.image.revision"] // empty)
+                | first // empty' || true
+          }
+          for entry in app:ferroehr:server viewer:ferroehr-viewer:viewer postgres:ferroehr-postgres:postgres; do
+            IFS=: read -r output image kind <<<"$entry"
+            revision="$(revision_of "ghcr.io/ferrohealth/$image:main")"
+            decision="$(bash scripts/lib/image-inputs.sh rebuild "$kind" "$revision" "$TREE")"
+            echo "$output=$decision" >>"$GITHUB_OUTPUT"
+            echo "- $image: rebuild $decision (\`:main\` built from ${revision:-an unread revision})" >>"$GITHUB_STEP_SUMMARY"
+          done
 
   # ── Compile the server binary natively per arch (no QEMU, no in-Docker cargo) ─
   dockerfile-lint:
