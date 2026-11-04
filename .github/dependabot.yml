@@ -29,9 +29,7 @@ updates:
     # advisory-driven bumps, so an advisory still arrives immediately. That is
     # what makes a cooldown safe rather than a delay on getting fixes.
     #
-    # The family crates are exempt too: FerroHEALTH publishes them from its
-    # own repositories, signed by Trusted Publishing, and the release that
-    # follows them is the reason to take them the day they publish.
+    # The family crates are exempt: FerroHEALTH's own, published through Trusted Publishing.
     cooldown:
       default-days: 7
       semver-major-days: 14
