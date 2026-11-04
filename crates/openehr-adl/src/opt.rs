@@ -64,6 +64,7 @@ use openehr_base::prelude::{
     MultiplicityInterval, ResourceAnnotations, TerminologyCode, TranslationDetails,
 };
 
+use crate::adl14::authored_flat::flattening_parent;
 use crate::adl14::term_constraint::rewrite_as_authored;
 use crate::aom::access::{
     child_occurrences, common_mut, complex_attributes, object_node_id, strip_sibling_order,
@@ -240,7 +241,7 @@ pub fn unresolved_constituents(root: &Archetype, repo: &ArchetypeRepository) -> 
     seen.insert(view(root).archetype_id.to_string());
     while let Some(artefact) = queue.pop() {
         let mut lineage = artefact;
-        while let Some(parent_id) = view(lineage).parent_archetype_id {
+        while let Some(parent_id) = flattening_parent(&view(lineage)) {
             match work.resolve(parent_id, view(lineage).archetype_id.namespace.as_deref()) {
                 Some(parent) if seen.insert(view(parent).archetype_id.to_string()) => {
                     lineage = parent;
