@@ -16,11 +16,9 @@
 1 app/ferroehr-viewer/src/bff/ehrs.rs
 1 app/ferroehr-viewer/src/bff/system.rs
 8 app/ferroehr-viewer/src/builder/lift.rs
-4 app/ferroehr-viewer/src/cdr.rs
+3 app/ferroehr-viewer/src/cdr.rs
 4 app/ferroehr-viewer/src/cdr/diagnostic.rs
 1 app/ferroehr-viewer/src/clinical.rs
-1 app/ferroehr-viewer/src/config.rs
-7 app/ferroehr-viewer/src/oidc.rs
 1 app/ferroehr-viewer/src/pages/find.rs
 2 app/ferroehr-viewer/src/pages/parties.rs
 2 app/ferroehr-viewer/src/pages/queries.rs
@@ -28,4 +26,4 @@
 5 app/ferroehr-viewer/src/prefs.rs
 2 app/ferroehr-viewer/src/query_namespace.rs
 1 app/ferroehr-viewer/src/server.rs
-5 app/ferroehr-viewer/src/session.rs
+1 app/ferroehr-viewer/src/session.rs
